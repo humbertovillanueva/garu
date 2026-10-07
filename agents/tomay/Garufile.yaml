@@ -70,4 +70,4 @@ prompt: |
   Pick up to 5 front-page stories that are about AI, agents, MCP, LLMs or developer tools. One line each: title (points) — why it matters to someone building an agent runtime, in under 15 words. If fewer than 5 qualify, list fewer. Never invent stories.
 
   Keep the whole brief under 250 words. Plain, no hype. Do not create any other files.
-  When done, reply with one sentence: the file you wrote and the single most interesting item.
+  When done, reply with the full text of the brief you wrote, then one closing sentence naming the single most interesting item.

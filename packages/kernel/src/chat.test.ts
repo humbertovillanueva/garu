@@ -29,6 +29,7 @@ describe("ChatStore", () => {
     expect(t).toContain("run) Wrote today's brief.");
     expect(t).toContain("Humberto's new message:\nand tomorrow?");
     expect(t).toMatch(/Reply to Humberto directly/);
+    expect(t).toMatch(/greeting or small talk, just reply briefly/);
   });
 
   it("with no history, just the message and instructions", () => {

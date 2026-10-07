@@ -63,7 +63,7 @@ export class ChatStore {
     const history = lines.length ? `Conversation so far, oldest first:\n${lines.join("\n")}\n\n` : "";
     return (
       `${history}${userName}'s new message:\n${newMessage}\n\n` +
-      `Reply to ${userName} directly, in plain language, as ${agentName}. If the message asks you to do work, do it with your tools under your policy and then say what you did. If it's just a question, answer it. Don't repeat your standing instructions back.`
+      `Reply to ${userName} directly, in plain language, as ${agentName}. If the message asks you to do work, do it with your tools under your policy and then say what you did. If it's a question, answer it (use tools to look things up if needed). If it's a greeting or small talk, just reply briefly — do not start your standing job unless asked. Don't repeat your standing instructions back.`
     );
   }
 }
