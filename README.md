@@ -1,6 +1,7 @@
 <p align="center">
-  <img src="docs/screenshots/home.png" alt="Garu control room: an agent waiting for approval to send an email, and a policy rule Garu learned from past approvals" width="900">
+  <img src="docs/demo.gif" alt="Tomay, a morning-brief agent, is told to write today's brief and post it. It fetches four sources and writes the file under allow rules, then pauses on post_message, which the policy marks ask. One click approves it and the brief appears in Slack." width="900">
 </p>
+<p align="center"><sub>Real run, real model, real Slack: four fetches and a file write allowed by policy, one post paused for a human, $0.003.</sub></p>
 
 <h1 align="center">Garu</h1>
 
