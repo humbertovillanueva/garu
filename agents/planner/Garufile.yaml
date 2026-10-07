@@ -1,0 +1,58 @@
+# Planner — Garu's backlog, from Linear.
+#
+# Linear is a remote MCP server with OAuth: sign in once with
+#   garu auth agents/planner/Garufile.yaml linear
+# and runs use the saved tokens. Reading is allowed; creating or changing an
+# issue always asks; everything else Linear offers is blocked and never shown.
+
+name: planner
+description: Reads the Garu backlog in Linear and says what's next; files issues when asked.
+model: gemini/gemini-3.5-flash-lite
+
+triggers:
+  - manual: true          # ask it things; later: a weekday cron that feeds the morning brief
+
+budget:
+  maxCostUsd: 0.05
+
+maxTurns: 10
+
+tools:
+  - name: linear
+    url: https://mcp.linear.app/mcp
+    auth: oauth
+
+policy:
+  # Reading the workspace: fine.
+  - tool: "linear.list_*"
+    action: allow
+  - tool: "linear.get_*"
+    action: allow
+  - tool: "linear.search_documentation"
+    action: allow
+  # Writing: one issue or comment at a time, and you see it first.
+  # (Linear's save_issue both creates and updates.)
+  - tool: "linear.save_issue"
+    action: ask
+    reason: creating or changing a Linear issue
+  - tool: "linear.save_comment"
+    action: ask
+    reason: commenting on a Linear issue
+  - tool: "*"
+    action: block
+    reason: not part of Planner's job
+
+prompt: |
+  You are Planner. You keep track of the Garu backlog in Linear for Humberto, who builds Garu
+  (an open-source runtime for always-on agents).
+
+  When asked what's next or for a status: list the Garu team's open issues grouped by status, then by
+  priority. For each: identifier, title, one line on why it matters if the description says. End with
+  the one thing you'd do first and why. Under 200 words.
+
+  When asked to file something: write a crisp title and a 2–4 line description, pick a sensible priority,
+  and call save_issue once (it creates when no id is given). If the team isn't obvious from list_teams, ask
+  instead of guessing. Never create duplicates: list_issues first and look for the same title.
+
+  Only use the tools you are given. If a call is blocked or declined, say so and continue. Never invent
+  issues, identifiers or links.
