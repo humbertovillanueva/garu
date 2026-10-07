@@ -209,21 +209,41 @@ program
   .command("ui")
   .option("-p, --port <n>", "port", "4000")
   .option("--host <host>", "bind address (localhost only by default)", "127.0.0.1")
+  .option("--up", "also run cron schedules for every Garufile found under this directory")
+  .option("--ask-timeout <minutes>", "deny approvals nobody answers after this long", "30")
+  .option("--notify <url>", "POST approval requests to this URL (ntfy.sh topic URLs work)")
   .option("--log-root <dir>", "where run logs live", DEFAULT_LOG_ROOT)
   .option("--inbox-root <dir>", "where approval requests live", DEFAULT_INBOX_ROOT)
   .option("--as <name>", "who approvals from the UI are recorded as", process.env["USER"] ?? "ui")
-  .description("Open the control room: agents, runs, inbox, cost — live, in your browser")
-  .action((opts: { port: string; host: string; logRoot: string; inboxRoot: string; as: string }) => {
+  .description("Open the control room: your agents, live, in the browser. Add --up to run their schedules too.")
+  .action(async (opts: { port: string; host: string; up?: boolean; askTimeout: string; notify?: string; logRoot: string; inboxRoot: string; as: string }) => {
+    loadDotEnv();
     const staticDir = uiStaticDir();
-    const { url } = startUiServer({
+    const t = (msg: string) => stderr.write(`${new Date().toISOString().slice(11, 19)} ${msg}\n`);
+    const srv = startUiServer({
       port: Number(opts.port),
       host: opts.host,
+      root: process.cwd(),
       logRoot: opts.logRoot,
       inboxRoot: opts.inboxRoot,
       staticDir,
       decider: `${opts.as} (ui)`,
+      up: Boolean(opts.up),
+      askTimeoutMs: Number(opts.askTimeout) * 60_000,
+      ...(opts.notify ? { notify: opts.notify } : {}),
+      log: t,
     });
-    stderr.write(`garu control room → ${url}\n${existsSync(join(staticDir, "index.html")) ? "" : "  (UI not built yet: run `npm run build` in the repo)\n"}Ctrl-C to stop.\n`);
+    stderr.write(`garu control room → ${srv.url}\n`);
+    if (!existsSync(join(staticDir, "index.html"))) stderr.write(`  UI not built yet: run \`npm run build\` in the repo\n`);
+    if (opts.up) stderr.write(`  running ${srv.agents} cron schedule(s) from Garufiles under ${process.cwd()}\n`);
+    stderr.write(`Ctrl-C to stop.\n`);
+    const shutdown = () => {
+      stderr.write(`\nstopping…\n`);
+      void srv.close().then(() => process.exit(0));
+    };
+    process.once("SIGINT", shutdown);
+    process.once("SIGTERM", shutdown);
+    await new Promise<never>(() => {});
   });
 
 program
