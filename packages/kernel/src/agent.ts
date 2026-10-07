@@ -27,6 +27,8 @@ export interface RunOptions {
   input?: string;
   /** Mirror of recorder events (pretty printing). */
   sink?: (e: Envelope) => void;
+  /** Clock, injectable for tests. */
+  now?: () => Date;
 }
 
 export interface RunResult {
@@ -77,24 +79,31 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
 
   try {
     await bus.connect(g.tools);
-    const known = bus.listTools().map((t) => t.qualified);
-    const tools: ModelTool[] = bus.listTools().map((t) => ({
+    // Tools the policy blocks unconditionally are never shown to the model: fewer wasted turns, less temptation.
+    const visible = bus.listTools().filter((t) => policy.staticDecision({ server: t.server, tool: t.name }) !== "block");
+    const hidden = bus.listTools().filter((t) => !visible.includes(t)).map((t) => t.qualified);
+    const known = visible.map((t) => t.qualified);
+    const tools: ModelTool[] = visible.map((t) => ({
       name: toModelToolName(t.qualified),
       description: t.description,
       inputSchema: t.inputSchema,
     }));
+    recorder.record({ type: "tools.offered", offered: known, hidden });
 
     const userText = opts.input ? `${g.prompt}\n\n---\nInput for this run:\n${opts.input}` : g.prompt;
     const messages: ModelMessage[] = [{ role: "user", content: [{ type: "text", text: userText }] }];
+    const now = (opts.now ?? (() => new Date()))();
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const system = [
+      SYSTEM_PREAMBLE,
+      `Agent: ${g.name}${g.description ? ` — ${g.description}` : ""}`,
+      `Trigger: ${trigger}`,
+      `Current time: ${now.toISOString()} (${tz}). Use this for any timestamp; never guess the date.`,
+    ].join("\n\n");
 
     while (turn < g.maxTurns) {
       turn++;
-      const res = await provider.complete({
-        model,
-        system: `${SYSTEM_PREAMBLE}\n\nAgent: ${g.name}${g.description ? ` — ${g.description}` : ""}`,
-        messages,
-        tools,
-      });
+      const res = await provider.complete({ model, system, messages, tools });
       const text = res.content.filter((b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text").map((b) => b.text).join("\n");
       let turnCost: number | undefined;
       if (res.usage) {

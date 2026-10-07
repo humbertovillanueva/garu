@@ -6,10 +6,10 @@
 
 ## What you get
 
-- **Agents that run 24/7** in their own sandbox, with their own memory and working directory.
+- **Agents that run 24/7.** Give an agent a cron trigger and `garu up` keeps it alive: one run at a time, every fire and skip logged, clean shutdown.
 - **Any model.** Claude, GPT, Gemini, local models. Swap per agent, or per task by cost.
 - **Any tool, via MCP.** An agent only ever touches the world through the Model Context Protocol.
-- **A policy kernel.** Every tool call is checked against rules you wrote: `allow`, `ask`, or `block`, by tool name and by argument. Nothing slips past it.
+- **A policy kernel.** Every tool call is checked against rules you wrote: `allow`, `ask`, or `block`, by tool name and by argument. Nothing slips past it, and tools that are always blocked are never even shown to the model.
 - **An approval inbox.** When a rule says `ask`, the agent pauses and you decide.
 - **A flight recorder.** Every call, decision, approval and model turn is written to an append-only log. Searchable. Diffable. Yours.
 - **A budget cap.** Each run's cost is estimated from real token counts and shown in the log; set `budget.maxCostUsd` and the run stops the moment it would cross it.
@@ -72,7 +72,12 @@ printf 'GEMINI_API_KEY=your-key\n' > .env
 npm run garu -- validate examples/hello/Garufile.yaml
 npm run garu -- run      examples/hello/Garufile.yaml   # approve the write when asked
 npm run garu -- log      hello                          # replay the flight recorder
+
+# always-on: keep an agent running on its cron schedule until Ctrl-C
+npm run garu -- up examples/heartbeat/Garufile.yaml --on-ask allow
 ```
+
+When nobody is watching (`garu up`), `ask` decisions are **denied** by default. Pass `--on-ask allow` only for agents you already trust, or tighten their policy so the routine actions are `allow` and only the scary ones `ask`.
 
 Providers today: `gemini/*` and `anthropic/*`. Local models via Ollama are next.
 

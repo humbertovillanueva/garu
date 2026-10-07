@@ -13,6 +13,7 @@ import { formatUsd } from "./pricing.js";
 
 export type GaruEvent =
   | { type: "run.start"; agent: string; model: string; trigger: string }
+  | { type: "tools.offered"; offered: string[]; hidden: string[] }
   | { type: "run.end"; status: "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded"; summary?: string; costUsd?: number; priced?: boolean }
   | { type: "model.turn"; turn: number; inputTokens?: number; outputTokens?: number; text?: string; costUsd?: number; totalCostUsd?: number }
   | { type: "budget.exceeded"; costUsd: number; maxCostUsd: number; pendingToolCalls: number }
@@ -105,6 +106,8 @@ export function formatEvent(env: Envelope): string {
   switch (e.type) {
     case "run.start":
       return `${t} ▶ run ${env.runId} (${e.agent}, ${e.model}, trigger=${e.trigger})`;
+    case "tools.offered":
+      return `${t}   tools: ${e.offered.length} offered${e.hidden.length ? `, ${e.hidden.length} hidden (always blocked: ${e.hidden.join(", ")})` : ""}`;
     case "run.end": {
       const cost = e.costUsd !== undefined ? ` · ${formatUsd(e.costUsd)}${e.priced === false ? " (unpriced model)" : ""}` : "";
       return `${t} ■ run ${e.status}${cost}${e.summary ? ` — ${e.summary}` : ""}`;

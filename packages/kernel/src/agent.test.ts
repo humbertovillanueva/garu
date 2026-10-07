@@ -49,21 +49,26 @@ describe("runAgent", () => {
       logRoot,
       provider,
       approver: async () => ({ approved: false, by: "test-human" }),
+      now: () => new Date("2026-10-07T05:00:00.000Z"),
     });
 
     expect(res.status).toBe("ok");
+    expect(provider.calls[0]?.system).toContain("Current time: 2026-10-07T05:00:00.000Z");
+    expect(provider.calls[0]?.system).toContain("Trigger: manual");
     expect(res.output).toBe("done");
     expect(res.turns).toBe(2);
 
-    // the model saw the tools under provider-safe names
-    expect(provider.calls[0]?.tools.map((t) => t.name).sort()).toEqual(["echo__add", "echo__danger", "echo__echo", "echo__fail"]);
+    // the model saw the tools under provider-safe names — minus echo.danger, which policy blocks unconditionally
+    expect(provider.calls[0]?.tools.map((t) => t.name).sort()).toEqual(["echo__add", "echo__echo", "echo__fail"]);
+    const offered = readRun(res.logPath).find((e) => e.event.type === "tools.offered")!.event;
+    expect(offered).toMatchObject({ type: "tools.offered", hidden: ["echo.danger"] });
 
     // second call carried the tool results back
     const second = provider.calls[1]!;
     const results = second.messages.at(-1)!.content;
     expect(results).toEqual([
       { type: "tool_result", toolUseId: "t1", content: "hello" },
-      { type: "tool_result", toolUseId: "t2", isError: true, content: "BLOCKED by policy: no deleting" },
+      { type: "tool_result", toolUseId: "t2", isError: true, content: "unknown tool echo__danger" },
       { type: "tool_result", toolUseId: "t3", isError: true, content: expect.stringMatching(/^DENIED by test-human/) },
     ]);
 

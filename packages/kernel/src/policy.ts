@@ -105,6 +105,21 @@ export class PolicyEngine {
     return { ...DEFAULT_DECISION, reason: `no rule matched ${name}; default is ask` };
   }
 
+  /**
+   * What would happen to this tool regardless of arguments?
+   * Returns the action if the first matching rule has no `when` conditions
+   * (so every call resolves the same way), or undefined if the outcome
+   * depends on arguments. Used to hide always-blocked tools from the model.
+   */
+  staticDecision(req: Pick<ToolCallRequest, "server" | "tool">): PolicyAction | undefined {
+    const name = qualifiedName(req);
+    for (const rule of this.rules) {
+      if (!minimatch(name, rule.tool, { nocase: false })) continue;
+      return rule.when ? undefined : rule.action;
+    }
+    return DEFAULT_DECISION.action;
+  }
+
   /** Static lint: rules after a catch-all are unreachable. */
   unreachableRules(): number[] {
     const out: number[] = [];

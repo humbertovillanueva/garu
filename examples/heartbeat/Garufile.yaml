@@ -1,0 +1,46 @@
+# An always-on agent. Every 2 minutes it checks the workspace and appends one
+# line to heartbeat.log saying what's there. Tiny on purpose: it exists to show
+# `garu up` keeping an agent alive on a schedule, with every run in the log.
+#
+#   garu up examples/heartbeat/Garufile.yaml --on-ask allow
+#   garu log heartbeat
+#
+# Note on --on-ask: when nobody is watching, `ask` decisions are denied by
+# default. This agent's only write is `ask`, so pass --on-ask allow to let it
+# write, or change the rule to `allow` once you trust it.
+
+name: heartbeat
+description: Appends a one-line status to heartbeat.log on a schedule.
+model: gemini/gemini-3.5-flash-lite
+
+triggers:
+  - cron: "*/2 * * * *"
+
+budget:
+  maxCostUsd: 0.01          # per run; ~700 runs/day at this cadence would still be < $7 at list price
+
+tools:
+  - name: fs
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "./examples/heartbeat/workspace"]
+
+policy:
+  - tool: "fs.list_*"
+    action: allow
+  - tool: "fs.read_*"
+    action: allow
+  - tool: "fs.write_file"
+    action: ask
+    when:
+      path: { matches: "heartbeat\\.log$" }
+    reason: appending to heartbeat.log
+  - tool: "*"
+    action: block
+
+maxTurns: 8
+
+prompt: |
+  Look at the files in the allowed directory. If heartbeat.log exists, read it.
+  Then write heartbeat.log back with all its previous lines plus ONE new line at the end
+  in the form "<ISO timestamp> — <N> file(s): <comma-separated names>".
+  Do nothing else. Reply with the line you added.

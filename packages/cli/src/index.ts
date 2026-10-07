@@ -7,6 +7,8 @@ import { join, resolve } from "node:path";
 import {
   GarufileError,
   PolicyEngine,
+  Scheduler,
+  assertValidCron,
   formatEvent,
   formatUsd,
   parseGarufile,
@@ -16,6 +18,7 @@ import {
   type Approver,
   type Envelope,
   type Garufile,
+  type SchedulerEvent,
 } from "@garu/kernel";
 
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
@@ -46,6 +49,16 @@ program
     const last = g.policy.at(-1);
     if (!last || last.tool !== "*") {
       stdout.write(`  ℹ no explicit catch-all rule; unmatched tools default to ask\n`);
+    }
+    for (const t of g.triggers) {
+      if (t.cron) {
+        try {
+          assertValidCron(t.cron);
+          stdout.write(`  trigger: cron "${t.cron}"\n`);
+        } catch (e) {
+          fail((e as Error).message);
+        }
+      }
     }
     const price = g.budget.pricing ?? priceFor(g.model);
     if (g.budget.maxCostUsd !== undefined) {
@@ -82,6 +95,52 @@ program
       `\nrun ${res.runId} → ${res.status} in ${res.turns} turn(s), ${res.inputTokens + res.outputTokens} tokens, ${cost}. log: ${res.logPath}\n`,
     );
     process.exitCode = res.status === "ok" ? 0 : 1;
+  });
+
+program
+  .command("up")
+  .argument("<files...>", "Garufiles to keep running on their cron triggers")
+  .option("--on-ask <mode>", "what to do with `ask` decisions when nobody is watching: deny | allow | terminal", "deny")
+  .option("--log-root <dir>", "where run logs go", DEFAULT_LOG_ROOT)
+  .option("-q, --quiet", "only print scheduler events, not every run step")
+  .option("--once", "fire every cron agent once right now, then exit (for testing)")
+  .description("Run agents on their schedules until stopped (Ctrl-C)")
+  .action(async (files: string[], opts: { onAsk: string; logRoot: string; quiet?: boolean; once?: boolean }) => {
+    loadDotEnv();
+    const agents = files.map((f) => ({ source: f, garufile: loadGarufile(f) }));
+    const approver =
+      opts.onAsk === "allow" ? autoApprove : opts.onAsk === "terminal" ? terminalApprover : unattendedDeny;
+    if (!["deny", "allow", "terminal"].includes(opts.onAsk)) fail(`--on-ask must be deny, allow or terminal (got "${opts.onAsk}")`);
+
+    const scheduler = new Scheduler({
+      onEvent: printSchedulerEvent,
+      runner: (a, trigger) =>
+        runAgent({
+          garufile: a.garufile,
+          logRoot: opts.logRoot,
+          approver,
+          trigger,
+          ...(opts.quiet ? {} : { sink: (e) => stderr.write(`  [${a.garufile.name}] ${formatEvent(e)}\n`) }),
+        }),
+    });
+
+    const n = scheduler.start(agents);
+    if (n === 0) fail("none of these Garufiles has a cron trigger; use `garu run` for one-off agents");
+    stderr.write(`garu up: ${n} schedule(s) across ${agents.length} agent(s); ask → ${opts.onAsk}. Ctrl-C to stop.\n`);
+
+    if (opts.once) {
+      for (const a of agents) for (const t of a.garufile.triggers) if (t.cron) await scheduler.fire(a, t.cron);
+      await scheduler.stop();
+      return;
+    }
+
+    const shutdown = (sig: string) => {
+      stderr.write(`\n${sig}: finishing in-flight runs…\n`);
+      void scheduler.stop().then(() => process.exit(0));
+    };
+    process.once("SIGINT", () => shutdown("SIGINT"));
+    process.once("SIGTERM", () => shutdown("SIGTERM"));
+    await new Promise<never>(() => {}); // run until a signal
   });
 
 program
@@ -137,6 +196,38 @@ function loadDotEnv(): void {
 }
 
 const autoApprove: Approver = async () => ({ approved: true, by: "--yes" });
+/** `garu up` default: nobody is at the keyboard, so an `ask` is a no. The model is told and moves on. */
+const unattendedDeny: Approver = async () => ({ approved: false, by: "unattended (garu up --on-ask deny)" });
+
+function printSchedulerEvent(e: SchedulerEvent): void {
+  const t = new Date().toISOString().slice(11, 19);
+  switch (e.type) {
+    case "scheduled":
+      stderr.write(`${t} ⏰ ${e.agent}: "${e.cron}" next at ${e.nextRun?.toISOString() ?? "?"}\n`);
+      break;
+    case "fire":
+      stderr.write(`${t} ▶ ${e.agent} (cron ${e.cron})\n`);
+      break;
+    case "skip.overlap":
+      stderr.write(`${t} ↷ ${e.agent}: previous run still going, skipped this tick\n`);
+      break;
+    case "run.done": {
+      const r = e.result;
+      const cost = r.costUsd === null ? "unpriced" : formatUsd(r.costUsd);
+      stderr.write(`${t} ■ ${e.agent}: ${r.status} in ${r.turns} turn(s), ${cost} — ${r.logPath}\n`);
+      break;
+    }
+    case "run.failed":
+      stderr.write(`${t} ✖ ${e.agent}: ${e.error}\n`);
+      break;
+    case "stopping":
+      if (e.inFlight > 0) stderr.write(`${t} waiting for ${e.inFlight} run(s) to finish…\n`);
+      break;
+    case "stopped":
+      stderr.write(`${t} garu up: stopped\n`);
+      break;
+  }
+}
 const autoDeny: Approver = async () => ({ approved: false, by: "--deny" });
 
 const terminalApprover: Approver = async (req, decision) => {

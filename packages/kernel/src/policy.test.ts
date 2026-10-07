@@ -80,6 +80,21 @@ describe("PolicyEngine.decide", () => {
   });
 });
 
+describe("PolicyEngine.staticDecision", () => {
+  it("resolves tools whose fate never depends on arguments", () => {
+    expect(engine.staticDecision({ server: "gmail", tool: "list_messages" })).toBe("allow");
+    expect(engine.staticDecision({ server: "gmail", tool: "delete_thread" })).toBe("block");
+    expect(engine.staticDecision({ server: "other", tool: "x" })).toBe("ask"); // catch-all
+  });
+  it("is undefined when the first matching rule has a `when`", () => {
+    expect(engine.staticDecision({ server: "gmail", tool: "send" })).toBeUndefined();
+    expect(engine.staticDecision({ server: "fs", tool: "read_file" })).toBeUndefined();
+  });
+  it("defaults to ask with no rules", () => {
+    expect(new PolicyEngine([]).staticDecision({ server: "a", tool: "b" })).toBe("ask");
+  });
+});
+
 describe("PolicyEngine.unreachableRules", () => {
   it("flags rules after a bare catch-all", () => {
     const e = new PolicyEngine([
