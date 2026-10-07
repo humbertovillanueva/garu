@@ -9,9 +9,13 @@
  */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport, getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js";
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
-import type { McpServerSpec, Sandbox } from "./garufile.js";
+import { resolve } from "node:path";
+import { isRemoteServer, type McpServerSpec, type Sandbox } from "./garufile.js";
+import { FileOAuthProvider, NeedsSignInError } from "./oauth.js";
 import { dockerArgs, explainDockerError } from "./sandbox.js";
 import type { Decision, PolicyEngine, ToolCallRequest } from "./policy.js";
 import type { Recorder } from "./recorder.js";
@@ -52,12 +56,14 @@ export interface BusOptions {
   sandbox?: Sandbox;
   /** Agent name, used to label containers. */
   agent?: string;
+  /** Where OAuth sign-ins for remote servers are kept (default .garu/auth). */
+  authRoot?: string;
 }
 
 interface Connected {
   spec: McpServerSpec;
   client: Client;
-  transport: StdioClientTransport;
+  transport: StdioClientTransport | StreamableHTTPClientTransport;
   containerName?: string;
 }
 
@@ -71,6 +77,23 @@ export class ToolBus {
   async connect(rawSpecs: readonly McpServerSpec[]): Promise<void> {
     const specs = rawSpecs.map((s) => expandSpec(s, process.env));
     for (const spec of specs) {
+      if (isRemoteServer(spec)) {
+        const client = new Client({ name: "garu", version: "0.1.0" });
+        const transport = remoteTransport(spec, this.opts.authRoot ?? resolve(process.cwd(), ".garu", "auth"));
+        try {
+          // The SDK's own Transport type trips exactOptionalPropertyTypes on sessionId; the object is fine.
+          await client.connect(transport as unknown as Parameters<Client["connect"]>[0]);
+        } catch (e) {
+          if (e instanceof NeedsSignInError) throw e;
+          const msg = (e as Error).message;
+          const unauthorized = e instanceof UnauthorizedError || /\b401\b|unauthori[sz]ed/i.test(msg);
+          if (unauthorized && spec.auth === "oauth") throw new NeedsSignInError(spec.name, spec.url);
+          if (unauthorized) throw new Error(`tool server "${spec.name}" at ${spec.url} rejected the credentials (401). Check the headers in its Garufile entry and the ${"$"}{VAR} values in .env, or set auth: oauth and run garu auth.`);
+          throw new Error(`tool server "${spec.name}" at ${spec.url} did not answer: ${msg || (e as Error).name || "connection failed"}`);
+        }
+        this.servers.set(spec.name, { spec, client, transport });
+        continue;
+      }
       const sb = this.opts.sandbox;
       const wrapped = sb ? dockerArgs(spec, sb, this.opts.agent ?? "agent") : undefined;
       const transport = new StdioClientTransport({
@@ -204,11 +227,39 @@ export function expandSpec(spec: McpServerSpec, env: NodeJS.ProcessEnv): McpServ
       if (v === undefined || v === "") throw new Error(`tool server "${spec.name}": ${where} needs $\{${name}\} but it is not set (add it to .env)`);
       return v;
     });
+  if (isRemoteServer(spec)) {
+    return {
+      ...spec,
+      url: expand(spec.url, "the url"),
+      headers: Object.fromEntries(Object.entries(spec.headers).map(([k, v]) => [k, expand(v, `header ${k}`)])),
+    };
+  }
   return {
     ...spec,
     args: spec.args.map((a) => expand(a, "an argument")),
     env: Object.fromEntries(Object.entries(spec.env).map(([k, v]) => [k, expand(v, `env ${k}`)])),
   };
+}
+
+/**
+ * Build the Streamable HTTP transport for a remote server. During a run the
+ * provider has no way to open a browser, so a server that demands sign-in
+ * fails with NeedsSignInError and the fix is one command: garu auth.
+ */
+export function remoteTransport(
+  spec: Extract<McpServerSpec, { url: string }>,
+  authRoot: string,
+  oauth?: { redirectUrl: string; onAuthorize: (url: URL) => void | Promise<void> },
+): StreamableHTTPClientTransport {
+  const headers = Object.keys(spec.headers).length ? { headers: spec.headers } : {};
+  const authProvider =
+    spec.auth === "oauth"
+      ? new FileOAuthProvider({ root: authRoot, server: spec.name, url: spec.url, ...(oauth ? { redirectUrl: oauth.redirectUrl, onAuthorize: oauth.onAuthorize } : {}) })
+      : undefined;
+  return new StreamableHTTPClientTransport(new URL(spec.url), {
+    ...(Object.keys(headers).length ? { requestInit: headers } : {}),
+    ...(authProvider ? { authProvider } : {}),
+  });
 }
 
 function dockerRmForce(name: string): Promise<void> {

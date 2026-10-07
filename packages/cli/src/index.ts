@@ -1,13 +1,21 @@
 #!/usr/bin/env node
 import { Command } from "commander";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
+import { createServer as createHttpServer } from "node:http";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout, stderr } from "node:process";
 import { join, relative, resolve } from "node:path";
 import {
+  AUTH_CALLBACK_PORT,
+  AUTH_REDIRECT_URL,
+  FileOAuthProvider,
+  expandSpec,
+  isRemoteServer,
+  remoteTransport,
   DEFAULT_SANDBOX_IMAGE,
   GarufileError,
   GrantStore,
@@ -61,6 +69,11 @@ program
     const engine = new PolicyEngine(g.policy);
     const dead = engine.unreachableRules();
     stdout.write(`✔ ${file}: agent "${g.name}", model ${g.model}, ${g.tools.length} tool server(s), ${g.policy.length} policy rule(s)\n`);
+    for (const t of g.tools) {
+      if (!isRemoteServer(t)) continue;
+      const signedIn = t.auth === "oauth" ? new FileOAuthProvider({ root: resolve(process.cwd(), ".garu", "auth"), server: t.name, url: t.url }).signedIn() : null;
+      stdout.write(`  remote: ${t.name} → ${t.url}${t.auth === "oauth" ? (signedIn ? " · signed in" : ` · ✖ not signed in — run: garu auth ${file} ${t.name}`) : Object.keys(t.headers).length ? " · headers from .env" : ""}\n`);
+    }
     for (const i of dead) {
       stdout.write(`  ⚠ policy rule #${i + 1} (${g.policy[i]!.tool}) is unreachable: an earlier rule matches everything\n`);
     }
@@ -80,8 +93,8 @@ program
     }
     if (g.sandbox) {
       stdout.write(`  sandbox: image ${g.sandbox.image}, network ${g.sandbox.network}, ${g.sandbox.memory} / ${g.sandbox.cpus} cpu${g.sandbox.workspace ? `, workspace ${g.sandbox.workspace}` : ""}\n`);
-    } else if (g.tools.length > 0) {
-      stdout.write(`  ⚠ no sandbox: tool servers run directly on this machine. Add a \`sandbox:\` block to containerise them.\n`);
+    } else if (g.tools.some((t) => !isRemoteServer(t))) {
+      stdout.write(`  ⚠ no sandbox: local tool servers run directly on this machine. Add a \`sandbox:\` block to containerise them.\n`);
     }
     const price = g.budget.pricing ?? priceFor(g.model);
     if (g.budget.maxCostUsd !== undefined) {
@@ -514,6 +527,87 @@ program
       stdout.write(`  Edit ${file} any time; npm run garu -- validate ${file} checks it.\n`);
     } finally {
       rl?.close();
+    }
+  });
+
+program
+  .command("auth")
+  .argument("<file>", "Garufile path")
+  .argument("<server>", "name of a remote tool server with `auth: oauth`")
+  .option("--forget", "remove the saved sign-in for this server")
+  .option("--auth-root <dir>", "where sign-ins are kept", resolve(process.cwd(), ".garu", "auth"))
+  .description("Sign in to a remote MCP server in your browser, once. Runs then use the saved tokens.")
+  .action(async (file: string, serverName: string, opts: { forget?: boolean; authRoot: string }) => {
+    loadDotEnv();
+    const g = loadGarufile(file);
+    const raw = g.tools.find((t) => t.name === serverName);
+    if (!raw) fail(`no tool server "${serverName}" in ${file} (have: ${g.tools.map((t) => t.name).join(", ") || "none"})`);
+    const spec = expandSpec(raw, process.env);
+    if (!isRemoteServer(spec)) fail(`"${serverName}" is a local server (command: ${raw && "command" in raw ? raw.command : "?"}); only remote servers (url:) sign in`);
+    if (spec.auth !== "oauth") fail(`"${serverName}" has auth: ${spec.auth}. Set \`auth: oauth\` on it in ${file} first.`);
+
+    const provider = new FileOAuthProvider({ root: opts.authRoot, server: spec.name, url: spec.url });
+    if (opts.forget) {
+      provider.forget();
+      stdout.write(`forgot the sign-in for ${spec.name} (${spec.url})\n`);
+      return;
+    }
+
+    // Catch the browser's return on the fixed loopback port.
+    let gotCode!: (code: string) => void;
+    let gotError!: (e: Error) => void;
+    const code = new Promise<string>((res, rej) => { gotCode = res; gotError = rej; });
+    const listener = createHttpServer((req, res) => {
+      const u = new URL(req.url ?? "/", AUTH_REDIRECT_URL);
+      if (u.pathname !== "/callback") { res.writeHead(404); res.end(); return; }
+      const err = u.searchParams.get("error");
+      const c = u.searchParams.get("code");
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(`<!doctype html><meta charset="utf-8"><title>Garu</title><body style="font-family:system-ui;background:#0a0c0f;color:#e6eaf0;display:grid;place-items:center;height:100vh;margin:0"><div style="text-align:center"><div style="font-size:22px;font-weight:600">${err ? "Sign-in failed" : "Signed in"}</div><div style="color:#aeb6c2;margin-top:8px">${err ? `${err}: ${u.searchParams.get("error_description") ?? ""}` : `${spec.name} can now be used by your agents. You can close this tab.`}</div></div>`);
+      if (err || !c) gotError(new Error(`authorization server answered: ${err ?? "no code"} ${u.searchParams.get("error_description") ?? ""}`.trim()));
+      else gotCode(c);
+    });
+    await new Promise<void>((res, rej) => {
+      listener.once("error", (e: NodeJS.ErrnoException) => rej(new Error(e.code === "EADDRINUSE" ? `port ${AUTH_CALLBACK_PORT} is in use. Stop whatever holds it, or set GARU_AUTH_PORT to another port (the same one every time).` : e.message)));
+      listener.listen(AUTH_CALLBACK_PORT, "127.0.0.1", () => res());
+    });
+
+    try {
+      const openBrowser = (url: URL) => {
+        stdout.write(`\nOpening your browser to sign in to ${spec.name}. If it doesn't open, visit:\n  ${url.href}\n\n`);
+        const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
+        const args = process.platform === "win32" ? ["/c", "start", "", url.href] : [url.href];
+        try { spawn(cmd, args, { stdio: "ignore", detached: true }).on("error", () => {}).unref(); } catch { /* printed above */ }
+      };
+      const transport = remoteTransport(spec, opts.authRoot, { redirectUrl: AUTH_REDIRECT_URL, onAuthorize: openBrowser });
+      const client = new Client({ name: "garu", version: "0.1.0" });
+      let needsCode = false;
+      try {
+        await client.connect(transport as unknown as Parameters<Client["connect"]>[0]);
+      } catch (e) {
+        if ((e as Error).name === "UnauthorizedError" || /unauthori[sz]ed|401/i.test((e as Error).message)) needsCode = true;
+        else throw e;
+      }
+      if (needsCode) {
+        stdout.write(`waiting for the sign-in to finish (5 minutes)…\n`);
+        const c = await Promise.race([code, new Promise<string>((_, rej) => setTimeout(() => rej(new Error("timed out waiting for the browser")), 5 * 60_000))]);
+        await transport.finishAuth(c);
+        await transport.close().catch(() => {});
+        // Prove it: connect again with the saved tokens and list the tools.
+        const t2 = remoteTransport(spec, opts.authRoot);
+        const c2 = new Client({ name: "garu", version: "0.1.0" });
+        await c2.connect(t2 as unknown as Parameters<Client["connect"]>[0]);
+        const { tools } = await c2.listTools();
+        await c2.close();
+        stdout.write(`✔ signed in to ${spec.name} — ${tools.length} tool(s): ${tools.slice(0, 8).map((t) => t.name).join(", ")}${tools.length > 8 ? ", …" : ""}\n`);
+      } else {
+        const { tools } = await client.listTools();
+        await client.close();
+        stdout.write(`✔ already signed in to ${spec.name} — ${tools.length} tool(s)\n`);
+      }
+      stdout.write(`  tokens: ${opts.authRoot}/ (shared by every agent that uses ${spec.url})\n`);
+    } finally {
+      listener.close();
     }
   });
 

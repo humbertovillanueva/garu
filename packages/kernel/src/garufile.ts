@@ -43,16 +43,44 @@ export const PolicyRule = z
   .strict();
 export type PolicyRule = z.infer<typeof PolicyRule>;
 
-export const McpServerSpec = z
+const serverName = z.string().regex(/^[a-z][a-z0-9_-]*$/, "server name: lowercase, digits, - or _");
+
+/** A local MCP server: a process Garu starts (and can sandbox). */
+export const StdioServerSpec = z
   .object({
-    name: z.string().regex(/^[a-z][a-z0-9_-]*$/, "server name: lowercase, digits, - or _"),
+    name: serverName,
     command: z.string().min(1),
     args: z.array(z.string()).default([]),
     env: z.record(z.string(), z.string()).default({}),
     cwd: z.string().optional(),
   })
   .strict();
+export type StdioServerSpec = z.infer<typeof StdioServerSpec>;
+
+/**
+ * A remote MCP server over Streamable HTTP: a URL Garu connects to. Static
+ * headers carry API keys from .env via ${VAR}; `auth: oauth` uses tokens from
+ * `garu auth`. Nothing runs locally, so the sandbox does not apply.
+ */
+export const HttpServerSpec = z
+  .object({
+    name: serverName,
+    url: z
+      .string()
+      .url()
+      .refine((u) => /^https:\/\//.test(u) || /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/.test(u), "remote server url must be https:// (http:// only for localhost)"),
+    headers: z.record(z.string(), z.string()).default({}),
+    auth: z.enum(["none", "oauth"]).default("none"),
+  })
+  .strict();
+export type HttpServerSpec = z.infer<typeof HttpServerSpec>;
+
+export const McpServerSpec = z.union([StdioServerSpec, HttpServerSpec]);
 export type McpServerSpec = z.infer<typeof McpServerSpec>;
+
+export function isRemoteServer(spec: McpServerSpec): spec is HttpServerSpec {
+  return "url" in spec;
+}
 
 export const Trigger = z
   .object({

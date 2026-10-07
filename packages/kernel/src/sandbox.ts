@@ -8,7 +8,7 @@
  */
 import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
-import type { McpServerSpec, Sandbox } from "./garufile.js";
+import type { StdioServerSpec, Sandbox } from "./garufile.js";
 
 export const DEFAULT_SANDBOX_IMAGE = "garu-sandbox";
 export const WORKSPACE_MOUNT = "/workspace";
@@ -21,7 +21,7 @@ export interface SandboxedCommand {
 }
 
 /** Build the `docker run` invocation for one tool server. Pure: easy to test, no Docker needed. */
-export function dockerArgs(spec: McpServerSpec, sandbox: Sandbox, agent: string, cwd = process.cwd()): SandboxedCommand {
+export function dockerArgs(spec: StdioServerSpec, sandbox: Sandbox, agent: string, cwd = process.cwd()): SandboxedCommand {
   const containerName = `garu-${safe(agent)}-${safe(spec.name)}-${randomUUID().slice(0, 8)}`;
   const args: string[] = [
     "run",

@@ -124,6 +124,32 @@ Rules are evaluated top to bottom; the first match wins; nothing matching means 
 
 Other fields: `sandbox:` (image, network, workspace, memory, cpus), `modelOptions:` (provider knobs, e.g. Ollama `think: false`), `maxTurns:`.
 
+### Remote tool servers
+
+A tool server can be a URL instead of a command. Garu speaks MCP's Streamable HTTP transport, so any hosted server works: GitHub's, Linear's, Notion's, your own. API keys come from `.env`; servers that want a login use OAuth, which you do once in a browser with `garu auth`.
+
+```yaml
+tools:
+  - name: github
+    url: https://api.githubcopilot.com/mcp/
+    headers: { Authorization: "Bearer ${GITHUB_TOKEN}" }   # a fine-grained PAT, kept in .env
+  - name: linear
+    url: https://mcp.linear.app/mcp
+    auth: oauth                                             # garu auth agents/x/Garufile.yaml linear
+
+policy:
+  - tool: "github.get_me"
+    action: allow
+  - tool: "github.get_file_contents"
+    action: allow
+  - tool: "github.create_issue"
+    action: ask
+  - tool: "*"
+    action: block        # GitHub's server offers 46 tools; the model only ever sees these three
+```
+
+Tokens live in `.garu/auth/` (gitignored), one file per server URL, refreshed automatically; an unattended run that would need a browser stops with the exact `garu auth` command to run instead. Remote servers run on someone else's machine, so the sandbox block doesn't apply to them — the policy is the whole boundary, which is why `block` by default matters.
+
 <p align="center"><img src="docs/screenshots/agent.png" alt="An agent's page: its identity, permissions, a conversation thread, and the brief it wrote" width="900"></p>
 
 ## Approvals that get smarter
@@ -150,6 +176,7 @@ The complaint practitioners make about always-on agents is that *their* throughp
 | `garu grants [list\|revoke <id>]` | Temporary allows. |
 | `garu log [agent] [run]` | Replay a flight recorder. |
 | `garu validate <Garufile>` | Lint policy, cron, budget, sandbox. |
+| `garu auth <Garufile> <server>` | Sign in to a remote tool server once, in your browser. `--forget` removes it. |
 | `garu sandbox build` | Build the default Docker image for tool servers. |
 
 ## Where Garu fits
@@ -162,11 +189,11 @@ Garu is the layer underneath all of that: *systemd for your agents*. It runs on 
 
 Garu is a week old and already runs the author's own agents every day. Expect sharp edges. What's next, in order:
 
-1. **Remote MCP servers** (Streamable HTTP + OAuth) so agents can use the 10,000+ servers in the MCP registry: Gmail, Calendar, GitHub with write access.
-2. **`garu install <url>`**: a registry of Garufiles you can install, fork and publish.
-3. **Phone:** installable control room (PWA) with push, reachable over Tailscale.
-4. **Hosted Garu:** agents that keep running when your laptop is closed, tap-to-approve from anywhere, EU-friendly by default.
-5. Delegation between agents over A2A; transparent, editable memory.
+1. **`garu install <url>`**: a registry of Garufiles you can install, fork and publish.
+2. **Hosted Garu:** agents that keep running when your laptop is closed, tap-to-approve from anywhere, EU-friendly by default.
+3. Delegation between agents over A2A; transparent, editable memory.
+
+Done since the first commit: remote MCP servers (Streamable HTTP + OAuth), the phone app over Tailscale, `garu new`, decline-with-a-note.
 
 ## Layout
 
