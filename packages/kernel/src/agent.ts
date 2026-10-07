@@ -57,10 +57,16 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
 
   const recorder = new Recorder({ root: opts.logRoot, agent: g.name, ...(opts.sink ? { sink: opts.sink } : {}) });
   const policy = new PolicyEngine(g.policy);
-  const bus = new ToolBus({ policy, recorder, approver: opts.approver });
+  const bus = new ToolBus({ policy, recorder, approver: opts.approver, agent: g.name, ...(g.sandbox ? { sandbox: g.sandbox } : {}) });
 
   const trigger = opts.trigger ?? "manual";
-  recorder.record({ type: "run.start", agent: g.name, model: g.model, trigger });
+  recorder.record({
+    type: "run.start",
+    agent: g.name,
+    model: g.model,
+    trigger,
+    ...(g.sandbox ? { sandbox: { image: g.sandbox.image, network: g.sandbox.network } } : {}),
+  });
 
   let status: RunResult["status"] = "ok";
   let output = "";

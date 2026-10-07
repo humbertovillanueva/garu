@@ -12,7 +12,7 @@ import type { Decision, ToolCallRequest } from "./policy.js";
 import { formatUsd } from "./pricing.js";
 
 export type GaruEvent =
-  | { type: "run.start"; agent: string; model: string; trigger: string }
+  | { type: "run.start"; agent: string; model: string; trigger: string; sandbox?: { image: string; network: string } }
   | { type: "tools.offered"; offered: string[]; hidden: string[] }
   | { type: "run.end"; status: "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded"; summary?: string; costUsd?: number; priced?: boolean }
   | { type: "model.turn"; turn: number; inputTokens?: number; outputTokens?: number; text?: string; costUsd?: number; totalCostUsd?: number }
@@ -105,7 +105,7 @@ export function formatEvent(env: Envelope): string {
   const t = env.ts.slice(11, 19);
   switch (e.type) {
     case "run.start":
-      return `${t} ▶ run ${env.runId} (${e.agent}, ${e.model}, trigger=${e.trigger})`;
+      return `${t} ▶ run ${env.runId} (${e.agent}, ${e.model}, trigger=${e.trigger}${e.sandbox ? `, sandbox=${e.sandbox.image}/${e.sandbox.network}` : ""})`;
     case "tools.offered":
       return `${t}   tools: ${e.offered.length} offered${e.hidden.length ? `, ${e.hidden.length} hidden (always blocked: ${e.hidden.join(", ")})` : ""}`;
     case "run.end": {

@@ -9,6 +9,7 @@
 - **Agents that run 24/7.** Give an agent a cron trigger and `garu up` keeps it alive: one run at a time, every fire and skip logged, clean shutdown.
 - **Any model.** Claude, GPT, Gemini, local models. Swap per agent, or per task by cost.
 - **Any tool, via MCP.** An agent only ever touches the world through the Model Context Protocol.
+- **A sandbox.** Add a `sandbox:` block and every tool server runs in its own Docker container: no network, only the agent's workspace mounted, memory and CPU capped, read-only root, no capabilities, destroyed after the run.
 - **A policy kernel.** Every tool call is checked against rules you wrote: `allow`, `ask`, or `block`, by tool name and by argument. Nothing slips past it, and tools that are always blocked are never even shown to the model.
 - **An approval inbox.** When a rule says `ask`, the agent pauses. `garu inbox` shows what's waiting, `garu approve <id>` lets it through, and it resumes. Unanswered requests expire as a deny. Add `--notify https://ntfy.sh/<your-topic>` and the request lands on your phone.
 - **A flight recorder.** Every call, decision, approval and model turn is written to an append-only log. Searchable. Diffable. Yours.
@@ -56,8 +57,9 @@ prompt: |
 
 ```
 packages/kernel   # Garufile schema, policy engine, flight recorder, MCP tool bus, agent loop
-packages/cli      # garu run · up · inbox · approve · deny · log · validate
+packages/cli      # garu run · up · inbox · approve · deny · log · validate · sandbox build
 examples/         # Garufiles you can run today
+docker/sandbox    # the default sandbox image
 ```
 
 ## Try it (free)
@@ -82,6 +84,13 @@ npm run garu -- approve <id>       # or: deny <id>
 ```
 
 Unattended `ask` decisions go to the inbox and expire as a deny after 30 minutes (`--ask-timeout`). Want them on your phone? Install the free [ntfy](https://ntfy.sh) app, pick a topic, and run `garu up … --notify https://ntfy.sh/<topic>`. `--on-ask allow|deny|terminal` are there for agents you fully trust, don't trust at all, or are watching live.
+
+To run the same agent with its tools locked in a container (needs Docker):
+
+```sh
+npm run garu -- sandbox build                              # once: builds the garu-sandbox image
+npm run garu -- run examples/hello-sandboxed/Garufile.yaml
+```
 
 Providers today: `gemini/*`, `anthropic/*`, and `ollama/*` for local models. For a fully local, $0 run:
 

@@ -79,6 +79,30 @@ export const Budget = z
   .strict();
 export type Budget = z.infer<typeof Budget>;
 
+export const SandboxMount = z
+  .object({
+    host: z.string().min(1),
+    container: z.string().regex(/^\//, "container path must be absolute"),
+    readonly: z.boolean().default(false),
+  })
+  .strict();
+
+/** Run every tool server of this agent inside its own Docker container. */
+export const Sandbox = z
+  .object({
+    /** Image with the tool servers installed. `garu sandbox build` makes the default one. */
+    image: z.string().min(1).default("garu-sandbox"),
+    /** "none" = no network at all (default). "bridge" = normal outbound internet. */
+    network: z.enum(["none", "bridge"]).default("none"),
+    /** Host directory mounted read-write at /workspace inside the container. */
+    workspace: z.string().min(1).optional(),
+    mounts: z.array(SandboxMount).default([]),
+    memory: z.string().regex(/^\d+[kmg]$/i, 'memory like "512m" or "2g"').default("512m"),
+    cpus: z.number().positive().default(1),
+  })
+  .strict();
+export type Sandbox = z.infer<typeof Sandbox>;
+
 export const Garufile = z
   .object({
     name: z.string().regex(/^[a-z][a-z0-9-]*$/, "agent name: lowercase, digits, hyphens"),
@@ -95,6 +119,8 @@ export const Garufile = z
     budget: Budget.default({}),
     /** Provider-specific knobs passed through untouched (e.g. Ollama: { think: false, temperature: 0.2 }). */
     modelOptions: z.record(z.string(), z.unknown()).default({}),
+    /** Omit to run tool servers directly on the host. Set (even `{}`) to containerise them. */
+    sandbox: Sandbox.optional(),
   })
   .strict();
 export type Garufile = z.infer<typeof Garufile>;

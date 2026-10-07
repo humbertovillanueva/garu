@@ -10,7 +10,9 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport, getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { randomUUID } from "node:crypto";
-import type { McpServerSpec } from "./garufile.js";
+import { execFile } from "node:child_process";
+import type { McpServerSpec, Sandbox } from "./garufile.js";
+import { dockerArgs, explainDockerError } from "./sandbox.js";
 import type { Decision, PolicyEngine, ToolCallRequest } from "./policy.js";
 import type { Recorder } from "./recorder.js";
 
@@ -46,12 +48,17 @@ export interface BusOptions {
   approver: Approver;
   /** Per-call timeout for the MCP server. */
   callTimeoutMs?: number;
+  /** When set, every tool server runs inside its own Docker container. */
+  sandbox?: Sandbox;
+  /** Agent name, used to label containers. */
+  agent?: string;
 }
 
 interface Connected {
   spec: McpServerSpec;
   client: Client;
   transport: StdioClientTransport;
+  containerName?: string;
 }
 
 export class ToolBus {
@@ -63,22 +70,27 @@ export class ToolBus {
   /** Spawn and handshake with every server. Fails loudly on the first that won't start. */
   async connect(specs: readonly McpServerSpec[]): Promise<void> {
     for (const spec of specs) {
+      const sb = this.opts.sandbox;
+      const wrapped = sb ? dockerArgs(spec, sb, this.opts.agent ?? "agent") : undefined;
       const transport = new StdioClientTransport({
-        command: spec.command,
-        args: spec.args,
-        env: { ...getDefaultEnvironment(), ...spec.env },
+        command: wrapped?.command ?? spec.command,
+        args: wrapped?.args ?? spec.args,
+        // inside a container, env goes in via -e; on the host, into the process
+        env: wrapped ? getDefaultEnvironment() : { ...getDefaultEnvironment(), ...spec.env },
         stderr: "pipe",
-        ...(spec.cwd ? { cwd: spec.cwd } : {}),
+        ...(spec.cwd && !wrapped ? { cwd: spec.cwd } : {}),
       });
       const client = new Client({ name: "garu", version: "0.1.0" });
       try {
         await client.connect(transport);
       } catch (e) {
+        const raw = (e as Error).message;
+        const hint = wrapped ? explainDockerError(raw, sb!.image) : raw;
         throw new Error(
-          `tool server "${spec.name}" failed to start (${spec.command} ${spec.args.join(" ")}): ${(e as Error).message}`,
+          `tool server "${spec.name}" failed to start${wrapped ? " in sandbox" : ""} (${spec.command} ${spec.args.join(" ")}): ${hint}`,
         );
       }
-      this.servers.set(spec.name, { spec, client, transport });
+      this.servers.set(spec.name, { spec, client, transport, ...(wrapped ? { containerName: wrapped.containerName } : {}) });
     }
     await this.refreshTools();
   }
@@ -171,10 +183,18 @@ export class ToolBus {
       } catch {
         /* already gone */
       }
+      // --rm handles the normal case; this covers a server that ignores stdin closing.
+      if (c.containerName) await dockerRmForce(c.containerName);
     }
     this.servers.clear();
     this.tools = [];
   }
+}
+
+function dockerRmForce(name: string): Promise<void> {
+  return new Promise((done) => {
+    execFile("docker", ["rm", "-f", name], { timeout: 10_000 }, () => done());
+  });
 }
 
 /** Pull plain text out of MCP content blocks. */

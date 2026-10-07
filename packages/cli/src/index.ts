@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout, stderr } from "node:process";
 import { join, resolve } from "node:path";
 import {
+  DEFAULT_SANDBOX_IMAGE,
   GarufileError,
   Inbox,
   PolicyEngine,
@@ -63,6 +67,11 @@ program
           fail((e as Error).message);
         }
       }
+    }
+    if (g.sandbox) {
+      stdout.write(`  sandbox: image ${g.sandbox.image}, network ${g.sandbox.network}, ${g.sandbox.memory} / ${g.sandbox.cpus} cpu${g.sandbox.workspace ? `, workspace ${g.sandbox.workspace}` : ""}\n`);
+    } else if (g.tools.length > 0) {
+      stdout.write(`  ⚠ no sandbox: tool servers run directly on this machine. Add a \`sandbox:\` block to containerise them.\n`);
     }
     const price = g.budget.pricing ?? priceFor(g.model);
     if (g.budget.maxCostUsd !== undefined) {
@@ -164,6 +173,27 @@ program
     await new Promise<never>(() => {}); // run until a signal
   });
 
+const sandboxCmd = program.command("sandbox").description("Manage the Docker image tool servers run in");
+sandboxCmd
+  .command("build")
+  .option("--tag <name>", "image tag", DEFAULT_SANDBOX_IMAGE)
+  .option("--context <dir>", "Dockerfile directory", defaultSandboxContext())
+  .description("Build the sandbox image (node + common MCP servers)")
+  .action(async (opts: { tag: string; context: string }) => {
+    if (!existsSync(join(opts.context, "Dockerfile"))) fail(`no Dockerfile in ${opts.context}`);
+    stderr.write(`building ${opts.tag} from ${opts.context}…\n`);
+    const code = await new Promise<number>((done) => {
+      const p = spawn("docker", ["build", "-t", opts.tag, opts.context], { stdio: "inherit" });
+      p.on("error", (e: NodeJS.ErrnoException) => {
+        if (e.code === "ENOENT") fail("Docker isn't installed or not on PATH. Install Docker Desktop and try again.");
+        fail(e.message);
+      });
+      p.on("exit", (c) => done(c ?? 1));
+    });
+    if (code !== 0) fail(`docker build exited with ${code}`);
+    stdout.write(`✔ built ${opts.tag}. Agents with a \`sandbox:\` block will use it.\n`);
+  });
+
 program
   .command("inbox")
   .option("--inbox-root <dir>", "where approval requests live", DEFAULT_INBOX_ROOT)
@@ -237,6 +267,13 @@ function loadGarufile(file: string): Garufile {
     if (e instanceof GarufileError) fail(e.message);
     throw e;
   }
+}
+
+/** docker/sandbox next to the repo root when running from source; falls back to cwd. */
+function defaultSandboxContext(): string {
+  const here = dirname(fileURLToPath(import.meta.url)); // packages/cli/dist
+  const fromSource = resolve(here, "..", "..", "..", "docker", "sandbox");
+  return existsSync(fromSource) ? fromSource : resolve(process.cwd(), "docker", "sandbox");
 }
 
 /** Tiny .env loader so `garu run` works without extra tooling. Never overrides real env. */
