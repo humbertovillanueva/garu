@@ -19,3 +19,4 @@ packages/ui/dist/
 
 # Tomay writes here
 agents/*/briefs/*.md
+agents/*/workspace/

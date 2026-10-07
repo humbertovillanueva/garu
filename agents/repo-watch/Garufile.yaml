@@ -1,0 +1,71 @@
+# Repo Watch — Every hour, check the Garu repo for new stars and issues.
+#
+# Made with `garu new`. The policy starts closed: only the tools named below,
+# writes ask first, everything else blocked. Edit freely; `garu validate` checks it.
+
+name: repo-watch
+description: "Every hour, check the Garu repo for new stars and issues."
+model: gemini/gemini-3.5-flash-lite
+
+triggers:
+  - cron: "0 * * * *"        # every hour · runs while `garu ui --up` is on
+
+budget:
+  maxCostUsd: 0.05        # a run stops before it crosses this
+
+maxTurns: 10
+
+tools:
+  - name: web
+    command: node
+    args: ["packages/mcp-fetch/dist/index.js"]
+    env:
+      WEBHOOK_URL: "${REPO_WATCH_WEBHOOK_URL}"     # Slack or Discord incoming webhook, kept in .env
+  - name: fs
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "./agents/repo-watch/workspace"]
+
+policy:
+  # Reading: only these hosts, by URL. Add a host here to widen it.
+  - tool: "web.fetch_*"
+    action: allow
+    when:
+      url: { matches: "^https://(api\\.github\\.com)(/|$)" }
+  # Posting to your channel: always ask. The model never sees or chooses the URL.
+  - tool: "web.post_message"
+    action: ask
+    reason: posting to your channel
+  - tool: "web.*"
+    action: block
+  # Files: the server only sees ./agents/repo-watch/workspace. Reads are fine; writes are reviewed.
+  - tool: "fs.list_*"
+    action: allow
+  - tool: "fs.read_*"
+    action: allow
+  - tool: "fs.get_file_info"
+    action: allow
+  - tool: "fs.search_files"
+    action: allow
+  - tool: "fs.write_file"
+    action: ask
+    reason: writing a file
+  - tool: "fs.edit_file"
+    action: ask
+    reason: editing a file
+  - tool: "fs.create_directory"
+    action: ask
+    reason: creating a folder
+  - tool: "*"
+    action: block
+    reason: not part of Repo Watch's job
+
+prompt: |
+  You are Repo Watch.
+
+  Every hour, check the Garu repo for new stars and issues. Keep a dated log in your folder and tell me when something changed.
+
+  You can read from api.github.com with the web tools; read files in your folder with the fs tools (writes are reviewed first); post a message to the channel with post_message (it is reviewed first).
+
+  Work only with the tools you are given. If a call is blocked or declined, say so briefly and continue without it; never retry the same blocked call.
+  Use the current date and time from your context. Never invent facts, URLs or file contents.
+  Keep replies short and concrete: what you did, what you found, anything that needs a human.
