@@ -25,6 +25,7 @@
   let error = $state<string | null>(null);
   let showAllRuns = $state(false);
   let bottom = $state<HTMLDivElement | null>(null);
+  const hasKeyboard = typeof window === "undefined" || !window.matchMedia("(hover: none)").matches;
 
   $effect(() => { live.tick; name; api.runs(name).then((r) => (runs = r)); });
   $effect(() => {
@@ -145,12 +146,11 @@
 
     <!-- Needs you: right where the timeline stopped -->
     {#each pending as r (r.id)}<ReviewCard req={r} />{/each}
-    <div bind:this={bottom}></div>
 
-    <!-- Composer -->
-    {#if a.configured}
+    <!-- Composer. While an approval is pending the review card is the input, so the composer steps aside. -->
+    {#if a.configured && pending.length === 0}
       <div class="panel-raised rise sticky p-3" style="bottom: calc(1rem + var(--tabbar))">
-        <textarea class="field" rows="2" placeholder="Message {a.name}… (⌘↵ to send)" bind:value={note} onkeydown={onKey} disabled={a.status === "working" || a.status === "waiting"}></textarea>
+        <textarea class="field" rows="2" placeholder={hasKeyboard ? `Message ${a.name}… (⌘↵ to send)` : `Message ${a.name}…`} bind:value={note} onkeydown={onKey} disabled={a.status === "working" || a.status === "waiting"}></textarea>
         <div class="mt-2 flex flex-wrap items-center gap-2">
           <button class="btn btn-primary" disabled={starting || !note.trim() || a.status === "working" || a.status === "waiting"} onclick={send}>
             {a.status === "working" ? "Working…" : a.status === "waiting" ? "Waiting for your decision" : starting ? "Sending…" : "Send"}
@@ -161,6 +161,7 @@
         </div>
       </div>
     {/if}
+    <div bind:this={bottom}></div>
 
     <!-- History -->
     <div>

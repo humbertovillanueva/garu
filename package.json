@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc -b && npm run test",
+    "demo-data": "node scripts/demo-data.mjs",
     "ui:dev": "npm run dev -w @garu/ui",
     "garu": "node packages/cli/dist/index.js"
   },

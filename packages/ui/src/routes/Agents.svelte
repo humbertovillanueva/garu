@@ -19,7 +19,7 @@
   {:else}
     <div class="grid gap-3 sm:grid-cols-2">
       {#each live.agents as a (a.name)}
-        <a href={href("agent", a.name)} class="panel card-hover rise flex gap-3 p-4">
+        <a href={href("agent", a.name)} class="panel card-hover rise flex min-w-0 gap-3 p-4">
           <Mark name={a.name} size={40} status={a.status} />
           <div class="min-w-0 flex-1">
             <div class="flex items-baseline justify-between gap-2">
