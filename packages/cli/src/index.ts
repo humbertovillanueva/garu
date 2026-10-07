@@ -32,6 +32,7 @@ import { startUiServer } from "./ui-server.js";
 
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
 const DEFAULT_INBOX_ROOT = resolve(process.cwd(), ".garu", "inbox");
+const DEFAULT_CHAT_ROOT = resolve(process.cwd(), ".garu", "chat");
 
 // `garu log | head` must not crash when the reader closes the pipe.
 stdout.on("error", (e: NodeJS.ErrnoException) => {
@@ -214,7 +215,7 @@ program
   .option("--notify <url>", "POST approval requests to this URL (ntfy.sh topic URLs work)")
   .option("--log-root <dir>", "where run logs live", DEFAULT_LOG_ROOT)
   .option("--inbox-root <dir>", "where approval requests live", DEFAULT_INBOX_ROOT)
-  .option("--as <name>", "who approvals from the UI are recorded as", process.env["USER"] ?? "ui")
+  .option("--as <name>", "your name — how approvals are recorded and how agents address you", process.env["GARU_USER"] ?? process.env["USER"] ?? "you")
   .description("Open the control room: your agents, live, in the browser. Add --up to run their schedules too.")
   .action(async (opts: { port: string; host: string; up?: boolean; askTimeout: string; notify?: string; logRoot: string; inboxRoot: string; as: string }) => {
     loadDotEnv();
@@ -226,7 +227,9 @@ program
       root: process.cwd(),
       logRoot: opts.logRoot,
       inboxRoot: opts.inboxRoot,
+      chatRoot: DEFAULT_CHAT_ROOT,
       staticDir,
+      userName: opts.as,
       decider: `${opts.as} (ui)`,
       up: Boolean(opts.up),
       askTimeoutMs: Number(opts.askTimeout) * 60_000,

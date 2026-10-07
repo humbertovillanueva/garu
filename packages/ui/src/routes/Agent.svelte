@@ -9,7 +9,9 @@
   import ReviewCard from "../lib/components/ReviewCard.svelte";
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
-  import type { Envelope, RunSummary } from "../lib/types";
+  import Thread from "../lib/components/Thread.svelte";
+  import type { ChatMessage, Envelope, RunSummary } from "../lib/types";
+  import { tick } from "svelte";
 
   let { name }: { name: string } = $props();
   const a = $derived(agentByName(name));
@@ -17,11 +19,36 @@
 
   let runs = $state<RunSummary[] | null>(null);
   let liveEvents = $state<Envelope[] | null>(null);
+  let messages = $state<ChatMessage[] | null>(null);
   let note = $state("");
   let starting = $state(false);
   let error = $state<string | null>(null);
+  let showAllRuns = $state(false);
+  let bottom = $state<HTMLDivElement | null>(null);
 
   $effect(() => { live.tick; name; api.runs(name).then((r) => (runs = r)); });
+  $effect(() => {
+    live.tick; name;
+    api.chat(name).then(async (m) => {
+      const grew = (messages?.length ?? 0) !== m.length;
+      messages = m;
+      if (grew) { await tick(); bottom?.scrollIntoView({ behavior: "smooth", block: "end" }); }
+    });
+  });
+
+  async function send() {
+    const text = note.trim();
+    if (!a || !text) return;
+    starting = true; error = null;
+    try {
+      await api.send(name, text);
+      note = "";
+      live.tick++;
+    } catch (e) { error = (e as Error).message; } finally { starting = false; }
+  }
+  function onKey(e: KeyboardEvent) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void send(); }
+  }
   // While working or waiting, stream the current run's events into the live panel.
   const currentRunId = $derived(a?.inFlight?.runId ?? pending[0]?.runId ?? null);
   $effect(() => {
@@ -83,26 +110,23 @@
     <!-- Needs you -->
     {#each pending as r (r.id)}<ReviewCard req={r} />{/each}
 
-    <!-- Composer -->
-    {#if a.configured}
-      <div class="panel-raised rise p-3">
-        <textarea class="field" rows="2" placeholder="Anything to add for this run? (optional) — e.g. “focus on the open questions”" bind:value={note} disabled={a.status === "working" || a.status === "waiting"}></textarea>
-        <div class="mt-2 flex flex-wrap items-center gap-2">
-          <button class="btn btn-primary" disabled={starting || a.status === "working" || a.status === "waiting"} onclick={run}>
-            {a.status === "working" ? "Working…" : a.status === "waiting" ? "Waiting for your decision" : starting ? "Starting…" : "Run now"}
-          </button>
-          <span class="text-[12.5px] text-mute">Runs under this agent's policy. Anything marked <span class="mono">ask</span> will pause here for you.</span>
-          {#if error}<span class="text-[12.5px]" style="color: var(--color-bad)">{error}</span>{/if}
-        </div>
+    <!-- Conversation -->
+    {#if messages === null}
+      <Skeleton rows={2} h={56} />
+    {:else if messages.length === 0 && !currentRunId}
+      <div class="rise rounded-xl border border-dashed hairline px-4 py-6 text-center text-[13.5px] text-fg-2">
+        {#if a.configured}Say hello to {a.name}, or tell it to run. Anything it does goes through its policy and shows up here.{:else}This agent has no Garufile here, so it can't be messaged — only its history is available.{/if}
       </div>
+    {:else}
+      <Thread agent={a.name} messages={messages ?? []} />
     {/if}
 
-    <!-- Live run -->
+    <!-- Live run, inline in the thread -->
     {#if currentRunId && liveEvents}
       <div class="panel-raised rise p-4" style="border-color: color-mix(in oklab, var(--color-accent) 30%, var(--color-line-2))">
         <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
           <span class="dot pulse bg-accent"></span>
-          <span class="text-[14px] font-medium">{a.status === "waiting" ? "Paused for you" : "Live"}</span>
+          <span class="text-[14px] font-medium">{a.status === "waiting" ? "Paused for you" : "Working"}</span>
           <span class="mono text-[12px] text-mute">{currentRunId}</span>
           {#if a.inFlight}<span class="mono text-[12px] text-mute">turn {a.inFlight.turn}{a.maxTurns ? ` / ${a.maxTurns}` : ""}</span>{/if}
           <div class="ml-auto"><Budget spent={liveCost} cap={a.budget?.maxCostUsd ?? null} free={a.budget?.free ?? false} /></div>
@@ -110,17 +134,36 @@
         <Timeline events={liveEvents} compact />
       </div>
     {/if}
+    <div bind:this={bottom}></div>
+
+    <!-- Composer -->
+    {#if a.configured}
+      <div class="panel-raised rise sticky bottom-4 p-3">
+        <textarea class="field" rows="2" placeholder="Message {a.name}… (⌘↵ to send)" bind:value={note} onkeydown={onKey} disabled={a.status === "working" || a.status === "waiting"}></textarea>
+        <div class="mt-2 flex flex-wrap items-center gap-2">
+          <button class="btn btn-primary" disabled={starting || !note.trim() || a.status === "working" || a.status === "waiting"} onclick={send}>
+            {a.status === "working" ? "Working…" : a.status === "waiting" ? "Waiting for your decision" : starting ? "Sending…" : "Send"}
+          </button>
+          <button class="btn" disabled={starting || a.status === "working" || a.status === "waiting"} onclick={run} title="Run the agent's standing job, with the message above as a note if any">Run job</button>
+          <span class="text-[12.5px] text-mute">Replies and work both go through this agent's policy. <span class="mono">ask</span> pauses here for you.</span>
+          {#if error}<span class="text-[12.5px]" style="color: var(--color-bad)">{error}</span>{/if}
+        </div>
+      </div>
+    {/if}
 
     <!-- History -->
     <div>
-      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">History</h2>
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="text-[11px] uppercase tracking-wider text-mute">Runs</h2>
+        {#if (runs?.length ?? 0) > 5}<button class="mono text-[11px] text-mute hover:text-fg" onclick={() => (showAllRuns = !showAllRuns)}>{showAllRuns ? "show fewer" : `show all ${runs!.length}`}</button>{/if}
+      </div>
       {#if runs === null}
         <Skeleton rows={3} h={48} />
       {:else if runs.length === 0}
-        <Empty title="No runs yet" hint={a.configured ? "press Run now above" : ""} />
+        <div class="text-[13px] text-mute">No runs yet.</div>
       {:else}
         <div class="panel divide-y divide-line">
-          {#each runs.filter((r) => r.runId !== currentRunId) as r (r.runId)}
+          {#each (showAllRuns ? runs : runs.slice(0, 5)).filter((r) => r.runId !== currentRunId) as r (r.runId)}
             <a href={href("run", r.agent, r.runId)} class="card-hover flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2.5 first:rounded-t-xl last:rounded-b-xl">
               <Status status={r.status} />
               <span class="mono text-[12.5px] text-fg-2" title={r.startedAt}>{when(r.startedAt)}</span>

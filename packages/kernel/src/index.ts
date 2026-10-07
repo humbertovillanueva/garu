@@ -11,3 +11,4 @@ export * from "./inbox.js";
 export * from "./sandbox.js";
 export * from "./store.js";
 export * from "./discover.js";
+export * from "./chat.js";

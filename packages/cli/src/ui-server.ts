@@ -12,6 +12,7 @@ import { existsSync, readFileSync, statSync, watch, type FSWatcher } from "node:
 import { extname, join, normalize } from "node:path";
 import { Cron } from "croner";
 import {
+  ChatStore,
   Inbox,
   RunStore,
   Scheduler,
@@ -32,7 +33,10 @@ export interface UiServerOptions {
   root: string;
   logRoot: string;
   inboxRoot: string;
+  chatRoot: string;
   staticDir: string;
+  /** How the agents address the person. */
+  userName: string;
   /** Who approvals are recorded as. */
   decider: string;
   /** Also run cron schedules for discovered agents. */
@@ -62,6 +66,7 @@ const MIME: Record<string, string> = {
 
 export function startUiServer(opts: UiServerOptions): { close: () => Promise<void>; url: string; agents: number } {
   const store = new RunStore(opts.logRoot);
+  const chat = new ChatStore(opts.chatRoot);
   const clients = new Set<ServerResponse>();
   const live = new Map<string, LiveRun>(); // agent → in-flight run started from this process
 
@@ -106,9 +111,19 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       if (e.event.type === "run.start") live.set(name, { runId: e.runId, startedAt: started, turn: 0, trigger });
       else if (e.event.type === "model.turn" && l) l.turn = e.event.turn;
     };
+    let result: RunResult | undefined;
     try {
-      return await runAgent({ garufile: a.garufile, logRoot: opts.logRoot, approver, trigger, sink, ...(input ? { input } : {}) });
+      result = await runAgent({ garufile: a.garufile, logRoot: opts.logRoot, approver, trigger, sink, ...(input ? { input } : {}) });
+      return result;
+    } catch (e) {
+      chat.append(name, { role: "agent", kind: "error", text: (e as Error).message });
+      throw e;
     } finally {
+      // The thread is the agent's diary: a chat reply for chat runs, a short entry for everything else.
+      if (result) {
+        const text = result.output?.trim() || `run ${result.status} with nothing to say`;
+        chat.append(name, { role: "agent", kind: trigger === "chat" ? (result.status === "ok" ? "chat" : "error") : result.status === "ok" ? "run" : "error", text, runId: result.runId });
+      }
       live.delete(name);
       ping();
     }
@@ -202,6 +217,28 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         // give run.start a moment to land so the client can navigate to it
         await new Promise((r) => setTimeout(r, 250));
         return json(res, { started: true, runId: live.get(name)?.runId ?? null }, 202);
+      }
+
+      const chatM = /^\/api\/agents\/([^/]+)\/chat$/.exec(path);
+      if (chatM) {
+        const name = decodeURIComponent(chatM[1]!);
+        if (req.method === "GET") return json(res, chat.messages(name));
+        if (req.method === "POST") {
+          const a = discover().agents.find((x) => x.garufile.name === name);
+          if (!a) return json(res, { error: `no Garufile for agent "${name}"` }, 404);
+          if (live.has(name)) return json(res, { error: `${name} is still working on the last message` }, 409);
+          const body = (await readBody(req)) as { text?: string };
+          const text = body.text?.trim();
+          if (!text) return json(res, { error: "empty message" }, 400);
+          const displayName = name.charAt(0).toUpperCase() + name.slice(1);
+          const input = chat.transcript(name, opts.userName, displayName, text);
+          chat.append(name, { role: "user", kind: "chat", text });
+          opts.log(`💬 ${name}: ${text.slice(0, 60)}`);
+          void startRun(a, "chat", input).catch(() => {});
+          await new Promise((r) => setTimeout(r, 250));
+          ping();
+          return json(res, { started: true, runId: live.get(name)?.runId ?? null }, 202);
+        }
       }
 
       if (path === "/api/runs") {

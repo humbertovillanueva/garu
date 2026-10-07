@@ -55,6 +55,8 @@ describe("runAgent", () => {
     expect(res.status).toBe("ok");
     expect(provider.calls[0]?.system).toContain("Current time: 2026-10-07T05:00:00.000Z");
     expect(provider.calls[0]?.system).toContain("Trigger: manual");
+    expect(provider.calls[0]?.system).toContain("Your standing instructions:\ndo the thing");
+    expect(provider.calls[0]?.messages[0]?.content).toEqual([{ type: "text", text: "Carry out your standing instructions now." }]);
     expect(res.output).toBe("done");
     expect(res.turns).toBe(2);
 

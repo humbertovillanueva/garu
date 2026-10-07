@@ -96,7 +96,9 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     }));
     recorder.record({ type: "tools.offered", offered: known, hidden });
 
-    const userText = opts.input ? `${g.prompt}\n\n---\nInput for this run:\n${opts.input}` : g.prompt;
+    // The Garufile prompt is who the agent is and what its job is: it lives in the system prompt.
+    // The user turn is what this particular run is about: a chat message, a note, or simply "do your job".
+    const userText = opts.input ?? "Carry out your standing instructions now.";
     const messages: ModelMessage[] = [{ role: "user", content: [{ type: "text", text: userText }] }];
     const now = (opts.now ?? (() => new Date()))();
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -105,6 +107,8 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
       `Agent: ${g.name}${g.description ? ` — ${g.description}` : ""}`,
       `Trigger: ${trigger}`,
       `Current time: ${now.toISOString()} (${tz}). Use this for any timestamp; never guess the date.`,
+      `Your standing instructions:\n${g.prompt.trim()}`,
+      `The user message that follows is what this run is about. If it asks a question, answer it. If it asks for work, do it. If it only says to carry out your standing instructions, do exactly that. Never do work the message asked you not to do.`,
     ].join("\n\n");
 
     while (turn < g.maxTurns) {

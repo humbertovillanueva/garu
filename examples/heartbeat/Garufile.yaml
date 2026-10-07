@@ -2,12 +2,11 @@
 # line to heartbeat.log saying what's there. Tiny on purpose: it exists to show
 # `garu up` keeping an agent alive on a schedule, with every run in the log.
 #
-#   garu up examples/heartbeat/Garufile.yaml --on-ask allow
+#   garu up examples/heartbeat/Garufile.yaml
 #   garu log heartbeat
 #
-# Note on --on-ask: when nobody is watching, `ask` decisions are denied by
-# default. This agent's only write is `ask`, so pass --on-ask allow to let it
-# write, or change the rule to `allow` once you trust it.
+# Its one write is its whole job, so it's `allow` — an agent that asks you every
+# two minutes is noise, not safety. Anything outside heartbeat.log is blocked.
 
 name: heartbeat
 description: Appends a one-line status to heartbeat.log on a schedule.
@@ -30,10 +29,9 @@ policy:
   - tool: "fs.read_*"
     action: allow
   - tool: "fs.write_file"
-    action: ask
+    action: allow
     when:
       path: { matches: "heartbeat\\.log$" }
-    reason: appending to heartbeat.log
   - tool: "*"
     action: block
 

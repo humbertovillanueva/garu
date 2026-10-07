@@ -85,3 +85,12 @@ export interface CostRow {
   costUsd: number;
   runs: number;
 }
+
+export interface ChatMessage {
+  id: string;
+  ts: string;
+  role: "user" | "agent";
+  text: string;
+  runId?: string;
+  kind: "chat" | "run" | "error";
+}
