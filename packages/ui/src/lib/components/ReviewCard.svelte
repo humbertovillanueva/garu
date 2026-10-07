@@ -14,9 +14,15 @@
   let error = $state<string | null>(null);
   let showRaw = $state(false);
 
+  let declining = $state(false);
+  let note = $state("");
   async function decide(approve: boolean, forDuration?: string) {
     busy = true; error = null;
-    try { await api.decide(req.id, approve, forDuration); live.tick++; } catch (e) { error = String((e as Error).message ?? e); } finally { busy = false; }
+    try { await api.decide(req.id, approve, forDuration, approve ? undefined : note.trim() || undefined); live.tick++; } catch (e) { error = String((e as Error).message ?? e); } finally { busy = false; }
+  }
+  function onNoteKey(e: KeyboardEvent) {
+    if (e.key === "Enter") { e.preventDefault(); void decide(false); }
+    if (e.key === "Escape") { declining = false; note = ""; }
   }
   const scopeKey = $derived(["path", "url", "to", "recipient", "recipients", "channel", "command", "cmd", "query"].find((k) => a[k] !== undefined && a[k] !== null && (typeof a[k] !== "object" || Array.isArray(a[k]))));
   const grantHint = $derived(scopeKey ? `Also allow ${req.tool} on this ${scopeKey} without asking, for 24 hours` : `Also allow ${req.tool} with any arguments without asking, for 24 hours`);
@@ -110,8 +116,19 @@
   <div class="mt-3 flex flex-wrap items-center gap-2 border-t hairline bg-bg/30 px-4 py-3">
     <button class="btn btn-ok" disabled={busy} onclick={() => decide(true)}>Approve</button>
     <button class="btn" disabled={busy} title={grantHint} onclick={() => decide(true, "24h")}>Approve for 24h</button>
-    <button class="btn btn-bad" disabled={busy} onclick={() => decide(false)}>Decline</button>
+    {#if !declining}
+      <button class="btn btn-bad" disabled={busy} onclick={() => (declining = true)}>Decline</button>
+    {/if}
     {#if error}<span class="text-[12.5px]" style="color: var(--color-bad)">{error}</span>{/if}
     <a href={href("run", req.agent, req.runId)} class="mono ml-auto text-[11.5px] text-mute hover:text-fg">open run →</a>
   </div>
+  {#if declining}
+    <!-- A decline can carry a reason. The agent reads it before its next step, so "wrong repo" fixes the run instead of just stopping one call. -->
+    <div class="flex flex-wrap items-center gap-2 border-t hairline bg-bg/30 px-4 py-3">
+      <!-- svelte-ignore a11y_autofocus -->
+      <input class="field min-w-0 flex-1" style="min-height: 36px; padding: 6px 10px" placeholder="Why? Optional — {req.agent} reads this before its next step. e.g. wrong repo, use humbertovillanueva/garu" bind:value={note} onkeydown={onNoteKey} autofocus />
+      <button class="btn btn-bad" disabled={busy} onclick={() => decide(false)}>{note.trim() ? "Decline with note" : "Decline"}</button>
+      <button class="btn" disabled={busy} onclick={() => { declining = false; note = ""; }}>Cancel</button>
+    </div>
+  {/if}
 </div>

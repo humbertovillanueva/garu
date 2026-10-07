@@ -48,7 +48,7 @@ describe("runAgent", () => {
       garufile,
       logRoot,
       provider,
-      approver: async () => ({ approved: false, by: "test-human" }),
+      approver: async () => ({ approved: false, by: "test-human", note: "wrong target, use staging" }),
       now: () => new Date("2026-10-07T05:00:00.000Z"),
     });
 
@@ -71,13 +71,14 @@ describe("runAgent", () => {
     expect(results).toEqual([
       { type: "tool_result", toolUseId: "t1", content: "hello" },
       { type: "tool_result", toolUseId: "t2", isError: true, content: "unknown tool echo__danger" },
-      { type: "tool_result", toolUseId: "t3", isError: true, content: expect.stringMatching(/^DENIED by test-human/) },
+      { type: "tool_result", toolUseId: "t3", isError: true, content: expect.stringMatching(/^DENIED by test-human: .*\nThe person who declined said: "wrong target, use staging"\./s) },
     ]);
 
     const types = readRun(res.logPath).map((e) => e.event.type);
     expect(types[0]).toBe("run.start");
     expect(types.at(-1)).toBe("run.end");
     expect(types).toContain("approval.requested");
+    expect(readRun(res.logPath).find((e) => e.event.type === "approval.resolved")!.event).toMatchObject({ approved: false, by: "test-human", note: "wrong target, use staging" });
   }, 30_000);
 
   it("stops at maxTurns and says so", async () => {

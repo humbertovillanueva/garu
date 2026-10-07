@@ -20,7 +20,7 @@ export type GaruEvent =
   | { type: "tool.request"; callId: string; request: ToolCallRequest }
   | { type: "policy.decision"; callId: string; decision: Decision }
   | { type: "approval.requested"; callId: string }
-  | { type: "approval.resolved"; callId: string; approved: boolean; by: string }
+  | { type: "approval.resolved"; callId: string; approved: boolean; by: string; note?: string }
   | { type: "tool.result"; callId: string; ok: boolean; durationMs: number; result?: unknown; error?: string }
   | { type: "error"; message: string; stack?: string };
 
@@ -125,7 +125,7 @@ export function formatEvent(env: Envelope): string {
     case "approval.requested":
       return `${t}   waiting for approval…`;
     case "approval.resolved":
-      return `${t}   ${e.approved ? "approved" : "denied"} by ${e.by}`;
+      return `${t}   ${e.approved ? "approved" : "denied"} by ${e.by}${e.note ? ` — "${e.note}"` : ""}`;
     case "tool.result":
       return `${t} ← ${e.ok ? "ok" : "ERROR"} in ${e.durationMs}ms${e.error ? `: ${e.error}` : ""}`;
     case "error":

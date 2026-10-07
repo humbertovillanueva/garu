@@ -19,7 +19,7 @@ export const api = {
   inbox: () => get<InboxResponse>("/api/inbox"),
   feed: (limit = 80) => get<FeedItem[]>(`/api/feed?limit=${limit}`),
   cost: (days = 14) => get<CostRow[]>(`/api/cost?days=${days}`),
-  decide: (id: string, approve: boolean, forDuration?: string) => post<ApprovalRequest>(`/api/inbox/${id}/${approve ? "approve" : "deny"}`, forDuration ? { for: forDuration } : {}),
+  decide: (id: string, approve: boolean, forDuration?: string, note?: string) => post<ApprovalRequest>(`/api/inbox/${id}/${approve ? "approve" : "deny"}`, { ...(forDuration ? { for: forDuration } : {}), ...(note ? { note } : {}) }),
   batch: (ids: string[], approve: boolean) => post<{ results: { id: string; ok: boolean }[] }>(`/api/inbox/batch`, { ids, approve }),
   revokeGrant: (id: string) => post<unknown>(`/api/grants/${id}/revoke`),
   applySuggestion: (id: string) => post<{ applied: boolean; file: string }>(`/api/suggestions/${encodeURIComponent(id)}/apply`),

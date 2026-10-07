@@ -67,7 +67,7 @@ export interface ApprovalRequest {
   reason: string;
   createdAt: string;
   expiresAt: string;
-  decision?: { approved: boolean; by: string; at: string };
+  decision?: { approved: boolean; by: string; at: string; note?: string };
 }
 
 export interface FeedItem {

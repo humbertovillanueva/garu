@@ -24,7 +24,7 @@ export interface ApprovalRequest {
   reason: string;
   createdAt: string;
   expiresAt: string;
-  decision?: { approved: boolean; by: string; at: string };
+  decision?: { approved: boolean; by: string; at: string; note?: string };
 }
 
 export interface InboxOptions {
@@ -81,11 +81,11 @@ export class Inbox {
   }
 
   /** Resolve when a decision lands or the request expires (expiry = deny). */
-  async waitFor(id: string): Promise<{ approved: boolean; by: string }> {
+  async waitFor(id: string): Promise<{ approved: boolean; by: string; note?: string }> {
     for (;;) {
       const r = this.get(id);
       if (!r) return { approved: false, by: "inbox: request vanished" };
-      if (r.decision) return { approved: r.decision.approved, by: r.decision.by };
+      if (r.decision) return { approved: r.decision.approved, by: r.decision.by, ...(r.decision.note ? { note: r.decision.note } : {}) };
       if (this.now().getTime() >= Date.parse(r.expiresAt)) {
         this.decide(id, false, "inbox: expired");
         return { approved: false, by: "inbox: expired" };
@@ -95,11 +95,12 @@ export class Inbox {
   }
 
   /** Record a human decision. Throws if the request is unknown or already decided. */
-  decide(id: string, approved: boolean, by: string): ApprovalRequest {
+  decide(id: string, approved: boolean, by: string, note?: string): ApprovalRequest {
     const r = this.get(id);
     if (!r) throw new Error(`no approval request "${id}"`);
     if (r.decision) throw new Error(`request "${id}" was already ${r.decision.approved ? "approved" : "denied"} by ${r.decision.by}`);
-    r.decision = { approved, by, at: this.now().toISOString() };
+    const n = note?.trim().slice(0, 500);
+    r.decision = { approved, by, at: this.now().toISOString(), ...(n ? { note: n } : {}) };
     writeAtomic(this.path(id), r);
     return r;
   }

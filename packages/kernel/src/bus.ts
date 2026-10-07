@@ -33,13 +33,13 @@ export interface ApprovalContext {
 
 export interface Approver {
   /** Return true to let the call through. Called only for `ask` decisions. */
-  (req: ToolCallRequest, decision: Decision, ctx: ApprovalContext): Promise<{ approved: boolean; by: string }>;
+  (req: ToolCallRequest, decision: Decision, ctx: ApprovalContext): Promise<{ approved: boolean; by: string; note?: string }>;
 }
 
 export type CallOutcome =
   | { status: "ok"; result: unknown }
   | { status: "blocked"; decision: Decision }
-  | { status: "denied"; decision: Decision; by: string }
+  | { status: "denied"; decision: Decision; by: string; note?: string }
   | { status: "error"; error: string };
 
 export interface BusOptions {
@@ -149,9 +149,9 @@ export class ToolBus {
 
     if (decision.action === "ask") {
       rec.record({ type: "approval.requested", callId });
-      const { approved, by } = await this.opts.approver(req, decision, { agent: rec.agent, runId: rec.runId, callId });
-      rec.record({ type: "approval.resolved", callId, approved, by });
-      if (!approved) return { status: "denied", decision, by, callId };
+      const { approved, by, note } = await this.opts.approver(req, decision, { agent: rec.agent, runId: rec.runId, callId });
+      rec.record({ type: "approval.resolved", callId, approved, by, ...(note ? { note } : {}) });
+      if (!approved) return { status: "denied", decision, by, callId, ...(note ? { note } : {}) };
     }
 
     const started = Date.now();

@@ -163,7 +163,12 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
             results.push({ type: "tool_result", toolUseId: tu.id, isError: true, content: `BLOCKED by policy: ${out.decision.reason}` });
             break;
           case "denied":
-            results.push({ type: "tool_result", toolUseId: tu.id, isError: true, content: `DENIED by ${out.by}: ${out.decision.reason}` });
+            results.push({
+              type: "tool_result",
+              toolUseId: tu.id,
+              isError: true,
+              content: `DENIED by ${out.by}: ${out.decision.reason}` + (out.note ? `\nThe person who declined said: "${out.note}". Act on this before doing anything else — correct the mistake if there is one, and do not repeat it in later calls.` : ""),
+            });
             break;
           case "error":
             results.push({ type: "tool_result", toolUseId: tu.id, isError: true, content: `ERROR: ${out.error}` });

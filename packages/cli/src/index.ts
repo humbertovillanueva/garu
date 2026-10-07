@@ -288,10 +288,11 @@ for (const [cmd, approved] of [["approve", true], ["deny", false]] as const) {
     .option("--as <name>", "who is deciding", process.env["USER"] ?? "terminal")
     .description(approved ? "Let a paused tool call through" : "Refuse a paused tool call");
   if (approved) c.option("--for <duration>", "also allow this agent+tool (same path/url/recipient) without asking, e.g. 24h, 7d");
-  c.action((id: string, opts: { inboxRoot: string; as: string; for?: string }) => {
+  else c.option("--note <text>", "tell the agent why; it reads this before its next step");
+  c.action((id: string, opts: { inboxRoot: string; as: string; for?: string; note?: string }) => {
     const inbox = new Inbox({ root: opts.inboxRoot });
     try {
-      const r = inbox.decide(id, approved, opts.as);
+      const r = inbox.decide(id, approved, opts.as, opts.note);
       stdout.write(`${approved ? "✔ approved" : "✖ denied"} ${r.tool} for ${r.agent} — the run will continue\n`);
       if (approved && opts.for) {
         const g = new GrantStore(DEFAULT_GRANTS_PATH).create({ agent: r.agent, tool: r.tool, scope: scopeFor(r.args), durationMs: parseDuration(opts.for), createdBy: opts.as });
@@ -613,7 +614,9 @@ const terminalApprover: Approver = async (req, decision) => {
     stderr.write(`│ ${decision.reason}\n`);
     stderr.write(`│ args: ${JSON.stringify(req.args, null, 2).split("\n").join("\n│       ")}\n`);
     const answer = (await rl.question("└ allow? [y/N] ")).trim().toLowerCase();
-    return { approved: answer === "y" || answer === "yes", by: "terminal" };
+    if (answer === "y" || answer === "yes") return { approved: true, by: "terminal" };
+    const note = (await rl.question("  why? (optional — the agent reads this) ")).trim();
+    return { approved: false, by: "terminal", ...(note ? { note } : {}) };
   } finally {
     rl.close();
   }

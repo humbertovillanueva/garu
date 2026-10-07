@@ -35,6 +35,18 @@ describe("Inbox", () => {
     await expect(waiting).resolves.toEqual({ approved: false, by: "humberto" });
   });
 
+  it("a deny can carry a note, trimmed and capped, that the run receives", async () => {
+    const inbox = new Inbox({ root: mkdtempSync(join(tmpdir(), "inbox-")), pollMs: 5 });
+    const waiting = inbox.approver()(req, decision, ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    inbox.decide(inbox.pending()[0]!.id, false, "humberto", "  wrong recipient — use b@c.d  ");
+    await expect(waiting).resolves.toEqual({ approved: false, by: "humberto", note: "wrong recipient — use b@c.d" });
+    const long = inbox.approver()(req, decision, { ...ctx, callId: "call2" });
+    await new Promise((r) => setTimeout(r, 10));
+    inbox.decide(inbox.pending()[0]!.id, false, "humberto", "x".repeat(900));
+    expect((await long).note).toHaveLength(500);
+  });
+
   it("expires as a deny — silence is never yes", async () => {
     let t = Date.parse("2026-10-07T00:00:00Z");
     const inbox = new Inbox({ root: mkdtempSync(join(tmpdir(), "inbox-")), pollMs: 5, timeoutMs: 1000, now: () => new Date(t) });

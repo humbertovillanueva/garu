@@ -278,9 +278,9 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       }
       const d = /^\/api\/inbox\/([a-z0-9]+)\/(approve|deny)$/.exec(path);
       if (d && req.method === "POST") {
-        const body = (await readBody(req)) as { for?: string };
+        const body = (await readBody(req)) as { for?: string; note?: string };
         try {
-          const r = inbox.decide(d[1]!, d[2] === "approve", opts.decider);
+          const r = inbox.decide(d[1]!, d[2] === "approve", opts.decider, typeof body.note === "string" ? body.note : undefined);
           let grant;
           if (d[2] === "approve" && body.for) {
             const scope = scopeFor(r.args);

@@ -23,7 +23,7 @@
   });
   function decisionOf(row: Row) {
     const d = row.children.find((c) => c.event.type === "policy.decision")?.event["decision"] as { action: "allow" | "ask" | "block"; reason: string } | undefined;
-    const approval = row.children.find((c) => c.event.type === "approval.resolved")?.event as { approved: boolean; by: string } | undefined;
+    const approval = row.children.find((c) => c.event.type === "approval.resolved")?.event as { approved: boolean; by: string; note?: string } | undefined;
     const waiting = !approval && row.children.some((c) => c.event.type === "approval.requested");
     const result = row.children.find((c) => c.event.type === "tool.result")?.event as { ok: boolean; durationMs: number; error?: string; result?: unknown } | undefined;
     return { d, approval, waiting, result };
@@ -56,6 +56,7 @@
             <span class="mono font-medium">{req.server}.{req.tool}</span>
             {#if d}<Decision action={d.action} />{/if}
             {#if approval}<Decision action={approval.approved ? "allow" : "block"} label={approval.approved ? `approved · ${approval.by}` : `declined · ${approval.by}`} />{/if}
+            {#if approval?.note}<span class="text-[12.5px] italic text-fg-2">“{approval.note}”</span>{/if}
             {#if waiting}<span class="mono pulse text-[11.5px] text-accent">waiting for you</span>{/if}
             {#if result}
               <span class="mono text-[12px]" style="color: {result.ok ? 'var(--color-mute)' : 'var(--color-bad)'}">{result.ok ? `ok · ${result.durationMs}ms` : `error · ${result.error ?? ''}`}</span>

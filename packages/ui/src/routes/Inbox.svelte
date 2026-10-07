@@ -76,6 +76,7 @@
             <span class="mono text-fg-2">{r.tool}</span>
             <span style="color: {r.decision?.approved ? 'var(--color-ok)' : 'var(--color-bad)'}">{r.decision?.approved ? "approved" : "declined"}</span>
             <span class="text-mute">by {r.decision?.by}</span>
+            {#if r.decision?.note}<span class="italic text-fg-2">“{r.decision.note}”</span>{/if}
             <span class="mono ml-auto text-[11px] text-mute">{when(r.decision?.at)}</span>
           </a>
         {/each}

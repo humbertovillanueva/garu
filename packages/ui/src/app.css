@@ -81,8 +81,8 @@ body {
 .btn-bad { border-color: color-mix(in oklab, var(--color-bad) 55%, transparent); color: var(--color-bad); }
 .btn-bad:hover { background: color-mix(in oklab, var(--color-bad) 14%, var(--color-panel-2)); }
 .chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 10px; font-size: 12px; border: 1px solid var(--color-line-2); background: var(--color-panel-2); color: var(--color-fg-2); white-space: nowrap; }
-textarea.field { width: 100%; resize: vertical; min-height: 44px; border-radius: 10px; padding: 10px 12px; background: var(--color-bg); border: 1px solid var(--color-line-2); color: var(--color-fg); font-size: 14px; outline: none; }
-textarea.field:focus { border-color: color-mix(in oklab, var(--color-accent) 60%, var(--color-line-2)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 15%, transparent); }
+textarea.field, input.field { width: 100%; resize: vertical; min-height: 44px; border-radius: 10px; padding: 10px 12px; background: var(--color-bg); border: 1px solid var(--color-line-2); color: var(--color-fg); font-size: 14px; outline: none; }
+textarea.field:focus, input.field:focus { border-color: color-mix(in oklab, var(--color-accent) 60%, var(--color-line-2)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 15%, transparent); }
 .navitem { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 9px; color: var(--color-fg-2); font-size: 14px; transition: background .12s ease, color .12s ease; }
 .navitem:hover { background: var(--color-panel-2); color: var(--color-fg); }
 .navitem.active { background: var(--color-panel-2); color: var(--color-fg); }
