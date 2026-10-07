@@ -1,0 +1,26 @@
+{
+  "name": "garu-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Garu — the open personal agent cloud. Always-on agents, any model, any MCP tool, every action through a policy kernel you control.",
+  "license": "Apache-2.0",
+  "author": "Humberto Villanueva <hachevillanueva99@gmail.com> (https://humbertovillanueva.dev)",
+  "homepage": "https://github.com/humbertovillanueva/garu",
+  "repository": { "type": "git", "url": "https://github.com/humbertovillanueva/garu.git" },
+  "workspaces": ["packages/*"],
+  "engines": { "node": ">=22" },
+  "type": "module",
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc -b && npm run test",
+    "garu": "node packages/cli/dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^5.0.0"
+  }
+}

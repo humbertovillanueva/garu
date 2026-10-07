@@ -1,0 +1,22 @@
+{
+  "name": "@garu/kernel",
+  "version": "0.1.0",
+  "description": "Garu kernel: Garufile schema, policy engine, flight recorder, MCP tool bus, agent loop.",
+  "license": "Apache-2.0",
+  "author": "Humberto Villanueva (https://humbertovillanueva.dev)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "minimatch": "^10.0.0",
+    "yaml": "^2.9.0",
+    "zod": "^4.0.0"
+  }
+}

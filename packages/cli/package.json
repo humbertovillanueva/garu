@@ -1,0 +1,18 @@
+{
+  "name": "garu",
+  "version": "0.1.0",
+  "description": "Garu CLI — run, inspect and approve always-on agents from your terminal.",
+  "license": "Apache-2.0",
+  "author": "Humberto Villanueva (https://humbertovillanueva.dev)",
+  "homepage": "https://github.com/humbertovillanueva/garu",
+  "type": "module",
+  "bin": { "garu": "./dist/index.js" },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@garu/kernel": "0.1.0",
+    "commander": "^15.0.0"
+  }
+}
