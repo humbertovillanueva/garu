@@ -56,6 +56,8 @@ npm run garu -- log      hello                          # replay the flight reco
 
 **Fully local, $0:** install [Ollama](https://ollama.com), `ollama pull qwen3:8b`, then `npm run garu -- run examples/hello-local/Garufile.yaml`.
 
+**Your own agent:** `npm run garu -- new` asks what it should do, when, which model, which folder and which hosts, and writes `agents/<name>/Garufile.yaml` with a policy that starts closed — only the tools you named, writes ask first, everything else blocked. Then `Run job` in the control room.
+
 **Sandboxed:** with Docker running, `npm run garu -- sandbox build` once, then `npm run garu -- run examples/hello-sandboxed/Garufile.yaml`.
 
 ## How it works
@@ -140,6 +142,7 @@ The complaint practitioners make about always-on agents is that *their* throughp
 
 | Command | What it does |
 |---|---|
+| `garu new [name]` | Make your own agent: a few questions, then a Garufile with a closed policy. Flags for scripting (`--task`, `--when`, `--web`, `--fs`, `-y`). |
 | `garu ui [--up] [--as Name] [--notify URL]` | Control room at localhost:4000. `--up` also runs every cron schedule found under the current folder. |
 | `garu run <Garufile> [-i note]` | Run an agent once, approving in the terminal. |
 | `garu up <Garufiles…>` | Run schedules without the UI; `--on-ask inbox\|deny\|allow\|terminal`. |

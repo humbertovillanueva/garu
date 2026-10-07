@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout, stderr } from "node:process";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import {
   DEFAULT_SANDBOX_IMAGE,
   GarufileError,
@@ -33,6 +33,7 @@ import {
 } from "@garu/kernel";
 
 import { startUiServer } from "./ui-server.js";
+import { SCHEDULES, cronFor, isFreeModel, renderGarufile, suggestModel, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
 
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
 const DEFAULT_INBOX_ROOT = resolve(process.cwd(), ".garu", "inbox");
@@ -351,6 +352,170 @@ program
     if (!opts.json) stdout.write(summarize(events) + "\n");
   });
 
+// ---------------------------------------------------------------------------
+// garu new — scaffold an agent from a few questions
+// ---------------------------------------------------------------------------
+
+program
+  .command("new")
+  .argument("[name]", "agent name (lowercase, digits, hyphens)")
+  .description("Create a new agent: a few questions, then a Garufile with a closed policy")
+  .option("--task <text>", "what the agent does, in one or two sentences")
+  .option("--when <schedule>", "manual | weekday-morning | hourly | daily | a cron expression")
+  .option("--model <provider/model>", "e.g. gemini/gemini-3.5-flash-lite, ollama/qwen3:8b")
+  .option("--web <hosts>", "comma-separated hosts it may fetch from, 'ask' to review each fetch, or 'none'")
+  .option("--fs <path>", "a folder it can use, or 'none'")
+  .option("--write <mode>", "allow | ask — whether it may write in that folder without asking")
+  .option("--webhook <ENV_VAR>", "post to a Slack/Discord webhook kept in this .env variable")
+  .option("--budget <usd>", "cap per run in USD")
+  .option("-y, --yes", "accept defaults for anything not given")
+  .option("--force", "overwrite an existing Garufile")
+  .action(async (nameArg: string | undefined, opts: { task?: string; when?: string; model?: string; web?: string; fs?: string; write?: string; webhook?: string; budget?: string; yes?: boolean; force?: boolean }) => {
+    loadDotEnv();
+    const interactive = !opts.yes && stdin.isTTY;
+    const rl = interactive ? createInterface({ input: stdin, output: stdout }) : null;
+    const ask = async (label: string, def?: string): Promise<string> => {
+      if (!rl) return def ?? "";
+      const a = (await rl.question(def !== undefined ? `${label} [${def}] ` : `${label} `)).trim();
+      return a || def || "";
+    };
+    const yesNo = async (label: string, def: boolean): Promise<boolean> => {
+      if (!rl) return def;
+      const a = (await rl.question(`${label} ${def ? "[Y/n]" : "[y/N]"} `)).trim().toLowerCase();
+      return a ? a.startsWith("y") : def;
+    };
+    const pick = async <T extends string>(label: string, choices: { key: T; label: string }[], def: T): Promise<T> => {
+      if (!rl) return def;
+      stdout.write(`${label}\n`);
+      choices.forEach((c, i) => stdout.write(`  ${i + 1}) ${c.label}${c.key === def ? "   (default)" : ""}\n`));
+      const a = (await rl.question(`> `)).trim();
+      const n = Number(a);
+      if (a && Number.isInteger(n) && n >= 1 && n <= choices.length) return choices[n - 1]!.key;
+      return (choices.find((c) => c.key === a)?.key as T | undefined) ?? def;
+    };
+    const section = (s: string) => { if (rl) stdout.write(s ? `\n${s}\n` : "\n"); };
+
+    try {
+      if (rl) stdout.write(`\nLet's make an agent. Enter accepts the default.\n`);
+
+      // Name
+      let name = nameArg ?? "";
+      while (!/^[a-z][a-z0-9-]*$/.test(name)) {
+        if (name) stdout.write(`  name must be lowercase letters, digits and hyphens, starting with a letter\n`);
+        if (!rl) fail(`agent name "${name || "(missing)"}" must be lowercase letters, digits and hyphens`);
+        name = await ask("Name (lowercase, e.g. tomay, inbox-triage):");
+      }
+      const dir = join("agents", name);
+      const file = join(dir, "Garufile.yaml");
+      if (existsSync(file) && !opts.force) fail(`${file} already exists (use --force to overwrite)`);
+
+      // Task
+      let task = opts.task?.trim() ?? "";
+      if (!task) {
+        section(`What should ${name} do? One or two sentences, like you'd brief a new hire.`);
+        task = await ask(">");
+      }
+      if (!task) fail(`--task is required when not interactive`);
+
+      // Schedule
+      let schedule: Schedule;
+      if (opts.when) {
+        schedule = (opts.when in SCHEDULES ? (opts.when as Schedule) : { cron: opts.when });
+      } else {
+        section("");
+        const k = await pick(`When should it run?`, [
+          { key: "manual", label: SCHEDULES.manual.label },
+          { key: "weekday-morning", label: SCHEDULES["weekday-morning"].label },
+          { key: "hourly", label: SCHEDULES.hourly.label },
+          { key: "daily", label: SCHEDULES.daily.label },
+          { key: "cron", label: "a cron expression I'll type" },
+        ], "manual");
+        schedule = k === "cron" ? { cron: await ask("Cron (minute hour day month weekday):", "0 9 * * *") } : k;
+      }
+      const cron = cronFor(schedule);
+      if (cron) assertValidCron(cron);
+
+      // Model
+      const suggestions = suggestModel(process.env);
+      let model = opts.model ?? "";
+      if (!model) {
+        section("");
+        model = await pick(`Which model?`, suggestions.map((s) => ({ key: s.model, label: `${s.model}   — ${s.why}` })), suggestions[0]!.model);
+      }
+      if (!/^[a-z0-9-]+\/.+$/.test(model)) fail(`model must look like provider/model-id (got "${model}")`);
+
+      // Web
+      let web: ScaffoldAnswers["web"] = null;
+      if (opts.web !== undefined) {
+        web = opts.web === "none" ? null : opts.web === "ask" ? { hosts: [] } : { hosts: opts.web.split(",").map((h) => h.trim()).filter(Boolean) };
+      } else if (rl) {
+        section("");
+        if (await yesNo(`Does it need to read from the web (APIs, pages)?`, false)) {
+          const hosts = await ask(`Which hosts? Comma-separated, e.g. api.github.com, hn.algolia.com. Empty = review every fetch:`);
+          web = { hosts: hosts.split(",").map((h) => h.trim()).filter(Boolean) };
+        }
+      }
+
+      // Files
+      let fs: ScaffoldAnswers["fs"] = null;
+      const defaultWs = `./${dir}/workspace`;
+      if (opts.fs !== undefined) {
+        if (opts.fs !== "none") fs = { path: opts.fs, write: opts.write === "allow" ? "allow" : "ask" };
+      } else if (rl) {
+        section("");
+        if (await yesNo(`Give it a folder to work in?`, true)) {
+          const path = await ask(`Folder:`, defaultWs);
+          const write = (await yesNo(`May it write there without asking each time? (it still can't touch anything outside)`, false)) ? "allow" : "ask";
+          fs = { path, write };
+        }
+      } else if (opts.yes) {
+        fs = { path: defaultWs, write: opts.write === "allow" ? "allow" : "ask" };
+      }
+
+      // Webhook
+      let webhook: ScaffoldAnswers["webhook"] = null;
+      if (opts.webhook) webhook = { envVar: opts.webhook };
+      else if (rl) {
+        section("");
+        if (await yesNo(`Should it be able to post to a Slack or Discord channel (always asks first)?`, false)) {
+          const envVar = await ask(`Name of the .env variable holding the webhook URL:`, `${name.toUpperCase().replace(/-/g, "_")}_WEBHOOK_URL`);
+          webhook = { envVar };
+        }
+      }
+
+      // Budget
+      let maxCostUsd: number | null = isFreeModel(model) ? null : 0.05;
+      if (opts.budget !== undefined) {
+        maxCostUsd = Number(opts.budget);
+        if (!Number.isFinite(maxCostUsd) || maxCostUsd < 0) fail(`--budget must be a non-negative number`);
+      } else if (rl && maxCostUsd !== null) {
+        section("");
+        const b = await ask(`Cap per run, in dollars:`, String(maxCostUsd));
+        maxCostUsd = Number(b);
+        if (!Number.isFinite(maxCostUsd) || maxCostUsd < 0) fail(`budget must be a non-negative number`);
+      }
+
+      const answers: ScaffoldAnswers = { name, task, model, schedule, web, fs, webhook, maxCostUsd, fetchServerPath: fetchServerPath() };
+      const text = renderGarufile(answers);
+      const g = parseGarufile(text, file); // never write a file the kernel would reject
+
+      mkdirSync(dir, { recursive: true });
+      if (fs && fs.path.startsWith("./")) mkdirSync(resolve(fs.path), { recursive: true });
+      writeFileSync(file, text);
+
+      stdout.write(`\n✔ ${file}\n`);
+      stdout.write(`  ${g.description}\n`);
+      stdout.write(`  model ${g.model} · ${cron ? `cron "${cron}"` : "runs when told"} · ${g.tools.length} tool server(s) · ${g.policy.length} policy rules${maxCostUsd !== null ? ` · cap ${formatUsd(maxCostUsd)}/run` : ""}\n`);
+      if (webhook) stdout.write(`\n  Add the webhook to .env before it runs:\n    read -s -p "webhook url: " W && echo && echo "${webhook.envVar}=$W" >> .env\n`);
+      stdout.write(`\n  Try it:\n`);
+      stdout.write(`    npm run garu -- run ${file}\n`);
+      stdout.write(`  or open the control room (npm run garu -- ui --up), click ${name}, and press Run job.\n`);
+      stdout.write(`  Edit ${file} any time; npm run garu -- validate ${file} checks it.\n`);
+    } finally {
+      rl?.close();
+    }
+  });
+
 // ---------- helpers ----------
 
 function loadGarufile(file: string): Garufile {
@@ -471,6 +636,14 @@ function summarize(events: Envelope[]): string {
   }
   const calls = decisions.allow + decisions.ask + decisions.block;
   return `── ${turns} turn(s) · ${calls} tool call(s) (${decisions.allow} allowed, ${decisions.ask} asked, ${decisions.block} blocked) · ${inTok + outTok} tokens · ${priced ? formatUsd(cost) : "unpriced model"}`;
+}
+
+/** Path to the bundled fetch server, relative to where the Garufile will be run from (the cwd). */
+function fetchServerPath(): string {
+  const here = dirname(fileURLToPath(import.meta.url)); // packages/cli/dist
+  const abs = resolve(here, "..", "..", "mcp-fetch", "dist", "index.js");
+  const rel = relative(process.cwd(), abs);
+  return rel.startsWith("..") ? abs : rel.split("\\").join("/");
 }
 
 function fail(msg: string): never {
