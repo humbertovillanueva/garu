@@ -1,4 +1,4 @@
-export type RunStatus = "running" | "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded";
+export type RunStatus = "running" | "interrupted" | "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded";
 
 export interface RunSummary {
   agent: string;

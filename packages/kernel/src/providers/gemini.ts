@@ -150,22 +150,39 @@ interface GeminiResponse {
   usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
 }
 
-/** Gemini's schema dialect rejects some JSON-Schema keywords MCP servers emit. Strip them recursively. */
+/**
+ * Gemini accepts only a subset of JSON Schema. MCP servers emit whatever their
+ * schema library produces (exclusiveMinimum, format: "uri", $schema, …), so we
+ * keep a whitelist of keywords Gemini understands and drop the rest, recursively.
+ */
+const GEMINI_KEYS = new Set(["type", "description", "enum", "properties", "required", "items", "anyOf", "nullable", "minimum", "maximum", "minItems", "maxItems"]);
 export function sanitizeSchema(schema: Record<string, unknown>): Record<string, unknown> {
-  const DROP = new Set(["$schema", "additionalProperties", "default", "examples", "title", "$id", "$ref", "definitions", "$defs"]);
-  const walk = (v: unknown): unknown => {
-    if (Array.isArray(v)) return v.map(walk);
+  const walk = (v: unknown, isSchema: boolean): unknown => {
+    if (Array.isArray(v)) return v.map((x) => walk(x, isSchema));
     if (v && typeof v === "object") {
       const out: Record<string, unknown> = {};
       for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
-        if (DROP.has(k)) continue;
-        out[k] = walk(val);
+        if (isSchema && !GEMINI_KEYS.has(k)) continue;
+        // `properties` maps names → schemas; its keys are not keywords.
+        if (k === "properties" && val && typeof val === "object") {
+          out[k] = Object.fromEntries(Object.entries(val as Record<string, unknown>).map(([name, sub]) => [name, walk(sub, true)]));
+        } else if (k === "items" || k === "anyOf") {
+          out[k] = walk(val, true);
+        } else {
+          out[k] = isSchema && typeof val === "object" ? walk(val, false) : val;
+        }
+      }
+      // Gemini wants a type on every schema; arrays of types ("string" | "null") become nullable.
+      if (Array.isArray(out["type"])) {
+        const ts = (out["type"] as string[]).filter((t) => t !== "null");
+        if (ts.length !== (out["type"] as string[]).length) out["nullable"] = true;
+        out["type"] = ts[0] ?? "string";
       }
       return out;
     }
     return v;
   };
-  const cleaned = walk(schema) as Record<string, unknown>;
+  const cleaned = walk(schema, true) as Record<string, unknown>;
   if (!cleaned["type"]) cleaned["type"] = "object";
   if (cleaned["type"] === "object" && !cleaned["properties"]) cleaned["properties"] = {};
   return cleaned;

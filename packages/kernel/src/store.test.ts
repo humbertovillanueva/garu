@@ -3,7 +3,8 @@ import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Recorder } from "./recorder.js";
-import { RunStore } from "./store.js";
+import { RunStore, summarizeRun } from "./store.js";
+import { readRun } from "./recorder.js";
 
 function makeRun(root: string, agent: string, opts: { status?: "ok" | "error"; cost?: number; day?: string } = {}) {
   const r = new Recorder({ root, agent });
@@ -48,6 +49,21 @@ describe("RunStore", () => {
     r.record({ type: "model.turn", turn: 1 });
     const [s] = new RunStore(root).runs("live");
     expect(s).toMatchObject({ status: "running", endedAt: null, turns: 1, trigger: "cron:* * * * *", sandbox: null });
+  });
+
+  it("a run silent for 10+ minutes without run.end is 'interrupted' (unless waiting on approval)", () => {
+    const root = mkdtempSync(join(tmpdir(), "store-"));
+    const r = new Recorder({ root, agent: "dead" });
+    r.record({ type: "run.start", agent: "dead", model: "m", trigger: "manual" });
+    r.record({ type: "model.turn", turn: 1 });
+    const later = Date.now() + 11 * 60_000;
+    expect(summarizeRun(r.path, readRun(r.path), later)!.status).toBe("interrupted");
+    expect(summarizeRun(r.path, readRun(r.path))!.status).toBe("running");
+
+    const w = new Recorder({ root, agent: "waiting" });
+    w.record({ type: "run.start", agent: "waiting", model: "m", trigger: "manual" });
+    w.record({ type: "approval.requested", callId: "c" });
+    expect(summarizeRun(w.path, readRun(w.path), later)!.status).toBe("running");
   });
 
   it("skips corrupt logs instead of failing the listing", () => {

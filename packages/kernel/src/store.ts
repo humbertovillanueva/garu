@@ -14,7 +14,7 @@ export interface RunSummary {
   runId: string;
   startedAt: string;
   endedAt: string | null;
-  status: "running" | "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded";
+  status: "running" | "interrupted" | "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded";
   trigger: string;
   model: string;
   sandbox: { image: string; network: string } | null;
@@ -37,7 +37,10 @@ export interface AgentSummary {
   model: string | null;
 }
 
-export function summarizeRun(path: string, events: Envelope[]): RunSummary | null {
+/** A run with no run.end whose log hasn't been touched for this long was killed, not paused. */
+export const INTERRUPTED_AFTER_MS = 10 * 60_000;
+
+export function summarizeRun(path: string, events: Envelope[], now = Date.now()): RunSummary | null {
   const start = events.find((e) => e.event.type === "run.start");
   if (!start || start.event.type !== "run.start") return null;
   const s: RunSummary = {
@@ -77,6 +80,12 @@ export function summarizeRun(path: string, events: Envelope[]): RunSummary | nul
         s.summary = e.summary ?? null;
         break;
     }
+  }
+  if (s.status === "running") {
+    const last = events.at(-1)?.ts;
+    // Waiting on an approval is legitimately quiet; anything else that's silent this long is dead.
+    const waiting = events.some((e) => e.event.type === "approval.requested") && !events.some((e) => e.event.type === "approval.resolved");
+    if (last && !waiting && now - Date.parse(last) > INTERRUPTED_AFTER_MS) s.status = "interrupted";
   }
   return s;
 }

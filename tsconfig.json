@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "packages/kernel" },
-    { "path": "packages/cli" }
+    { "path": "packages/cli" },
+    { "path": "packages/mcp-fetch" }
   ]
 }

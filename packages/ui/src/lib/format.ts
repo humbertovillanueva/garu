@@ -48,7 +48,7 @@ export function truncate(s: string, n = 90): string {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
 export function statusLabel(s: string): string {
-  return ({ ok: "done", error: "error", running: "running", blocked: "blocked", max_turns: "hit turn limit", budget_exceeded: "over budget", "run.ok": "done" } as Record<string, string>)[s] ?? s;
+  return ({ ok: "done", error: "error", running: "running", interrupted: "interrupted", blocked: "blocked", max_turns: "hit turn limit", budget_exceeded: "over budget", "run.ok": "done" } as Record<string, string>)[s] ?? s;
 }
 
 /** Stable identity color per agent name. */

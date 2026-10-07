@@ -2,15 +2,32 @@ import { describe, expect, it } from "vitest";
 import { GeminiProvider, sanitizeSchema } from "./gemini.js";
 
 describe("sanitizeSchema", () => {
-  it("drops keywords Gemini rejects and fills type/properties", () => {
+  it("keeps only keywords Gemini accepts and fills type/properties", () => {
     const out = sanitizeSchema({
       $schema: "x",
       type: "object",
       additionalProperties: false,
-      properties: { a: { type: "string", default: "q", title: "A" }, b: { type: "array", items: { type: "number", examples: [1] } } },
+      required: ["a"],
+      properties: {
+        a: { type: "string", default: "q", title: "A", format: "uri", description: "the url" },
+        b: { type: "array", items: { type: "number", examples: [1], exclusiveMinimum: 0 } },
+        c: { type: ["string", "null"], minLength: 1 },
+      },
     });
-    expect(out).toEqual({ type: "object", properties: { a: { type: "string" }, b: { type: "array", items: { type: "number" } } } });
+    expect(out).toEqual({
+      type: "object",
+      required: ["a"],
+      properties: {
+        a: { type: "string", description: "the url" },
+        b: { type: "array", items: { type: "number" } },
+        c: { type: "string", nullable: true },
+      },
+    });
     expect(sanitizeSchema({})).toEqual({ type: "object", properties: {} });
+  });
+  it("does not treat property names as keywords", () => {
+    const out = sanitizeSchema({ type: "object", properties: { format: { type: "string" }, items: { type: "integer" } } });
+    expect(out).toEqual({ type: "object", properties: { format: { type: "string" }, items: { type: "integer" } } });
   });
 });
 

@@ -1,0 +1,15 @@
+{
+  "name": "@garu/mcp-fetch",
+  "version": "0.1.0",
+  "description": "A small MCP server that fetches URLs (GET only). Pair it with a Garu policy that allowlists hosts.",
+  "license": "Apache-2.0",
+  "author": "Humberto Villanueva (https://humbertovillanueva.dev)",
+  "type": "module",
+  "bin": { "garu-mcp-fetch": "./dist/index.js" },
+  "files": ["dist"],
+  "scripts": { "build": "tsc -b" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "zod": "^4.0.0"
+  }
+}

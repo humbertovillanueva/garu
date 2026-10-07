@@ -4,7 +4,7 @@
   const color = $derived(
     status === "ok" || status === "run.ok" ? "var(--color-ok)"
     : status === "running" || status === "working" || status === "waiting" ? "var(--color-accent)"
-    : status === "blocked" || status === "error" || status === "budget_exceeded" ? "var(--color-bad)"
+    : status === "blocked" || status === "error" || status === "budget_exceeded" || status === "interrupted" ? "var(--color-bad)"
     : "var(--color-mute)",
   );
 </script>
