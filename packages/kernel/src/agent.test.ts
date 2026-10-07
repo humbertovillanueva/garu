@@ -88,6 +88,93 @@ describe("runAgent", () => {
     expect(res.turns).toBe(5);
   }, 30_000);
 
+  it("budget cap: stops before executing tool calls once cost reaches maxCostUsd", async () => {
+    const capped = parseGarufile(`
+name: capped
+model: anthropic/claude-sonnet-4-6
+prompt: x
+maxTurns: 10
+budget:
+  maxCostUsd: 0.05
+tools:
+  - name: echo
+    command: node
+    args: ["${serverPath}"]
+policy:
+  - tool: "*"
+    action: allow
+`);
+    // Sonnet: $3/M in, $15/M out. 10k in + 2k out = $0.03 + $0.03 = $0.06 per turn → first turn already over cap.
+    const provider = new FakeProvider([
+      {
+        stopReason: "tool_use",
+        content: [{ type: "tool_use", id: "t1", name: "echo__echo", input: { text: "should never run" } }],
+        usage: { inputTokens: 10_000, outputTokens: 2_000 },
+      },
+      { stopReason: "end_turn", content: [{ type: "text", text: "unreachable" }] },
+    ]);
+    const res = await runAgent({ garufile: capped, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider, approver: async () => ({ approved: true, by: "t" }) });
+
+    expect(res.status).toBe("budget_exceeded");
+    expect(res.turns).toBe(1);
+    expect(res.costUsd).toBeCloseTo(0.06, 6);
+    expect(provider.calls).toHaveLength(1); // no second model call
+
+    const events = readRun(res.logPath).map((e) => e.event);
+    expect(events.some((e) => e.type === "tool.request")).toBe(false); // the tool call never reached the bus
+    const b = events.find((e) => e.type === "budget.exceeded");
+    expect(b).toMatchObject({ type: "budget.exceeded", maxCostUsd: 0.05, pendingToolCalls: 1 });
+    const end = events.at(-1);
+    expect(end).toMatchObject({ type: "run.end", status: "budget_exceeded", priced: true });
+  }, 30_000);
+
+  it("budget cap: a run under the cap completes and reports cost", async () => {
+    const cheap = parseGarufile(`
+name: cheap
+model: anthropic/claude-haiku-4-5
+prompt: x
+budget:
+  maxCostUsd: 1
+`);
+    const provider = new FakeProvider([
+      { stopReason: "end_turn", content: [{ type: "text", text: "hi" }], usage: { inputTokens: 1000, outputTokens: 100 } },
+    ]);
+    const res = await runAgent({ garufile: cheap, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider, approver: async () => ({ approved: true, by: "t" }) });
+    expect(res.status).toBe("ok");
+    expect(res.costUsd).toBeCloseTo(0.0015, 8); // 1000/1M*1 + 100/1M*5
+    expect(res.inputTokens).toBe(1000);
+  });
+
+  it("budget cap on an unpriced model is refused up front unless pricing is given", async () => {
+    const unpriced = parseGarufile(`
+name: unpriced
+model: fake/any
+prompt: x
+budget:
+  maxCostUsd: 1
+`);
+    await expect(
+      runAgent({ garufile: unpriced, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider: new FakeProvider([]), approver: async () => ({ approved: true, by: "t" }) }),
+    ).rejects.toThrow(/no known price/);
+
+    const withPricing = parseGarufile(`
+name: unpriced
+model: fake/any
+prompt: x
+budget:
+  maxCostUsd: 1
+  pricing: { inputPerMTok: 0, outputPerMTok: 0 }
+`);
+    const res = await runAgent({
+      garufile: withPricing,
+      logRoot: mkdtempSync(join(tmpdir(), "garu-")),
+      provider: new FakeProvider([{ stopReason: "end_turn", content: [{ type: "text", text: "free" }], usage: { inputTokens: 5, outputTokens: 5 } }]),
+      approver: async () => ({ approved: true, by: "t" }),
+    });
+    expect(res.status).toBe("ok");
+    expect(res.costUsd).toBe(0);
+  });
+
   it("a tool server that won't start is a recorded error, not a crash", async () => {
     const bad = parseGarufile(`
 name: bad

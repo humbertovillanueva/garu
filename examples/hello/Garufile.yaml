@@ -9,7 +9,13 @@
 
 name: hello
 description: Summarizes the notes in ./workspace into SUMMARY.md.
-model: gemini/gemini-3.6-flash   # free tier; swap for anthropic/claude-sonnet-4-5 if you have a key
+model: gemini/gemini-3.5-flash-lite   # free tier (generous daily quota); swap for anthropic/claude-sonnet-4-6 if you have a key
+
+# Money guard. Estimated from token counts at list price; the run stops the
+# moment it crosses the cap. On Gemini's free tier the real bill is $0, but
+# the estimate still shows what this would cost if you paid.
+budget:
+  maxCostUsd: 0.05
 
 tools:
   - name: fs

@@ -8,10 +8,13 @@ import {
   GarufileError,
   PolicyEngine,
   formatEvent,
+  formatUsd,
   parseGarufile,
+  priceFor,
   readRun,
   runAgent,
   type Approver,
+  type Envelope,
   type Garufile,
 } from "@garu/kernel";
 
@@ -44,6 +47,12 @@ program
     if (!last || last.tool !== "*") {
       stdout.write(`  ℹ no explicit catch-all rule; unmatched tools default to ask\n`);
     }
+    const price = g.budget.pricing ?? priceFor(g.model);
+    if (g.budget.maxCostUsd !== undefined) {
+      stdout.write(`  budget: cap ${formatUsd(g.budget.maxCostUsd)} per run${price ? ` at $${price.inputPerMTok}/$${price.outputPerMTok} per MTok` : " — ✖ model has no known price, add budget.pricing"}\n`);
+    } else {
+      stdout.write(`  ⚠ no budget.maxCostUsd — fine for a one-off, risky for an always-on agent\n`);
+    }
   });
 
 program
@@ -68,7 +77,10 @@ program
       ...(opts.quiet ? {} : { sink: (e) => stderr.write(formatEvent(e) + "\n") }),
     });
     if (res.output) stdout.write(res.output.trimEnd() + "\n");
-    stderr.write(`\nrun ${res.runId} → ${res.status} in ${res.turns} turn(s). log: ${res.logPath}\n`);
+    const cost = res.costUsd === null ? "unpriced model" : formatUsd(res.costUsd);
+    stderr.write(
+      `\nrun ${res.runId} → ${res.status} in ${res.turns} turn(s), ${res.inputTokens + res.outputTokens} tokens, ${cost}. log: ${res.logPath}\n`,
+    );
     process.exitCode = res.status === "ok" ? 0 : 1;
   });
 
@@ -95,6 +107,7 @@ program
     if (!pick || !existsSync(join(dir, pick))) fail(`no run ${run ?? ""} for agent "${agent}"`);
     const events = readRun(join(dir, pick));
     for (const e of events) stdout.write((opts.json ? JSON.stringify(e) : formatEvent(e)) + "\n");
+    if (!opts.json) stdout.write(summarize(events) + "\n");
   });
 
 // ---------- helpers ----------
@@ -138,6 +151,25 @@ const terminalApprover: Approver = async (req, decision) => {
     rl.close();
   }
 };
+
+/** One line of totals for a run: turns, tool calls by decision, tokens, cost. */
+function summarize(events: Envelope[]): string {
+  let turns = 0, inTok = 0, outTok = 0, cost = 0, priced = true;
+  const decisions = { allow: 0, ask: 0, block: 0 };
+  for (const { event: e } of events) {
+    if (e.type === "model.turn") {
+      turns++;
+      inTok += e.inputTokens ?? 0;
+      outTok += e.outputTokens ?? 0;
+    } else if (e.type === "policy.decision") decisions[e.decision.action]++;
+    else if (e.type === "run.end") {
+      cost = e.costUsd ?? 0;
+      priced = e.priced !== false;
+    }
+  }
+  const calls = decisions.allow + decisions.ask + decisions.block;
+  return `── ${turns} turn(s) · ${calls} tool call(s) (${decisions.allow} allowed, ${decisions.ask} asked, ${decisions.block} blocked) · ${inTok + outTok} tokens · ${priced ? formatUsd(cost) : "unpriced model"}`;
+}
 
 function fail(msg: string): never {
   stderr.write(`garu: ${msg}\n`);

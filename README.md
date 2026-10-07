@@ -12,6 +12,7 @@
 - **A policy kernel.** Every tool call is checked against rules you wrote: `allow`, `ask`, or `block`, by tool name and by argument. Nothing slips past it.
 - **An approval inbox.** When a rule says `ask`, the agent pauses and you decide.
 - **A flight recorder.** Every call, decision, approval and model turn is written to an append-only log. Searchable. Diffable. Yours.
+- **A budget cap.** Each run's cost is estimated from real token counts and shown in the log; set `budget.maxCostUsd` and the run stops the moment it would cross it.
 - **Garufile.** One portable manifest describes an agent: prompt, tools, triggers, policy, memory. Publish it, install it, fork it.
 
 ## Status
@@ -32,6 +33,9 @@ tools:
 
 triggers:
   - cron: "*/15 * * * *"
+
+budget:
+  maxCostUsd: 0.25             # the run stops the moment it would cost more
 
 policy:
   - tool: "gmail.list_*"       # read freely

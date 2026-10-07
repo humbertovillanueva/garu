@@ -66,6 +66,19 @@ export const Trigger = z
   });
 export type Trigger = z.infer<typeof Trigger>;
 
+export const Budget = z
+  .object({
+    /** Stop the run as soon as its estimated cost reaches this many USD. */
+    maxCostUsd: z.number().nonnegative().optional(),
+    /** Override the built-in price table for this agent's model (set both to 0 on a free tier). */
+    pricing: z
+      .object({ inputPerMTok: z.number().nonnegative(), outputPerMTok: z.number().nonnegative() })
+      .strict()
+      .optional(),
+  })
+  .strict();
+export type Budget = z.infer<typeof Budget>;
+
 export const Garufile = z
   .object({
     name: z.string().regex(/^[a-z][a-z0-9-]*$/, "agent name: lowercase, digits, hyphens"),
@@ -78,6 +91,8 @@ export const Garufile = z
     policy: z.array(PolicyRule).default([{ tool: "*", action: "ask" }]),
     /** Hard cap on model turns per run. Agents must not loop forever. */
     maxTurns: z.number().int().positive().default(25),
+    /** Money guard. Optional, but every always-on agent should have one. */
+    budget: Budget.default({}),
   })
   .strict();
 export type Garufile = z.infer<typeof Garufile>;

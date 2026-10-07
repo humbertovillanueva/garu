@@ -13,6 +13,7 @@ import { PolicyEngine } from "./policy.js";
 import { Recorder, type Envelope } from "./recorder.js";
 import { fromModelToolName, splitModelId, toModelToolName, type ContentBlock, type ModelMessage, type ModelProvider, type ModelTool } from "./provider.js";
 import { getProvider } from "./providers/index.js";
+import { costOf, priceFor } from "./pricing.js";
 
 export interface RunOptions {
   garufile: Garufile;
@@ -31,10 +32,14 @@ export interface RunOptions {
 export interface RunResult {
   runId: string;
   logPath: string;
-  status: "ok" | "error" | "blocked" | "max_turns";
+  status: "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded";
   /** The model's final text, if any. */
   output: string;
   turns: number;
+  /** Estimated spend for this run. null when the model has no known price. */
+  costUsd: number | null;
+  inputTokens: number;
+  outputTokens: number;
 }
 
 const SYSTEM_PREAMBLE = `You are an autonomous agent running inside Garu.
@@ -59,6 +64,17 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
   let output = "";
   let turn = 0;
 
+  const price = g.budget.pricing ?? priceFor(g.model);
+  const maxCost = g.budget.maxCostUsd;
+  let totalCost = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
+  if (maxCost !== undefined && !price) {
+    throw new Error(
+      `budget.maxCostUsd is set but "${g.model}" has no known price; add budget.pricing to the Garufile`,
+    );
+  }
+
   try {
     await bus.connect(g.tools);
     const known = bus.listTools().map((t) => t.qualified);
@@ -80,10 +96,20 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
         tools,
       });
       const text = res.content.filter((b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text").map((b) => b.text).join("\n");
+      let turnCost: number | undefined;
+      if (res.usage) {
+        inputTokens += res.usage.inputTokens;
+        outputTokens += res.usage.outputTokens;
+        if (price) {
+          turnCost = costOf(price, res.usage.inputTokens, res.usage.outputTokens);
+          totalCost += turnCost;
+        }
+      }
       recorder.record({
         type: "model.turn",
         turn,
         ...(res.usage ? { inputTokens: res.usage.inputTokens, outputTokens: res.usage.outputTokens } : {}),
+        ...(turnCost !== undefined ? { costUsd: turnCost, totalCostUsd: totalCost } : {}),
         ...(text ? { text } : {}),
       });
       messages.push({ role: "assistant", content: res.content });
@@ -91,6 +117,14 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
       const toolUses = res.content.filter((b): b is Extract<ContentBlock, { type: "tool_use" }> => b.type === "tool_use");
       if (toolUses.length === 0) {
         output = text;
+        break;
+      }
+
+      // Money guard: the turn we just paid for is recorded; nothing further runs.
+      if (maxCost !== undefined && totalCost >= maxCost) {
+        recorder.record({ type: "budget.exceeded", costUsd: totalCost, maxCostUsd: maxCost, pendingToolCalls: toolUses.length });
+        status = "budget_exceeded";
+        output = text || `stopped: estimated cost reached the budget cap`;
         break;
       }
 
@@ -120,7 +154,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
       messages.push({ role: "user", content: results });
     }
 
-    if (turn >= g.maxTurns && !output) status = "max_turns";
+    if (status === "ok" && turn >= g.maxTurns && !output) status = "max_turns";
   } catch (e) {
     status = "error";
     const err = e as Error;
@@ -128,8 +162,23 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     output = err.message;
   } finally {
     await bus.close();
-    recorder.record({ type: "run.end", status, ...(output ? { summary: output.slice(0, 200) } : {}) });
+    recorder.record({
+      type: "run.end",
+      status,
+      costUsd: totalCost,
+      priced: price !== null,
+      ...(output ? { summary: output.slice(0, 200) } : {}),
+    });
   }
 
-  return { runId: recorder.runId, logPath: recorder.path, status, output, turns: turn };
+  return {
+    runId: recorder.runId,
+    logPath: recorder.path,
+    status,
+    output,
+    turns: turn,
+    costUsd: price ? totalCost : null,
+    inputTokens,
+    outputTokens,
+  };
 }

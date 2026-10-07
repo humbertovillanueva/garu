@@ -72,6 +72,13 @@ prompt: triage
     expect(g.policy[1]?.when?.["recipients.length"]).toEqual({ gt: 5 });
   });
 
+  it("parses budget and rejects negative caps", () => {
+    const g = parseGarufile(minimal + "\nbudget:\n  maxCostUsd: 0.25\n");
+    expect(g.budget).toEqual({ maxCostUsd: 0.25 });
+    expect(parseGarufile(minimal).budget).toEqual({});
+    expect(() => parseGarufile(minimal + "\nbudget:\n  maxCostUsd: -1\n")).toThrow(/budget.maxCostUsd/);
+  });
+
   it("reports invalid YAML plainly", () => {
     expect(() => parseGarufile("name: [unclosed")).toThrow(/invalid YAML/);
   });

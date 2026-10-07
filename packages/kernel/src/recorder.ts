@@ -9,11 +9,13 @@ import { appendFileSync, mkdirSync, openSync, closeSync, readFileSync, existsSyn
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Decision, ToolCallRequest } from "./policy.js";
+import { formatUsd } from "./pricing.js";
 
 export type GaruEvent =
   | { type: "run.start"; agent: string; model: string; trigger: string }
-  | { type: "run.end"; status: "ok" | "error" | "blocked" | "max_turns"; summary?: string }
-  | { type: "model.turn"; turn: number; inputTokens?: number; outputTokens?: number; text?: string }
+  | { type: "run.end"; status: "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded"; summary?: string; costUsd?: number; priced?: boolean }
+  | { type: "model.turn"; turn: number; inputTokens?: number; outputTokens?: number; text?: string; costUsd?: number; totalCostUsd?: number }
+  | { type: "budget.exceeded"; costUsd: number; maxCostUsd: number; pendingToolCalls: number }
   | { type: "tool.request"; callId: string; request: ToolCallRequest }
   | { type: "policy.decision"; callId: string; decision: Decision }
   | { type: "approval.requested"; callId: string }
@@ -103,10 +105,16 @@ export function formatEvent(env: Envelope): string {
   switch (e.type) {
     case "run.start":
       return `${t} ▶ run ${env.runId} (${e.agent}, ${e.model}, trigger=${e.trigger})`;
-    case "run.end":
-      return `${t} ■ run ${e.status}${e.summary ? ` — ${e.summary}` : ""}`;
-    case "model.turn":
-      return `${t} ⋯ turn ${e.turn}${e.text ? `: ${truncate(e.text, 80)}` : ""}`;
+    case "run.end": {
+      const cost = e.costUsd !== undefined ? ` · ${formatUsd(e.costUsd)}${e.priced === false ? " (unpriced model)" : ""}` : "";
+      return `${t} ■ run ${e.status}${cost}${e.summary ? ` — ${e.summary}` : ""}`;
+    }
+    case "model.turn": {
+      const cost = e.totalCostUsd !== undefined ? ` · ${formatUsd(e.totalCostUsd)} so far` : "";
+      return `${t} ⋯ turn ${e.turn}${cost}${e.text ? `: ${truncate(e.text, 80)}` : ""}`;
+    }
+    case "budget.exceeded":
+      return `${t} ✖ BUDGET ${formatUsd(e.costUsd)} ≥ cap ${formatUsd(e.maxCostUsd)} — stopping, ${e.pendingToolCalls} tool call(s) not executed`;
     case "tool.request":
       return `${t} → ${e.request.server}.${e.request.tool} ${truncate(JSON.stringify(e.request.args), 80)}`;
     case "policy.decision":
