@@ -28,6 +28,8 @@ import {
   type SchedulerEvent,
 } from "@garu/kernel";
 
+import { startUiServer } from "./ui-server.js";
+
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
 const DEFAULT_INBOX_ROOT = resolve(process.cwd(), ".garu", "inbox");
 
@@ -204,6 +206,27 @@ sandboxCmd
   });
 
 program
+  .command("ui")
+  .option("-p, --port <n>", "port", "4000")
+  .option("--host <host>", "bind address (localhost only by default)", "127.0.0.1")
+  .option("--log-root <dir>", "where run logs live", DEFAULT_LOG_ROOT)
+  .option("--inbox-root <dir>", "where approval requests live", DEFAULT_INBOX_ROOT)
+  .option("--as <name>", "who approvals from the UI are recorded as", process.env["USER"] ?? "ui")
+  .description("Open the control room: agents, runs, inbox, cost — live, in your browser")
+  .action((opts: { port: string; host: string; logRoot: string; inboxRoot: string; as: string }) => {
+    const staticDir = uiStaticDir();
+    const { url } = startUiServer({
+      port: Number(opts.port),
+      host: opts.host,
+      logRoot: opts.logRoot,
+      inboxRoot: opts.inboxRoot,
+      staticDir,
+      decider: `${opts.as} (ui)`,
+    });
+    stderr.write(`garu control room → ${url}\n${existsSync(join(staticDir, "index.html")) ? "" : "  (UI not built yet: run `npm run build` in the repo)\n"}Ctrl-C to stop.\n`);
+  });
+
+program
   .command("inbox")
   .option("--inbox-root <dir>", "where approval requests live", DEFAULT_INBOX_ROOT)
   .option("--all", "include decided and expired requests")
@@ -276,6 +299,13 @@ function loadGarufile(file: string): Garufile {
     if (e instanceof GarufileError) fail(e.message);
     throw e;
   }
+}
+
+/** packages/ui/dist when running from source; the published CLI ships the same folder as ./ui. */
+function uiStaticDir(): string {
+  const here = dirname(fileURLToPath(import.meta.url)); // packages/cli/dist
+  for (const c of [resolve(here, "..", "..", "ui", "dist"), resolve(here, "ui")]) if (existsSync(c)) return c;
+  return resolve(here, "..", "..", "ui", "dist");
 }
 
 /** docker/sandbox next to the repo root when running from source; falls back to cwd. */

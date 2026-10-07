@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* Garu control room — one dark surface, one accent, data in monospace. */
+@theme {
+  --color-bg: #0a0c0f;
+  --color-panel: #11141a;
+  --color-panel-2: #171b22;
+  --color-line: #1e232c;
+  --color-line-2: #2a303b;
+  --color-fg: #e4e8ee;
+  --color-fg-2: #aeb6c2;
+  --color-mute: #7f8899;
+  --color-accent: #f2a93b;
+  --color-ok: #43c979;
+  --color-ask: #f2a93b;
+  --color-bad: #ef5350;
+  --color-s1: #4f8fd9;
+  --color-s2: #2a9d78;
+  --color-s3: #9a6fd0;
+  --color-s4: #d0663a;
+  --color-s-other: #5b6472;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "tnum" 1, "cv11" 1;
+}
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.panel { background: var(--color-panel); border: 1px solid var(--color-line); border-radius: 10px; }
+.hairline { border-color: var(--color-line); }
+.dot { width: 8px; height: 8px; border-radius: 9999px; display: inline-block; flex: none; }
+.dot-live { box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 25%, transparent); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
+button.btn { border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 500; border: 1px solid var(--color-line-2); background: var(--color-panel-2); color: var(--color-fg); }
+button.btn:hover { border-color: var(--color-mute); }
+button.btn-ok { border-color: color-mix(in oklab, var(--color-ok) 50%, transparent); color: var(--color-ok); }
+button.btn-ok:hover { background: color-mix(in oklab, var(--color-ok) 12%, var(--color-panel-2)); }
+button.btn-bad { border-color: color-mix(in oklab, var(--color-bad) 50%, transparent); color: var(--color-bad); }
+button.btn-bad:hover { background: color-mix(in oklab, var(--color-bad) 12%, var(--color-panel-2)); }
+a.navlink { color: var(--color-mute); padding: 6px 10px; border-radius: 8px; font-size: 14px; }
+a.navlink:hover { color: var(--color-fg); }
+a.navlink.active { color: var(--color-fg); background: var(--color-panel-2); }
+::selection { background: color-mix(in oklab, var(--color-accent) 35%, transparent); }
