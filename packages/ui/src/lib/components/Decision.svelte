@@ -3,7 +3,5 @@
   const color = $derived(action === "allow" ? "var(--color-ok)" : action === "ask" ? "var(--color-ask)" : "var(--color-bad)");
 </script>
 
-<span class="mono inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[11px] uppercase tracking-wide"
-      style="color: {color}; background: color-mix(in oklab, {color} 12%, transparent)">
-  {label ?? action}
-</span>
+<span class="mono inline-flex items-center rounded-md px-1.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wider"
+      style="color: {color}; background: color-mix(in oklab, {color} 13%, transparent)">{label ?? action}</span>

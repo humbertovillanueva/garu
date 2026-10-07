@@ -1,6 +1,8 @@
 <script lang="ts">
   import { api, live } from "../lib/api.svelte";
-  import { usd, seriesVar } from "../lib/format";
+  import { usd, agentColor } from "../lib/format";
+  import Mark from "../lib/components/Mark.svelte";
+  import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
   import type { CostRow } from "../lib/types";
 
@@ -18,7 +20,7 @@
     for (const r of rows ?? []) totals.set(r.agent, (totals.get(r.agent) ?? 0) + r.costUsd);
     return [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([a]) => a);
   });
-  const legend = $derived(agentOrder.slice(0, 4).concat(agentOrder.length > 4 ? ["other"] : []));
+  const legend = $derived(agentOrder.slice(0, 6).concat(agentOrder.length > 6 ? ["other"] : []));
 
   // One stacked bar per day over the window, including days with nothing.
   const daysList = $derived.by(() => {
@@ -34,14 +36,14 @@
   const maxDay = $derived(Math.max(1e-9, ...daysList.map((d) => (byDay.get(d) ?? []).reduce((s, r) => s + r.costUsd, 0))));
   const total = $derived((rows ?? []).reduce((s, r) => s + r.costUsd, 0));
   const totalRuns = $derived((rows ?? []).reduce((s, r) => s + r.runs, 0));
-  const colorFor = (agent: string) => seriesVar(agent, agentOrder);
+  const colorFor = (agent: string) => (agentOrder.indexOf(agent) < 6 ? agentColor(agent) : "var(--color-s-other)");
 </script>
 
 <section class="space-y-5">
-  <div class="flex flex-wrap items-end justify-between gap-3">
+  <div class="rise flex flex-wrap items-end justify-between gap-3">
     <div>
-      <h1 class="text-xl font-semibold tracking-tight">Cost</h1>
-      <p class="mt-1 text-[13px] text-mute">Estimated from real token counts at list price. Free tiers and local models bill $0; the estimate still shows what it would cost.</p>
+      <h1 class="text-[24px] font-semibold tracking-tight">Cost</h1>
+      <p class="mt-1 text-[14px] text-fg-2">Estimated from real token counts at list price. Free tiers and local models bill $0; the estimate still shows what it would cost.</p>
     </div>
     <div class="flex items-center gap-1 text-[13px]">
       {#each [7, 14, 30] as d}
@@ -51,14 +53,14 @@
   </div>
 
   {#if rows === null}
-    <div class="text-[13px] text-mute">loading…</div>
+    <Skeleton rows={2} h={90} />
   {:else if rows.length === 0}
     <Empty title="No spend recorded in this window" />
   {:else}
     <div class="grid gap-3 sm:grid-cols-3">
-      <div class="panel p-4"><div class="text-[11px] uppercase tracking-wide text-mute">Total</div><div class="mono mt-1 text-2xl">{usd(total)}</div></div>
-      <div class="panel p-4"><div class="text-[11px] uppercase tracking-wide text-mute">Runs</div><div class="mono mt-1 text-2xl">{totalRuns}</div></div>
-      <div class="panel p-4"><div class="text-[11px] uppercase tracking-wide text-mute">Per run</div><div class="mono mt-1 text-2xl">{usd(totalRuns ? total / totalRuns : 0)}</div></div>
+      <div class="panel-raised rise p-4"><div class="text-[11px] uppercase tracking-wider text-mute">Total</div><div class="mono mt-1 text-[26px]">{usd(total)}</div></div>
+      <div class="panel-raised rise p-4"><div class="text-[11px] uppercase tracking-wider text-mute">Runs</div><div class="mono mt-1 text-[26px]">{totalRuns}</div></div>
+      <div class="panel-raised rise p-4"><div class="text-[11px] uppercase tracking-wider text-mute">Per run</div><div class="mono mt-1 text-[26px]">{usd(totalRuns ? total / totalRuns : 0)}</div></div>
     </div>
 
     <div class="panel p-4">
@@ -97,7 +99,7 @@
           {#each rows.slice().reverse() as r (r.day + r.agent)}
             <tr class="border-b hairline last:border-0">
               <td class="mono px-4 py-2 text-fg-2">{r.day}</td>
-              <td class="px-3 py-2"><span class="dot mr-2" style="background: {colorFor(r.agent)}"></span>{r.agent}</td>
+              <td class="px-3 py-2"><span class="flex items-center gap-2"><Mark name={r.agent} size={18} />{r.agent}</span></td>
               <td class="mono px-3 py-2 text-right">{r.runs}</td>
               <td class="mono px-3 py-2 text-right">{usd(r.costUsd)}</td>
             </tr>

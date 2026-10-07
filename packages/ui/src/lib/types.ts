@@ -1,4 +1,3 @@
-// Mirrors the kernel's public types for the pieces the UI reads. Kept small on purpose.
 export type RunStatus = "running" | "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded";
 
 export interface RunSummary {
@@ -19,13 +18,35 @@ export interface RunSummary {
   summary: string | null;
 }
 
-export interface AgentSummary {
+export type AgentStatus = "idle" | "scheduled" | "working" | "waiting";
+
+export interface Agent {
   name: string;
-  runs: number;
-  lastRun: RunSummary | null;
-  costTodayUsd: number;
-  runsToday: number;
+  description: string;
   model: string | null;
+  source: string | null;
+  configured: boolean;
+  status: AgentStatus;
+  inFlight: { runId: string; startedAt: string; turn: number; trigger: string } | null;
+  pending: number;
+  cron: string | null;
+  nextRun: string | null;
+  tools: string[];
+  policy: { rules: number; allow: number; ask: number; block: number } | null;
+  sandbox: { image: string; network: string } | null;
+  budget: { maxCostUsd: number | null; free: boolean } | null;
+  maxTurns: number | null;
+  runs: number;
+  runsToday: number;
+  costTodayUsd: number;
+  lastRun: RunSummary | null;
+}
+
+export interface AgentsResponse {
+  agents: Agent[];
+  problems: { source: string; error: string }[];
+  up: boolean;
+  root: string;
 }
 
 export interface Envelope {
@@ -47,6 +68,15 @@ export interface ApprovalRequest {
   createdAt: string;
   expiresAt: string;
   decision?: { approved: boolean; by: string; at: string };
+}
+
+export interface FeedItem {
+  ts: string;
+  kind: string;
+  agent: string;
+  runId: string;
+  text: string;
+  detail?: unknown;
 }
 
 export interface CostRow {

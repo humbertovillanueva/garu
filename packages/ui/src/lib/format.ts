@@ -6,21 +6,34 @@ export function usd(n: number | null | undefined, priced = true): string {
   if (n < 1) return `$${n.toFixed(3)}`;
   return `$${n.toFixed(2)}`;
 }
-
 export function when(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
-  if (diff < 60_000) return "just now";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  if (diff < 45_000) return "just now";
+  if (diff < 3_600_000) return `${Math.max(1, Math.floor(diff / 60_000))}m ago`;
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
-
+export function until(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const diff = new Date(iso).getTime() - Date.now();
+  if (diff <= 0) return "now";
+  if (diff < 60_000) return `${Math.ceil(diff / 1000)}s`;
+  if (diff < 3_600_000) return `${Math.ceil(diff / 60_000)}m`;
+  return `${Math.floor(diff / 3_600_000)}h ${Math.round((diff % 3_600_000) / 60_000)}m`;
+}
 export function clock(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour12: false });
 }
-
+export function dayLabel(iso: string): string {
+  const d = new Date(iso); const today = new Date();
+  const y = new Date(today); y.setDate(today.getDate() - 1);
+  const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  if (same(d, today)) return "Today";
+  if (same(d, y)) return "Yesterday";
+  return d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+}
 export function duration(a: string, b: string | null): string {
   if (!b) return "running";
   const ms = new Date(b).getTime() - new Date(a).getTime();
@@ -28,21 +41,30 @@ export function duration(a: string, b: string | null): string {
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
   return `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1000)}s`;
 }
-
 export function tokens(n: number): string {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 }
-
 export function truncate(s: string, n = 90): string {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
-
 export function statusLabel(s: string): string {
-  return { ok: "ok", error: "error", running: "running", blocked: "blocked", max_turns: "max turns", budget_exceeded: "over budget" }[s] ?? s;
+  return ({ ok: "done", error: "error", running: "running", blocked: "blocked", max_turns: "hit turn limit", budget_exceeded: "over budget", "run.ok": "done" } as Record<string, string>)[s] ?? s;
 }
 
-/** Stable series color per agent name: first four get a hue, the rest share gray. */
-export function seriesVar(agent: string, order: string[]): string {
-  const i = order.indexOf(agent);
-  return i >= 0 && i < 4 ? `var(--color-s${i + 1})` : "var(--color-s-other)";
+/** Stable identity color per agent name. */
+export function agentColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return `var(--color-s${(h % 6) + 1})`;
+}
+
+/** First-person status line, the way a colleague would say it. */
+export function statusLine(a: { status: string; inFlight: { turn: number } | null; pending: number; nextRun: string | null; lastRun: { status: string; startedAt: string } | null; cron: string | null; configured: boolean }): string {
+  if (a.status === "waiting") return a.pending === 1 ? "Waiting for you to approve one action" : `Waiting for you on ${a.pending} actions`;
+  if (a.status === "working") return a.inFlight ? `Working — turn ${a.inFlight.turn}` : "Working";
+  if (a.status === "scheduled") return `Sleeping — next run in ${until(a.nextRun)}`;
+  if (!a.configured) return "No Garufile found — history only";
+  if (a.lastRun) return `Idle — last ran ${when(a.lastRun.startedAt)} (${statusLabel(a.lastRun.status)})`;
+  if (a.cron) return "Scheduled, but nothing is running the schedule — start `garu ui --up`";
+  return "Idle — hasn't run yet";
 }

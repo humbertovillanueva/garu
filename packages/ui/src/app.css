@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
-/* Garu control room — one dark surface, one accent, data in monospace. */
+/* Garu control room — one dark surface, one accent, data in monospace, agents in color. */
 @theme {
   --color-bg: #0a0c0f;
   --color-panel: #11141a;
   --color-panel-2: #171b22;
+  --color-panel-3: #1d222b;
   --color-line: #1e232c;
   --color-line-2: #2a303b;
-  --color-fg: #e4e8ee;
+  --color-fg: #e6eaf0;
   --color-fg-2: #aeb6c2;
   --color-mute: #7f8899;
   --color-accent: #f2a93b;
@@ -15,17 +16,18 @@
   --color-ask: #f2a93b;
   --color-bad: #ef5350;
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
-/* Chart series colors: referenced only via var() in markup, so they live outside @theme
-   (Tailwind v4 drops theme variables no utility uses). Validated for the dark surface. */
+/* Agent identity colors (validated for this surface). Referenced via var() only, so they live outside @theme. */
 :root {
   --color-s1: #4f8fd9;
   --color-s2: #2a9d78;
   --color-s3: #9a6fd0;
   --color-s4: #d0663a;
+  --color-s5: #c9a227;
+  --color-s6: #d05a8a;
   --color-s-other: #5b6472;
 }
 
@@ -35,21 +37,54 @@ body {
   color: var(--color-fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: "tnum" 1, "cv11" 1;
+  font-feature-settings: "tnum" 1, "cv11" 1, "ss01" 1;
+  font-size: 14px;
 }
-.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.panel { background: var(--color-panel); border: 1px solid var(--color-line); border-radius: 10px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 0.93em; }
+
+/* Surfaces */
+.panel { background: var(--color-panel); border: 1px solid var(--color-line); border-radius: 12px; }
+.panel-raised {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--color-panel-2) 100%, white 2%) 0%, var(--color-panel) 100%);
+  border: 1px solid var(--color-line-2);
+  border-radius: 14px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 12px 40px -20px rgba(0,0,0,.8);
+}
 .hairline { border-color: var(--color-line); }
+.card-hover { transition: border-color .15s ease, transform .15s ease, background .15s ease; }
+.card-hover:hover { border-color: var(--color-line-2); background: var(--color-panel-2); }
+
+/* Dots & live states */
 .dot { width: 8px; height: 8px; border-radius: 9999px; display: inline-block; flex: none; }
-.dot-live { box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 25%, transparent); animation: pulse 1.6s ease-in-out infinite; }
-@keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
-button.btn { border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 500; border: 1px solid var(--color-line-2); background: var(--color-panel-2); color: var(--color-fg); }
-button.btn:hover { border-color: var(--color-mute); }
-button.btn-ok { border-color: color-mix(in oklab, var(--color-ok) 50%, transparent); color: var(--color-ok); }
-button.btn-ok:hover { background: color-mix(in oklab, var(--color-ok) 12%, var(--color-panel-2)); }
-button.btn-bad { border-color: color-mix(in oklab, var(--color-bad) 50%, transparent); color: var(--color-bad); }
-button.btn-bad:hover { background: color-mix(in oklab, var(--color-bad) 12%, var(--color-panel-2)); }
-a.navlink { color: var(--color-mute); padding: 6px 10px; border-radius: 8px; font-size: 14px; }
-a.navlink:hover { color: var(--color-fg); }
-a.navlink.active { color: var(--color-fg); background: var(--color-panel-2); }
+.pulse { animation: pulse 1.6s ease-in-out infinite; }
+.ring-live { box-shadow: 0 0 0 3px color-mix(in oklab, var(--live, var(--color-accent)) 22%, transparent); }
+@keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .4 } }
+
+/* Entry motion */
+.rise { animation: rise .35s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+@media (prefers-reduced-motion: reduce) { .rise, .pulse, .shimmer { animation: none !important } }
+
+/* Skeletons */
+.skel { position: relative; overflow: hidden; background: var(--color-panel-2); border-radius: 6px; }
+.skel::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.04), transparent); animation: shimmer 1.4s infinite; }
+@keyframes shimmer { to { transform: translateX(100%) } }
+
+/* Controls */
+.btn { border-radius: 9px; padding: 7px 13px; font-size: 13px; font-weight: 500; border: 1px solid var(--color-line-2); background: var(--color-panel-2); color: var(--color-fg); transition: all .12s ease; cursor: pointer; }
+.btn:hover { border-color: var(--color-mute); background: var(--color-panel-3); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn-primary { background: var(--color-accent); border-color: var(--color-accent); color: #141008; font-weight: 600; }
+.btn-primary:hover { background: color-mix(in oklab, var(--color-accent) 88%, white); border-color: transparent; }
+.btn-ok { border-color: color-mix(in oklab, var(--color-ok) 55%, transparent); color: var(--color-ok); }
+.btn-ok:hover { background: color-mix(in oklab, var(--color-ok) 14%, var(--color-panel-2)); }
+.btn-bad { border-color: color-mix(in oklab, var(--color-bad) 55%, transparent); color: var(--color-bad); }
+.btn-bad:hover { background: color-mix(in oklab, var(--color-bad) 14%, var(--color-panel-2)); }
+.chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 10px; font-size: 12px; border: 1px solid var(--color-line-2); background: var(--color-panel-2); color: var(--color-fg-2); white-space: nowrap; }
+textarea.field { width: 100%; resize: vertical; min-height: 44px; border-radius: 10px; padding: 10px 12px; background: var(--color-bg); border: 1px solid var(--color-line-2); color: var(--color-fg); font-size: 14px; outline: none; }
+textarea.field:focus { border-color: color-mix(in oklab, var(--color-accent) 60%, var(--color-line-2)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 15%, transparent); }
+.navitem { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 9px; color: var(--color-fg-2); font-size: 14px; transition: background .12s ease, color .12s ease; }
+.navitem:hover { background: var(--color-panel-2); color: var(--color-fg); }
+.navitem.active { background: var(--color-panel-2); color: var(--color-fg); }
 ::selection { background: color-mix(in oklab, var(--color-accent) 35%, transparent); }
+* { scrollbar-width: thin; scrollbar-color: var(--color-line-2) transparent; }
