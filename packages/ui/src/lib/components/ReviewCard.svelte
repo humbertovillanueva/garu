@@ -48,7 +48,7 @@
       </div>
       <div class="mt-0.5 text-[13px] text-fg-2">{req.reason}</div>
     </div>
-    <div class="mono text-right text-[11px] text-mute">
+    <div class="mono flex w-full gap-3 text-[11px] text-mute sm:block sm:w-auto sm:text-right">
       <div>asked {when(req.createdAt)}</div>
       <div>expires in {until(req.expiresAt)}</div>
     </div>
