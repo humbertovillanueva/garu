@@ -94,3 +94,33 @@ export interface ChatMessage {
   runId?: string;
   kind: "chat" | "run" | "error";
 }
+
+export interface Grant {
+  id: string;
+  agent: string;
+  tool: string;
+  scope?: { key: string; value: unknown };
+  createdAt: string;
+  expiresAt: string;
+  createdBy: string;
+  revokedAt?: string;
+  uses: number;
+  label: string;
+}
+
+export interface Suggestion {
+  id: string;
+  agent: string;
+  tool: string;
+  approvals: number;
+  lastApprovedAt: string;
+  rule: { tool: string; action: "allow" | "ask" | "block"; when?: Record<string, unknown>; reason?: string };
+  summary: string;
+}
+
+export interface InboxResponse {
+  pending: ApprovalRequest[];
+  recent: ApprovalRequest[];
+  grants: Grant[];
+  suggestions: Suggestion[];
+}

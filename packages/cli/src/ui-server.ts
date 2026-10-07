@@ -8,18 +8,25 @@
  * see them".
  */
 import { createServer, type ServerResponse } from "node:http";
-import { existsSync, readFileSync, statSync, watch, type FSWatcher } from "node:fs";
+import { existsSync, readFileSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { Cron } from "croner";
 import {
   ChatStore,
+  GrantStore,
   Inbox,
   RunStore,
   Scheduler,
+  addPolicyRule,
+  describeGrant,
   discoverGarufiles,
   formatRequest,
+  parseDuration,
   priceFor,
   runAgent,
+  scopeFor,
+  suggestRules,
+  withGrants,
   type ApprovalRequest,
   type DiscoveredAgent,
   type Envelope,
@@ -34,6 +41,8 @@ export interface UiServerOptions {
   logRoot: string;
   inboxRoot: string;
   chatRoot: string;
+  grantsPath: string;
+  dismissedPath: string;
   staticDir: string;
   /** How the agents address the person. */
   userName: string;
@@ -67,6 +76,9 @@ const MIME: Record<string, string> = {
 export function startUiServer(opts: UiServerOptions): { close: () => Promise<void>; url: string; agents: number } {
   const store = new RunStore(opts.logRoot);
   const chat = new ChatStore(opts.chatRoot);
+  const grants = new GrantStore(opts.grantsPath);
+  const dismissed = new Set<string>(existsSync(opts.dismissedPath) ? (JSON.parse(readFileSync(opts.dismissedPath, "utf8")) as string[]) : []);
+  const saveDismissed = () => writeFileSync(opts.dismissedPath, JSON.stringify([...dismissed]));
   const clients = new Set<ServerResponse>();
   const live = new Map<string, LiveRun>(); // agent → in-flight run started from this process
 
@@ -88,7 +100,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       if (opts.notify) await notify(opts.notify, r);
     },
   });
-  const approver = inbox.approver();
+  const approver = withGrants(inbox.approver(), grants);
 
   const watchers: FSWatcher[] = [];
   for (const dir of [opts.logRoot, opts.inboxRoot]) {
@@ -134,7 +146,11 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
   let scheduled = 0;
   if (opts.up) {
     scheduler = new Scheduler({
-      runner: (a, trigger) => startRun(a as DiscoveredAgent, trigger),
+      // Re-read the Garufile at fire time so policy edits apply without a restart.
+      runner: (a, trigger) => {
+        const fresh = discover().agents.find((x) => x.garufile.name === a.garufile.name) ?? (a as DiscoveredAgent);
+        return startRun(fresh, trigger);
+      },
       onEvent: (e) => {
         if (e.type === "fire") opts.log(`▶ ${e.agent} (cron ${e.cron})`);
         else if (e.type === "run.done") opts.log(`■ ${e.agent}: ${e.result.status} in ${e.result.turns} turn(s)`);
@@ -250,15 +266,69 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         const events = store.run(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!));
         return events ? json(res, events) : json(res, { error: "no such run" }, 404);
       }
-      if (path === "/api/inbox") return json(res, { pending: inbox.pending(), recent: inbox.all().slice(-50).reverse() });
+      if (path === "/api/inbox") {
+        const all = inbox.all();
+        return json(res, {
+          pending: inbox.pending(),
+          recent: all.slice(-50).reverse(),
+          grants: grants.active().map((g) => ({ ...g, label: describeGrant(g) })),
+          suggestions: suggestRules(all, { dismissed }),
+        });
+      }
       const d = /^\/api\/inbox\/([a-z0-9]+)\/(approve|deny)$/.exec(path);
       if (d && req.method === "POST") {
+        const body = (await readBody(req)) as { for?: string };
         try {
           const r = inbox.decide(d[1]!, d[2] === "approve", opts.decider);
+          let grant;
+          if (d[2] === "approve" && body.for) {
+            const scope = scopeFor(r.args);
+            grant = grants.create({ agent: r.agent, tool: r.tool, scope, durationMs: parseDuration(body.for), createdBy: opts.decider });
+            opts.log(`grant ${grant.id}: ${describeGrant(grant)} for ${body.for}`);
+            // anything else already waiting that this grant covers gets answered now
+            for (const p of inbox.pending()) {
+              if (p.agent === grant.agent && p.tool === grant.tool && (!scope || JSON.stringify(p.args[scope.key]) === JSON.stringify(scope.value))) {
+                inbox.decide(p.id, true, `grant ${grant.id} (${opts.decider})`);
+              }
+            }
+          }
           ping();
-          return json(res, r);
+          return json(res, { ...r, grant });
         } catch (e) {
           return json(res, { error: (e as Error).message }, 409);
+        }
+      }
+      if (path === "/api/inbox/batch" && req.method === "POST") {
+        const body = (await readBody(req)) as { ids?: string[]; approve?: boolean };
+        const results: { id: string; ok: boolean; error?: string }[] = [];
+        for (const id of body.ids ?? []) {
+          try { inbox.decide(id, Boolean(body.approve), opts.decider); results.push({ id, ok: true }); }
+          catch (e) { results.push({ id, ok: false, error: (e as Error).message }); }
+        }
+        ping();
+        return json(res, { results });
+      }
+      const gr = /^\/api\/grants\/([a-z0-9]+)\/revoke$/.exec(path);
+      if (gr && req.method === "POST") {
+        try { const g = grants.revoke(gr[1]!); ping(); return json(res, g); }
+        catch (e) { return json(res, { error: (e as Error).message }, 404); }
+      }
+      const sg = /^\/api\/suggestions\/([^/]+)\/(apply|dismiss)$/.exec(path);
+      if (sg && req.method === "POST") {
+        const id = decodeURIComponent(sg[1]!);
+        if (sg[2] === "dismiss") { dismissed.add(id); saveDismissed(); ping(); return json(res, { dismissed: id }); }
+        const sug = suggestRules(inbox.all(), { dismissed }).find((x) => x.id === id);
+        if (!sug) return json(res, { error: "suggestion no longer applies" }, 404);
+        const a = discover().agents.find((x) => x.garufile.name === sug.agent);
+        if (!a) return json(res, { error: `no Garufile for ${sug.agent}` }, 404);
+        try {
+          const { inserted } = addPolicyRule(a.path, sug.rule, `learned: approved ${sug.approvals}× by ${opts.decider}, ${new Date().toISOString().slice(0, 10)}`);
+          dismissed.add(id); saveDismissed();
+          opts.log(`policy: added "${sug.summary}" to ${a.source}`);
+          ping();
+          return json(res, { applied: true, file: a.source, inserted, rule: sug.rule });
+        } catch (e) {
+          return json(res, { error: `could not edit ${a.source}: ${(e as Error).message}` }, 500);
         }
       }
       if (path === "/api/feed") return json(res, feed(store, inbox, Number(url.searchParams.get("limit") ?? 80)));

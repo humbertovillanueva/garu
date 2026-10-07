@@ -1,4 +1,4 @@
-import type { Agent, AgentsResponse, ApprovalRequest, ChatMessage, CostRow, Envelope, FeedItem, RunSummary } from "./types";
+import type { Agent, AgentsResponse, ApprovalRequest, ChatMessage, CostRow, Envelope, FeedItem, InboxResponse, RunSummary } from "./types";
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(path, { cache: "no-store" });
@@ -16,10 +16,14 @@ export const api = {
   agents: () => get<AgentsResponse>("/api/agents"),
   runs: (agent?: string) => get<RunSummary[]>(agent ? `/api/runs?agent=${encodeURIComponent(agent)}` : "/api/runs"),
   run: (agent: string, runId: string) => get<Envelope[]>(`/api/runs/${encodeURIComponent(agent)}/${encodeURIComponent(runId)}`),
-  inbox: () => get<{ pending: ApprovalRequest[]; recent: ApprovalRequest[] }>("/api/inbox"),
+  inbox: () => get<InboxResponse>("/api/inbox"),
   feed: (limit = 80) => get<FeedItem[]>(`/api/feed?limit=${limit}`),
   cost: (days = 14) => get<CostRow[]>(`/api/cost?days=${days}`),
-  decide: (id: string, approve: boolean) => post<ApprovalRequest>(`/api/inbox/${id}/${approve ? "approve" : "deny"}`),
+  decide: (id: string, approve: boolean, forDuration?: string) => post<ApprovalRequest>(`/api/inbox/${id}/${approve ? "approve" : "deny"}`, forDuration ? { for: forDuration } : {}),
+  batch: (ids: string[], approve: boolean) => post<{ results: { id: string; ok: boolean }[] }>(`/api/inbox/batch`, { ids, approve }),
+  revokeGrant: (id: string) => post<unknown>(`/api/grants/${id}/revoke`),
+  applySuggestion: (id: string) => post<{ applied: boolean; file: string }>(`/api/suggestions/${encodeURIComponent(id)}/apply`),
+  dismissSuggestion: (id: string) => post<unknown>(`/api/suggestions/${encodeURIComponent(id)}/dismiss`),
   startRun: (agent: string, note?: string) => post<{ started: boolean; runId: string | null }>(`/api/agents/${encodeURIComponent(agent)}/run`, { note }),
   chat: (agent: string) => get<ChatMessage[]>(`/api/agents/${encodeURIComponent(agent)}/chat`),
   send: (agent: string, text: string) => post<{ started: boolean; runId: string | null }>(`/api/agents/${encodeURIComponent(agent)}/chat`, { text }),
@@ -34,6 +38,8 @@ export const live = $state({
   root: "",
   problems: [] as { source: string; error: string }[],
   pending: [] as ApprovalRequest[],
+  suggestions: [] as import("./types").Suggestion[],
+  grants: [] as import("./types").Grant[],
   loaded: false,
 });
 
@@ -44,6 +50,8 @@ export async function refreshCore(): Promise<void> {
   live.root = a.root;
   live.problems = a.problems;
   live.pending = i.pending;
+  live.suggestions = i.suggestions ?? [];
+  live.grants = i.grants ?? [];
   live.loaded = true;
 }
 

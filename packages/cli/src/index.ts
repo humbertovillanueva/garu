@@ -10,7 +10,11 @@ import { join, resolve } from "node:path";
 import {
   DEFAULT_SANDBOX_IMAGE,
   GarufileError,
+  GrantStore,
   Inbox,
+  describeGrant,
+  parseDuration,
+  scopeFor,
   PolicyEngine,
   Scheduler,
   assertValidCron,
@@ -33,6 +37,8 @@ import { startUiServer } from "./ui-server.js";
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
 const DEFAULT_INBOX_ROOT = resolve(process.cwd(), ".garu", "inbox");
 const DEFAULT_CHAT_ROOT = resolve(process.cwd(), ".garu", "chat");
+const DEFAULT_GRANTS_PATH = resolve(process.cwd(), ".garu", "grants.jsonl");
+const DEFAULT_DISMISSED_PATH = resolve(process.cwd(), ".garu", "suggestions-dismissed.json");
 
 // `garu log | head` must not crash when the reader closes the pipe.
 stdout.on("error", (e: NodeJS.ErrnoException) => {
@@ -228,6 +234,8 @@ program
       logRoot: opts.logRoot,
       inboxRoot: opts.inboxRoot,
       chatRoot: DEFAULT_CHAT_ROOT,
+      grantsPath: DEFAULT_GRANTS_PATH,
+      dismissedPath: DEFAULT_DISMISSED_PATH,
       staticDir,
       userName: opts.as,
       decider: `${opts.as} (ui)`,
@@ -268,22 +276,50 @@ program
   });
 
 for (const [cmd, approved] of [["approve", true], ["deny", false]] as const) {
-  program
+  const c = program
     .command(cmd)
     .argument("<id>", "approval request id (from `garu inbox`)")
     .option("--inbox-root <dir>", "where approval requests live", DEFAULT_INBOX_ROOT)
     .option("--as <name>", "who is deciding", process.env["USER"] ?? "terminal")
-    .description(approved ? "Let a paused tool call through" : "Refuse a paused tool call")
-    .action((id: string, opts: { inboxRoot: string; as: string }) => {
-      const inbox = new Inbox({ root: opts.inboxRoot });
-      try {
-        const r = inbox.decide(id, approved, opts.as);
-        stdout.write(`${approved ? "✔ approved" : "✖ denied"} ${r.tool} for ${r.agent} — the run will continue\n`);
-      } catch (e) {
-        fail((e as Error).message);
+    .description(approved ? "Let a paused tool call through" : "Refuse a paused tool call");
+  if (approved) c.option("--for <duration>", "also allow this agent+tool (same path/url/recipient) without asking, e.g. 24h, 7d");
+  c.action((id: string, opts: { inboxRoot: string; as: string; for?: string }) => {
+    const inbox = new Inbox({ root: opts.inboxRoot });
+    try {
+      const r = inbox.decide(id, approved, opts.as);
+      stdout.write(`${approved ? "✔ approved" : "✖ denied"} ${r.tool} for ${r.agent} — the run will continue\n`);
+      if (approved && opts.for) {
+        const g = new GrantStore(DEFAULT_GRANTS_PATH).create({ agent: r.agent, tool: r.tool, scope: scopeFor(r.args), durationMs: parseDuration(opts.for), createdBy: opts.as });
+        stdout.write(`  grant ${g.id}: ${describeGrant(g)} until ${g.expiresAt.slice(0, 16).replace("T", " ")} UTC\n`);
       }
-    });
+    } catch (e) {
+      fail((e as Error).message);
+    }
+  });
 }
+
+const grantsCmd = program.command("grants").description("Temporary allow rules created with approve --for");
+grantsCmd
+  .command("list", { isDefault: true })
+  .option("--all", "include expired and revoked")
+  .description("List grants")
+  .action((opts: { all?: boolean }) => {
+    const store = new GrantStore(DEFAULT_GRANTS_PATH);
+    const rows = opts.all ? store.all() : store.active();
+    if (!rows.length) return void stdout.write(opts.all ? "no grants\n" : "no active grants\n");
+    for (const g of rows) {
+      const state = g.revokedAt ? "revoked" : Date.parse(g.expiresAt) < Date.now() ? "expired" : `until ${g.expiresAt.slice(0, 16).replace("T", " ")} UTC`;
+      stdout.write(`${g.id}  ${describeGrant(g)}  · ${state} · used ${g.uses}×\n`);
+    }
+  });
+grantsCmd
+  .command("revoke")
+  .argument("<id>", "grant id")
+  .description("End a grant now")
+  .action((id: string) => {
+    try { const g = new GrantStore(DEFAULT_GRANTS_PATH).revoke(id); stdout.write(`revoked ${g.id}: ${describeGrant(g)}\n`); }
+    catch (e) { fail((e as Error).message); }
+  });
 
 program
   .command("log")

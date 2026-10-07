@@ -3,13 +3,21 @@
   import { href } from "../lib/router.svelte";
   import { when } from "../lib/format";
   import ReviewCard from "../lib/components/ReviewCard.svelte";
+  import SuggestionCard from "../lib/components/SuggestionCard.svelte";
   import Mark from "../lib/components/Mark.svelte";
+  import { until } from "../lib/format";
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
   import type { ApprovalRequest } from "../lib/types";
 
   let recent = $state<ApprovalRequest[] | null>(null);
+  let busy = $state(false);
   $effect(() => { live.tick; api.inbox().then((r) => (recent = r.recent.filter((x) => x.decision))); });
+  async function batch(approve: boolean) {
+    busy = true;
+    try { await api.batch(live.pending.map((p) => p.id), approve); live.tick++; } finally { busy = false; }
+  }
+  async function revoke(id: string) { await api.revokeGrant(id); live.tick++; }
 </script>
 
 <section class="space-y-6">
@@ -23,7 +31,38 @@
   {:else if live.pending.length === 0}
     <Empty title="Nothing waiting for you" hint="your agents are either inside their policy, or idle" />
   {:else}
+    {#if live.pending.length > 1}
+      <div class="flex flex-wrap items-center gap-2 text-[13px]">
+        <span class="text-fg-2">{live.pending.length} waiting.</span>
+        <button class="btn btn-ok" disabled={busy} onclick={() => batch(true)}>Approve all</button>
+        <button class="btn btn-bad" disabled={busy} onclick={() => batch(false)}>Decline all</button>
+        <span class="text-[12px] text-mute">Read them first; "all" means all.</span>
+      </div>
+    {/if}
     <div class="space-y-3">{#each live.pending as r (r.id)}<ReviewCard req={r} />{/each}</div>
+  {/if}
+
+  {#if live.suggestions.length}
+    <div class="space-y-3">
+      <h2 class="text-[11px] uppercase tracking-wider text-mute">Garu noticed</h2>
+      {#each live.suggestions as s (s.id)}<SuggestionCard {s} />{/each}
+    </div>
+  {/if}
+
+  {#if live.grants.length}
+    <div>
+      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Temporary allows</h2>
+      <div class="panel divide-y divide-line">
+        {#each live.grants as g (g.id)}
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-[13px]">
+            <Mark name={g.agent} size={22} />
+            <span class="mono text-fg-2">{g.label}</span>
+            <span class="mono text-[11.5px] text-mute">expires in {until(g.expiresAt)} · used {g.uses}×</span>
+            <button class="btn ml-auto py-1 text-[12px]" onclick={() => revoke(g.id)}>Revoke</button>
+          </div>
+        {/each}
+      </div>
+    </div>
   {/if}
 
   {#if recent && recent.length}

@@ -4,6 +4,7 @@
   import { usd, when, dayLabel, statusLabel, statusLine } from "../lib/format";
   import Mark from "../lib/components/Mark.svelte";
   import ReviewCard from "../lib/components/ReviewCard.svelte";
+  import SuggestionCard from "../lib/components/SuggestionCard.svelte";
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
   import type { FeedItem, ApprovalRequest } from "../lib/types";
@@ -44,10 +45,11 @@
     </p>
   </div>
 
-  {#if live.pending.length}
+  {#if live.pending.length || live.suggestions.length}
     <div class="space-y-3">
       <h2 class="text-[11px] uppercase tracking-wider text-mute">Needs you</h2>
       {#each live.pending as r (r.id)}<ReviewCard req={r} />{/each}
+      {#each live.suggestions.slice(0, 2) as s (s.id)}<SuggestionCard {s} />{/each}
     </div>
   {/if}
 
