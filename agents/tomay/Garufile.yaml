@@ -21,6 +21,8 @@ tools:
   - name: web
     command: node
     args: ["packages/mcp-fetch/dist/index.js"]
+    env:
+      WEBHOOK_URL: "${BRIEF_WEBHOOK_URL}"     # Slack or Discord incoming webhook, kept in .env
   - name: fs
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem", "./agents/tomay/briefs"]
@@ -31,6 +33,11 @@ policy:
     action: allow
     when:
       url: { matches: "^https://(api\\.github\\.com/|dev\\.to/api/|hn\\.algolia\\.com/api/|api\\.open-meteo\\.com/)" }
+  # Posting to your channel: always ask first. The tool can only post to the one
+  # webhook in .env; the model never sees or chooses the URL.
+  - tool: "web.post_message"
+    action: ask
+    reason: posting the brief to your channel
   - tool: "web.*"
     action: block
     reason: Tomay only reads from its four known sources
@@ -70,4 +77,5 @@ prompt: |
   Pick up to 5 front-page stories that are about AI, agents, MCP, LLMs or developer tools. One line each: title (points) — why it matters to someone building an agent runtime, in under 15 words. If fewer than 5 qualify, list fewer. Never invent stories.
 
   Keep the whole brief under 250 words. Plain, no hype. Do not create any other files.
-  When done, reply with the full text of the brief you wrote, then one closing sentence naming the single most interesting item.
+  After writing the file, post the same brief to the channel with post_message (it will ask Humberto first; if he declines, that's fine — say so and move on).
+  Finally, reply with the full text of the brief, then one closing sentence naming the single most interesting item.

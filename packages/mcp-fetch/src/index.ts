@@ -94,4 +94,33 @@ server.registerTool(
   },
 );
 
+/**
+ * post_message — send text to one webhook (Slack or Discord incoming webhook, or
+ * anything that accepts JSON). The URL comes from WEBHOOK_URL in this server's
+ * environment, never from the model: it cannot choose where messages go.
+ */
+const WEBHOOK_URL = process.env["WEBHOOK_URL"];
+if (WEBHOOK_URL) {
+  server.registerTool(
+    "post_message",
+    {
+      description: "Post a text message to the configured channel (a Slack or Discord webhook set up by the user). Markdown-lite is fine. Keep it under 1900 characters.",
+      inputSchema: { text: z.string().min(1).max(1900) },
+    },
+    async ({ text }) => {
+      const u = new URL(WEBHOOK_URL);
+      const body = /discord\.com$|discordapp\.com$/.test(u.hostname) ? { content: text } : { text };
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+      try {
+        const res = await fetch(u, { method: "POST", signal: ctrl.signal, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+        if (!res.ok) return { isError: true, content: [{ type: "text", text: `webhook answered HTTP ${res.status}: ${(await res.text()).slice(0, 200)}` }] };
+        return { content: [{ type: "text", text: `posted ${text.length} chars to ${u.hostname}` }] };
+      } finally {
+        clearTimeout(timer);
+      }
+    },
+  );
+}
+
 await server.connect(new StdioServerTransport());

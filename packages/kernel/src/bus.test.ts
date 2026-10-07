@@ -3,7 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ToolBus } from "./bus.js";
+import { ToolBus, expandSpec } from "./bus.js";
 import { PolicyEngine } from "./policy.js";
 import { Recorder, readRun } from "./recorder.js";
 
@@ -92,5 +92,18 @@ describe("ToolBus (real MCP server over stdio)", () => {
     expect(blockIdx).toBeGreaterThan(0);
     const after = readRun(rec.path)[blockIdx + 1];
     expect(after?.event.type).toBe("tool.request"); // next call, not a tool.result for the blocked one
+  });
+});
+
+describe("expandSpec", () => {
+  const spec = { name: "web", command: "node", args: ["server.js", "--token=${TOKEN}"], env: { WEBHOOK_URL: "${HOOK}", PLAIN: "x" } };
+  it("fills ${VAR} from the environment", () => {
+    const out = expandSpec(spec, { TOKEN: "t1", HOOK: "https://h" });
+    expect(out.args).toEqual(["server.js", "--token=t1"]);
+    expect(out.env).toEqual({ WEBHOOK_URL: "https://h", PLAIN: "x" });
+  });
+  it("fails loudly when a variable is missing or empty", () => {
+    expect(() => expandSpec(spec, { TOKEN: "t1" })).toThrow(/env WEBHOOK_URL needs \$\{HOOK\} but it is not set/);
+    expect(() => expandSpec(spec, { TOKEN: "", HOOK: "h" })).toThrow(/argument needs \$\{TOKEN\}/);
   });
 });

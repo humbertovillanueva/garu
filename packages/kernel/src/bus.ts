@@ -68,7 +68,8 @@ export class ToolBus {
   constructor(private readonly opts: BusOptions) {}
 
   /** Spawn and handshake with every server. Fails loudly on the first that won't start. */
-  async connect(specs: readonly McpServerSpec[]): Promise<void> {
+  async connect(rawSpecs: readonly McpServerSpec[]): Promise<void> {
+    const specs = rawSpecs.map((s) => expandSpec(s, process.env));
     for (const spec of specs) {
       const sb = this.opts.sandbox;
       const wrapped = sb ? dockerArgs(spec, sb, this.opts.agent ?? "agent") : undefined;
@@ -189,6 +190,25 @@ export class ToolBus {
     this.servers.clear();
     this.tools = [];
   }
+}
+
+/**
+ * Replace ${VAR} in a tool server's env values and args with values from the
+ * environment, so secrets stay in .env and out of the Garufile. A missing
+ * variable is an error, not an empty string.
+ */
+export function expandSpec(spec: McpServerSpec, env: NodeJS.ProcessEnv): McpServerSpec {
+  const expand = (s: string, where: string) =>
+    s.replace(/\$\{([A-Z_][A-Z0-9_]*)\}/g, (_, name: string) => {
+      const v = env[name];
+      if (v === undefined || v === "") throw new Error(`tool server "${spec.name}": ${where} needs $\{${name}\} but it is not set (add it to .env)`);
+      return v;
+    });
+  return {
+    ...spec,
+    args: spec.args.map((a) => expand(a, "an argument")),
+    env: Object.fromEntries(Object.entries(spec.env).map(([k, v]) => [k, expand(v, `env ${k}`)])),
+  };
 }
 
 function dockerRmForce(name: string): Promise<void> {
