@@ -26,9 +26,10 @@
   const str = (k: string) => (typeof a[k] === "string" ? (a[k] as string) : undefined);
   const list = (k: string) => (Array.isArray(a[k]) ? (a[k] as unknown[]).map(String) : typeof a[k] === "string" ? [a[k] as string] : undefined);
 
-  type Shape = "email" | "file" | "command" | "generic";
+  type Shape = "email" | "post" | "file" | "command" | "generic";
   const shape = $derived.by((): Shape => {
     if (/send|mail|message|reply/i.test(tool) && (a["to"] || a["subject"] || a["body"] || a["recipients"])) return "email";
+    if (/post|publish|message|notify|announce|say|chat/i.test(tool) && (str("text") || str("message") || str("content"))) return "post";
     if (/write|edit|create|append|save/i.test(tool) && (str("path") || str("file") || str("filename")) && (str("content") || str("text"))) return "file";
     if (/exec|shell|command|run|bash|terminal/i.test(tool) && (str("command") || str("cmd"))) return "command";
     return "generic";
@@ -36,7 +37,9 @@
   const filePath = $derived(str("path") ?? str("file") ?? str("filename") ?? "");
   const fileName = $derived(filePath.split("/").pop() ?? filePath);
   const content = $derived(str("content") ?? str("text") ?? "");
-  const verb = $derived(shape === "email" ? "wants to send" : shape === "file" ? "wants to write" : shape === "command" ? "wants to run" : "wants to call");
+  const postText = $derived(str("text") ?? str("message") ?? str("content") ?? "");
+  const postTo = $derived(str("channel") ?? str("room") ?? str("chat_id") ?? str("recipient"));
+  const verb = $derived(shape === "email" ? "wants to send" : shape === "post" ? "wants to post" : shape === "file" ? "wants to write" : shape === "command" ? "wants to run" : "wants to call");
 </script>
 
 <div class="panel-raised rise overflow-hidden" style="border-color: color-mix(in oklab, var(--color-accent) 35%, var(--color-line-2))">
@@ -74,6 +77,14 @@
         </div>
         <pre class="mono max-h-56 overflow-auto whitespace-pre-wrap px-3 py-3 text-[12.5px] leading-relaxed text-fg-2">{content}</pre>
       </div>
+    {:else if shape === "post"}
+      <div class="overflow-hidden rounded-lg border hairline bg-bg/60">
+        <div class="mono flex items-center gap-3 border-b hairline px-3 py-1.5 text-[11.5px] text-mute">
+          <span>{postTo ? `to ${postTo}` : "message"}</span>
+          <span class="ml-auto flex-none">{postText.split("\n").length} lines · {postText.length} chars</span>
+        </div>
+        <pre class="max-h-64 overflow-auto whitespace-pre-wrap px-3 py-3 text-[13px] leading-relaxed text-fg-2" style="font-family: inherit">{postText}</pre>
+      </div>
     {:else if shape === "command"}
       <pre class="mono overflow-auto rounded-lg border hairline bg-bg/60 px-3 py-3 text-[12.5px] text-fg-2"><span class="text-mute">$ </span>{str("command") ?? str("cmd")}</pre>
     {:else}
@@ -83,7 +94,7 @@
             {#each Object.entries(a) as [k, v]}
               <tr class="border-b hairline last:border-0 align-top">
                 <td class="mono w-32 px-3 py-1.5 text-mute">{k}</td>
-                <td class="mono break-all px-3 py-1.5 text-fg-2">{typeof v === "string" ? v : JSON.stringify(v)}</td>
+                <td class="mono whitespace-pre-wrap break-words px-3 py-1.5 text-fg-2">{typeof v === "string" ? v : JSON.stringify(v)}</td>
               </tr>
             {/each}
           </tbody>

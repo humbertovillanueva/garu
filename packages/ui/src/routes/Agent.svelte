@@ -57,6 +57,17 @@
     if (!id) { liveEvents = null; return; }
     api.run(name, id).then((e) => (liveEvents = e)).catch(() => (liveEvents = null));
   });
+  // Follow the run as it grows, unless the reader has scrolled up to study something.
+  let seenLive = 0, seenPending = 0;
+  $effect(() => {
+    const n = liveEvents?.length ?? 0, p = pending.length;
+    if (n <= seenLive && p <= seenPending) { seenLive = n; seenPending = p; return; }
+    seenLive = n; seenPending = p;
+    void tick().then(() => {
+      const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 320;
+      if (nearBottom || p > 0) bottom?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+  });
   const liveCost = $derived.by(() => {
     const last = [...(liveEvents ?? [])].reverse().find((e) => e.event.type === "model.turn" && e.event["totalCostUsd"] !== undefined);
     return (last?.event["totalCostUsd"] as number | undefined) ?? 0;
