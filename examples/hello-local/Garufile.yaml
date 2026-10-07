@@ -15,6 +15,12 @@ model: ollama/qwen3:8b   # strong at multi-step tool use. llama3.1:8b also works
 # Local models are priced at $0, so no cap is needed. maxTurns still bounds the run.
 maxTurns: 12
 
+# Ollama knobs. qwen3 "thinks" before every answer; for a tool task like this it
+# roughly doubles the run time for little gain. Set think: true to see the difference.
+modelOptions:
+  think: false
+  temperature: 0.2
+
 tools:
   - name: fs
     command: npx
@@ -46,8 +52,8 @@ policy:
     action: ask
 
 prompt: |
-  Read every markdown file in the workspace directory (use the tools to find them;
-  the directory you are allowed to use is the one the filesystem server exposes).
+  First call list_allowed_directories to learn the exact directory you may use; always
+  pass absolute paths from there. Then read every markdown file in that directory.
   Then write a file called SUMMARY.md in that same directory with three sections:
   "Decisions", "Open questions", and "People". Keep it short. When done, tell me
   in one sentence what you wrote.

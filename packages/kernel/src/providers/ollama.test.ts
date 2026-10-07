@@ -50,6 +50,17 @@ describe("OllamaProvider", () => {
     expect(res.usage).toEqual({ inputTokens: 50, outputTokens: 7 });
   });
 
+  it("maps modelOptions: think at top level, the rest into options", async () => {
+    let captured: Record<string, unknown> = {};
+    const fakeFetch = (async (_u: string | URL | Request, init?: RequestInit) => {
+      captured = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return okResponse({ message: { role: "assistant", content: "ok" }, done_reason: "stop" });
+    }) as typeof fetch;
+    await new OllamaProvider("x", fakeFetch).complete({ model: "m", system: "", messages: [], tools: [], options: { think: false, temperature: 0.2, num_ctx: 8192 } });
+    expect(captured["think"]).toBe(false);
+    expect(captured["options"]).toEqual({ num_predict: 4096, temperature: 0.2, num_ctx: 8192 });
+  });
+
   it("parses stringified tool arguments", async () => {
     const fakeFetch = (async () =>
       okResponse({ message: { role: "assistant", content: "", tool_calls: [{ function: { name: "add", arguments: '{"a":1,"b":2}' } }] } })) as typeof fetch;

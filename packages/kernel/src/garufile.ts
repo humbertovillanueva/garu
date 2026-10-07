@@ -93,6 +93,8 @@ export const Garufile = z
     maxTurns: z.number().int().positive().default(25),
     /** Money guard. Optional, but every always-on agent should have one. */
     budget: Budget.default({}),
+    /** Provider-specific knobs passed through untouched (e.g. Ollama: { think: false, temperature: 0.2 }). */
+    modelOptions: z.record(z.string(), z.unknown()).default({}),
   })
   .strict();
 export type Garufile = z.infer<typeof Garufile>;

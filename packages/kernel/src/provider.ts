@@ -34,6 +34,8 @@ export interface CompleteRequest {
   messages: ModelMessage[];
   tools: ModelTool[];
   maxTokens?: number;
+  /** Provider-specific knobs from the Garufile's modelOptions. Each provider takes what it understands. */
+  options?: Record<string, unknown>;
 }
 
 export interface CompleteResponse {

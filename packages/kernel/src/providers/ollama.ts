@@ -78,7 +78,12 @@ export class OllamaProvider implements ModelProvider {
             })),
           }
         : {}),
-      options: { num_predict: req.maxTokens ?? 4096 },
+      ...(typeof req.options?.["think"] === "boolean" ? { think: req.options["think"] } : {}),
+      options: {
+        num_predict: req.maxTokens ?? 4096,
+        // everything else in modelOptions goes to Ollama's generation options (temperature, num_ctx, top_p…)
+        ...Object.fromEntries(Object.entries(req.options ?? {}).filter(([k]) => k !== "think")),
+      },
     };
 
     let res: Response;
