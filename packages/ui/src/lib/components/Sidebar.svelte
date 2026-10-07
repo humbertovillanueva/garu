@@ -2,6 +2,7 @@
   import { route, href } from "../router.svelte";
   import { live } from "../api.svelte";
   import Mark from "./Mark.svelte";
+  import Icon from "./Icon.svelte";
 
   const isActive = (name: string, part?: string) => route.name === name && (part === undefined || route.parts[0] === part);
   const shortRoot = $derived(live.root.replace(/^\/Users\/[^/]+/, "~").replace(/^\/home\/[^/]+/, "~"));
@@ -61,17 +62,27 @@
   </div>
 </aside>
 
-<!-- Mobile top bar -->
-<header class="sticky top-0 z-10 flex items-center gap-3 border-b hairline bg-bg/90 px-4 py-3 backdrop-blur lg:hidden">
+<!-- Phone: slim top bar with the brand and the live dot -->
+<header class="sticky top-0 z-10 flex items-center gap-3 border-b hairline bg-bg/90 px-4 py-2.5 backdrop-blur lg:hidden" style="padding-top: calc(0.625rem + env(safe-area-inset-top))">
   <a href={href("home")} class="flex items-center gap-2">
     <span class="relative grid h-6 w-6 place-items-center"><span class="absolute h-6 w-6 rounded-full border border-accent/35"></span><span class="h-2.5 w-2.5 rounded-full bg-accent"></span></span>
     <span class="text-[15px] font-semibold tracking-tight">Garu</span>
   </a>
-  <nav class="ml-2 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-    {#each [["home", "Home"], ["inbox", "Inbox"], ["runs", "Runs"], ["cost", "Cost"], ["agents", "Agents"]] as const as [n, l]}
-      <a href={href(n)} class="navitem whitespace-nowrap py-1.5" class:active={route.name === n || (n === "agents" && route.name === "agent")}>
-        {l}{#if n === "inbox" && live.pending.length}<span class="mono rounded-full bg-accent px-1.5 text-[11px] font-semibold text-bg">{live.pending.length}</span>{/if}
-      </a>
-    {/each}
-  </nav>
+  <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute">
+    <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{live.connected ? "live" : "…"}
+  </span>
 </header>
+
+<!-- Phone: bottom tab bar, within thumb reach -->
+<nav class="fixed inset-x-0 bottom-0 z-10 grid grid-cols-5 border-t hairline bg-bg/95 backdrop-blur lg:hidden" style="padding-bottom: env(safe-area-inset-bottom)">
+  {#each [["home", "Home"], ["inbox", "Inbox"], ["agents", "Agents"], ["runs", "Runs"], ["cost", "Cost"]] as const as [n, l]}
+    {@const active = route.name === n || (n === "agents" && route.name === "agent") || (n === "runs" && route.name === "run")}
+    <a href={href(n)} class="tab" class:active aria-label={l}>
+      <span class="relative">
+        <Icon name={n} />
+        {#if n === "inbox" && live.pending.length}<span class="mono absolute -right-2.5 -top-1.5 rounded-full bg-accent px-1.5 text-[10px] font-semibold leading-4 text-bg">{live.pending.length}</span>{/if}
+      </span>
+      <span>{l}</span>
+    </a>
+  {/each}
+</nav>

@@ -149,7 +149,7 @@
 
     <!-- Composer -->
     {#if a.configured}
-      <div class="panel-raised rise sticky bottom-4 p-3">
+      <div class="panel-raised rise sticky p-3" style="bottom: calc(1rem + var(--tabbar))">
         <textarea class="field" rows="2" placeholder="Message {a.name}… (⌘↵ to send)" bind:value={note} onkeydown={onKey} disabled={a.status === "working" || a.status === "waiting"}></textarea>
         <div class="mt-2 flex flex-wrap items-center gap-2">
           <button class="btn btn-primary" disabled={starting || !note.trim() || a.status === "working" || a.status === "waiting"} onclick={send}>

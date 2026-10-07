@@ -245,6 +245,10 @@ program
       log: t,
     });
     stderr.write(`garu control room → ${srv.url}\n`);
+    if (!/^(127\.0\.0\.1|localhost|::1)$/.test(opts.host)) {
+      stderr.write(`  bound to ${opts.host}: the control room has no login, so anyone who can reach this address can approve actions.\n`);
+      stderr.write(`  For your phone, prefer \`tailscale serve --bg ${opts.port}\` on the default host — HTTPS, your devices only. See docs/phone.md.\n`);
+    }
     if (!existsSync(join(staticDir, "index.html"))) stderr.write(`  UI not built yet: run \`npm run build\` in the repo\n`);
     if (opts.up) stderr.write(`  running ${srv.agents} cron schedule(s) from Garufiles under ${process.cwd()}\n`);
     stderr.write(`Ctrl-C to stop.\n`);

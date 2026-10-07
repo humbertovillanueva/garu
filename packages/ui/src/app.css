@@ -86,5 +86,9 @@ textarea.field:focus { border-color: color-mix(in oklab, var(--color-accent) 60%
 .navitem { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 9px; color: var(--color-fg-2); font-size: 14px; transition: background .12s ease, color .12s ease; }
 .navitem:hover { background: var(--color-panel-2); color: var(--color-fg); }
 .navitem.active { background: var(--color-panel-2); color: var(--color-fg); }
+:root { --tabbar: calc(3.75rem + env(safe-area-inset-bottom)); }
+@media (min-width: 64rem) { :root { --tabbar: 0px; } }
+.tab { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 7px; font-size: 10.5px; color: var(--color-mute); -webkit-tap-highlight-color: transparent; }
+.tab.active { color: var(--color-accent); }
 ::selection { background: color-mix(in oklab, var(--color-accent) 35%, transparent); }
 * { scrollbar-width: thin; scrollbar-color: var(--color-line-2) transparent; }
