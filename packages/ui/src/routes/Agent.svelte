@@ -107,9 +107,6 @@
       </div>
     </div>
 
-    <!-- Needs you -->
-    {#each pending as r (r.id)}<ReviewCard req={r} />{/each}
-
     <!-- Conversation -->
     {#if messages === null}
       <Skeleton rows={2} h={56} />
@@ -134,6 +131,9 @@
         <Timeline events={liveEvents} compact />
       </div>
     {/if}
+
+    <!-- Needs you: right where the timeline stopped -->
+    {#each pending as r (r.id)}<ReviewCard req={r} />{/each}
     <div bind:this={bottom}></div>
 
     <!-- Composer -->

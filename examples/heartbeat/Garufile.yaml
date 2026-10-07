@@ -1,4 +1,4 @@
-# An always-on agent. Every 2 minutes it checks the workspace and appends one
+# An always-on agent. Every hour it checks the workspace and appends one
 # line to heartbeat.log saying what's there. Tiny on purpose: it exists to show
 # `garu up` keeping an agent alive on a schedule, with every run in the log.
 #
@@ -6,14 +6,14 @@
 #   garu log heartbeat
 #
 # Its one write is its whole job, so it's `allow` — an agent that asks you every
-# two minutes is noise, not safety. Anything outside heartbeat.log is blocked.
+# hour is noise, not safety. Anything outside heartbeat.log is blocked.
 
 name: heartbeat
 description: Appends a one-line status to heartbeat.log on a schedule.
 model: gemini/gemini-3.5-flash-lite
 
 triggers:
-  - cron: "*/2 * * * *"
+  - cron: "0 * * * *"
 
 budget:
   maxCostUsd: 0.01          # per run; ~700 runs/day at this cadence would still be < $7 at list price

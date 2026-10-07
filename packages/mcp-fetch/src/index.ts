@@ -9,6 +9,7 @@
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { toSlackMrkdwn } from "./format.js";
 import { z } from "zod";
 
 const MAX_CHARS_DEFAULT = 20_000;
@@ -109,7 +110,7 @@ if (WEBHOOK_URL) {
     },
     async ({ text }) => {
       const u = new URL(WEBHOOK_URL);
-      const body = /discord\.com$|discordapp\.com$/.test(u.hostname) ? { content: text } : { text };
+      const body = /discord\.com$|discordapp\.com$/.test(u.hostname) ? { content: text } : { text: /slack\.com$/.test(u.hostname) ? toSlackMrkdwn(text) : text };
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
       try {
