@@ -16,6 +16,9 @@ budget:
 maxTurns: 10
 
 tools:
+  - name: github                                   # GitHub's hosted MCP server, 46 tools; the policy below exposes 3
+    url: https://api.githubcopilot.com/mcp/
+    headers: { Authorization: "Bearer ${GITHUB_TOKEN}" }
   - name: web
     command: node
     args: ["packages/mcp-fetch/dist/index.js"]
@@ -26,6 +29,21 @@ tools:
     args: ["-y", "@modelcontextprotocol/server-filesystem", "./agents/repo-watch/workspace"]
 
 policy:
+  # GitHub: three read-only tools, and only for this one repository. Everything
+  # else the server offers (create issue, push files, merge…) is blocked, so the
+  # model never even sees it.
+  - tool: "github.list_issues"
+    action: allow
+    when: { owner: { eq: humbertovillanueva }, repo: { eq: garu } }
+  - tool: "github.list_pull_requests"
+    action: allow
+    when: { owner: { eq: humbertovillanueva }, repo: { eq: garu } }
+  - tool: "github.list_commits"
+    action: allow
+    when: { owner: { eq: humbertovillanueva }, repo: { eq: garu } }
+  - tool: "github.*"
+    action: block
+    reason: repo-watch only reads humbertovillanueva/garu
   # Reading: only these hosts, by URL. Add a host here to widen it.
   - tool: "web.fetch_*"
     action: allow
@@ -64,13 +82,16 @@ prompt: |
 
   Every hour, check the Garu repo for new stars and issues. Keep a dated log in your folder and tell me when something changed.
 
-  The repo is https://api.github.com/repos/humbertovillanueva/garu (stars, forks, open_issues_count, pushed_at).
-  Open issues: https://api.github.com/repos/humbertovillanueva/garu/issues?state=open&per_page=20
-  Your folder is the one fs.list_allowed_directories returns. Keep one file there, log.md: on each run append a line
-  "<ISO time> — <stars> stars, <forks> forks, <open issues> open issues, pushed <pushed_at>" and read the previous line first.
-  Only post to the channel when a number changed or a new issue appeared; say exactly what changed. If nothing changed, do not post — just reply "no change".
+  The repo is humbertovillanueva/garu. Each run, in as few turns as possible:
+  1. web.fetch_json https://api.github.com/repos/humbertovillanueva/garu → stargazers_count, forks_count, pushed_at.
+  2. github.list_issues with owner "humbertovillanueva", repo "garu", state "OPEN" → the open issues (number, title).
+  3. github.list_pull_requests with owner "humbertovillanueva", repo "garu", state "open" → the open PRs (number, title).
+  4. Read log.md in your folder (fs.list_allowed_directories gives the folder; it may not exist yet).
+  Then append one line to log.md: "<ISO time> — <stars> stars, <forks> forks, <N> open issues, <N> open PRs, pushed <pushed_at>".
+  Compare with the previous line. Post to the channel only when stars, forks, issues or PRs changed, naming new issues/PRs
+  by number and title. If nothing changed, do not post — reply "no change".
 
-  You can read from api.github.com with the web tools; read files in your folder with the fs tools (writes are reviewed first); post a message to the channel with post_message (it is reviewed first).
+  You can read from api.github.com with the web tools; read this repo's issues, PRs and commits with the github tools; read files in your folder with the fs tools (writes are reviewed first); post a message to the channel with post_message (it is reviewed first).
 
   Work only with the tools you are given. If a call is blocked or declined, say so briefly and continue without it; never retry the same blocked call.
   Use the current date and time from your context. Never invent facts, URLs or file contents.
