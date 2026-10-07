@@ -1,6 +1,6 @@
 # The hello agent on a local model. Zero API cost, nothing leaves your machine.
 #
-#   ollama pull llama3.2          # once; ~2 GB
+#   ollama pull llama3.1:8b       # once; ~4.9 GB
 #   garu run examples/hello-local/Garufile.yaml
 #
 # It can read the files in ./workspace, and it may write a summary there —
@@ -10,7 +10,7 @@
 
 name: hello-local
 description: Summarizes the notes in ./workspace into SUMMARY.md.
-model: ollama/llama3.2   # any Ollama model that supports tools: llama3.1, llama3.2, qwen3, mistral-nemo…
+model: ollama/llama3.1:8b   # reliable at multi-step tool use. Smaller models (llama3.2 3B) tend to skip steps and drop arguments.
 
 # Local models are priced at $0, so no cap is needed. maxTurns still bounds the run.
 maxTurns: 12

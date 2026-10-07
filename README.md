@@ -86,7 +86,7 @@ Unattended `ask` decisions go to the inbox and expire as a deny after 30 minutes
 Providers today: `gemini/*`, `anthropic/*`, and `ollama/*` for local models. For a fully local, $0 run:
 
 ```sh
-ollama pull llama3.2                                   # once
+ollama pull llama3.1:8b                                # once, ~4.9 GB
 npm run garu -- run examples/hello-local/Garufile.yaml
 ```
 
