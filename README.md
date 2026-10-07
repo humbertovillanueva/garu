@@ -149,19 +149,9 @@ The complaint practitioners make about always-on agents is that *their* throughp
 
 ## Where Garu fits
 
-Be clear about what this is and isn't.
+Be clear about what this is and isn't. Dots and Muse are polished consumer products with thousands of integrations, running on their makers' clouds with their makers' models. OpenDots is a friendly open-source coworker that lives in Slack and voice calls. open-multi-agent is a serious framework for orchestrating teams of agents inside a company, with audit trails to match.
 
-| | Dots (OpenAI) · Muse (Meta) | OpenDots (CopilotKit) | open-multi-agent | **Garu** |
-|---|---|---|---|---|
-| Runs where | their cloud | yours | yours | yours (laptop, server, or soon hosted) |
-| Models | theirs only | any | any | any, including local |
-| Per-argument policy | rules, opaque | per-Dot permissions | approvals | **allow/ask/block by tool and argument, learned rules** |
-| Cost cap per run | — | — | — | **yes, from real tokens** |
-| Sandbox | their VM | — | yes | **Docker, network off by default** |
-| Portable agent file | — | — | — | **Garufile** |
-| Best at | consumer polish, 4,000 integrations | coworker in Slack and voice | enterprise orchestration, audit | **the trustworthy runtime** |
-
-OpenDots is the friendlier coworker app; open-multi-agent is the enterprise orchestration framework. Garu is the thing underneath: *systemd for your agents*. If you want an agent to run unattended with write access to anything you care about, this is the layer that makes that a reasonable idea.
+Garu is the layer underneath all of that: *systemd for your agents*. It runs on your laptop or your server, with any model including local ones, and its whole design is about one question: **can I let this thing run unattended with write access to something I care about?** Per-argument policy, rules learned from your own approvals, a cost cap on every run, a sandbox with the network off by default, and a flight recorder that misses nothing. If that's the question you're asking, this is the runtime for it.
 
 ## Status and roadmap
 
