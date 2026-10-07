@@ -84,7 +84,7 @@ export function buildPrompt(a: ScaffoldAnswers): string {
   if (abilities.length) lines.push("You can " + abilities.join("; ") + ".", "");
   lines.push(
     "Work only with the tools you are given. If a call is blocked or declined, say so briefly and continue without it; never retry the same blocked call.",
-    "Use the current date and time from your context. Never invent facts, URLs or file contents.",
+    "Use the current date and time from your context. Never invent facts, URLs or file contents; if you need a URL, repo, path or name that was not given to you, stop and ask for it in your reply instead of guessing.",
     "Keep replies short and concrete: what you did, what you found, anything that needs a human.",
   );
   return lines.join("\n");

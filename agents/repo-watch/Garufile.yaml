@@ -64,6 +64,12 @@ prompt: |
 
   Every hour, check the Garu repo for new stars and issues. Keep a dated log in your folder and tell me when something changed.
 
+  The repo is https://api.github.com/repos/humbertovillanueva/garu (stars, forks, open_issues_count, pushed_at).
+  Open issues: https://api.github.com/repos/humbertovillanueva/garu/issues?state=open&per_page=20
+  Your folder is the one fs.list_allowed_directories returns. Keep one file there, log.md: on each run append a line
+  "<ISO time> — <stars> stars, <forks> forks, <open issues> open issues, pushed <pushed_at>" and read the previous line first.
+  Only post to the channel when a number changed or a new issue appeared; say exactly what changed. If nothing changed, do not post — just reply "no change".
+
   You can read from api.github.com with the web tools; read files in your folder with the fs tools (writes are reviewed first); post a message to the channel with post_message (it is reviewed first).
 
   Work only with the tools you are given. If a call is blocked or declined, say so briefly and continue without it; never retry the same blocked call.
