@@ -83,7 +83,12 @@ npm run garu -- approve <id>       # or: deny <id>
 
 Unattended `ask` decisions go to the inbox and expire as a deny after 30 minutes (`--ask-timeout`). Want them on your phone? Install the free [ntfy](https://ntfy.sh) app, pick a topic, and run `garu up … --notify https://ntfy.sh/<topic>`. `--on-ask allow|deny|terminal` are there for agents you fully trust, don't trust at all, or are watching live.
 
-Providers today: `gemini/*` and `anthropic/*`. Local models via Ollama are next.
+Providers today: `gemini/*`, `anthropic/*`, and `ollama/*` for local models. For a fully local, $0 run:
+
+```sh
+ollama pull llama3.2                                   # once
+npm run garu -- run examples/hello-local/Garufile.yaml
+```
 
 ## Develop
 

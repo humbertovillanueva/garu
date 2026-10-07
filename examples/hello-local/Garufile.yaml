@@ -1,0 +1,53 @@
+# The hello agent on a local model. Zero API cost, nothing leaves your machine.
+#
+#   ollama pull llama3.2          # once; ~2 GB
+#   garu run examples/hello-local/Garufile.yaml
+#
+# It can read the files in ./workspace, and it may write a summary there —
+# but only after you approve. Deleting or moving anything is blocked outright.
+#
+#   garu log hello-local
+
+name: hello-local
+description: Summarizes the notes in ./workspace into SUMMARY.md.
+model: ollama/llama3.2   # any Ollama model that supports tools: llama3.1, llama3.2, qwen3, mistral-nemo…
+
+# Local models are priced at $0, so no cap is needed. maxTurns still bounds the run.
+maxTurns: 12
+
+tools:
+  - name: fs
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "./examples/hello/workspace"]
+
+policy:
+  - tool: "fs.read_*"
+    action: allow
+  - tool: "fs.list_*"
+    action: allow
+  - tool: "fs.search_files"
+    action: allow
+  - tool: "fs.get_file_info"
+    action: allow
+  - tool: "fs.directory_tree"
+    action: allow
+  - tool: "fs.write_file"
+    action: ask
+    reason: writing a file in the workspace
+  - tool: "fs.edit_file"
+    action: ask
+    reason: editing a file in the workspace
+  - tool: "fs.move_file"
+    action: block
+    reason: this agent never moves files
+  - tool: "fs.create_directory"
+    action: block
+  - tool: "*"
+    action: ask
+
+prompt: |
+  Read every markdown file in the workspace directory (use the tools to find them;
+  the directory you are allowed to use is the one the filesystem server exposes).
+  Then write a file called SUMMARY.md in that same directory with three sections:
+  "Decisions", "Open questions", and "People". Keep it short. When done, tell me
+  in one sentence what you wrote.

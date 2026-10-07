@@ -67,6 +67,8 @@ program
     const price = g.budget.pricing ?? priceFor(g.model);
     if (g.budget.maxCostUsd !== undefined) {
       stdout.write(`  budget: cap ${formatUsd(g.budget.maxCostUsd)} per run${price ? ` at $${price.inputPerMTok}/$${price.outputPerMTok} per MTok` : " — ✖ model has no known price, add budget.pricing"}\n`);
+    } else if (price && price.inputPerMTok === 0 && price.outputPerMTok === 0) {
+      stdout.write(`  budget: model is priced at $0 (local/free), no cap needed\n`);
     } else {
       stdout.write(`  ⚠ no budget.maxCostUsd — fine for a one-off, risky for an always-on agent\n`);
     }
