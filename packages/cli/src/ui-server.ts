@@ -340,6 +340,13 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     }
   });
 
+  server.on("error", (e: NodeJS.ErrnoException) => {
+    if (e.code === "EADDRINUSE") {
+      opts.log(`port ${opts.port} is already in use — another control room is probably still running. Stop it, or pick a port with --port.`);
+      process.exit(1);
+    }
+    throw e;
+  });
   server.listen(opts.port, opts.host);
   const url = `http://${opts.host === "0.0.0.0" ? "localhost" : opts.host}:${opts.port}`;
   return {
