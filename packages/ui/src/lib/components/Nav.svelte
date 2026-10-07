@@ -19,7 +19,7 @@
       </span>
       <span class="text-[15px] font-semibold tracking-tight">Garu</span>
     </a>
-    <nav class="flex items-center gap-1 overflow-x-auto">
+    <nav class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
       {#each items as [name, label]}
         <a href={href(name)} class="navlink flex items-center gap-2 whitespace-nowrap" class:active={route.name === name}>
           {label}
@@ -29,7 +29,7 @@
         </a>
       {/each}
     </nav>
-    <div class="ml-auto flex items-center gap-2 text-[12px] text-mute">
+    <div class="ml-2 flex flex-none items-center gap-2 text-[12px] text-mute">
       <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>
       <span class="hidden sm:inline">{live.connected ? "live" : "reconnecting"}</span>
     </div>

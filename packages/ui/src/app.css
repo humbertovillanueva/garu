@@ -14,14 +14,19 @@
   --color-ok: #43c979;
   --color-ask: #f2a93b;
   --color-bad: #ef5350;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* Chart series colors: referenced only via var() in markup, so they live outside @theme
+   (Tailwind v4 drops theme variables no utility uses). Validated for the dark surface. */
+:root {
   --color-s1: #4f8fd9;
   --color-s2: #2a9d78;
   --color-s3: #9a6fd0;
   --color-s4: #d0663a;
   --color-s-other: #5b6472;
-
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 html, body { height: 100%; }

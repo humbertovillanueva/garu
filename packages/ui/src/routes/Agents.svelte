@@ -51,13 +51,13 @@
             <div><div class="text-mute">spend</div><div>{usd(a.costTodayUsd)}</div></div>
           </div>
           {#if a.lastRun}
-            <div class="mono mt-3 flex gap-3 border-t hairline pt-3 text-[11px] text-mute">
+            <div class="mono mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t hairline pt-3 text-[11px] whitespace-nowrap text-mute">
               <span>{a.lastRun.turns} turns</span>
               <span>{tokens(a.lastRun.inputTokens + a.lastRun.outputTokens)} tok</span>
               <span style="color: var(--color-ok)">{a.lastRun.toolCalls.allow} allow</span>
               <span style="color: var(--color-ask)">{a.lastRun.toolCalls.ask} ask</span>
               <span style="color: var(--color-bad)">{a.lastRun.toolCalls.block} block</span>
-              {#if a.lastRun.sandbox}<span class="ml-auto">sandboxed</span>{/if}
+              {#if a.lastRun.sandbox}<span class="ml-auto rounded px-1.5 text-fg-2" style="background: var(--color-panel-2)">sandboxed</span>{/if}
             </div>
           {/if}
         </a>
