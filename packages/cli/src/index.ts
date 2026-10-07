@@ -182,15 +182,24 @@ sandboxCmd
   .action(async (opts: { tag: string; context: string }) => {
     if (!existsSync(join(opts.context, "Dockerfile"))) fail(`no Dockerfile in ${opts.context}`);
     stderr.write(`building ${opts.tag} from ${opts.context}…\n`);
+    let stderrTail = "";
     const code = await new Promise<number>((done) => {
-      const p = spawn("docker", ["build", "-t", opts.tag, opts.context], { stdio: "inherit" });
+      const p = spawn("docker", ["build", "-t", opts.tag, opts.context], { stdio: ["ignore", "inherit", "pipe"] });
+      p.stderr.on("data", (d: Buffer) => {
+        const text = d.toString();
+        stderrTail = (stderrTail + text).slice(-2000);
+        stderr.write(text);
+      });
       p.on("error", (e: NodeJS.ErrnoException) => {
         if (e.code === "ENOENT") fail("Docker isn't installed or not on PATH. Install Docker Desktop and try again.");
         fail(e.message);
       });
       p.on("exit", (c) => done(c ?? 1));
     });
-    if (code !== 0) fail(`docker build exited with ${code}`);
+    if (code !== 0) {
+      if (/docker API|docker\.sock|daemon/i.test(stderrTail)) fail("Docker is installed but not running. Start Docker Desktop, wait for the whale to settle, then try again.");
+      fail(`docker build exited with ${code}`);
+    }
     stdout.write(`✔ built ${opts.tag}. Agents with a \`sandbox:\` block will use it.\n`);
   });
 
