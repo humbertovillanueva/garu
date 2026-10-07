@@ -6,15 +6,18 @@ import { stdin, stdout, stderr } from "node:process";
 import { join, resolve } from "node:path";
 import {
   GarufileError,
+  Inbox,
   PolicyEngine,
   Scheduler,
   assertValidCron,
   formatEvent,
+  formatRequest,
   formatUsd,
   parseGarufile,
   priceFor,
   readRun,
   runAgent,
+  type ApprovalRequest,
   type Approver,
   type Envelope,
   type Garufile,
@@ -22,6 +25,7 @@ import {
 } from "@garu/kernel";
 
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
+const DEFAULT_INBOX_ROOT = resolve(process.cwd(), ".garu", "inbox");
 
 // `garu log | head` must not crash when the reader closes the pipe.
 stdout.on("error", (e: NodeJS.ErrnoException) => {
@@ -100,17 +104,32 @@ program
 program
   .command("up")
   .argument("<files...>", "Garufiles to keep running on their cron triggers")
-  .option("--on-ask <mode>", "what to do with `ask` decisions when nobody is watching: deny | allow | terminal", "deny")
+  .option("--on-ask <mode>", "what to do with `ask` decisions: inbox (pause for `garu approve`) | deny | allow | terminal", "inbox")
+  .option("--ask-timeout <minutes>", "inbox mode: deny a request nobody answers after this long", "30")
+  .option("--notify <url>", "inbox mode: POST each approval request to this URL (ntfy.sh topic URLs work)")
+  .option("--inbox-root <dir>", "where approval requests live", DEFAULT_INBOX_ROOT)
   .option("--log-root <dir>", "where run logs go", DEFAULT_LOG_ROOT)
   .option("-q, --quiet", "only print scheduler events, not every run step")
   .option("--once", "fire every cron agent once right now, then exit (for testing)")
   .description("Run agents on their schedules until stopped (Ctrl-C)")
-  .action(async (files: string[], opts: { onAsk: string; logRoot: string; quiet?: boolean; once?: boolean }) => {
+  .action(async (files: string[], opts: { onAsk: string; askTimeout: string; notify?: string; inboxRoot: string; logRoot: string; quiet?: boolean; once?: boolean }) => {
     loadDotEnv();
     const agents = files.map((f) => ({ source: f, garufile: loadGarufile(f) }));
-    const approver =
-      opts.onAsk === "allow" ? autoApprove : opts.onAsk === "terminal" ? terminalApprover : unattendedDeny;
-    if (!["deny", "allow", "terminal"].includes(opts.onAsk)) fail(`--on-ask must be deny, allow or terminal (got "${opts.onAsk}")`);
+    if (!["inbox", "deny", "allow", "terminal"].includes(opts.onAsk)) fail(`--on-ask must be inbox, deny, allow or terminal (got "${opts.onAsk}")`);
+    const timeoutMin = Number(opts.askTimeout);
+    if (!Number.isFinite(timeoutMin) || timeoutMin <= 0) fail(`--ask-timeout must be a positive number of minutes`);
+    const approver: Approver =
+      opts.onAsk === "allow" ? autoApprove
+      : opts.onAsk === "terminal" ? terminalApprover
+      : opts.onAsk === "deny" ? unattendedDeny
+      : new Inbox({
+          root: opts.inboxRoot,
+          timeoutMs: timeoutMin * 60_000,
+          onRequest: async (r) => {
+            stderr.write(`\n┌ APPROVAL NEEDED  (expires ${r.expiresAt.slice(11, 16)} UTC)\n│ ${formatRequest(r)}\n└ garu approve ${r.id}   ·   garu deny ${r.id}\n\n`);
+            if (opts.notify) await notify(opts.notify, r);
+          },
+        }).approver();
 
     const scheduler = new Scheduler({
       onEvent: printSchedulerEvent,
@@ -142,6 +161,42 @@ program
     process.once("SIGTERM", () => shutdown("SIGTERM"));
     await new Promise<never>(() => {}); // run until a signal
   });
+
+program
+  .command("inbox")
+  .option("--inbox-root <dir>", "where approval requests live", DEFAULT_INBOX_ROOT)
+  .option("--all", "include decided and expired requests")
+  .description("List approval requests waiting for you")
+  .action((opts: { inboxRoot: string; all?: boolean }) => {
+    const inbox = new Inbox({ root: opts.inboxRoot });
+    const rows = opts.all ? inbox.all() : inbox.pending();
+    if (rows.length === 0) {
+      stdout.write(opts.all ? "inbox is empty\n" : "nothing waiting for approval\n");
+      return;
+    }
+    for (const r of rows) {
+      const state = r.decision ? (r.decision.approved ? `approved by ${r.decision.by}` : `denied by ${r.decision.by}`) : `pending, expires ${r.expiresAt.slice(11, 16)} UTC`;
+      stdout.write(`${formatRequest(r)}\n    ${r.createdAt.slice(0, 19).replace("T", " ")}  ·  ${state}\n`);
+    }
+  });
+
+for (const [cmd, approved] of [["approve", true], ["deny", false]] as const) {
+  program
+    .command(cmd)
+    .argument("<id>", "approval request id (from `garu inbox`)")
+    .option("--inbox-root <dir>", "where approval requests live", DEFAULT_INBOX_ROOT)
+    .option("--as <name>", "who is deciding", process.env["USER"] ?? "terminal")
+    .description(approved ? "Let a paused tool call through" : "Refuse a paused tool call")
+    .action((id: string, opts: { inboxRoot: string; as: string }) => {
+      const inbox = new Inbox({ root: opts.inboxRoot });
+      try {
+        const r = inbox.decide(id, approved, opts.as);
+        stdout.write(`${approved ? "✔ approved" : "✖ denied"} ${r.tool} for ${r.agent} — the run will continue\n`);
+      } catch (e) {
+        fail((e as Error).message);
+      }
+    });
+}
 
 program
   .command("log")
@@ -198,6 +253,21 @@ function loadDotEnv(): void {
 const autoApprove: Approver = async () => ({ approved: true, by: "--yes" });
 /** `garu up` default: nobody is at the keyboard, so an `ask` is a no. The model is told and moves on. */
 const unattendedDeny: Approver = async () => ({ approved: false, by: "unattended (garu up --on-ask deny)" });
+
+/** Push an approval request to a URL. Body is plain text so ntfy.sh (free push to your phone) shows it as-is. */
+async function notify(url: string, r: ApprovalRequest): Promise<void> {
+  const body = `${r.agent} wants ${r.tool}\n${JSON.stringify(r.args).slice(0, 300)}\nreason: ${r.reason}\n\ngaru approve ${r.id}\ngaru deny ${r.id}`;
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "text/plain", Title: `Garu: approval needed (${r.agent})`, Priority: "high", Tags: "lock" },
+      body,
+    });
+    if (!res.ok) stderr.write(`notify: ${url} answered HTTP ${res.status}\n`);
+  } catch (e) {
+    stderr.write(`notify: could not reach ${url}: ${(e as Error).message}\n`);
+  }
+}
 
 function printSchedulerEvent(e: SchedulerEvent): void {
   const t = new Date().toISOString().slice(11, 19);

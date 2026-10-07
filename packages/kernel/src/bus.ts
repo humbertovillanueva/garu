@@ -23,9 +23,15 @@ export interface BusTool {
   inputSchema: Record<string, unknown>;
 }
 
+export interface ApprovalContext {
+  agent: string;
+  runId: string;
+  callId: string;
+}
+
 export interface Approver {
   /** Return true to let the call through. Called only for `ask` decisions. */
-  (req: ToolCallRequest, decision: Decision): Promise<{ approved: boolean; by: string }>;
+  (req: ToolCallRequest, decision: Decision, ctx: ApprovalContext): Promise<{ approved: boolean; by: string }>;
 }
 
 export type CallOutcome =
@@ -130,7 +136,7 @@ export class ToolBus {
 
     if (decision.action === "ask") {
       rec.record({ type: "approval.requested", callId });
-      const { approved, by } = await this.opts.approver(req, decision);
+      const { approved, by } = await this.opts.approver(req, decision, { agent: rec.agent, runId: rec.runId, callId });
       rec.record({ type: "approval.resolved", callId, approved, by });
       if (!approved) return { status: "denied", decision, by, callId };
     }

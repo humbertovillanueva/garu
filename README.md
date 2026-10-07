@@ -10,7 +10,7 @@
 - **Any model.** Claude, GPT, Gemini, local models. Swap per agent, or per task by cost.
 - **Any tool, via MCP.** An agent only ever touches the world through the Model Context Protocol.
 - **A policy kernel.** Every tool call is checked against rules you wrote: `allow`, `ask`, or `block`, by tool name and by argument. Nothing slips past it, and tools that are always blocked are never even shown to the model.
-- **An approval inbox.** When a rule says `ask`, the agent pauses and you decide.
+- **An approval inbox.** When a rule says `ask`, the agent pauses. `garu inbox` shows what's waiting, `garu approve <id>` lets it through, and it resumes. Unanswered requests expire as a deny. Add `--notify https://ntfy.sh/<your-topic>` and the request lands on your phone.
 - **A flight recorder.** Every call, decision, approval and model turn is written to an append-only log. Searchable. Diffable. Yours.
 - **A budget cap.** Each run's cost is estimated from real token counts and shown in the log; set `budget.maxCostUsd` and the run stops the moment it would cross it.
 - **Garufile.** One portable manifest describes an agent: prompt, tools, triggers, policy, memory. Publish it, install it, fork it.
@@ -56,7 +56,7 @@ prompt: |
 
 ```
 packages/kernel   # Garufile schema, policy engine, flight recorder, MCP tool bus, agent loop
-packages/cli      # `garu run`, `garu log`, `garu validate`
+packages/cli      # garu run · up · inbox · approve · deny · log · validate
 examples/         # Garufiles you can run today
 ```
 
@@ -74,10 +74,14 @@ npm run garu -- run      examples/hello/Garufile.yaml   # approve the write when
 npm run garu -- log      hello                          # replay the flight recorder
 
 # always-on: keep an agent running on its cron schedule until Ctrl-C
-npm run garu -- up examples/heartbeat/Garufile.yaml --on-ask allow
+npm run garu -- up examples/heartbeat/Garufile.yaml
+
+# in another terminal, when the agent hits an `ask` rule:
+npm run garu -- inbox              # see what's waiting
+npm run garu -- approve <id>       # or: deny <id>
 ```
 
-When nobody is watching (`garu up`), `ask` decisions are **denied** by default. Pass `--on-ask allow` only for agents you already trust, or tighten their policy so the routine actions are `allow` and only the scary ones `ask`.
+Unattended `ask` decisions go to the inbox and expire as a deny after 30 minutes (`--ask-timeout`). Want them on your phone? Install the free [ntfy](https://ntfy.sh) app, pick a topic, and run `garu up … --notify https://ntfy.sh/<topic>`. `--on-ask allow|deny|terminal` are there for agents you fully trust, don't trust at all, or are watching live.
 
 Providers today: `gemini/*` and `anthropic/*`. Local models via Ollama are next.
 

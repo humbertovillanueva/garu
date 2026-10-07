@@ -47,7 +47,7 @@ export class Recorder {
   readonly path: string;
   private seq = 0;
   private readonly sink: ((e: Envelope) => void) | undefined;
-  private readonly agent: string;
+  readonly agent: string;
 
   constructor(opts: RecorderOptions) {
     this.runId = opts.runId ?? newRunId();
