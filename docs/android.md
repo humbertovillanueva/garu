@@ -15,6 +15,13 @@ your control room, on the phone.
   (the setup wizard installs it).
 - Node 22+ and `npm install` at the repo root (installs Capacitor).
 
+## Quickest look: install the built APK on an emulator
+
+A debug build is produced from the repo (`packages/app/garu-debug.apk` when present,
+or build one as below). In Android Studio open **Device Manager**, start a Pixel
+emulator, and drag the `.apk` onto its window: it installs and appears in the app
+drawer as Garu. Pair it by pasting the sign-in link (emulators have no real camera).
+
 ## Build and run
 
 ```sh

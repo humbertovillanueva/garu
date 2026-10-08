@@ -21,3 +21,7 @@ packages/ui/dist-app/
 # Tomay writes here
 agents/*/briefs/*.md
 agents/*/workspace/
+
+# built phone apps
+*.apk
+*.aab
