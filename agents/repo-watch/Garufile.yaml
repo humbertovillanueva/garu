@@ -5,6 +5,9 @@
 
 name: repo-watch
 description: "Every hour, check the Garu repo for new stars and issues."
+persona:
+  kind: owl
+  tagline: "Watches the repo so you don't have to."
 model: gemini/gemini-3.5-flash-lite
 
 triggers:

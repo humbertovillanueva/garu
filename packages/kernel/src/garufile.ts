@@ -76,6 +76,17 @@ export const HttpServerSpec = z
 export type HttpServerSpec = z.infer<typeof HttpServerSpec>;
 
 export const McpServerSpec = z.union([StdioServerSpec, HttpServerSpec]);
+
+/** The agent's face and one-line character. Purely presentational; the policy is what it can do. */
+export const PERSONA_KINDS = ["owl", "fox", "turtle", "bee", "cat", "octopus"] as const;
+export const Persona = z
+  .object({
+    /** owl: watcher · fox: messenger · turtle: keeper · bee: worker · cat: reader · octopus: planner */
+    kind: z.enum(PERSONA_KINDS),
+    tagline: z.string().max(80).optional(),
+  })
+  .strict();
+export type Persona = z.infer<typeof Persona>;
 export type McpServerSpec = z.infer<typeof McpServerSpec>;
 
 export function isRemoteServer(spec: McpServerSpec): spec is HttpServerSpec {
@@ -135,6 +146,7 @@ export const Garufile = z
   .object({
     name: z.string().regex(/^[a-z][a-z0-9-]*$/, "agent name: lowercase, digits, hyphens"),
     description: z.string().default(""),
+    persona: Persona.optional(),
     /** "<provider>/<model>" e.g. "anthropic/claude-sonnet-4-5". */
     model: z.string().regex(/^[a-z0-9-]+\/.+$/, "model must look like provider/model-id"),
     prompt: z.string().min(1, "prompt is required"),

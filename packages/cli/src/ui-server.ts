@@ -199,6 +199,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     return {
       name,
       description: g?.description ?? "",
+      persona: g?.persona ?? null,
       model: g?.model ?? runs[0]?.model ?? null,
       source: a?.source ?? null,
       configured: Boolean(g),

@@ -10,6 +10,9 @@
 
 name: hello-local
 description: Summarizes the notes in ./workspace into SUMMARY.md.
+persona:
+  kind: cat
+  tagline: "Same reader, running at home on your own model."
 model: ollama/qwen3:8b   # strong at multi-step tool use. llama3.1:8b also works; 3B models skip steps and drop arguments.
 
 # Local models are priced at $0, so no cap is needed. maxTurns still bounds the run.

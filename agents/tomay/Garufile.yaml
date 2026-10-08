@@ -7,6 +7,9 @@
 
 name: tomay
 description: Writes a short morning brief — weather, Garu repo, dev.to, AI news.
+persona:
+  kind: fox
+  tagline: "Gathers the morning and brings it to you."
 model: gemini/gemini-3.5-flash-lite
 
 triggers:

@@ -3,7 +3,7 @@
 </p>
 <p align="center"><sub>Real run, real model, real Slack: four fetches and a file write allowed by policy, one post paused for a human, $0.003.</sub></p>
 
-<h1 align="center">Garu</h1>
+<p align="center"><img src="docs/brand/logo.png" alt="Garu" width="180"></p>
 
 <p align="center"><strong>Always-on agents you can actually trust.</strong><br>
 Any model. Any MCP tool. Every action through a policy you wrote, recorded, capped, and sandboxed.</p>

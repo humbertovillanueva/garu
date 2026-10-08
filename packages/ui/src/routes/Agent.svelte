@@ -100,6 +100,7 @@
           <h1 class="text-[24px] font-semibold tracking-tight">{a.name}</h1>
           <Status status={a.status === "scheduled" ? "idle" : a.status} />
         </div>
+        {#if a.persona?.tagline}<p class="mt-0.5 text-[14px] italic text-fg-2">“{a.persona.tagline}”</p>{/if}
         <p class="mt-0.5 text-[14px] text-fg-2">{a.description || statusLine(a)}</p>
         {#if a.description}<p class="mt-0.5 text-[13px] text-mute">{statusLine(a)}</p>{/if}
       </div>

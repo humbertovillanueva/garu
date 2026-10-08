@@ -23,6 +23,7 @@ export type AgentStatus = "idle" | "scheduled" | "working" | "waiting" | "needs-
 export interface Agent {
   name: string;
   description: string;
+  persona: { kind: "owl" | "fox" | "turtle" | "bee" | "cat" | "octopus"; tagline?: string } | null;
   model: string | null;
   source: string | null;
   configured: boolean;

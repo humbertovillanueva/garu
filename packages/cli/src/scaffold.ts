@@ -6,8 +6,21 @@
 
 export type Schedule = "manual" | "weekday-morning" | "hourly" | "daily" | { cron: string };
 
+export const KINDS = {
+  owl: { label: "a watcher — checks things on a schedule and notices change", names: ["rook", "sage", "argus"] },
+  fox: { label: "a messenger — reads around, writes, delivers", names: ["scout", "rusty", "ember"] },
+  turtle: { label: "a keeper — steady, tidy, keeps files and logs", names: ["tick", "moss", "shelby"] },
+  bee: { label: "a worker — does one small job over and over", names: ["buzz", "dot", "hum"] },
+  cat: { label: "a reader — curious, answers questions about what it finds", names: ["pip", "mochi", "nook"] },
+  octopus: { label: "a planner — many tools, juggles tasks", names: ["atlas", "otto", "inky"] },
+} as const;
+export type Kind = keyof typeof KINDS;
+
 export interface ScaffoldAnswers {
   name: string;
+  /** Its face and one-line character. */
+  kind?: Kind;
+  tagline?: string;
   /** What the agent does, in the user's words. First sentence becomes the description. */
   task: string;
   model: string;
@@ -102,6 +115,11 @@ export function renderGarufile(a: ScaffoldAnswers): string {
   out.push(``);
   out.push(`name: ${a.name}`);
   out.push(`description: ${q(firstSentence(a.task))}`);
+  if (a.kind) {
+    out.push(`persona:`);
+    out.push(`  kind: ${a.kind}                 # its face in the control room: ${KINDS[a.kind].label.split(" — ")[0]}`);
+    if (a.tagline) out.push(`  tagline: ${q(a.tagline)}`);
+  }
   out.push(`model: ${a.model}`);
   out.push(``);
   if (cron) {

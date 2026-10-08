@@ -10,6 +10,9 @@
 
 name: heartbeat
 description: Appends a one-line status to heartbeat.log on a schedule.
+persona:
+  kind: turtle
+  tagline: "Slow, steady, never misses a beat."
 model: gemini/gemini-3.5-flash-lite
 
 triggers:

@@ -37,9 +37,7 @@
   nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px); background: color-mix(in oklab, var(--bg) 88%, transparent); border-bottom: 1px solid var(--line); }
   nav .wrap { display: flex; align-items: center; gap: 22px; height: 56px; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; letter-spacing: -.01em; }
-  .mark { position: relative; width: 26px; height: 26px; display: grid; place-items: center; }
-  .mark::before { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid color-mix(in oklab, var(--accent) 35%, transparent); }
-  .mark::after { content: ""; width: 11px; height: 11px; border-radius: 50%; background: var(--accent); }
+  .mark { width: 26px; height: 26px; display: block; }
   nav .links { margin-left: auto; display: flex; gap: 18px; font-size: 14px; color: var(--fg-2); }
   nav .links a.gh { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border: 1px solid var(--line-2); border-radius: 8px; color: var(--fg); background: var(--panel); }
   nav .links a.gh:hover { background: var(--panel-2); }
@@ -120,7 +118,7 @@
 
 <nav>
   <div class="wrap">
-    <a class="brand" href="#"><span class="mark"></span>Garu</a>
+    <a class="brand" href="#"><svg class="mark" viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M52.5 20.5 A24 24 0 1 1 43 11.1" stroke="#f2a93b" stroke-opacity=".6" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="11" fill="#f2a93b"/><circle cx="28.5" cy="28" r="3.2" fill="#fff" fill-opacity=".55"/></svg>Garu</a>
     <div class="links">
       <a href="#how">How it works</a>
       <a href="#garufile">Garufile</a>
@@ -297,7 +295,7 @@ npm run garu -- log hello                                   <span class="c"># re
 
 <footer>
   <div class="wrap">
-    <span class="brand" style="font-size:14px"><span class="mark" style="width:18px;height:18px"></span>Garu</span>
+    <span class="brand" style="font-size:14px"><svg class="mark" style="width:18px;height:18px" viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M52.5 20.5 A24 24 0 1 1 43 11.1" stroke="#f2a93b" stroke-opacity=".6" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="11" fill="#f2a93b"/><circle cx="28.5" cy="28" r="3.2" fill="#fff" fill-opacity=".55"/></svg>Garu</span>
     <a href="https://github.com/humbertovillanueva/garu">GitHub</a>
     <a href="https://github.com/humbertovillanueva/garu#readme">README</a>
     <a href="https://github.com/humbertovillanueva/garu/blob/main/docs/phone.md">Phone guide</a>

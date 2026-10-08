@@ -7,6 +7,9 @@
 
 name: planner
 description: Reads the Garu backlog in Linear and says what's next; files issues when asked.
+persona:
+  kind: octopus
+  tagline: "Keeps the backlog in all eight hands."
 model: gemini/gemini-3.5-flash-lite
 
 triggers:

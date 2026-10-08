@@ -74,3 +74,11 @@ describe("garu new scaffold", () => {
     expect(suggestModel({})[0]?.model).toBe("ollama/qwen3:8b");
   });
 });
+
+describe("persona", () => {
+  it("writes the face and tagline when given, and the kernel accepts them", () => {
+    const g = parseGarufile(renderGarufile({ ...base, kind: "owl", tagline: "Watches the repo so you don't have to." }));
+    expect(g.persona).toEqual({ kind: "owl", tagline: "Watches the repo so you don't have to." });
+    expect(parseGarufile(renderGarufile(base)).persona).toBeUndefined();
+  });
+});

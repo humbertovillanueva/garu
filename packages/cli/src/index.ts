@@ -42,7 +42,7 @@ import {
 } from "@garu/kernel";
 
 import { startUiServer } from "./ui-server.js";
-import { SCHEDULES, cronFor, isFreeModel, renderGarufile, suggestModel, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
+import { KINDS, SCHEDULES, cronFor, isFreeModel, renderGarufile, suggestModel, type Kind, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
 
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
 const DEFAULT_INBOX_ROOT = resolve(process.cwd(), ".garu", "inbox");
@@ -384,6 +384,8 @@ program
   .argument("[name]", "agent name (lowercase, digits, hyphens)")
   .description("Create a new agent: a few questions, then a Garufile with a closed policy")
   .option("--task <text>", "what the agent does, in one or two sentences")
+  .option("--kind <kind>", "its face: owl | fox | turtle | bee | cat | octopus")
+  .option("--tagline <text>", "one line of character shown under its name")
   .option("--when <schedule>", "manual | weekday-morning | hourly | daily | a cron expression")
   .option("--model <provider/model>", "e.g. gemini/gemini-3.5-flash-lite, ollama/qwen3:8b")
   .option("--web <hosts>", "comma-separated hosts it may fetch from, 'ask' to review each fetch, or 'none'")
@@ -393,7 +395,7 @@ program
   .option("--budget <usd>", "cap per run in USD")
   .option("-y, --yes", "accept defaults for anything not given")
   .option("--force", "overwrite an existing Garufile")
-  .action(async (nameArg: string | undefined, opts: { task?: string; when?: string; model?: string; web?: string; fs?: string; write?: string; webhook?: string; budget?: string; yes?: boolean; force?: boolean }) => {
+  .action(async (nameArg: string | undefined, opts: { task?: string; kind?: string; tagline?: string; when?: string; model?: string; web?: string; fs?: string; write?: string; webhook?: string; budget?: string; yes?: boolean; force?: boolean }) => {
     loadDotEnv();
     const interactive = !opts.yes && stdin.isTTY;
     const rl = interactive ? createInterface({ input: stdin, output: stdout }) : null;
@@ -421,24 +423,39 @@ program
     try {
       if (rl) stdout.write(`\nLet's make an agent. Enter accepts the default.\n`);
 
+      // Task first: it's easier to name something once you've said what it does.
+      let task = opts.task?.trim() ?? "";
+      if (!task) {
+        section(`What should this agent do? One or two sentences, like you'd brief a new hire.`);
+        task = await ask(">");
+      }
+      if (!task) fail(`--task is required when not interactive`);
+
+      // Kind: its face, and a hint for the name
+      let kind: Kind | undefined;
+      if (opts.kind !== undefined) {
+        if (!(opts.kind in KINDS)) fail(`--kind must be one of ${Object.keys(KINDS).join(", ")}`);
+        kind = opts.kind as Kind;
+      } else if (rl) {
+        section("");
+        kind = await pick(`What kind of agent is it? (this picks its face)`, (Object.keys(KINDS) as Kind[]).map((k) => ({ key: k, label: `${k.padEnd(8)} ${KINDS[k].label}` })), "cat");
+      }
+
       // Name
       let name = nameArg ?? "";
+      const suggested = kind ? KINDS[kind].names.find((n) => !existsSync(join("agents", n, "Garufile.yaml"))) : undefined;
       while (!/^[a-z][a-z0-9-]*$/.test(name)) {
         if (name) stdout.write(`  name must be lowercase letters, digits and hyphens, starting with a letter\n`);
         if (!rl) fail(`agent name "${name || "(missing)"}" must be lowercase letters, digits and hyphens`);
-        name = await ask("Name (lowercase, e.g. tomay, inbox-triage):");
+        section("");
+        name = (await ask(`Name it (lowercase; this is what you'll call it):`, suggested)).toLowerCase();
       }
       const dir = join("agents", name);
       const file = join(dir, "Garufile.yaml");
       if (existsSync(file) && !opts.force) fail(`${file} already exists (use --force to overwrite)`);
 
-      // Task
-      let task = opts.task?.trim() ?? "";
-      if (!task) {
-        section(`What should ${name} do? One or two sentences, like you'd brief a new hire.`);
-        task = await ask(">");
-      }
-      if (!task) fail(`--task is required when not interactive`);
+      let tagline = opts.tagline?.trim();
+      if (tagline === undefined && rl && kind) tagline = (await ask(`One line of character for ${name} (optional, shown under its name):`)).trim() || undefined;
 
       // Schedule
       let schedule: Schedule;
@@ -518,7 +535,7 @@ program
         if (!Number.isFinite(maxCostUsd) || maxCostUsd < 0) fail(`budget must be a non-negative number`);
       }
 
-      const answers: ScaffoldAnswers = { name, task, model, schedule, web, fs, webhook, maxCostUsd, fetchServerPath: fetchServerPath() };
+      const answers: ScaffoldAnswers = { name, task, model, schedule, web, fs, webhook, maxCostUsd, fetchServerPath: fetchServerPath(), ...(kind ? { kind } : {}), ...(tagline ? { tagline } : {}) };
       const text = renderGarufile(answers);
       const g = parseGarufile(text, file); // never write a file the kernel would reject
 
