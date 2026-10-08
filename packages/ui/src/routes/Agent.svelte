@@ -114,7 +114,7 @@
     {#if a.configured}
       {@const total = (a.policy?.allow ?? 0) + (a.policy?.ask ?? 0) + (a.policy?.block ?? 0) || 1}
       <div class="rise facts">
-        <div class="fact"><div class="k">Model</div><div class="v mono" title={a.model ?? ""}>{a.model}</div></div>
+        <div class="fact wide"><div class="k">Model</div><div class="v mono" title={a.model ?? ""}>{a.model}</div></div>
         <div class="fact"><div class="k">Tools</div><div class="v" title={a.tools.join(", ")}>{a.tools.length ? a.tools.join(" · ") : "none"}</div></div>
         <div class="fact"><div class="k">Runs</div><div class="v" title={a.cron ?? ""}>{cronLabel(a.cron)}{#if a.nextRun}<span class="text-mute"> · next {until(a.nextRun)}</span>{/if}</div></div>
         <div class="fact"><div class="k">Cap</div><div class="v mono">{a.budget?.maxCostUsd ? `${usd(a.budget.maxCostUsd)} / run` : a.budget?.free ? "$0 model" : "none"}</div></div>
