@@ -19,7 +19,7 @@
 <style>
   :root {
     --bg: #0a0c0f; --panel: #11141a; --panel-2: #171b22; --line: #1e232c; --line-2: #2a303b;
-    --fg: #e6eaf0; --fg-2: #aeb6c2; --mute: #7f8899; --accent: #f2a93b; --ok: #43c979; --bad: #ef5350;
+    --fg: #e6eaf0; --fg-2: #aeb6c2; --mute: #7f8899; --accent: #f4f1ea; --ask: #d9b24c; --ok: #43c979; --bad: #ef5350;
     --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     --w: 1080px;
@@ -118,7 +118,7 @@
 
 <nav>
   <div class="wrap">
-    <a class="brand" href="#"><svg class="mark" viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M52.5 20.5 A24 24 0 1 1 43 11.1" stroke="#f2a93b" stroke-opacity=".6" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="11" fill="#f2a93b"/><circle cx="28.5" cy="28" r="3.2" fill="#fff" fill-opacity=".55"/></svg>Garu</a>
+    <a class="brand" href="#"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="mark" fill="none" color="currentColor"><defs><mask id="garu-cat"><g fill="#fff"><ellipse cx="48.5" cy="52.0" rx="23.0" ry="20.70"/><polygon points="44.82,42.34 29.64,40.96 27.80,19.34"/><polygon points="52.18,42.34 67.36,40.96 69.20,19.34"/></g><g fill="#000"><rect x="25.04" y="41.42" width="46.92" height="4.60" rx="2.30" transform="rotate(6 48.5 43.72)"/><ellipse cx="39.30" cy="53.38" rx="5.98" ry="2.07" transform="rotate(12 39.30 53.38)"/><ellipse cx="57.70" cy="53.38" rx="5.98" ry="2.07" transform="rotate(-12 57.70 53.38)"/><polygon points="46.66,60.28 50.34,60.28 48.5,62.58"/></g><g fill="#fff"><rect x="38.61" y="51.66" width="1.38" height="3.45" rx="0.69"/><rect x="57.01" y="51.66" width="1.38" height="3.45" rx="0.69"/></g></mask></defs> <path d="M 91.77 54.39 A 42 42 0 1 1 84.82 26.51" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"/> <rect width="100" height="100" fill="currentColor" mask="url(#garu-cat)"/> <g stroke="currentColor" stroke-width="3.91" stroke-linecap="round" stroke-linejoin="round"><polyline points="71.04,44.18 83.98,36.13 98.35,39.01"/><polyline points="71.04,44.18 83.11,47.63 96.34,53.95"/></g> <g fill="currentColor"><circle cx="71.04" cy="44.18" r="3.22"/></g></svg>Garu</a>
     <div class="links">
       <a href="#how">How it works</a>
       <a href="#garufile">Garufile</a>
@@ -172,7 +172,7 @@
         <rect x="190" y="30" width="170" height="44" rx="9"/>
         <rect x="420" y="30" width="140" height="44" rx="9"/>
         <rect x="620" y="30" width="150" height="44" rx="9"/>
-        <rect x="420" y="130" width="140" height="44" rx="9" stroke="#f2a93b" stroke-opacity=".6"/>
+        <rect x="420" y="130" width="140" height="44" rx="9" stroke="#d9b24c" stroke-opacity=".6"/>
         <rect x="660" y="106" width="372" height="40" rx="9"/>
         <rect x="660" y="156" width="372" height="40" rx="9"/>
         <rect x="660" y="206" width="372" height="40" rx="9"/>
@@ -183,12 +183,12 @@
         <text x="275" y="57">control room · CLI</text>
         <text x="490" y="57">agent loop</text>
         <text x="695" y="57">model</text>
-        <text x="490" y="157" fill="#f2a93b">policy kernel</text>
+        <text x="490" y="157" fill="#d9b24c">policy kernel</text>
         <text x="375" y="259">flight recorder · .garu/runs/*.jsonl</text>
       </g>
       <g fill="#aeb6c2" text-anchor="start">
         <text x="676" y="131"><tspan fill="#43c979">allow</tspan> → MCP tool server (Docker optional)</text>
-        <text x="676" y="181"><tspan fill="#f2a93b">ask</tspan> → inbox → you · browser · phone · CLI</text>
+        <text x="676" y="181"><tspan fill="#d9b24c">ask</tspan> → inbox → you · browser · phone · CLI</text>
         <text x="676" y="231"><tspan fill="#ef5350">block</tspan> → never executed, never offered</text>
       </g>
       <g fill="#7f8899" font-size="11">
@@ -295,7 +295,7 @@ npm run garu -- log hello                                   <span class="c"># re
 
 <footer>
   <div class="wrap">
-    <span class="brand" style="font-size:14px"><svg class="mark" style="width:18px;height:18px" viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M52.5 20.5 A24 24 0 1 1 43 11.1" stroke="#f2a93b" stroke-opacity=".6" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="11" fill="#f2a93b"/><circle cx="28.5" cy="28" r="3.2" fill="#fff" fill-opacity=".55"/></svg>Garu</span>
+    <span class="brand" style="font-size:14px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="mark" style="width:18px;height:18px" fill="none" color="currentColor"><defs><mask id="garu-cat"><g fill="#fff"><ellipse cx="48.5" cy="52.0" rx="23.0" ry="20.70"/><polygon points="44.82,42.34 29.64,40.96 27.80,19.34"/><polygon points="52.18,42.34 67.36,40.96 69.20,19.34"/></g><g fill="#000"><rect x="25.04" y="41.42" width="46.92" height="4.60" rx="2.30" transform="rotate(6 48.5 43.72)"/><ellipse cx="39.30" cy="53.38" rx="5.98" ry="2.07" transform="rotate(12 39.30 53.38)"/><ellipse cx="57.70" cy="53.38" rx="5.98" ry="2.07" transform="rotate(-12 57.70 53.38)"/><polygon points="46.66,60.28 50.34,60.28 48.5,62.58"/></g><g fill="#fff"><rect x="38.61" y="51.66" width="1.38" height="3.45" rx="0.69"/><rect x="57.01" y="51.66" width="1.38" height="3.45" rx="0.69"/></g></mask></defs> <path d="M 91.77 54.39 A 42 42 0 1 1 84.82 26.51" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"/> <rect width="100" height="100" fill="currentColor" mask="url(#garu-cat)"/> <g stroke="currentColor" stroke-width="3.91" stroke-linecap="round" stroke-linejoin="round"><polyline points="71.04,44.18 83.98,36.13 98.35,39.01"/><polyline points="71.04,44.18 83.11,47.63 96.34,53.95"/></g> <g fill="currentColor"><circle cx="71.04" cy="44.18" r="3.22"/></g></svg>Garu</span>
     <a href="https://github.com/humbertovillanueva/garu">GitHub</a>
     <a href="https://github.com/humbertovillanueva/garu#readme">README</a>
     <a href="https://github.com/humbertovillanueva/garu/blob/main/docs/phone.md">Phone guide</a>

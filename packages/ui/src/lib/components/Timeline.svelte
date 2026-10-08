@@ -50,14 +50,14 @@
       {:else if row.kind === "call"}
         {@const req = e["request"] as { server: string; tool: string; args: Record<string, unknown> }}
         {@const { d, approval, waiting, result } = decisionOf(row)}
-        <div class="panel overflow-hidden" style={waiting ? "border-color: color-mix(in oklab, var(--color-accent) 45%, var(--color-line))" : ""}>
+        <div class="panel overflow-hidden" style={waiting ? "border-color: color-mix(in oklab, var(--color-ask) 45%, var(--color-line))" : ""}>
           <button class="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-left text-[13px]" onclick={() => (open[row.env.seq] = !open[row.env.seq])}>
             <span class="mono text-mute">{clock(row.env.ts)}</span>
             <span class="mono font-medium">{req.server}.{req.tool}</span>
             {#if d}<Decision action={d.action} />{/if}
             {#if approval}<Decision action={approval.approved ? "allow" : "block"} label={approval.approved ? `approved · ${approval.by}` : `declined · ${approval.by}`} />{/if}
             {#if approval?.note}<span class="text-[12.5px] italic text-fg-2">“{approval.note}”</span>{/if}
-            {#if waiting}<span class="mono pulse text-[11.5px] text-accent">waiting for you</span>{/if}
+            {#if waiting}<span class="mono pulse text-[11.5px]" style="color: var(--color-ask)">waiting for you</span>{/if}
             {#if result}
               <span class="mono text-[12px]" style="color: {result.ok ? 'var(--color-mute)' : 'var(--color-bad)'}">{result.ok ? `ok · ${result.durationMs}ms` : `error · ${result.error ?? ''}`}</span>
             {:else if d && d.action === "block"}

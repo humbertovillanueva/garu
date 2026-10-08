@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Logo from "../lib/components/Logo.svelte";
   /** Shown when this browser has no session: the control room is on another computer (or login is required here). */
   import { api } from "../lib/api.svelte";
   let token = $state("");
@@ -17,7 +18,7 @@
 <div class="flex min-h-screen items-center justify-center px-5" style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom)">
   <form class="panel rise w-full max-w-sm p-6 sm:p-7" onsubmit={submit}>
     <div class="mb-5 flex items-center gap-2.5">
-      <svg viewBox="0 0 64 64" width="30" height="30" fill="none" aria-hidden="true"><path d="M52.5 20.5 A24 24 0 1 1 43 11.1" stroke="var(--color-accent)" stroke-opacity=".6" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="11" fill="var(--color-accent)"/><circle cx="28.5" cy="28" r="3.2" fill="#fff" fill-opacity=".55"/></svg>
+      <Logo size={30} />
       <span class="text-[17px] font-semibold tracking-tight">Garu</span>
     </div>
     <h1 class="text-[20px] font-semibold tracking-tight">Sign in to your control room</h1>

@@ -153,9 +153,9 @@
 
     <!-- Live run, inline in the thread -->
     {#if currentRunId && liveEvents}
-      <div class="panel-raised rise p-4" style="border-color: color-mix(in oklab, var(--color-accent) 30%, var(--color-line-2))">
+      <div class="panel-raised rise p-4" style="border-color: color-mix(in oklab, var(--color-ask) 30%, var(--color-line-2))">
         <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <span class="dot pulse bg-accent"></span>
+          <span class="dot pulse" style="background: var(--color-ask)"></span>
           <span class="text-[14px] font-medium">{a.status === "waiting" ? "Paused for you" : "Working"}</span>
           <span class="mono text-[12px] text-mute">{currentRunId}</span>
           {#if a.inFlight}<span class="mono text-[12px] text-mute">turn {a.inFlight.turn}{a.maxTurns ? ` / ${a.maxTurns}` : ""}</span>{/if}

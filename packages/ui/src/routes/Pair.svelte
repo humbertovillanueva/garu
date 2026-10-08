@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Logo from "../lib/components/Logo.svelte";
   /**
    * The app's first screen: connect this phone to the control room on your computer.
    * Scan the code from Settings → Your phone, or paste the link it carries.
@@ -70,7 +71,7 @@
 <div class="flex min-h-screen items-center justify-center px-5" style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom)">
   <div class="panel rise w-full max-w-sm p-6 sm:p-7">
     <div class="mb-5 flex items-center gap-2.5">
-      <svg viewBox="0 0 64 64" width="30" height="30" fill="none" aria-hidden="true"><path d="M52.5 20.5 A24 24 0 1 1 43 11.1" stroke="var(--color-accent)" stroke-opacity=".6" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="11" fill="var(--color-accent)"/><circle cx="28.5" cy="28" r="3.2" fill="#fff" fill-opacity=".55"/></svg>
+      <Logo size={30} />
       <span class="text-[17px] font-semibold tracking-tight">Garu</span>
     </div>
 

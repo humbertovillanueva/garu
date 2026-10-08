@@ -48,7 +48,7 @@
   const verb = $derived(shape === "email" ? "wants to send" : shape === "post" ? "wants to post" : shape === "file" ? "wants to write" : shape === "command" ? "wants to run" : "wants to call");
 </script>
 
-<div class="panel-raised rise overflow-hidden" style="border-color: color-mix(in oklab, var(--color-accent) 35%, var(--color-line-2))">
+<div class="panel-raised rise overflow-hidden" style="border-color: color-mix(in oklab, var(--color-ask) 35%, var(--color-line-2))">
   <div class="flex flex-wrap items-start gap-3 px-4 pt-4">
     <Mark name={req.agent} size={34} status="waiting" />
     <div class="min-w-0 flex-1">

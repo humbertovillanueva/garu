@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Logo from "./Logo.svelte";
   import { route, href } from "../router.svelte";
   import { live } from "../api.svelte";
   import { statusLine } from "../format";
@@ -20,7 +21,7 @@
 <!-- Desktop sidebar -->
 <aside class="hidden h-screen w-64 flex-none flex-col border-r hairline bg-bg lg:flex sticky top-0">
   <a href={href("home")} class="flex items-center gap-2.5 px-5 pt-5 pb-4">
-    <svg viewBox="0 0 64 64" width="26" height="26" fill="none" aria-hidden="true"><path d="M52.5 20.5 A24 24 0 1 1 43 11.1" stroke="var(--color-accent)" stroke-opacity=".6" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="11" fill="var(--color-accent)"/><circle cx="28.5" cy="28" r="3.2" fill="#fff" fill-opacity=".55"/></svg>
+    <Logo size={26} />
     <span class="text-[16px] font-semibold tracking-tight">Garu</span>
     <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute" title={live.connected ? "connected to the control room" : "reconnecting…"}>
       <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{live.connected ? "live" : "…"}
@@ -32,7 +33,7 @@
       <a href={href(item.n)} class="navitem" class:active={item.active()}>
         <span class="navicon"><Icon name={item.icon} size={17} /></span>
         <span>{item.label}</span>
-        {#if item.n === "inbox" && live.pending.length}<span class="mono ml-auto rounded-full bg-accent px-1.5 text-[11px] font-semibold text-bg">{live.pending.length}</span>{/if}
+        {#if item.n === "inbox" && live.pending.length}<span class="mono ml-auto rounded-full px-1.5 text-[11px] font-semibold text-bg" style="background: var(--color-ask)">{live.pending.length}</span>{/if}
       </a>
     {/each}
   </nav>
@@ -50,7 +51,7 @@
           <span class="block truncate">{a.name}</span>
           {#if sub}<span class="block truncate text-[11px]" style="color: {a.status === 'needs-setup' ? 'var(--color-ask)' : 'var(--color-mute)'}">{sub}</span>{/if}
         </span>
-        {#if a.status === "waiting"}<span class="dot bg-accent"></span>
+        {#if a.status === "waiting"}<span class="dot" style="background: var(--color-ask)"></span>
         {:else if a.status === "working"}<span class="dot pulse bg-accent"></span>
         {:else if a.status === "scheduled"}<span class="text-mute"><Icon name="clock" size={13} /></span>{/if}
       </a>
@@ -76,7 +77,7 @@
 <!-- Phone: slim top bar with the brand and the live dot -->
 <header class="sticky top-0 z-10 flex items-center gap-3 border-b hairline bg-bg/90 px-4 py-2.5 backdrop-blur lg:hidden" style="padding-top: calc(0.625rem + env(safe-area-inset-top))">
   <a href={href("home")} class="flex items-center gap-2">
-    <svg viewBox="0 0 64 64" width="22" height="22" fill="none" aria-hidden="true"><path d="M52.5 20.5 A24 24 0 1 1 43 11.1" stroke="var(--color-accent)" stroke-opacity=".6" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="11" fill="var(--color-accent)"/><circle cx="28.5" cy="28" r="3.2" fill="#fff" fill-opacity=".55"/></svg>
+    <Logo size={22} />
     <span class="text-[15px] font-semibold tracking-tight">Garu</span>
   </a>
   <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute">
@@ -92,7 +93,7 @@
     <a href={href(n)} class="tab" class:active aria-label={l}>
       <span class="relative">
         <Icon name={n} />
-        {#if n === "inbox" && live.pending.length}<span class="mono absolute -right-2.5 -top-1.5 rounded-full bg-accent px-1.5 text-[10px] font-semibold leading-4 text-bg">{live.pending.length}</span>{/if}
+        {#if n === "inbox" && live.pending.length}<span class="mono absolute -right-2.5 -top-1.5 rounded-full px-1.5 text-[10px] font-semibold leading-4 text-bg" style="background: var(--color-ask)">{live.pending.length}</span>{/if}
       </span>
       <span>{l}</span>
     </a>

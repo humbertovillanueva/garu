@@ -15,9 +15,9 @@
 <span class="relative grid flex-none place-items-center rounded-full"
       class:pulse={status === "working"}
       class:ring-live={status === "waiting"}
-      style="width:{size}px;height:{size}px;--live:var(--color-accent);
+      style="width:{size}px;height:{size}px;--live:var(--color-ask);
              background: radial-gradient(circle at 35% 30%, color-mix(in oklab, {color} 85%, white 20%), {color} 55%, color-mix(in oklab, {color} 70%, black) 100%);
-             box-shadow: 0 0 0 1px color-mix(in oklab, {color} 40%, transparent) inset{status === 'waiting' ? ', 0 0 0 3px color-mix(in oklab, var(--color-accent) 30%, transparent)' : ''}">
+             box-shadow: 0 0 0 1px color-mix(in oklab, {color} 40%, transparent) inset{status === 'waiting' ? ', 0 0 0 3px color-mix(in oklab, var(--color-ask) 30%, transparent)' : ''}">
   {#if face}
     <Creature kind={face} size={Math.round(size * 0.78)} />
   {:else}

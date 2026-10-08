@@ -55,7 +55,7 @@
       <div class="panel stat"><div class="k">Agents</div><div class="v">{live.agents.length}</div><div class="s">{scheduled} on a schedule{live.up ? "" : " · not running"}</div></div>
       <div class="panel stat"><div class="k">Runs today</div><div class="v">{runsToday}</div><div class="s">{totalRuns} all time</div></div>
       <div class="panel stat"><div class="k">Spend today</div><div class="v">{usd(spendToday)}</div><div class="s">estimated at list price</div></div>
-      <a href={href("inbox")} class="panel stat card-hover"><div class="k">Waiting on you</div><div class="v" style="color: {live.pending.length ? 'var(--color-accent)' : 'inherit'}">{live.pending.length}</div><div class="s">{live.pending.length ? "open the inbox" : "nothing to approve"}</div></a>
+      <a href={href("inbox")} class="panel stat card-hover"><div class="k">Waiting on you</div><div class="v" style="color: {live.pending.length ? 'var(--color-ask)' : 'inherit'}">{live.pending.length}</div><div class="s">{live.pending.length ? "open the inbox" : "nothing to approve"}</div></a>
     </div>
   {/if}
 
