@@ -47,6 +47,7 @@ import { KINDS, SCHEDULES, cronFor, isFreeModel, renderGarufile, suggestModel, t
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
 const DEFAULT_INBOX_ROOT = resolve(process.cwd(), ".garu", "inbox");
 const DEFAULT_CHAT_ROOT = resolve(process.cwd(), ".garu", "chat");
+const DEFAULT_TOKEN_PATH = resolve(process.cwd(), ".garu", "ui-token");
 const DEFAULT_GRANTS_PATH = resolve(process.cwd(), ".garu", "grants.jsonl");
 const DEFAULT_DISMISSED_PATH = resolve(process.cwd(), ".garu", "suggestions-dismissed.json");
 
@@ -245,8 +246,9 @@ program
   .option("--log-root <dir>", "where run logs live", DEFAULT_LOG_ROOT)
   .option("--inbox-root <dir>", "where approval requests live", DEFAULT_INBOX_ROOT)
   .option("--as <name>", "your name — how approvals are recorded and how agents address you", process.env["GARU_USER"] ?? process.env["USER"] ?? "you")
+  .option("--require-login", "ask for the token even in the browser on this computer")
   .description("Open the control room: your agents, live, in the browser. Add --up to run their schedules too.")
-  .action(async (opts: { port: string; host: string; up?: boolean; askTimeout: string; notify?: string; logRoot: string; inboxRoot: string; as: string }) => {
+  .action(async (opts: { port: string; host: string; up?: boolean; askTimeout: string; notify?: string; logRoot: string; inboxRoot: string; as: string; requireLogin?: boolean }) => {
     loadDotEnv();
     const staticDir = uiStaticDir();
     const t = (msg: string) => stderr.write(`${new Date().toISOString().slice(11, 19)} ${msg}\n`);
@@ -265,12 +267,15 @@ program
       up: Boolean(opts.up),
       askTimeoutMs: Number(opts.askTimeout) * 60_000,
       ...(opts.notify ? { notify: opts.notify } : {}),
+      tokenPath: DEFAULT_TOKEN_PATH,
+      requireLogin: Boolean(opts.requireLogin),
       log: t,
     });
-    stderr.write(`garu control room → ${srv.url}\n`);
+    stderr.write(`garu control room → ${srv.url}${opts.requireLogin ? `/?token=${srv.token}` : ""}\n`);
+    stderr.write(`  from your phone or another computer: scan the code in Settings → Your phone, or sign in with the token in .garu/ui-token\n`);
     if (!/^(127\.0\.0\.1|localhost|::1)$/.test(opts.host)) {
-      stderr.write(`  bound to ${opts.host}: the control room has no login, so anyone who can reach this address can approve actions.\n`);
-      stderr.write(`  For your phone, prefer \`tailscale serve --bg ${opts.port}\` on the default host — HTTPS, your devices only. See docs/phone.md.\n`);
+      stderr.write(`  bound to ${opts.host}: anyone on this network can reach the page; approving anything needs the token.\n`);
+      stderr.write(`  For your phone, \`tailscale serve --bg ${opts.port}\` on the default host is simpler — HTTPS, your devices only. See docs/phone.md.\n`);
     }
     if (!existsSync(join(staticDir, "index.html"))) stderr.write(`  UI not built yet: run \`npm run build\` in the repo\n`);
     if (opts.up) stderr.write(`  running ${srv.agents} cron schedule(s) from Garufiles under ${process.cwd()}\n`);

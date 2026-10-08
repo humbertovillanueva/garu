@@ -35,6 +35,7 @@ import {
   isRemoteServer,
   FileOAuthProvider,
 } from "@garu/kernel";
+import { authenticate, clearSessionCookie, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
 
 export interface UiServerOptions {
   port: number;
@@ -55,6 +56,10 @@ export interface UiServerOptions {
   up: boolean;
   askTimeoutMs: number;
   notify?: string;
+  /** Where the sign-in token lives (created on first start). */
+  tokenPath: string;
+  /** Make even the browser on this computer sign in. */
+  requireLogin?: boolean;
   log: (line: string) => void;
 }
 
@@ -77,7 +82,7 @@ const MIME: Record<string, string> = {
   ".woff2": "font/woff2",
 };
 
-export function startUiServer(opts: UiServerOptions): { close: () => Promise<void>; url: string; agents: number } {
+export function startUiServer(opts: UiServerOptions): { close: () => Promise<void>; url: string; token: string; agents: number } {
   const store = new RunStore(opts.logRoot);
   const chat = new ChatStore(opts.chatRoot);
   const grants = new GrantStore(opts.grantsPath);
@@ -222,10 +227,45 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     };
   };
 
+  const token = loadOrCreateToken(opts.tokenPath);
+  const requireLogin = Boolean(opts.requireLogin);
+
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
     const path = url.pathname;
     try {
+      // --- who is this? ---
+      if (isCrossSiteWrite(req)) return json(res, { error: "cross-site request refused" }, 403);
+      const linkToken = url.searchParams.get("token");
+      if (linkToken !== null && !path.startsWith("/api/")) {
+        // A sign-in link (the QR code, or the one printed at start): set the cookie, then show the clean URL.
+        if (!tokensMatch(linkToken, token)) {
+          res.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
+          return void res.end("That sign-in link is not valid for this control room. Open Settings → Your phone on the computer running garu to get a fresh one.\n");
+        }
+        url.searchParams.delete("token");
+        res.writeHead(302, { location: url.pathname + url.search, "set-cookie": sessionCookie(token, isHttps(req)), "cache-control": "no-store" });
+        return void res.end();
+      }
+      if (path === "/api/login" && req.method === "POST") {
+        const body = (await readBody(req)) as { token?: string };
+        if (typeof body.token !== "string" || !tokensMatch(body.token.trim(), token)) return json(res, { error: "that token is not right" }, 403);
+        res.setHeader("set-cookie", sessionCookie(token, isHttps(req)));
+        return json(res, { ok: true });
+      }
+      if (path === "/api/logout" && req.method === "POST") {
+        res.setHeader("set-cookie", clearSessionCookie());
+        return json(res, { ok: true });
+      }
+      if (path.startsWith("/api/")) {
+        const who = authenticate(req, url, token, requireLogin);
+        if (who !== "ok") return json(res, { error: who === "bad" ? "wrong token" : "sign in", signIn: true }, 401);
+      }
+      if (path === "/api/pair") {
+        // Only for someone already in: the token, so the QR code on Settings can carry it to a phone.
+        return json(res, { token, direct: isDirectLoopback(req) });
+      }
+
       if (path === "/api/events") return sse(res, clients);
 
       if (path === "/api/agents") {
@@ -375,6 +415,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           remotes,
           notify: Boolean(opts.notify),
           askTimeoutMin: Math.round((opts.askTimeoutMs ?? 30 * 60_000) / 60_000),
+          login: { required: requireLogin, direct: isDirectLoopback(req), tokenPath: opts.tokenPath },
         });
       }
       if (path.startsWith("/api/")) return json(res, { error: "not found" }, 404);
@@ -395,6 +436,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
   const url = `http://${opts.host === "0.0.0.0" ? "localhost" : opts.host}:${opts.port}`;
   return {
     url,
+    token,
     agents: scheduled,
     close: async () => {
       for (const w of watchers) w.close();

@@ -2,7 +2,7 @@
   "name": "@garu/ui",
   "version": "0.1.0",
   "private": true,
-  "description": "Garu control room — the web UI served by `garu ui`.",
+  "description": "Garu control room \u2014 the web UI served by `garu ui`.",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
@@ -13,6 +13,8 @@
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@tailwindcss/vite": "^4.3.0",
+    "@types/qrcode": "^1.5.5",
+    "qrcode": "^1.5.4",
     "svelte": "^5.57.0",
     "svelte-check": "^4.7.0",
     "tailwindcss": "^4.3.0",

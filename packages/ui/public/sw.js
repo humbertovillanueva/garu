@@ -12,7 +12,7 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin || url.pathname.startsWith("/api/")) return;
+  if (url.origin !== self.location.origin || url.pathname.startsWith("/api/") || url.searchParams.has("token")) return;
   // Network first; fall back to the last good copy of the shell/assets.
   e.respondWith(
     fetch(req)

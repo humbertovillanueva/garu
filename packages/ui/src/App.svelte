@@ -9,6 +9,7 @@
   import Inbox from "./routes/Inbox.svelte";
   import Cost from "./routes/Cost.svelte";
   import Settings from "./routes/Settings.svelte";
+  import SignIn from "./routes/SignIn.svelte";
   import { route, startRouter } from "./lib/router.svelte";
   import { connectLive, live } from "./lib/api.svelte";
 
@@ -20,6 +21,9 @@
   $effect(() => { document.title = live.pending.length ? `(${live.pending.length}) Garu` : "Garu"; });
 </script>
 
+{#if live.signIn}
+  <SignIn />
+{:else}
 <div class="flex min-h-screen flex-col lg:flex-row">
   <Sidebar />
   <main class="min-w-0 flex-1">
@@ -46,3 +50,4 @@
     </div>
   </main>
 </div>
+{/if}

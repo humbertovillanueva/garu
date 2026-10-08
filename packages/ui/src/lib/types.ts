@@ -142,4 +142,6 @@ export interface Settings {
   remotes: { agent: string; source: string; server: string; url: string; auth: "none" | "oauth"; signedIn: boolean | null }[];
   notify: boolean;
   askTimeoutMin: number;
+  /** required: even this computer signs in. direct: this request came from a browser on the same computer. */
+  login: { required: boolean; direct: boolean; tokenPath: string };
 }

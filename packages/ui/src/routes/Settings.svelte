@@ -5,11 +5,31 @@
   import Icon from "../lib/components/Icon.svelte";
   import Skeleton from "../lib/components/Skeleton.svelte";
   import type { Settings } from "../lib/types";
+  import QRCode from "qrcode";
 
   let s = $state<Settings | null>(null);
   let error = $state<string | null>(null);
   $effect(() => { live.tick; api.settings().then((v) => (s = v)).catch((e) => (error = (e as Error).message)); });
   const shortRoot = (p: string) => p.replace(/^\/Users\/[^/]+/, "~").replace(/^\/home\/[^/]+/, "~");
+
+  // Pairing: a sign-in link for this same address, as a QR code. Shown only when asked, since it is a key.
+  let pairOpen = $state(false);
+  let pairSvg = $state<string | null>(null);
+  let pairLink = $state<string | null>(null);
+  let showToken = $state(false);
+  let copied = $state(false);
+  const isLocalhost = $derived(/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname));
+  async function openPair() {
+    pairOpen = true;
+    if (pairSvg) return;
+    const { token } = await api.pair();
+    pairLink = `${location.origin}/?token=${token}`;
+    pairSvg = await QRCode.toString(pairLink, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#0a0c0f", light: "#f4f1ea" } });
+  }
+  async function copyLink() {
+    if (!pairLink) return;
+    try { await navigator.clipboard.writeText(pairLink); copied = true; setTimeout(() => (copied = false), 1500); } catch { showToken = true; }
+  }
 </script>
 
 <section class="space-y-8">
@@ -32,11 +52,43 @@
           <dt class="text-mute">Deciding as</dt><dd>{s.user} <span class="text-mute">· <span class="mono">--as</span> to change</span></dd>
           <dt class="text-mute">Schedules</dt>
           <dd class="flex items-center gap-2"><span class="dot" style="background: {s.up ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{s.up ? "running in this process" : "not running"}{#if !s.up}<span class="text-mute"> · start with <span class="mono">garu ui --up</span></span>{/if}</dd>
-          <dt class="text-mute">Listening on</dt><dd class="mono">{s.host}:{s.port}{#if s.host !== "127.0.0.1" && s.host !== "localhost"}<span class="ml-2 text-[12px]" style="color: var(--color-ask)">no login — reachable by anyone on this network</span>{/if}</dd>
+          <dt class="text-mute">Listening on</dt><dd class="mono">{s.host}:{s.port}{#if s.host !== "127.0.0.1" && s.host !== "localhost"}<span class="ml-2 text-[12px] text-mute">reachable on this network · token required</span>{/if}</dd>
           <dt class="text-mute">Unanswered asks</dt><dd>denied after {s.askTimeoutMin} min <span class="text-mute">· <span class="mono">--ask-timeout</span></span></dd>
           <dt class="text-mute">Push</dt><dd>{s.notify ? "on (ntfy)" : "off"} <span class="text-mute">· <span class="mono">--notify https://ntfy.sh/your-topic</span></span></dd>
           <dt class="text-mute">Folder</dt><dd class="mono break-all">{s.root}</dd>
         </dl>
+      </div>
+
+      <!-- Your phone -->
+      <div class="panel rise p-5">
+        <div class="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute"><Icon name="key" size={14} /> Your phone &amp; other devices</div>
+        {#if s.login.direct}
+          <p class="text-[13px] text-fg-2">This browser is on the same computer as Garu, so it is signed in automatically. Anything else needs the token.</p>
+        {:else}
+          <p class="text-[13px] text-fg-2">This device is signed in with the token. <button class="text-fg-2 underline hover:text-fg" onclick={() => api.logout()}>Sign out</button></p>
+        {/if}
+        {#if isLocalhost}
+          <p class="mt-2 text-[12.5px] text-mute">A phone can't reach <span class="mono">localhost</span>. Put the control room on your private network first — <span class="mono">tailscale serve --bg {s.port}</span> — then open <em>this page</em> from that address and the code below will point there.</p>
+        {/if}
+        {#if !pairOpen}
+          <button class="btn mt-3" onclick={openPair}>Show sign-in code</button>
+        {:else if !pairSvg}
+          <Skeleton rows={1} h={180} />
+        {:else}
+          <div class="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start">
+            <div class="qr w-[180px] flex-none rounded-xl p-2" style="background:#f4f1ea">{@html pairSvg}</div>
+            <div class="min-w-0 flex-1 text-[13px] text-fg-2">
+              <p>Scan with your phone's camera. It opens this control room signed in — then <em>Add to Home Screen</em> to make it an app.</p>
+              <p class="mt-2 text-[12px] text-mute">This code is a key. Anyone who scans it can approve actions as you.</p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button class="btn" onclick={copyLink}>{copied ? "Copied" : "Copy link"}</button>
+                <button class="btn" onclick={() => (showToken = !showToken)}>{showToken ? "Hide token" : "Show token"}</button>
+              </div>
+              {#if showToken}<div class="mono mt-2 break-all rounded-lg border hairline bg-bg px-2.5 py-2 text-[12px] select-all">{pairLink?.split("token=")[1]}</div>{/if}
+              <p class="mt-2 text-[12px] text-mute">Lost it, or someone else saw it? Stop garu, delete <span class="mono">{shortRoot(s.login.tokenPath)}</span>, start again: a new one is made.</p>
+            </div>
+          </div>
+        {/if}
       </div>
 
       <!-- Models -->
@@ -99,3 +151,7 @@
     </div>
   {/if}
 </section>
+
+<style>
+  .qr :global(svg) { display: block; width: 100%; height: auto; }
+</style>
