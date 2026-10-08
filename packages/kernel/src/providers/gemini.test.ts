@@ -97,6 +97,25 @@ describe("GeminiProvider (mocked fetch)", () => {
     expect(waits).toEqual([510, 510]);
   });
 
+  it("backs off harder on 503 (high demand) and tells the caller about each retry", async () => {
+    let calls = 0;
+    const fakeFetch = (async () => {
+      calls++;
+      if (calls < 3) return new Response(JSON.stringify({ error: { message: "This model is currently experiencing high demand. Spikes in demand are usually temporary." } }), { status: 503 });
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "ok" }] }, finishReason: "STOP" }] }), { status: 200 });
+    }) as typeof fetch;
+    const p = new GeminiProvider("k", fakeFetch);
+    const waits: number[] = []; const seen: { attempt: number; maxAttempts: number; reason: string }[] = [];
+    p.sleep = async (ms) => { waits.push(ms); }; p.onRetry = undefined;
+    const res = await p.complete({ model: "m", system: "", messages: [], tools: [], onRetry: (r) => seen.push({ attempt: r.attempt, maxAttempts: r.maxAttempts, reason: r.reason }) });
+    expect(res.content).toEqual([{ type: "text", text: "ok" }]);
+    expect(waits).toEqual([5000, 10000]);
+    expect(seen).toEqual([
+      { attempt: 1, maxAttempts: 6, reason: "This model is currently experiencing high demand" },
+      { attempt: 2, maxAttempts: 6, reason: "This model is currently experiencing high demand" },
+    ]);
+  });
+
   it("gives up after maxAttempts and does not retry non-retryable errors", async () => {
     let calls = 0;
     const always429 = (async () => { calls++; return new Response(JSON.stringify({ error: { message: "quota" } }), { status: 429 }); }) as typeof fetch;

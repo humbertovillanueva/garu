@@ -52,6 +52,8 @@ export interface BusOptions {
   approver: Approver;
   /** Per-call timeout for the MCP server. */
   callTimeoutMs?: number;
+  /** How long to wait before the one retry of a tool server that didn't start. */
+  startupRetryMs?: number;
   /** When set, every tool server runs inside its own Docker container. */
   sandbox?: Sandbox;
   /** Agent name, used to label containers. */
@@ -96,7 +98,7 @@ export class ToolBus {
       }
       const sb = this.opts.sandbox;
       const wrapped = sb ? dockerArgs(spec, sb, this.opts.agent ?? "agent") : undefined;
-      const transport = new StdioClientTransport({
+      const makeTransport = () => new StdioClientTransport({
         command: wrapped?.command ?? spec.command,
         args: wrapped?.args ?? spec.args,
         // inside a container, env goes in via -e; on the host, into the process
@@ -104,17 +106,37 @@ export class ToolBus {
         stderr: "pipe",
         ...(spec.cwd && !wrapped ? { cwd: spec.cwd } : {}),
       });
-      const client = new Client({ name: "garu", version: "0.1.0" });
-      try {
-        await client.connect(transport);
-      } catch (e) {
-        const raw = (e as Error).message;
-        const hint = wrapped ? explainDockerError(raw, sb!.image) : raw;
-        throw new Error(
-          `tool server "${spec.name}" failed to start${wrapped ? " in sandbox" : ""} (${spec.command} ${spec.args.join(" ")}): ${hint}`,
-        );
+      // A server that times out starting (npx fetching a package on a cold cache, Docker pulling an
+      // image, a busy machine) usually starts fine a moment later. One more try before giving up.
+      const MAX = 2;
+      let client: Client | undefined;
+      let transport = makeTransport();
+      for (let attempt = 1; attempt <= MAX; attempt++) {
+        const c = new Client({ name: "garu", version: "0.1.0" });
+        try {
+          await c.connect(transport);
+          client = c;
+          break;
+        } catch (e) {
+          const raw = (e as Error).message;
+          // Timeouts and a process that died during the handshake are worth one more go; a command that
+          // doesn't exist (ENOENT) or Docker refusing are not.
+          const transient = /timed out|-32001|ETIMEDOUT|EAGAIN|ECONNRESET|connection closed/i.test(raw) && !/ENOENT/.test(raw);
+          if (transient && attempt < MAX) {
+            const waitMs = this.opts.startupRetryMs ?? 3000;
+            this.opts.recorder.record({ type: "tools.retry", server: spec.name, attempt, maxAttempts: MAX, waitMs, reason: raw.slice(0, 120) });
+            await transport.close().catch(() => {});
+            await new Promise((r) => setTimeout(r, waitMs));
+            transport = makeTransport();
+            continue;
+          }
+          const hint = wrapped ? explainDockerError(raw, sb!.image) : raw;
+          throw new Error(
+            `tool server "${spec.name}" failed to start${wrapped ? " in sandbox" : ""} (${spec.command} ${spec.args.join(" ")}): ${hint}`,
+          );
+        }
       }
-      this.servers.set(spec.name, { spec, client, transport, ...(wrapped ? { containerName: wrapped.containerName } : {}) });
+      this.servers.set(spec.name, { spec, client: client!, transport, ...(wrapped ? { containerName: wrapped.containerName } : {}) });
     }
     await this.refreshTools();
   }

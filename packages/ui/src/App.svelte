@@ -12,17 +12,34 @@
   import SignIn from "./routes/SignIn.svelte";
   import Pair from "./routes/Pair.svelte";
   import { isApp, paired } from "./lib/server.svelte";
-  import { route, startRouter } from "./lib/router.svelte";
-  import { connectLive, live } from "./lib/api.svelte";
+  import { route, startRouter, href } from "./lib/router.svelte";
+  import { connectLive, live, refreshNow } from "./lib/api.svelte";
+  import { setupNative } from "./lib/native";
+  import { pullToRefresh } from "./lib/pull";
+
+  /** In the app, opening it with a decision waiting lands on the inbox: open → read → approve. */
+  let landed = false;
+  function landOnPending() {
+    if (!isApp || !live.loaded) return;
+    if (live.pending.length && (route.name === "home" || !location.hash)) location.hash = href("inbox");
+  }
+  async function resume() { await refreshNow(); landOnPending(); }
 
   onMount(() => {
     startRouter();
     if (paired()) connectLive();
+    void setupNative(resume);
     // The app ships its own copy of the page; only the browser version wants the service worker.
     if (import.meta.env.PROD && !isApp && "serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js").catch(() => {});
   });
+  $effect(() => { if (live.loaded && !landed) { landed = true; landOnPending(); } });
   // Title reflects what needs you, like a mail client.
   $effect(() => { document.title = live.pending.length ? `(${live.pending.length}) Garu` : "Garu"; });
+
+  // The reconnect banner waits two seconds so a blink of the network doesn't flash it.
+  let now = $state(Date.now());
+  $effect(() => { const t = setInterval(() => (now = Date.now()), 1000); return () => clearInterval(t); });
+  const offline = $derived(live.loaded && !live.connected && live.disconnectedAt > 0 && now - live.disconnectedAt > 2000);
 </script>
 
 {#if isApp && !paired()}
@@ -32,7 +49,15 @@
 {:else}
 <div class="flex min-h-screen flex-col lg:flex-row">
   <Sidebar />
-  <main class="min-w-0 flex-1">
+  <main class="pull min-w-0 flex-1" use:pullToRefresh={refreshNow}>
+    <div class="pull-hint" aria-hidden="true"><span class="dot" class:pulse={live.refreshing}></span>{live.refreshing ? "Refreshing…" : "Pull to refresh"}</div>
+    {#if offline}
+      <div class="offline" role="status">
+        <span class="dot pulse" style="background: var(--color-ask)"></span>
+        <span>Reconnecting to your {isApp ? "computer" : "control room"}…</span>
+        <button class="ml-auto underline" onclick={() => refreshNow()}>Try now</button>
+      </div>
+    {/if}
     <div class="mx-auto max-w-5xl px-4 py-5 pb-24 sm:px-6 lg:px-10 lg:py-8 lg:pb-8">
       {#key route.name + "/" + route.parts.join("/")}
         {#if route.name === "agent" && route.parts[0]}

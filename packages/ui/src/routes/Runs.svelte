@@ -31,7 +31,7 @@
             <th class="px-3 py-2.5 font-medium">Started</th>
             <th class="hidden px-3 py-2.5 font-medium md:table-cell">Trigger</th>
             <th class="hidden px-3 py-2.5 font-medium lg:table-cell">Summary</th>
-            <th class="px-3 py-2.5 text-right font-medium">Turns</th>
+            <th class="hidden px-3 py-2.5 text-right font-medium sm:table-cell">Turns</th>
             <th class="hidden px-3 py-2.5 text-right font-medium sm:table-cell">Tools</th>
             <th class="px-3 py-2.5 text-right font-medium">Cost</th>
             <th class="hidden px-3 py-2.5 text-right font-medium sm:table-cell">Took</th>
@@ -45,7 +45,7 @@
               <td class="mono px-3 py-2 text-fg-2" title={r.startedAt}>{when(r.startedAt)}</td>
               <td class="mono hidden whitespace-nowrap px-3 py-2 text-mute md:table-cell" title={r.trigger}>{r.trigger.startsWith("cron") ? "cron" : r.trigger}</td>
               <td class="hidden max-w-[28ch] truncate px-3 py-2 text-fg-2 lg:table-cell">{r.summary ?? ""}</td>
-              <td class="mono px-3 py-2 text-right">{r.turns}</td>
+              <td class="mono hidden sm:table-cell px-3 py-2 text-right">{r.turns}</td>
               <td class="mono hidden px-3 py-2 text-right sm:table-cell"><span style="color: var(--color-ok)">{r.toolCalls.allow}</span><span class="text-mute">/</span><span style="color: var(--color-ask)">{r.toolCalls.ask}</span><span class="text-mute">/</span><span style="color: var(--color-bad)">{r.toolCalls.block}</span></td>
               <td class="mono px-3 py-2 text-right">{usd(r.costUsd, r.priced)}</td>
               <td class="mono hidden px-3 py-2 text-right text-mute sm:table-cell">{duration(r.startedAt, r.endedAt)}</td>

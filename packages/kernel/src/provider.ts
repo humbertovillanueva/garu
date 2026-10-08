@@ -36,6 +36,16 @@ export interface CompleteRequest {
   maxTokens?: number;
   /** Provider-specific knobs from the Garufile's modelOptions. Each provider takes what it understands. */
   options?: Record<string, unknown>;
+  /** Called before each wait when the provider retries a transient failure (rate limit, overload). */
+  onRetry?: (info: RetryInfo) => void;
+}
+
+export interface RetryInfo {
+  attempt: number;
+  maxAttempts: number;
+  waitMs: number;
+  /** What the provider said, e.g. "high demand" or "HTTP 503". */
+  reason: string;
 }
 
 export interface CompleteResponse {

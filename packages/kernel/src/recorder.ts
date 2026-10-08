@@ -22,6 +22,8 @@ export type GaruEvent =
   | { type: "approval.requested"; callId: string }
   | { type: "approval.resolved"; callId: string; approved: boolean; by: string; note?: string }
   | { type: "tool.result"; callId: string; ok: boolean; durationMs: number; result?: unknown; error?: string }
+  | { type: "model.retry"; attempt: number; maxAttempts: number; waitMs: number; reason: string }
+  | { type: "tools.retry"; server: string; attempt: number; maxAttempts: number; waitMs: number; reason: string }
   | { type: "error"; message: string; stack?: string };
 
 export interface Envelope {
@@ -128,6 +130,10 @@ export function formatEvent(env: Envelope): string {
       return `${t}   ${e.approved ? "approved" : "denied"} by ${e.by}${e.note ? ` — "${e.note}"` : ""}`;
     case "tool.result":
       return `${t} ← ${e.ok ? "ok" : "ERROR"} in ${e.durationMs}ms${e.error ? `: ${e.error}` : ""}`;
+    case "model.retry":
+      return `${t}   model busy (${e.reason}) — retrying in ${Math.round(e.waitMs / 1000)}s, attempt ${e.attempt}/${e.maxAttempts}`;
+    case "tools.retry":
+      return `${t}   tool server "${e.server}" didn't start in time — retrying in ${Math.round(e.waitMs / 1000)}s`;
     case "error":
       return `${t} ✖ ${e.message}`;
   }

@@ -80,6 +80,8 @@
           {:else if e.type === "tools.offered"}<span class="text-mute">{(e["offered"] as string[]).length} tools offered{(e["hidden"] as string[]).length ? `, ${(e["hidden"] as string[]).length} hidden (always blocked)` : ""}</span>
           {:else if e.type === "run.end"}<span class="font-medium">run {e["status"]}</span>{#if e["summary"]}<span class="text-fg-2">— {e["summary"]}</span>{/if}
           {:else if e.type === "budget.exceeded"}<span style="color: var(--color-bad)">budget cap hit: {usd(e["costUsd"] as number)} ≥ {usd(e["maxCostUsd"] as number)} — {e["pendingToolCalls"]} call(s) not executed</span>
+          {:else if e.type === "model.retry"}<span style="color: var(--color-ask)">model busy ({e["reason"]}) — retrying in {Math.round((e["waitMs"] as number) / 1000)}s, attempt {e["attempt"]} of {e["maxAttempts"]}</span>
+          {:else if e.type === "tools.retry"}<span style="color: var(--color-ask)">tool server "{e["server"]}" didn't start in time — retrying in {Math.round((e["waitMs"] as number) / 1000)}s</span>
           {:else if e.type === "error"}<span style="color: var(--color-bad)">{e["message"]}</span>
           {:else}<span class="mono text-mute">{e.type}</span>{/if}
         </div>

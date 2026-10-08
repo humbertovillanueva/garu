@@ -113,7 +113,10 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
 
     while (turn < g.maxTurns) {
       turn++;
-      const res = await provider.complete({ model, system, messages, tools, options: g.modelOptions });
+      const res = await provider.complete({
+        model, system, messages, tools, options: g.modelOptions,
+        onRetry: (r) => recorder.record({ type: "model.retry", attempt: r.attempt, maxAttempts: r.maxAttempts, waitMs: r.waitMs, reason: r.reason }),
+      });
       const text = res.content.filter((b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text").map((b) => b.text).join("\n");
       let turnCost: number | undefined;
       if (res.usage) {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { haptic } from "../native";
   /**
    * One paused tool call, shown as the thing it is: an email looks like an email,
    * a file write shows the file, a command shows the command. Approve or Decline.
@@ -18,7 +19,7 @@
   let note = $state("");
   async function decide(approve: boolean, forDuration?: string) {
     busy = true; error = null;
-    try { await api.decide(req.id, approve, forDuration, approve ? undefined : note.trim() || undefined); live.tick++; } catch (e) { error = String((e as Error).message ?? e); } finally { busy = false; }
+    try { await api.decide(req.id, approve, forDuration, approve ? undefined : note.trim() || undefined); live.tick++; void haptic(approve ? "success" : "warning"); } catch (e) { error = String((e as Error).message ?? e); } finally { busy = false; }
   }
   function onNoteKey(e: KeyboardEvent) {
     if (e.key === "Enter") { e.preventDefault(); void decide(false); }

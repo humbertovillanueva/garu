@@ -7,6 +7,7 @@
   import { onDestroy } from "svelte";
   import { connectLive, live } from "../lib/api.svelte";
   import { parsePairing, remember, server } from "../lib/server.svelte";
+  import { haptic } from "../lib/native";
 
   let { problem = null }: { problem?: string | null } = $props();
 
@@ -31,6 +32,7 @@
       remember(p.base, p.token);
       live.signIn = false;
       connectLive(true);
+      void haptic("success");
     } catch {
       error = `Couldn't reach ${p.base.replace(/^https?:\/\//, "")}. Is Tailscale on for this phone, and is garu ui running on your computer?`;
     } finally {

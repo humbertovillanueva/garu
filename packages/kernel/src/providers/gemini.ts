@@ -76,7 +76,7 @@ export class GeminiProvider implements ModelProvider {
       ];
     }
 
-    const { res, json } = await this.postWithRetry(req.model, body);
+    const { res, json } = await this.postWithRetry(req.model, body, req.onRetry);
 
     void res;
     const cand = json.candidates?.[0];
@@ -115,7 +115,7 @@ export class GeminiProvider implements ModelProvider {
    * Free tiers rate-limit hard (a handful of requests per minute). 429 and 503
    * are retried with the server's "retry in Ns" hint when present, else backoff.
    */
-  private async postWithRetry(model: string, body: unknown): Promise<{ res: Response; json: GeminiResponse }> {
+  private async postWithRetry(model: string, body: unknown, onRetry?: CompleteRequest["onRetry"]): Promise<{ res: Response; json: GeminiResponse }> {
     const maxAttempts = this.maxAttempts;
     let lastMsg = "";
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -130,17 +130,21 @@ export class GeminiProvider implements ModelProvider {
       const retryable = res.status === 429 || res.status === 503;
       if (!retryable || attempt === maxAttempts) break;
       const hinted = /retry in ([0-9.]+)s/i.exec(lastMsg);
-      const waitMs = Math.min(hinted ? Math.ceil(parseFloat(hinted[1]!) * 1000) + 500 : 2 ** attempt * 1000, 65_000);
-      this.onRetry?.({ model, attempt, status: res.status, waitMs, message: lastMsg });
+      // 429 says how long to wait. 503 ("high demand") doesn't, and those spikes last longer than a few seconds: back off harder.
+      const base = res.status === 503 ? 5000 * 2 ** (attempt - 1) : 2 ** attempt * 1000;
+      const waitMs = Math.min(hinted ? Math.ceil(parseFloat(hinted[1]!) * 1000) + 500 : base, 65_000);
+      const info = { model, attempt, maxAttempts, status: res.status, waitMs, message: lastMsg };
+      this.onRetry?.(info);
+      onRetry?.({ attempt, maxAttempts, waitMs, reason: lastMsg.replace(/\.\s.*$/, "") });
       await this.sleep(waitMs);
     }
     throw new Error(`gemini ${model}: ${lastMsg}`);
   }
 
   /** Overridable for tests. */
-  maxAttempts = 4;
+  maxAttempts = 6;
   sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms));
-  onRetry: ((info: { model: string; attempt: number; status: number; waitMs: number; message: string }) => void) | undefined =
+  onRetry: ((info: { model: string; attempt: number; maxAttempts: number; status: number; waitMs: number; message: string }) => void) | undefined =
     (i) => process.stderr.write(`         gemini ${i.status}: waiting ${Math.round(i.waitMs / 1000)}s then retrying (${i.attempt}/${this.maxAttempts})\n`);
 }
 

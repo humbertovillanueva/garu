@@ -12,6 +12,9 @@
     "build:app": "GARU_APP=1 vite build"
   },
   "devDependencies": {
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@tailwindcss/vite": "^4.3.0",
     "@types/qrcode": "^1.5.5",

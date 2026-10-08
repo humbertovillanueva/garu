@@ -63,7 +63,23 @@ export const live = $state({
   loaded: false,
   /** This browser needs the token before it can see anything. */
   signIn: false,
+  /** When the live stream last dropped, or 0 while connected. The banner waits a moment before showing. */
+  disconnectedAt: 0,
+  /** A pull-to-refresh or manual refresh in flight. */
+  refreshing: false,
 });
+
+/** Refresh everything now: what pull-to-refresh and coming back to the app do. */
+export async function refreshNow(): Promise<void> {
+  live.refreshing = true;
+  try {
+    if (!live.connected) connectLive(true);
+    await refreshCore();
+    live.tick++;
+  } catch { /* the banner says it */ } finally {
+    live.refreshing = false;
+  }
+}
 
 export async function refreshCore(): Promise<void> {
   const [a, i] = await Promise.all([api.agents(), api.inbox()]);
@@ -79,15 +95,22 @@ export async function refreshCore(): Promise<void> {
 
 let source: EventSource | undefined;
 let heartbeat: ReturnType<typeof setInterval> | undefined;
+let listening = false;
 export function connectLive(again = false): void {
   if (source && !again) return;
   source?.close();
   void refreshCore().catch(() => {});
   // EventSource can't carry a header, so the app passes its token in the query; a browser session uses its cookie.
   source = new EventSource(url("/api/events") + (server.token ? `?token=${encodeURIComponent(server.token)}` : ""));
-  source.addEventListener("hello", () => { live.connected = true; void refreshCore().catch(() => {}); });
+  source.addEventListener("hello", () => { live.connected = true; live.disconnectedAt = 0; void refreshCore().catch(() => {}); });
   source.addEventListener("changed", () => { live.tick++; void refreshCore().catch(() => {}); });
-  source.onerror = () => { live.connected = false; };
+  source.onerror = () => { if (live.connected || !live.disconnectedAt) live.disconnectedAt = Date.now(); live.connected = false; };
+  if (!listening) {
+    listening = true;
+    // Coming back from the background, or the network returning, is the moment to try again rather than waiting for the browser's backoff.
+    addEventListener("online", () => connectLive(true));
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !live.connected) connectLive(true); });
+  }
   // in-flight turn counters change without a file event sometimes; a slow heartbeat keeps "working" fresh
   heartbeat ??= setInterval(() => { if (!live.signIn && live.agents.some((a) => a.status === "working")) void refreshCore().catch(() => {}); }, 2000);
 }

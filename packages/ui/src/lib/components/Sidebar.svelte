@@ -81,7 +81,7 @@
     <span class="text-[15px] font-semibold tracking-tight">Garu</span>
   </a>
   <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute">
-    <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{live.connected ? "live" : "…"}
+    <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-ask)'}"></span>{live.connected ? "live" : "offline"}
   </span>
   <a href={href("settings")} class="text-mute hover:text-fg" aria-label="Settings"><Icon name="settings" size={18} /></a>
 </header>

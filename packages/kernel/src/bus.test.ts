@@ -95,6 +95,28 @@ describe("ToolBus (real MCP server over stdio)", () => {
   });
 });
 
+describe("ToolBus retries a server that dies while starting", () => {
+  it("records tools.retry, then connects", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "garu-flaky-"));
+    const rec = new Recorder({ root: dir, agent: "flaky" });
+    const bus = new ToolBus({ policy: new PolicyEngine([{ tool: "*", action: "allow" }]), recorder: rec, approver: async () => ({ approved: true, by: "t" }), startupRetryMs: 50 });
+    await bus.connect([{ name: "echo", command: "node", args: [join(here, "testing", "flaky-server.mjs"), join(dir, "started-once")], env: {} }]);
+    expect(bus.listTools().map((t) => t.qualified)).toContain("echo.echo");
+    const events = readRun(rec.path).map((e) => e.event);
+    const retry = events.find((e) => e.type === "tools.retry");
+    expect(retry).toMatchObject({ type: "tools.retry", server: "echo", attempt: 1, maxAttempts: 2, waitMs: 50 });
+    await bus.close();
+  }, 30_000);
+
+  it("does not retry a command that does not exist", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "garu-noent-"));
+    const rec = new Recorder({ root: dir, agent: "noent" });
+    const bus = new ToolBus({ policy: new PolicyEngine([{ tool: "*", action: "allow" }]), recorder: rec, approver: async () => ({ approved: true, by: "t" }), startupRetryMs: 50 });
+    await expect(bus.connect([{ name: "nope", command: "definitely-not-a-command-xyz", args: [], env: {} }])).rejects.toThrow(/failed to start/);
+    expect(readRun(rec.path).some((e) => e.event.type === "tools.retry")).toBe(false);
+  }, 30_000);
+});
+
 describe("expandSpec", () => {
   const spec = { name: "web", command: "node", args: ["server.js", "--token=${TOKEN}"], env: { WEBHOOK_URL: "${HOOK}", PLAIN: "x" } };
   it("fills ${VAR} from the environment", () => {
