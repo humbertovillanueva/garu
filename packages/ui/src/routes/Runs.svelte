@@ -43,7 +43,7 @@
               <td class="px-4 py-2"><span class="flex items-center gap-2"><Mark name={r.agent} size={20} /><span class="font-medium">{r.agent}</span></span></td>
               <td class="px-3 py-2"><Status status={r.status} /></td>
               <td class="mono px-3 py-2 text-fg-2" title={r.startedAt}>{when(r.startedAt)}</td>
-              <td class="mono hidden px-3 py-2 text-mute md:table-cell">{truncate(r.trigger, 22)}</td>
+              <td class="mono hidden whitespace-nowrap px-3 py-2 text-mute md:table-cell" title={r.trigger}>{r.trigger.startsWith("cron") ? "cron" : r.trigger}</td>
               <td class="hidden max-w-[28ch] truncate px-3 py-2 text-fg-2 lg:table-cell">{r.summary ?? ""}</td>
               <td class="mono px-3 py-2 text-right">{r.turns}</td>
               <td class="mono hidden px-3 py-2 text-right sm:table-cell"><span style="color: var(--color-ok)">{r.toolCalls.allow}</span><span class="text-mute">/</span><span style="color: var(--color-ask)">{r.toolCalls.ask}</span><span class="text-mute">/</span><span style="color: var(--color-bad)">{r.toolCalls.block}</span></td>

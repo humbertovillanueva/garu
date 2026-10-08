@@ -40,7 +40,7 @@
       {#if !live.loaded}Loading your agents…
       {:else if live.pending.length}<span class="font-medium text-fg">{live.pending.length} decision{live.pending.length === 1 ? "" : "s"}</span> waiting for you.
       {:else if working.length}{working.map((a) => a.name).join(", ")} {working.length === 1 ? "is" : "are"} working right now.
-      {:else if runsToday}{runsToday} run{runsToday === 1 ? "" : "s"} today across {live.agents.filter((a) => a.runsToday).length} agent{live.agents.filter((a) => a.runsToday).length === 1 ? "" : "s"}, {usd(spendToday)} estimated. Nothing needs you.
+      {:else if runsToday}{runsToday} run{runsToday === 1 ? "" : "s"} today from {live.agents.filter((a) => a.runsToday).length} of your {live.agents.length} agents, {usd(spendToday)} estimated. Nothing needs you.
       {:else}Quiet so far today. Nothing needs you.{/if}
     </p>
   </div>

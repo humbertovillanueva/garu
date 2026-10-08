@@ -23,12 +23,23 @@ tools:
     auth: oauth
 
 policy:
-  # Reading the workspace: fine.
-  - tool: "linear.list_*"
+  # Reading: just the handful Planner needs. Linear offers 68 tools; every one
+  # the model sees costs tokens on every turn, so the rest stay hidden.
+  - tool: "linear.list_teams"
     action: allow
-  - tool: "linear.get_*"
+  - tool: "linear.list_issues"
     action: allow
-  - tool: "linear.search_documentation"
+  - tool: "linear.get_issue"
+    action: allow
+  - tool: "linear.list_issue_statuses"
+    action: allow
+  - tool: "linear.list_issue_labels"
+    action: allow
+  - tool: "linear.list_projects"
+    action: allow
+  - tool: "linear.list_comments"
+    action: allow
+  - tool: "linear.list_users"
     action: allow
   # Writing: one issue or comment at a time, and you see it first.
   # (Linear's save_issue both creates and updates.)
