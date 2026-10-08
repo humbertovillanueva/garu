@@ -20,11 +20,13 @@
   import { pullToRefresh } from "./lib/pull";
 
   // The app opens on a short splash every time; the first time (or when asked again from Settings) the intro follows.
-  let showIntro = $state(isApp && !introSeen());
-  let splashing = $state(isApp && introSeen());
+  const introAtStart = isApp && !introSeen();
+  const pairedAtStart = paired();
+  let showIntro = $state(introAtStart);
+  let splashing = $state(isApp && !introAtStart);
   $effect(() => { if (splashing) { const t = setTimeout(() => (splashing = false), 1500); return () => clearTimeout(t); } });
-  // Pairing from inside the intro finishes it.
-  $effect(() => { if (showIntro && server.base && server.token) { markIntroSeen(); showIntro = false; } });
+  // Pairing from inside the intro finishes it. A phone that was already paired (replaying the intro from Settings) ends it with Done.
+  $effect(() => { if (showIntro && !pairedAtStart && server.base && server.token) { markIntroSeen(); showIntro = false; } });
 
   /** In the app, opening it with a decision waiting lands on the inbox: open → read → approve. */
   let landed = false;
@@ -53,7 +55,7 @@
 </script>
 
 {#if showIntro}
-  <Intro onDone={() => { markIntroSeen(); showIntro = false; }} />
+  <Intro alreadyPaired={pairedAtStart} onDone={() => { markIntroSeen(); showIntro = false; }} />
 {:else if splashing}
   <div class="grid min-h-screen place-items-center bg-bg text-fg"><Logo size={132} animate /></div>
 {:else if isApp && !paired()}

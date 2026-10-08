@@ -8,7 +8,7 @@
   import Pair from "./Pair.svelte";
   import { haptic } from "../lib/native";
 
-  let { onDone, splash = true }: { onDone: () => void; splash?: boolean } = $props();
+  let { onDone, splash = true, alreadyPaired = false }: { onDone: () => void; splash?: boolean; alreadyPaired?: boolean } = $props();
 
   // svelte-ignore state_referenced_locally
   let phase = $state<"splash" | "slides">(splash ? "splash" : "slides");
@@ -93,14 +93,21 @@
       </section>
 
       <section class="slide last">
+        {#if alreadyPaired}
+          <h1>You're connected.</h1>
+          <p>This phone is already paired with your computer, so there's nothing to set up. That's the whole tour.</p>
+        {:else}
         <h1>Connect to your computer.</h1>
         <p>Your agents live on the computer running Garu. Pair this phone once and it stays connected over your private network. Nothing goes through a cloud.</p>
+        {/if}
+        {#if !alreadyPaired}
         <ol class="steps">
           <li><i>1</i><span>On your computer, open Garu → <b>Settings → Your phone</b>.</span></li>
           <li><i>2</i><span>Press <b>Show sign-in code</b> and scan it here, or paste the link.</span></li>
           <li><i>3</i><span>Don't have Garu yet? <code>npx garu new</code> makes your first agent in a minute; the website walks you through it.</span></li>
         </ol>
         <div class="w-full"><Pair embedded /></div>
+        {/if}
       </section>
     </div>
 
@@ -108,6 +115,8 @@
       <div class="dots">{#each Array(LAST + 1) as _, d}<i class:on={d === i}></i>{/each}</div>
       {#if i < LAST}
         <button class="cta" onclick={next}>{i === 0 ? "How does it work?" : "Next"}</button>
+      {:else if alreadyPaired}
+        <button class="cta" onclick={onDone}>Done</button>
       {:else}
         <button class="text-[12.5px] text-mute" onclick={onDone}>I'll pair later</button>
       {/if}
