@@ -1,29 +1,33 @@
-# The smallest useful Garu agent.
+# The pip agent on a local model. Zero API cost, nothing leaves your machine.
+#
+#   ollama pull qwen3:8b          # once; ~5.2 GB
+#   garu run examples/nook/Garufile.yaml
 #
 # It can read the files in ./workspace, and it may write a summary there —
 # but only after you approve. Deleting or moving anything is blocked outright.
 #
-#   garu validate examples/hello/Garufile.yaml
-#   garu run      examples/hello/Garufile.yaml
-#   garu log      hello
+#   garu log nook
 
-name: hello
+name: nook
 description: Summarizes the notes in ./workspace into SUMMARY.md.
 persona:
   kind: cat
-  tagline: "Reads your notes and tells you what's in them."
-model: gemini/gemini-3.5-flash-lite   # free tier (generous daily quota); swap for anthropic/claude-sonnet-4-6 if you have a key
+  tagline: "Same reader, running at home on your own model."
+model: ollama/qwen3:8b   # strong at multi-step tool use. llama3.1:8b also works; 3B models skip steps and drop arguments.
 
-# Money guard. Estimated from token counts at list price; the run stops the
-# moment it crosses the cap. On Gemini's free tier the real bill is $0, but
-# the estimate still shows what this would cost if you paid.
-budget:
-  maxCostUsd: 0.05
+# Local models are priced at $0, so no cap is needed. maxTurns still bounds the run.
+maxTurns: 12
+
+# Ollama knobs. qwen3 "thinks" before every answer; for a tool task like this it
+# roughly doubles the run time for little gain. Set think: true to see the difference.
+modelOptions:
+  think: false
+  temperature: 0.2
 
 tools:
   - name: fs
     command: npx
-    args: ["-y", "@modelcontextprotocol/server-filesystem", "./examples/hello/workspace"]
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "./examples/pip/workspace"]
 
 policy:
   - tool: "fs.read_*"
@@ -51,8 +55,8 @@ policy:
     action: ask
 
 prompt: |
-  Read every markdown file in the workspace directory (use the tools to find them;
-  the directory you are allowed to use is the one the filesystem server exposes).
+  First call list_allowed_directories to learn the exact directory you may use; always
+  pass absolute paths from there. Then read every markdown file in that directory.
   Then write a file called SUMMARY.md in that same directory with three sections:
   "Decisions", "Open questions", and "People". Keep it short. When done, tell me
   in one sentence what you wrote.

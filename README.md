@@ -45,21 +45,21 @@ printf 'GEMINI_API_KEY=your-key\nGARU_USER=YourName\n' > .env
 npm run garu -- ui --up --as YourName       # control room at http://localhost:4000
 ```
 
-Open the control room, click **hello** in the sidebar, and press **Run job**. It reads `examples/hello/workspace/notes.md`, pauses to ask before writing a summary, and you approve from the browser. Then type a message to it.
+Open the control room, click **pip** in the sidebar, and press **Run job**. It reads `examples/pip/workspace/notes.md`, pauses to ask before writing a summary, and you approve from the browser. Then type a message to it.
 
 Prefer the terminal?
 
 ```sh
-npm run garu -- validate examples/hello/Garufile.yaml
-npm run garu -- run      examples/hello/Garufile.yaml   # approve the write when asked
-npm run garu -- log      hello                          # replay the flight recorder
+npm run garu -- validate examples/pip/Garufile.yaml
+npm run garu -- run      examples/pip/Garufile.yaml   # approve the write when asked
+npm run garu -- log      pip                          # replay the flight recorder
 ```
 
-**Fully local, $0:** install [Ollama](https://ollama.com), `ollama pull qwen3:8b`, then `npm run garu -- run examples/hello-local/Garufile.yaml`.
+**Fully local, $0:** install [Ollama](https://ollama.com), `ollama pull qwen3:8b`, then `npm run garu -- run examples/nook/Garufile.yaml`.
 
 **Your own agent:** `npm run garu -- new` asks what it should do, when, which model, which folder and which hosts, and writes `agents/<name>/Garufile.yaml` with a policy that starts closed — only the tools you named, writes ask first, everything else blocked. Then `Run job` in the control room.
 
-**Sandboxed:** with Docker running, `npm run garu -- sandbox build` once, then `npm run garu -- run examples/hello-sandboxed/Garufile.yaml`.
+**Sandboxed:** with Docker running, `npm run garu -- sandbox build` once, then `npm run garu -- run examples/vault/Garufile.yaml`.
 
 ## How it works
 

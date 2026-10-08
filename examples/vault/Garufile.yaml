@@ -1,12 +1,12 @@
-# The hello agent, with its tool server locked in a Docker container:
+# The pip agent, with its tool server locked in a Docker container:
 # no network, only ./workspace mounted, 512 MB, 1 CPU, destroyed after the run.
 # The agent loop and the policy kernel stay on the host, in front of it.
 #
 #   garu sandbox build                                  # once: builds the garu-sandbox image
-#   garu run examples/hello-sandboxed/Garufile.yaml
-#   garu log hello-sandboxed
+#   garu run examples/vault/Garufile.yaml
+#   garu log vault
 
-name: hello-sandboxed
+name: vault
 description: Summarizes the notes in ./workspace into SUMMARY.md.
 persona:
   kind: bee
@@ -20,7 +20,7 @@ budget:
   maxCostUsd: 0.05
 
 sandbox:
-  workspace: ./examples/hello/workspace   # mounted at /workspace inside the container
+  workspace: ./examples/pip/workspace   # mounted at /workspace inside the container
   network: none
   memory: 512m
   cpus: 1

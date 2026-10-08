@@ -85,17 +85,17 @@ for (const d of [1, 2, 3]) {
 const pausedRun = run("tomay", { model: "gemini/gemini-3.5-flash-lite", trigger: "chat", endMinutesAgo: 0.5, secs: 7,
   steps: [{ turn: true, cost: 0.0003 }, ...fetches, { turn: true, cost: 0.0012, in: 11200, out: 510 }, write, { turn: true, cost: 0.0011, in: 11400, out: 223 }, post({ pending: true })] });
 
-// Two hello runs on a local model: one approved write, one declined.
-run("hello", { model: "ollama/qwen3:8b", trigger: "manual", endMinutesAgo: 95, secs: 14, cost: 0,
+// Two pip runs on a local model: one approved write, one declined.
+run("pip", { model: "ollama/qwen3:8b", trigger: "manual", endMinutesAgo: 95, secs: 14, cost: 0,
   summary: "Summarised the three notes in the workspace into SUMMARY.md.",
-  steps: [{ turn: true, cost: 0 }, { tool: "fs.read_file", args: { path: "examples/hello/workspace/notes.md" }, action: "allow", ms: 3, result: "..." }, { turn: true, cost: 0 }, { tool: "fs.write_file", args: { path: "examples/hello/workspace/SUMMARY.md", content: "# Summary\n\n- …" }, action: "ask", rule: 2, reason: "writing outside the notes folder" }, { turn: true, cost: 0 }] });
-run("hello", { model: "ollama/qwen3:8b", trigger: "manual", endMinutesAgo: 180, secs: 11, status: "ok", cost: 0,
+  steps: [{ turn: true, cost: 0 }, { tool: "fs.read_file", args: { path: "examples/pip/workspace/notes.md" }, action: "allow", ms: 3, result: "..." }, { turn: true, cost: 0 }, { tool: "fs.write_file", args: { path: "examples/pip/workspace/SUMMARY.md", content: "# Summary\n\n- …" }, action: "ask", rule: 2, reason: "writing outside the notes folder" }, { turn: true, cost: 0 }] });
+run("pip", { model: "ollama/qwen3:8b", trigger: "manual", endMinutesAgo: 180, secs: 11, status: "ok", cost: 0,
   summary: "You declined the write, so I left the summary in this message instead.",
-  steps: [{ turn: true, cost: 0 }, { tool: "fs.write_file", args: { path: "examples/hello/workspace/SUMMARY.md", content: "# Summary" }, action: "ask", rule: 2, approved: false, reason: "writing outside the notes folder" }, { turn: true, cost: 0 }] });
+  steps: [{ turn: true, cost: 0 }, { tool: "fs.write_file", args: { path: "examples/pip/workspace/SUMMARY.md", content: "# Summary" }, action: "ask", rule: 2, approved: false, reason: "writing outside the notes folder" }, { turn: true, cost: 0 }] });
 for (let h = 1; h <= 6; h++) {
-  run("heartbeat", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron", endMinutesAgo: h * 60, secs: 5, cost: 0.0016,
-    summary: `${new Date(Date.now() - h * 3600_000).toISOString()} — 2 file(s): .gitkeep, heartbeat.log`,
-    steps: [{ turn: true, cost: 0.0003 }, { tool: "fs.list_directory", args: { path: "examples/heartbeat/workspace" }, action: "allow", ms: 2, result: "[FILE] heartbeat.log" }, { turn: true, cost: 0.0013 }, { tool: "fs.write_file", args: { path: "examples/heartbeat/workspace/heartbeat.log", content: "…" }, action: "allow", ms: 3 }] });
+  run("tick", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron", endMinutesAgo: h * 60, secs: 5, cost: 0.0016,
+    summary: `${new Date(Date.now() - h * 3600_000).toISOString()} — 2 file(s): .gitkeep, tick.log`,
+    steps: [{ turn: true, cost: 0.0003 }, { tool: "fs.list_directory", args: { path: "examples/tick/workspace" }, action: "allow", ms: 2, result: "[FILE] tick.log" }, { turn: true, cost: 0.0013 }, { tool: "fs.write_file", args: { path: "examples/tick/workspace/tick.log", content: "…" }, action: "allow", ms: 3 }] });
 }
 
 // The paused approval, waiting in the inbox.
@@ -108,7 +108,7 @@ const req = {
 writeFileSync(join(inbox.root, `${req.id}.json`), JSON.stringify(req, null, 2));
 
 // A temporary allow from yesterday.
-appendFileSync(join(root, "grants.jsonl"), JSON.stringify({ id: hex().slice(0, 6), agent: "heartbeat", tool: "fs.write_file", scope: { key: "path", value: "examples/heartbeat/workspace/heartbeat.log" }, createdBy: "Humberto (ui)", createdAt: minutesAgo(600).toISOString(), expiresAt: new Date(Date.now() + 14 * 3600_000).toISOString(), uses: 6 }) + "\n");
+appendFileSync(join(root, "grants.jsonl"), JSON.stringify({ id: hex().slice(0, 6), agent: "tick", tool: "fs.write_file", scope: { key: "path", value: "examples/tick/workspace/tick.log" }, createdBy: "Humberto (ui)", createdAt: minutesAgo(600).toISOString(), expiresAt: new Date(Date.now() + 14 * 3600_000).toISOString(), uses: 6 }) + "\n");
 
 // Chat with tomay.
 const chat = new ChatStore(join(root, "chat"));

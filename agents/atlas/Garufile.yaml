@@ -1,11 +1,11 @@
 # Planner — Garu's backlog, from Linear.
 #
 # Linear is a remote MCP server with OAuth: sign in once with
-#   garu auth agents/planner/Garufile.yaml linear
+#   garu auth agents/atlas/Garufile.yaml linear
 # and runs use the saved tokens. Reading is allowed; creating or changing an
 # issue always asks; everything else Linear offers is blocked and never shown.
 
-name: planner
+name: atlas
 description: Reads the Garu backlog in Linear and says what's next; files issues when asked.
 persona:
   kind: octopus

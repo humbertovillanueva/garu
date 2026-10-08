@@ -58,13 +58,13 @@ The run pauses. The request shows up in an inbox as what it is: an email looks l
 
 The thing I didn't expect to matter this much: declining can carry a note, and the agent reads it before its next step.
 
-Here's why. My second agent, `repo-watch`, checks my repo every hour. The first time it ran, the brief I'd given it said "the Garu repo" without naming it. It searched GitHub, found someone else's project called garu with 179 stars, and tried to write that into its log. The review card showed me the wrong numbers before anything touched disk. I declined. Then it tried to post the same wrong numbers to Slack. Declined again. The policy did its job, but the agent had no idea *why*, so it kept going with the mistake. Now a decline says "wrong repo, use humbertovillanueva/garu" and the agent corrects course instead of carrying the error into the next call.
+Here's why. My second agent, `rook`, checks my repo every hour. The first time it ran, the brief I'd given it said "the Garu repo" without naming it. It searched GitHub, found someone else's project called garu with 179 stars, and tried to write that into its log. The review card showed me the wrong numbers before anything touched disk. I declined. Then it tried to post the same wrong numbers to Slack. Declined again. The policy did its job, but the agent had no idea *why*, so it kept going with the mistake. Now a decline says "wrong repo, use humbertovillanueva/garu" and the agent corrects course instead of carrying the error into the next call.
 
 Approve the same thing three times with no declines and Garu proposes the narrowest rule that covers what you approved, one exact value, a common directory, or the whole tool, and writes it into your file when you say so. Approving isn't a dialog box you click through. It's how the policy gets written.
 
 ## Remote servers, with a policy in front of them
 
-Any MCP server works, local or hosted. GitHub's hosted server offers 46 tools. My repo-watch agent is allowed three of them, and only when `owner` and `repo` name my repository. The other 43 are blocked and the model never sees them.
+Any MCP server works, local or hosted. GitHub's hosted server offers 46 tools. My rook agent is allowed three of them, and only when `owner` and `repo` name my repository. The other 43 are blocked and the model never sees them.
 
 ```yaml
 tools:
@@ -93,6 +93,6 @@ printf 'GEMINI_API_KEY=your-key\nGARU_USER=YourName\n' > .env
 npm run garu -- ui --up --as YourName
 ```
 
-Five minutes, free key from aistudio.google.com, no card. Click `hello`, press Run job, approve the write when it asks.
+Five minutes, free key from aistudio.google.com, no card. Click `pip`, press Run job, approve the write when it asks.
 
 I'd like to know where it breaks for you, what agent you'd actually run, and what the policy language can't express yet. Repo: [github.com/humbertovillanueva/garu](https://github.com/humbertovillanueva/garu). Site: [humbertovillanueva.github.io/garu](https://humbertovillanueva.github.io/garu/).

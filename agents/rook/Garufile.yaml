@@ -3,7 +3,7 @@
 # Made with `garu new`. The policy starts closed: only the tools named below,
 # writes ask first, everything else blocked. Edit freely; `garu validate` checks it.
 
-name: repo-watch
+name: rook
 description: "Every hour, check the Garu repo for new stars and issues."
 persona:
   kind: owl
@@ -29,7 +29,7 @@ tools:
       WEBHOOK_URL: "${REPO_WATCH_WEBHOOK_URL}"     # Slack or Discord incoming webhook, kept in .env
   - name: fs
     command: npx
-    args: ["-y", "@modelcontextprotocol/server-filesystem", "./agents/repo-watch/workspace"]
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "./agents/rook/workspace"]
 
 policy:
   # GitHub: three read-only tools, and only for this one repository. Everything
@@ -46,7 +46,7 @@ policy:
     when: { owner: { eq: humbertovillanueva }, repo: { eq: garu } }
   - tool: "github.*"
     action: block
-    reason: repo-watch only reads humbertovillanueva/garu
+    reason: rook only reads humbertovillanueva/garu
   # Reading: only these hosts, by URL. Add a host here to widen it.
   - tool: "web.fetch_*"
     action: allow
@@ -58,7 +58,7 @@ policy:
     reason: posting to your channel
   - tool: "web.*"
     action: block
-  # Files: the server only sees ./agents/repo-watch/workspace. Reads are fine; writes are reviewed.
+  # Files: the server only sees ./agents/rook/workspace. Reads are fine; writes are reviewed.
   - tool: "fs.list_*"
     action: allow
   - tool: "fs.read_*"

@@ -1,15 +1,15 @@
 # An always-on agent. Every hour it checks the workspace and appends one
-# line to heartbeat.log saying what's there. Tiny on purpose: it exists to show
+# line to tick.log saying what's there. Tiny on purpose: it exists to show
 # `garu up` keeping an agent alive on a schedule, with every run in the log.
 #
-#   garu up examples/heartbeat/Garufile.yaml
-#   garu log heartbeat
+#   garu up examples/tick/Garufile.yaml
+#   garu log tick
 #
 # Its one write is its whole job, so it's `allow` — an agent that asks you every
-# hour is noise, not safety. Anything outside heartbeat.log is blocked.
+# hour is noise, not safety. Anything outside tick.log is blocked.
 
-name: heartbeat
-description: Appends a one-line status to heartbeat.log on a schedule.
+name: tick
+description: Appends a one-line status to tick.log on a schedule.
 persona:
   kind: turtle
   tagline: "Slow, steady, never misses a beat."
@@ -24,7 +24,7 @@ budget:
 tools:
   - name: fs
     command: npx
-    args: ["-y", "@modelcontextprotocol/server-filesystem", "./examples/heartbeat/workspace"]
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "./examples/tick/workspace"]
 
 policy:
   - tool: "fs.list_*"
@@ -34,14 +34,14 @@ policy:
   - tool: "fs.write_file"
     action: allow
     when:
-      path: { matches: "heartbeat\\.log$" }
+      path: { matches: "tick\\.log$" }
   - tool: "*"
     action: block
 
 maxTurns: 8
 
 prompt: |
-  Look at the files in the allowed directory. If heartbeat.log exists, read it.
-  Then write heartbeat.log back with all its previous lines plus ONE new line at the end
+  Look at the files in the allowed directory. If tick.log exists, read it.
+  Then write tick.log back with all its previous lines plus ONE new line at the end
   in the form "<ISO timestamp> — <N> file(s): <comma-separated names>".
   Do nothing else. Reply with the line you added.

@@ -23,7 +23,7 @@ Garu is a small runtime: an agent is a YAML file with a model, some MCP tool ser
 
 Things I think are worth looking at:
 
-- Tools that no rule can ever allow aren't offered to the model at all. GitHub's hosted MCP server has 46 tools; my repo-watch agent sees 3.
+- Tools that no rule can ever allow aren't offered to the model at all. GitHub's hosted MCP server has 46 tools; my rook agent sees 3.
 - Every run is an append-only JSONL file (model turns, tool calls, decisions, approvals). The UI is a view over those files. No database.
 - Declining a call can carry a note the agent reads before its next step. My agent once picked the wrong repo to write about; the card caught it, but a plain decline left the agent carrying the mistake into its next call. The note fixed that.
 - Remote MCP servers over Streamable HTTP, with OAuth done once via `garu auth`. Tested against GitHub's and Linear's hosted servers.

@@ -286,10 +286,10 @@ npm install &amp;&amp; npm run build
 printf 'GEMINI_API_KEY=your-key\nGARU_USER=YourName\n' &gt; .env
 
 npm run garu -- ui --up --as YourName       <span class="c"># control room at http://localhost:4000</span></pre>
-    <p style="margin-top:16px">Click <b>hello</b> in the sidebar and press <b>Run job</b>. It reads a notes file, pauses to ask before writing a summary, and you approve from the browser. Then type a message to it.</p>
-<pre>npm run garu -- run examples/hello-local/Garufile.yaml      <span class="c"># fully local with Ollama, $0</span>
-npm run garu -- run examples/hello-sandboxed/Garufile.yaml  <span class="c"># tools in Docker, network off</span>
-npm run garu -- log hello                                   <span class="c"># replay the flight recorder</span></pre>
+    <p style="margin-top:16px">Click <b>pip</b> in the sidebar and press <b>Run job</b>. It reads a notes file, pauses to ask before writing a summary, and you approve from the browser. Then type a message to it.</p>
+<pre>npm run garu -- run examples/nook/Garufile.yaml      <span class="c"># fully local with Ollama, $0</span>
+npm run garu -- run examples/vault/Garufile.yaml  <span class="c"># tools in Docker, network off</span>
+npm run garu -- log pip                                   <span class="c"># replay the flight recorder</span></pre>
   </div>
 </section>
 
