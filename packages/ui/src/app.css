@@ -112,6 +112,9 @@ textarea.field:focus, input.field:focus { border-color: color-mix(in oklab, var(
 .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 7px; font-size: 10.5px; color: var(--color-mute); -webkit-tap-highlight-color: transparent; }
 .tab.active { color: var(--color-accent); }
 
+/* In the app, the phone bars are solid: a blurred translucent bar over a scrolling list leaves ghost frames in Android's WebView. */
+html.app .phonebar { background: var(--color-bg) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+
 /* file-write review: one line per row, change signs in the gutter */
 .diffline { display: flex; white-space: pre-wrap; word-break: break-word; padding: 0 12px 0 8px; color: var(--color-fg-2); }
 .diffline .sign { flex: none; width: 14px; color: var(--color-mute); user-select: none; }

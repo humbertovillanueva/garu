@@ -6,7 +6,7 @@
   import Skeleton from "../lib/components/Skeleton.svelte";
   import type { Settings } from "../lib/types";
   import QRCode from "qrcode";
-  import { build, forget, isApp, server } from "../lib/server.svelte";
+  import { build, forget, isApp, markIntroSeen, server } from "../lib/server.svelte";
   function unpair() {
     if (!confirm("Forget this control room? You'll pair again by scanning a code on your computer.")) return;
     forget(); location.reload();
@@ -97,7 +97,7 @@
         <div class="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute"><Icon name="key" size={14} /> Your phone &amp; other devices</div>
         {#if isApp}
           <p class="text-[13px] text-fg-2">This phone is paired with <span class="mono">{server.base.replace(/^https?:\/\//, "")}</span>. <button class="text-fg-2 underline hover:text-fg" onclick={unpair}>Forget it</button></p>
-          <p class="mt-2 text-[12.5px] text-mute">To pair another device, open Garu on your computer and show the sign-in code there.</p>
+          <p class="mt-2 text-[12.5px] text-mute">To pair another device, open Garu on your computer and show the sign-in code there. <button class="underline hover:text-fg" onclick={() => { markIntroSeen(false); location.hash = ""; location.reload(); }}>Show the intro again</button></p>
         {:else if s.login.direct}
           <p class="text-[13px] text-fg-2">This browser is on the same computer as Garu, so it is signed in automatically. Anything else needs the token.</p>
         {:else}

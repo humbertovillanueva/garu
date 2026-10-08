@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import Sidebar from "./lib/components/Sidebar.svelte";
+  import Logo from "./lib/components/Logo.svelte";
   import Home from "./routes/Home.svelte";
   import Agents from "./routes/Agents.svelte";
   import Agent from "./routes/Agent.svelte";
@@ -11,11 +12,19 @@
   import Settings from "./routes/Settings.svelte";
   import SignIn from "./routes/SignIn.svelte";
   import Pair from "./routes/Pair.svelte";
-  import { isApp, paired } from "./lib/server.svelte";
+  import Intro from "./routes/Intro.svelte";
+  import { isApp, paired, introSeen, markIntroSeen, server } from "./lib/server.svelte";
   import { route, startRouter, href } from "./lib/router.svelte";
   import { connectLive, live, refreshNow } from "./lib/api.svelte";
   import { setupNative } from "./lib/native";
   import { pullToRefresh } from "./lib/pull";
+
+  // The app opens on a short splash every time; the first time (or when asked again from Settings) the intro follows.
+  let showIntro = $state(isApp && !introSeen());
+  let splashing = $state(isApp && introSeen());
+  $effect(() => { if (splashing) { const t = setTimeout(() => (splashing = false), 1500); return () => clearTimeout(t); } });
+  // Pairing from inside the intro finishes it.
+  $effect(() => { if (showIntro && server.base && server.token) { markIntroSeen(); showIntro = false; } });
 
   /** In the app, opening it with a decision waiting lands on the inbox: open → read → approve. */
   let landed = false;
@@ -26,6 +35,7 @@
   async function resume() { await refreshNow(); landOnPending(); }
 
   onMount(() => {
+    if (isApp) document.documentElement.classList.add("app");
     startRouter();
     if (paired()) connectLive();
     void setupNative(resume);
@@ -42,7 +52,11 @@
   const offline = $derived(live.loaded && !live.connected && live.disconnectedAt > 0 && now - live.disconnectedAt > 2000);
 </script>
 
-{#if isApp && !paired()}
+{#if showIntro}
+  <Intro onDone={() => { markIntroSeen(); showIntro = false; }} />
+{:else if splashing}
+  <div class="grid min-h-screen place-items-center bg-bg text-fg"><Logo size={132} animate /></div>
+{:else if isApp && !paired()}
   <Pair />
 {:else if live.signIn}
   {#if isApp}<Pair problem="The token it has is no longer accepted — someone may have made a new one. Pair again with a fresh code." />{:else}<SignIn />{/if}

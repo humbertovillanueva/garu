@@ -75,7 +75,7 @@
 </aside>
 
 <!-- Phone: slim top bar with the brand and the live dot -->
-<header class="sticky top-0 z-10 flex items-center gap-3 border-b hairline bg-bg/90 px-4 py-2.5 backdrop-blur lg:hidden" style="padding-top: calc(0.625rem + env(safe-area-inset-top))">
+<header class="phonebar sticky top-0 z-10 flex items-center gap-3 border-b hairline bg-bg/90 px-4 py-2.5 backdrop-blur lg:hidden" style="padding-top: calc(0.625rem + env(safe-area-inset-top))">
   <a href={href("home")} class="flex items-center gap-2">
     <Logo size={22} />
     <span class="text-[15px] font-semibold tracking-tight">Garu</span>
@@ -87,7 +87,7 @@
 </header>
 
 <!-- Phone: bottom tab bar, within thumb reach -->
-<nav class="fixed inset-x-0 bottom-0 z-10 grid grid-cols-5 border-t hairline bg-bg/95 backdrop-blur lg:hidden" style="padding-bottom: env(safe-area-inset-bottom)">
+<nav class="phonebar fixed inset-x-0 bottom-0 z-10 grid grid-cols-5 border-t hairline bg-bg/95 backdrop-blur lg:hidden" style="padding-bottom: env(safe-area-inset-bottom)">
   {#each [["home", "Home"], ["inbox", "Inbox"], ["agents", "Agents"], ["runs", "Runs"], ["cost", "Cost"]] as const as [n, l]}
     {@const active = route.name === n || (n === "agents" && route.name === "agent") || (n === "runs" && route.name === "run")}
     <a href={href(n)} class="tab" class:active aria-label={l}>

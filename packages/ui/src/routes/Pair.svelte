@@ -9,7 +9,7 @@
   import { build, parsePairing, remember, server } from "../lib/server.svelte";
   import { haptic } from "../lib/native";
 
-  let { problem = null }: { problem?: string | null } = $props();
+  let { problem = null, embedded = false }: { problem?: string | null; embedded?: boolean } = $props();
 
   let text = $state("");
   let busy = $state(false);
@@ -70,14 +70,18 @@
   onDestroy(stopScan);
 </script>
 
-<div class="flex min-h-screen items-center justify-center px-5" style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom)">
-  <div class="panel rise w-full max-w-sm p-6 sm:p-7">
+<div class={embedded ? "w-full" : "flex min-h-screen items-center justify-center px-5"} style={embedded ? "" : "padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom)"}>
+  <div class={embedded ? "w-full" : "panel rise w-full max-w-sm p-6 sm:p-7"}>
+    {#if !embedded}
     <div class="mb-5 flex items-center gap-2.5">
       <Logo size={30} />
       <span class="text-[17px] font-semibold tracking-tight">Garu</span>
     </div>
+    {/if}
 
-    {#if server.base && problem}
+    {#if embedded}
+      <!-- the intro slide above carries the title and explanation -->
+    {:else if server.base && problem}
       <h1 class="text-[20px] font-semibold tracking-tight">Can't reach your control room</h1>
       <p class="mt-2 text-[13.5px] leading-relaxed text-fg-2">This phone is paired with <span class="mono">{server.base.replace(/^https?:\/\//, "")}</span>. {problem}</p>
     {:else}
@@ -85,10 +89,12 @@
       <p class="mt-2 text-[13.5px] leading-relaxed text-fg-2">Your agents run on your computer. Garu on this phone talks to them over your private network, so nothing goes through a cloud.</p>
     {/if}
 
+    {#if !embedded}
     <ol class="mt-4 space-y-1.5 text-[13px] text-fg-2">
       <li><span class="text-mute">1.</span> On your computer, open Garu → <span class="font-medium text-fg">Settings → Your phone</span> → <em>Show sign-in code</em>.</li>
       <li><span class="text-mute">2.</span> {canScan ? "Scan it here, or paste the link below." : "Press Copy link there and paste it below."}</li>
     </ol>
+    {/if}
 
     {#if scanning}
       <div class="relative mt-4 overflow-hidden rounded-xl border hairline bg-black" style="aspect-ratio: 1 / 1">
@@ -113,6 +119,6 @@
 
     {#if error}<p class="mt-3 text-[12.5px] leading-relaxed" style="color: var(--color-bad)">{error}</p>{/if}
     <p class="mt-4 text-[11.5px] leading-relaxed text-mute">The link carries a key that lets this phone approve actions as you. It is stored only on this phone.</p>
-    <p class="mono mt-3 text-[10.5px] text-mute">{build}</p>
+    {#if !embedded}<p class="mono mt-3 text-[10.5px] text-mute">{build}</p>{/if}
   </div>
 </div>

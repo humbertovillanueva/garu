@@ -34,6 +34,11 @@ export function remember(base: string, token: string): void {
   try { localStorage.setItem(KEY, JSON.stringify({ base: server.base, token })); } catch { /* storage off */ }
 }
 
+const INTRO_KEY = "garu.intro";
+/** Has this phone seen the introduction? */
+export function introSeen(): boolean { try { return localStorage.getItem(INTRO_KEY) === "1"; } catch { return true; } }
+export function markIntroSeen(seen = true): void { try { seen ? localStorage.setItem(INTRO_KEY, "1") : localStorage.removeItem(INTRO_KEY); } catch { /* ignore */ } }
+
 export function forget(): void {
   server.base = ""; server.token = "";
   try { localStorage.removeItem(KEY); } catch { /* ignore */ }
