@@ -8,7 +8,7 @@
   import { href } from "../router.svelte";
   import { until, when } from "../format";
   import Mark from "./Mark.svelte";
-  import type { ApprovalRequest } from "../types";
+  import type { ApprovalRequest, WriteDiff } from "../types";
 
   let { req, compact = false }: { req: ApprovalRequest; compact?: boolean } = $props();
   let busy = $state(false);
@@ -47,6 +47,35 @@
   const postText = $derived(str("text") ?? str("message") ?? str("content") ?? "");
   const postTo = $derived(str("channel") ?? str("room") ?? str("chat_id") ?? str("recipient"));
   const verb = $derived(shape === "email" ? "wants to send" : shape === "post" ? "wants to post" : shape === "file" ? "wants to write" : shape === "command" ? "wants to run" : "wants to call");
+
+  // For a file write: what would actually change. Unchanged lines collapse to a little context; tap to see everything.
+  let diff = $state<WriteDiff | null>(null);
+  let wholeFile = $state(false);
+  $effect(() => { if (shape === "file") api.diff(req.id).then((d) => (diff = d)).catch(() => (diff = { error: "n/a" })); });
+  const CONTEXT = 2;
+  type Row = { t: "=" | "+" | "-" | "…"; s: string; n?: number };
+  const rows = $derived.by((): Row[] => {
+    const lines = diff?.lines;
+    if (!lines) return [];
+    if (wholeFile) return lines;
+    const keep = new Set<number>();
+    lines.forEach((l, i) => { if (l.t !== "=") for (let k = i - CONTEXT; k <= i + CONTEXT; k++) keep.add(k); });
+    const out: Row[] = [];
+    let skipping = 0;
+    lines.forEach((l, i) => {
+      if (keep.has(i)) { if (skipping) { out.push({ t: "…", s: "", n: skipping }); skipping = 0; } out.push(l); }
+      else skipping++;
+    });
+    if (skipping) out.push({ t: "…", s: "", n: skipping });
+    return out;
+  });
+  const diffReady = $derived(Boolean(diff?.lines));
+  const changeLabel = $derived.by(() => {
+    if (!diff?.lines) return "";
+    if (diff.isNew) return `new file · ${diff.added} lines`;
+    if (!diff.added && !diff.removed) return "no change";
+    return `+${diff.added} −${diff.removed} · ${diff.lines.length - (diff.added ?? 0)} lines before`;
+  });
 </script>
 
 <div class="panel-raised rise overflow-hidden" style="border-color: color-mix(in oklab, var(--color-ask) 35%, var(--color-line-2))">
@@ -80,9 +109,14 @@
       <div class="overflow-hidden rounded-lg border hairline bg-bg/60">
         <div class="mono flex items-center gap-2 border-b hairline px-3 py-1.5 text-[11.5px] text-mute">
           <span class="truncate" title={filePath}>{filePath}</span>
-          <span class="ml-auto flex-none">{content.split("\n").length} lines · {content.length} chars</span>
+          <span class="ml-auto flex-none">{diffReady ? changeLabel : `${content.split("\n").length} lines · ${content.length} chars`}</span>
         </div>
-        <pre class="mono max-h-56 overflow-auto whitespace-pre-wrap px-3 py-3 text-[12.5px] leading-relaxed text-fg-2">{content}</pre>
+        {#if diffReady}
+          <pre class="mono max-h-64 overflow-auto px-0 py-2 text-[12.5px] leading-relaxed">{#each rows as r}<div class="diffline" data-t={r.t}>{#if r.t === "…"}<button class="w-full text-left text-mute" onclick={() => (wholeFile = true)}>⋯ {r.n} unchanged line{r.n === 1 ? "" : "s"}</button>{:else}<span class="sign">{r.t === "=" ? " " : r.t}</span>{r.s}{/if}</div>{/each}</pre>
+          {#if wholeFile && (diff?.unchanged ?? 0) > 0}<button class="mono border-t hairline px-3 py-1.5 text-[11px] text-mute hover:text-fg" onclick={() => (wholeFile = false)}>show only the change</button>{/if}
+        {:else}
+          <pre class="mono max-h-56 overflow-auto whitespace-pre-wrap px-3 py-3 text-[12.5px] leading-relaxed text-fg-2">{content}</pre>
+        {/if}
       </div>
     {:else if shape === "post"}
       <div class="overflow-hidden rounded-lg border hairline bg-bg/60">

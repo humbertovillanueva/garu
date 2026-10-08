@@ -137,6 +137,19 @@ export interface Pair {
   addresses: { url: string; via: "tailscale" | "seen" }[];
 }
 
+/** What a pending file write would change. */
+export interface WriteDiff {
+  path?: string;
+  isNew?: boolean;
+  lines?: { t: "=" | "+" | "-"; s: string }[];
+  added?: number;
+  removed?: number;
+  unchanged?: number;
+  outside?: boolean;
+  tooBig?: boolean;
+  error?: string;
+}
+
 export interface Settings {
   version: string;
   root: string;

@@ -35,6 +35,7 @@ export const api = {
   feed: (limit = 80) => get<FeedItem[]>(`/api/feed?limit=${limit}`),
   cost: (days = 14) => get<CostRow[]>(`/api/cost?days=${days}`),
   decide: (id: string, approve: boolean, forDuration?: string, note?: string) => post<ApprovalRequest>(`/api/inbox/${id}/${approve ? "approve" : "deny"}`, { ...(forDuration ? { for: forDuration } : {}), ...(note ? { note } : {}) }),
+  diff: (id: string) => get<import("./types").WriteDiff>(`/api/inbox/${id}/diff`),
   batch: (ids: string[], approve: boolean) => post<{ results: { id: string; ok: boolean }[] }>(`/api/inbox/batch`, { ids, approve }),
   revokeGrant: (id: string) => post<unknown>(`/api/grants/${id}/revoke`),
   applySuggestion: (id: string) => post<{ applied: boolean; file: string }>(`/api/suggestions/${encodeURIComponent(id)}/apply`),

@@ -15,3 +15,4 @@ export * from "./chat.js";
 export * from "./grants.js";
 export * from "./suggest.js";
 export * from "./oauth.js";
+export * from "./diff.js";

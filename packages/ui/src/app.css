@@ -112,6 +112,15 @@ textarea.field:focus, input.field:focus { border-color: color-mix(in oklab, var(
 .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 7px; font-size: 10.5px; color: var(--color-mute); -webkit-tap-highlight-color: transparent; }
 .tab.active { color: var(--color-accent); }
 
+/* file-write review: one line per row, change signs in the gutter */
+.diffline { display: flex; white-space: pre-wrap; word-break: break-word; padding: 0 12px 0 8px; color: var(--color-fg-2); }
+.diffline .sign { flex: none; width: 14px; color: var(--color-mute); user-select: none; }
+.diffline[data-t="+"] { background: color-mix(in oklab, var(--color-ok) 14%, transparent); color: var(--color-fg); }
+.diffline[data-t="+"] .sign { color: var(--color-ok); }
+.diffline[data-t="-"] { background: color-mix(in oklab, var(--color-bad) 14%, transparent); color: var(--color-fg-2); text-decoration: line-through; text-decoration-color: color-mix(in oklab, var(--color-bad) 50%, transparent); }
+.diffline[data-t="-"] .sign { color: var(--color-bad); }
+.diffline[data-t="…"] { padding: 4px 12px; font-size: 11.5px; }
+
 /* pull to refresh (touch only) and the reconnect banner */
 .pull { position: relative; }
 .pull-hint { position: absolute; left: 0; right: 0; top: 0; height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--color-mute); transition: height .15s ease; }

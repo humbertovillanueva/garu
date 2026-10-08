@@ -34,6 +34,8 @@ import {
   missingEnv,
   isRemoteServer,
   FileOAuthProvider,
+  lineDiff,
+  diffStats,
 } from "@garu/kernel";
 import { authenticate, clearSessionCookie, corsHeaders, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, rotateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
 import { SeenHosts, tailscaleAddresses, type Address } from "./ui-addresses.js";
@@ -355,6 +357,28 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           suggestions: suggestRules(all, { dismissed }),
         });
       }
+      // What a file write would change: the current file on disk against the content the agent wants to write.
+      const diffM = /^\/api\/inbox\/([a-z0-9]+)\/diff$/.exec(path);
+      if (diffM) {
+        const p = inbox.pending().find((x) => x.id === diffM[1]);
+        if (!p) return json(res, { error: "not pending" }, 404);
+        const args = p.args as Record<string, unknown>;
+        const target = typeof args["path"] === "string" ? args["path"] : typeof args["file"] === "string" ? args["file"] : null;
+        const next = typeof args["content"] === "string" ? args["content"] : typeof args["text"] === "string" ? args["text"] : null;
+        if (!target || next === null) return json(res, { error: "not a file write" }, 400);
+        const abs = resolve(opts.root, target);
+        if (!abs.startsWith(opts.root + "/") && abs !== opts.root) return json(res, { outside: true });
+        let before = "";
+        let isNew = true;
+        if (existsSync(abs) && !statSync(abs).isDirectory()) {
+          if (statSync(abs).size > 512 * 1024) return json(res, { tooBig: true });
+          before = readFileSync(abs, "utf8");
+          isNew = false;
+        }
+        const lines = lineDiff(before, next);
+        return json(res, { path: abs, isNew, lines, ...diffStats(lines) });
+      }
+
       const d = /^\/api\/inbox\/([a-z0-9]+)\/(approve|deny)$/.exec(path);
       if (d && req.method === "POST") {
         const body = (await readBody(req)) as { for?: string; note?: string };
