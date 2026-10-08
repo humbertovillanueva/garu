@@ -108,6 +108,7 @@
           {#if a.policy}<span class="chip mono"><span style="color: var(--color-ok)">{a.policy.allow} allow</span>·<span style="color: var(--color-ask)">{a.policy.ask} ask</span>·<span style="color: var(--color-bad)">{a.policy.block} block</span></span>{/if}
           {#if a.sandbox}<span class="chip">sandboxed · net {a.sandbox.network}</span>{:else if a.configured}<span class="chip" style="color: var(--color-ask)">no sandbox</span>{/if}
           {#each a.needs ?? [] as v}<span class="chip mono" style="color: var(--color-ask); border-color: color-mix(in oklab, var(--color-ask) 40%, var(--color-line-2))">needs ${"{"}{v}{"}"} in .env</span>{/each}
+          {#each a.signIn ?? [] as srv}<span class="chip mono" style="color: var(--color-ask); border-color: color-mix(in oklab, var(--color-ask) 40%, var(--color-line-2))">{srv}: not signed in</span>{/each}
           {#if a.cron}<span class="chip mono">⏱ {a.cron}{#if a.nextRun} · next {until(a.nextRun)}{/if}</span>{/if}
           {#if a.budget?.maxCostUsd}<span class="chip mono">cap {usd(a.budget.maxCostUsd)}/run</span>{:else if a.budget?.free}<span class="chip mono">$0 model</span>{/if}
           {#if a.source}<span class="chip mono text-mute">{a.source}</span>{/if}
@@ -150,9 +151,10 @@
 
     <!-- Composer. While an approval is pending the review card is the input, so the composer steps aside. -->
     {#if a.configured && pending.length === 0 && a.status === "needs-setup"}
-      <div class="panel-raised rise p-4 text-[13.5px] text-fg-2">
-        {a.name} can't run here yet: its tool servers need <span class="mono text-fg">{a.needs.join(", ")}</span> in <span class="mono">.env</span>.
-        Add {a.needs.length === 1 ? "it" : "them"} and restart the control room. Nothing is scheduled until then.
+      <div class="panel-raised rise space-y-2 p-4 text-[13.5px] text-fg-2">
+        <div>{a.name} can't run here yet. Nothing is scheduled until this is done:</div>
+        {#if a.needs.length}<div>· Add <span class="mono text-fg">{a.needs.join(", ")}</span> to <span class="mono">.env</span>, then restart the control room.</div>{/if}
+        {#each a.signIn as srv}<div>· Sign in to <span class="mono text-fg">{srv}</span> once: <span class="mono text-fg">garu auth {a.source} {srv}</span></div>{/each}
       </div>
     {:else if a.configured && pending.length === 0}
       <div class="panel-raised rise sticky p-3" style="bottom: calc(1rem + var(--tabbar))">

@@ -49,7 +49,7 @@
         {#if a.status === "waiting"}<span class="dot ml-auto bg-accent"></span>
         {:else if a.status === "working"}<span class="dot pulse ml-auto bg-accent"></span>
         {:else if a.status === "scheduled"}<span class="ml-auto text-[11px] text-mute">⏱</span>
-        {:else if a.status === "needs-setup"}<span class="ml-auto text-[11px]" style="color: var(--color-ask)" title="needs {a.needs.join(', ')} in .env">!</span>{/if}
+        {:else if a.status === "needs-setup"}<span class="ml-auto text-[11px]" style="color: var(--color-ask)" title="needs setup">!</span>{/if}
       </a>
     {/each}
     {#if live.loaded && live.agents.length === 0}

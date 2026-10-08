@@ -28,6 +28,8 @@ export interface Agent {
   configured: boolean;
   /** ${VAR}s its tool servers need that are not set in .env. */
   needs: string[];
+  /** Remote servers with auth: oauth that have no saved sign-in yet. */
+  signIn: string[];
   status: AgentStatus;
   inFlight: { runId: string; startedAt: string; turn: number; trigger: string } | null;
   pending: number;

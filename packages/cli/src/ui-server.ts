@@ -9,7 +9,7 @@
  */
 import { createServer, type ServerResponse } from "node:http";
 import { existsSync, readFileSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
-import { extname, join, normalize } from "node:path";
+import { extname, join, normalize, resolve } from "node:path";
 import { Cron } from "croner";
 import {
   ChatStore,
@@ -32,6 +32,8 @@ import {
   type Envelope,
   type RunResult,
   missingEnv,
+  isRemoteServer,
+  FileOAuthProvider,
 } from "@garu/kernel";
 
 export interface UiServerOptions {
@@ -92,6 +94,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       for (const res of clients) res.write(`event: changed\ndata: ${Date.now()}\n\n`);
     }, 120);
   };
+
+  const authRoot = resolve(opts.root, ".garu", "auth");
 
   const inbox = new Inbox({
     root: opts.inboxRoot,
@@ -163,8 +167,11 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     const all = discover().agents;
     const ready = all.filter((a) => {
       const needs = missingEnv(a.garufile.tools, process.env);
-      if (needs.length && a.garufile.triggers.some((t) => t.cron)) opts.log(`${a.garufile.name}: not scheduled — needs ${needs.join(", ")} in .env`);
-      return needs.length === 0;
+      const signIn = a.garufile.tools.filter((t) => isRemoteServer(t) && t.auth === "oauth" && !new FileOAuthProvider({ root: authRoot, server: t.name, url: (t as { url: string }).url }).signedIn()).map((t) => t.name);
+      const hasCron = a.garufile.triggers.some((t) => t.cron);
+      if (needs.length && hasCron) opts.log(`${a.garufile.name}: not scheduled — needs ${needs.join(", ")} in .env`);
+      if (signIn.length && hasCron) opts.log(`${a.garufile.name}: not scheduled — sign in first: garu auth ${a.source} ${signIn[0]}`);
+      return needs.length === 0 && signIn.length === 0;
     });
     scheduled = scheduler.start(ready);
   }
@@ -186,7 +193,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       }
     }
     const needs = g ? missingEnv(g.tools, process.env) : [];
-    const status = pending.length ? "waiting" : inFlight ? "working" : needs.length ? "needs-setup" : cron && opts.up ? "scheduled" : "idle";
+    const signIn = g ? g.tools.filter((t) => isRemoteServer(t) && t.auth === "oauth" && !new FileOAuthProvider({ root: authRoot, server: t.name, url: (t as { url: string }).url }).signedIn()).map((t) => t.name) : [];
+    const status = pending.length ? "waiting" : inFlight ? "working" : needs.length || signIn.length ? "needs-setup" : cron && opts.up ? "scheduled" : "idle";
     const price = g ? (g.budget.pricing ?? priceFor(g.model)) : null;
     return {
       name,
@@ -195,6 +203,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       source: a?.source ?? null,
       configured: Boolean(g),
       needs,
+      signIn,
       status,
       inFlight: inFlight ?? null,
       pending: pending.length,
