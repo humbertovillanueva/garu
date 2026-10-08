@@ -6,7 +6,7 @@
    */
   import { onDestroy } from "svelte";
   import { connectLive, live } from "../lib/api.svelte";
-  import { parsePairing, remember, server } from "../lib/server.svelte";
+  import { build, parsePairing, remember, server } from "../lib/server.svelte";
   import { haptic } from "../lib/native";
 
   let { problem = null }: { problem?: string | null } = $props();
@@ -113,5 +113,6 @@
 
     {#if error}<p class="mt-3 text-[12.5px] leading-relaxed" style="color: var(--color-bad)">{error}</p>{/if}
     <p class="mt-4 text-[11.5px] leading-relaxed text-mute">The link carries a key that lets this phone approve actions as you. It is stored only on this phone.</p>
+    <p class="mono mt-3 text-[10.5px] text-mute">{build}</p>
   </div>
 </div>

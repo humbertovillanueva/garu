@@ -63,3 +63,19 @@ Changed the UI? Run `npm run sync -w @garu/app` again and press Run again.
   account; not set up yet.
 - **Play Store listing.** Needs a developer account, a privacy policy page, store
   graphics and the closed-testing period Google requires for new accounts.
+
+## Installing a build without dragging
+
+Dragging an `.apk` onto the emulator works but gives no feedback. From a
+terminal on the Mac, with the emulator running:
+
+```sh
+~/Library/Android/sdk/platform-tools/adb install -r packages/app/garu-debug.apk
+```
+
+`Success` means it is on the device. `-r` replaces the installed copy and keeps
+its data (the pairing). To check what is installed, open the app's **Settings →
+This app**: it shows version · commit · build time, which should match the
+latest commit on `main`. If the emulator is sluggish, give it more memory in
+Device Manager (⋮ → Edit → Show Advanced Settings → RAM 4096 MB) or cold-boot it
+(⋮ → Cold Boot Now).

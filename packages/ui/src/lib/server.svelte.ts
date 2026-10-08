@@ -7,6 +7,8 @@
  * token after you pair by scanning the code in Settings → Your phone.
  */
 export const isApp = import.meta.env["VITE_GARU_APP"] === "1";
+/** version · commit · build time, stamped at build. */
+export const build = (import.meta.env["VITE_GARU_BUILD"] as string | undefined) ?? "dev";
 
 const KEY = "garu.server";
 

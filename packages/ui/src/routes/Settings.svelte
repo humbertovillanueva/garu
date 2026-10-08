@@ -6,7 +6,7 @@
   import Skeleton from "../lib/components/Skeleton.svelte";
   import type { Settings } from "../lib/types";
   import QRCode from "qrcode";
-  import { forget, isApp, server } from "../lib/server.svelte";
+  import { build, forget, isApp, server } from "../lib/server.svelte";
   function unpair() {
     if (!confirm("Forget this control room? You'll pair again by scanning a code on your computer.")) return;
     forget(); location.reload();
@@ -81,6 +81,7 @@
         <div class="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute"><Icon name="spark" size={14} /> This control room</div>
         <dl class="grid grid-cols-[120px_1fr] gap-y-2 text-[13.5px]">
           <dt class="text-mute">Version</dt><dd class="mono">garu {s.version}</dd>
+          <dt class="text-mute">{isApp ? "This app" : "This page"}</dt><dd class="mono text-[12.5px]">{build}</dd>
           <dt class="text-mute">Deciding as</dt><dd>{s.user} <span class="text-mute">· <span class="mono">--as</span> to change</span></dd>
           <dt class="text-mute">Schedules</dt>
           <dd class="flex items-center gap-2"><span class="dot" style="background: {s.up ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{s.up ? "running in this process" : "not running"}{#if !s.up}<span class="text-mute"> · start with <span class="mono">garu ui --up</span></span>{/if}</dd>
