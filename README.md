@@ -194,7 +194,7 @@ Garu is a week old and already runs the author's own agents every day. Expect sh
 2. **Hosted Garu:** agents that keep running when your laptop is closed, tap-to-approve from anywhere, EU-friendly by default.
 3. Delegation between agents over A2A; transparent, editable memory.
 
-Done since the first commit: remote MCP servers (Streamable HTTP + OAuth), the phone app over Tailscale, `garu new`, decline-with-a-note.
+Done since the first commit: remote MCP servers (Streamable HTTP + OAuth), the phone app over Tailscale with a sign-in token ([docs/phone.md](docs/phone.md)), a native Android app that pairs by scanning a code ([docs/android.md](docs/android.md)), `garu new`, personas, decline-with-a-note.
 
 ## Layout
 
@@ -202,6 +202,7 @@ Done since the first commit: remote MCP servers (Streamable HTTP + OAuth), the p
 packages/kernel     Garufile schema · policy engine · flight recorder · MCP bus · agent loop · scheduler · inbox · grants · suggestions · sandbox · providers
 packages/cli        the garu command
 packages/ui         the control room (Svelte 5 + Tailwind 4)
+packages/app        the control room as a native Android app (Capacitor), pairs with a running garu ui
 packages/mcp-fetch  a tiny MCP server: fetch_json / fetch_text, GET only
 agents/             real agents that run from this repo (tomay)
 examples/           Garufiles to learn from

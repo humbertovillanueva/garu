@@ -16,6 +16,7 @@ examples/heartbeat/workspace/heartbeat.log
 
 # built UI (served by garu ui; rebuilt by npm run build)
 packages/ui/dist/
+packages/ui/dist-app/
 
 # Tomay writes here
 agents/*/briefs/*.md

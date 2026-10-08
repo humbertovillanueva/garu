@@ -1,0 +1,21 @@
+{
+  "name": "@garu/app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Garu for your phone \u2014 the control room as a native app, paired with the Garu running on your computer.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "sync": "npm run build:app -w @garu/ui && cap sync android",
+    "open": "cap open android",
+    "assets": "capacitor-assets generate --android --iconBackgroundColor '#0a0c0f' --iconBackgroundColorDark '#0a0c0f' --splashBackgroundColor '#0a0c0f' --splashBackgroundColorDark '#0a0c0f'"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/core": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.0.0"
+  }
+}

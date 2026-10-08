@@ -77,12 +77,18 @@ export function tokensMatch(a: string, b: string): boolean {
 
 export type AuthResult = "ok" | "none" | "bad";
 
-/** `requireLogin` makes even the local browser sign in. */
+/**
+ * `requireLogin` makes even the local browser sign in. An explicit token (bearer header
+ * or link) must be right wherever it comes from; a stale cookie on the local browser is
+ * forgiven, since that browser is trusted anyway and a stale cookie is just leftover.
+ */
 export function authenticate(req: RequestLike, url: URL, token: string, requireLogin = false): AuthResult {
-  if (!requireLogin && isDirectLoopback(req)) return "ok";
   const t = presentedToken(req, url);
-  if (!t) return "none";
-  return tokensMatch(t, token) ? "ok" : "bad";
+  if (t && tokensMatch(t, token)) return "ok";
+  const explicit = Boolean(req.headers.authorization?.startsWith("Bearer ")) || url.searchParams.has("token");
+  if (explicit) return "bad";
+  if (!requireLogin && isDirectLoopback(req)) return "ok";
+  return t ? "bad" : "none";
 }
 
 export function isHttps(req: RequestLike): boolean {
@@ -102,7 +108,29 @@ export function clearSessionCookie(): string {
  * page you happen to have open from approving things on your behalf.
  */
 export function isCrossSiteWrite(req: RequestLike): boolean {
-  if (req.method === "GET" || req.method === "HEAD") return false;
+  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return false;
+  // A bearer token can't be attached by a page you merely have open: the browser would
+  // preflight it and we'd refuse. So a request carrying one is the app, not a trick.
+  if (req.headers.authorization?.startsWith("Bearer ")) return false;
   const site = req.headers["sec-fetch-site"];
   return site !== undefined && site !== "same-origin" && site !== "none";
+}
+
+/**
+ * The Garu app is a webview served from its own local origin, so its calls to the
+ * control room are cross-origin. Only those origins get CORS, and only without cookies:
+ * the app authenticates with a bearer token.
+ */
+const APP_ORIGIN = /^(capacitor|ionic|https?):\/\/localhost(:\d+)?$/;
+
+export function corsHeaders(req: RequestLike): Record<string, string> {
+  const origin = req.headers.origin;
+  if (typeof origin !== "string" || !APP_ORIGIN.test(origin)) return {};
+  return {
+    "access-control-allow-origin": origin,
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-headers": "authorization, content-type",
+    "access-control-max-age": "600",
+    vary: "Origin",
+  };
 }

@@ -48,6 +48,13 @@ describe("control room auth", () => {
     expect(authenticate(req(), url(), TOKEN, true)).toBe("none");
   });
 
+  it("an explicit wrong token is wrong even from this computer; a stale local cookie is forgiven", () => {
+    expect(authenticate(req({ authorization: "Bearer nope" }), url(), TOKEN)).toBe("bad");
+    expect(authenticate(req(), url("/api/agents?token=nope"), TOKEN)).toBe("bad");
+    expect(authenticate(req({ cookie: "garu_session=stale" }), url(), TOKEN)).toBe("ok");
+    expect(authenticate(req({ cookie: "garu_session=stale" }, "192.168.1.20"), url(), TOKEN)).toBe("bad");
+  });
+
   it("refuses writes a browser marks as cross-site", () => {
     expect(isCrossSiteWrite(req({ "sec-fetch-site": "cross-site" }, "127.0.0.1", "POST"))).toBe(true);
     expect(isCrossSiteWrite(req({ "sec-fetch-site": "same-origin" }, "127.0.0.1", "POST"))).toBe(false);
@@ -71,5 +78,21 @@ describe("rotating the token", () => {
     const b = rotateToken(p);
     expect(b).not.toBe(a);
     expect(loadOrCreateToken(p)).toBe(b);
+  });
+});
+
+describe("the app's origin", () => {
+  it("gets CORS headers; other origins get none", async () => {
+    const { corsHeaders } = await import("./ui-auth.js");
+    expect(corsHeaders(req({ origin: "https://localhost" }))["access-control-allow-origin"]).toBe("https://localhost");
+    expect(corsHeaders(req({ origin: "capacitor://localhost" }))["access-control-allow-origin"]).toBe("capacitor://localhost");
+    expect(corsHeaders(req({ origin: "http://localhost:5173" }))["access-control-allow-origin"]).toBe("http://localhost:5173");
+    expect(corsHeaders(req({ origin: "https://evil.example" }))).toEqual({});
+    expect(corsHeaders(req({ origin: "https://localhost.evil.example" }))).toEqual({});
+    expect(corsHeaders(req())).toEqual({});
+  });
+  it("a bearer-authenticated write is not a cross-site write", () => {
+    expect(isCrossSiteWrite(req({ "sec-fetch-site": "cross-site", authorization: `Bearer ${TOKEN}` }, "100.64.0.9", "POST"))).toBe(false);
+    expect(isCrossSiteWrite(req({ "sec-fetch-site": "cross-site" }, "100.64.0.9", "POST"))).toBe(true);
   });
 });

@@ -10,19 +10,25 @@
   import Cost from "./routes/Cost.svelte";
   import Settings from "./routes/Settings.svelte";
   import SignIn from "./routes/SignIn.svelte";
+  import Pair from "./routes/Pair.svelte";
+  import { isApp, paired } from "./lib/server.svelte";
   import { route, startRouter } from "./lib/router.svelte";
   import { connectLive, live } from "./lib/api.svelte";
 
   onMount(() => {
-    startRouter(); connectLive();
-    if (import.meta.env.PROD && "serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js").catch(() => {});
+    startRouter();
+    if (paired()) connectLive();
+    // The app ships its own copy of the page; only the browser version wants the service worker.
+    if (import.meta.env.PROD && !isApp && "serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js").catch(() => {});
   });
   // Title reflects what needs you, like a mail client.
   $effect(() => { document.title = live.pending.length ? `(${live.pending.length}) Garu` : "Garu"; });
 </script>
 
-{#if live.signIn}
-  <SignIn />
+{#if isApp && !paired()}
+  <Pair />
+{:else if live.signIn}
+  {#if isApp}<Pair problem="The token it has is no longer accepted — someone may have made a new one. Pair again with a fresh code." />{:else}<SignIn />{/if}
 {:else}
 <div class="flex min-h-screen flex-col lg:flex-row">
   <Sidebar />

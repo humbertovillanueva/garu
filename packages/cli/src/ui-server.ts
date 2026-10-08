@@ -35,7 +35,7 @@ import {
   isRemoteServer,
   FileOAuthProvider,
 } from "@garu/kernel";
-import { authenticate, clearSessionCookie, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, rotateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
+import { authenticate, clearSessionCookie, corsHeaders, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, rotateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
 import { SeenHosts, tailscaleAddresses, type Address } from "./ui-addresses.js";
 
 export interface UiServerOptions {
@@ -244,6 +244,9 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     const path = url.pathname;
     try {
       seen.note(req.headers);
+      // --- the Garu app calls from its own origin ---
+      for (const [k, v] of Object.entries(corsHeaders(req))) res.setHeader(k, v);
+      if (req.method === "OPTIONS") { res.writeHead(204); return void res.end(); }
       // --- who is this? ---
       if (isCrossSiteWrite(req)) return json(res, { error: "cross-site request refused" }, 403);
       const linkToken = url.searchParams.get("token");

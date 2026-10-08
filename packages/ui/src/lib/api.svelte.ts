@@ -1,4 +1,9 @@
 import type { Agent, AgentsResponse, ApprovalRequest, ChatMessage, CostRow, Envelope, FeedItem, InboxResponse, RunSummary } from "./types";
+import { server } from "./server.svelte";
+
+/** Every call goes to the control room this page is paired with (the serving host in a browser). */
+const url = (path: string) => server.base + path;
+const auth = (): Record<string, string> => (server.token ? { authorization: `Bearer ${server.token}` } : {});
 
 /** A 401 means this browser has no session with the control room: show the sign-in screen and stop the live stream. */
 function unauthorized(): void {
@@ -9,13 +14,13 @@ function unauthorized(): void {
   source = undefined;
 }
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(path, { cache: "no-store" });
+  const res = await fetch(url(path), { cache: "no-store", headers: auth() });
   if (res.status === 401) { unauthorized(); throw new Error("sign in"); }
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
   return (await res.json()) as T;
 }
 async function post<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  const res = await fetch(url(path), { method: "POST", headers: { "content-type": "application/json", ...auth() }, body: body ? JSON.stringify(body) : undefined });
   if (res.status === 401) { unauthorized(); throw new Error("sign in"); }
   const json = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
@@ -40,7 +45,7 @@ export const api = {
   pair: () => get<import("./types").Pair>("/api/pair"),
   rotateToken: () => post<import("./types").Pair>("/api/pair"),
   login: async (token: string) => { await post<{ ok: true }>("/api/login", { token }); live.signIn = false; connectLive(true); },
-  logout: async () => { await post<{ ok: true }>("/api/logout"); location.reload(); },
+  logout: async () => { if (!server.token) await post<{ ok: true }>("/api/logout"); location.reload(); },
   send: (agent: string, text: string) => post<{ started: boolean; runId: string | null }>(`/api/agents/${encodeURIComponent(agent)}/chat`, { text }),
 };
 
@@ -78,7 +83,8 @@ export function connectLive(again = false): void {
   if (source && !again) return;
   source?.close();
   void refreshCore().catch(() => {});
-  source = new EventSource("/api/events");
+  // EventSource can't carry a header, so the app passes its token in the query; a browser session uses its cookie.
+  source = new EventSource(url("/api/events") + (server.token ? `?token=${encodeURIComponent(server.token)}` : ""));
   source.addEventListener("hello", () => { live.connected = true; void refreshCore().catch(() => {}); });
   source.addEventListener("changed", () => { live.tick++; void refreshCore().catch(() => {}); });
   source.onerror = () => { live.connected = false; };
