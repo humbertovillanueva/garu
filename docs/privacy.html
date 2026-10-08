@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a0c0f">
+<title>Garu — privacy</title>
+<meta name="description" content="Garu collects nothing. The app stores the address and token of your own control room on your phone, and talks only to that computer.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0a0c0f; --panel:#11141a; --line:#1e232c; --line-2:#2a303b; --fg:#e6eaf0; --fg-2:#aeb6c2; --mute:#7f8899; --accent:#f2a93b;
+    --sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans); font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased; }
+  a { color:var(--fg-2); text-decoration:none; } a:hover { color:var(--fg); }
+  code { font-family:var(--mono); font-size:.92em; background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:1px 6px; }
+  nav { border-bottom:1px solid var(--line); }
+  nav .wrap { display:flex; align-items:center; gap:10px; height:56px; font-weight:600; }
+  .wrap { max-width:720px; margin:0 auto; padding:0 20px; }
+  .mark { width:26px; height:26px; display:block; }
+  main { padding:48px 0 80px; }
+  h1 { font-size:34px; letter-spacing:-.03em; line-height:1.1; margin:0 0 6px; font-weight:650; }
+  .sub { color:var(--mute); font-size:14px; margin-bottom:34px; }
+  h2 { font-size:18px; letter-spacing:-.01em; margin:34px 0 8px; }
+  p { color:var(--fg-2); margin:0 0 14px; }
+  p b { color:var(--fg); font-weight:500; }
+  footer { border-top:1px solid var(--line); padding:24px 0 40px; color:var(--mute); font-size:13.5px; }
+  footer .wrap { display:flex; flex-wrap:wrap; gap:10px 22px; }
+</style>
+</head>
+<body>
+<nav><div class="wrap"><a href="./" style="display:flex;align-items:center;gap:10px;color:var(--fg)"><svg class="mark" viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M52.5 20.5 A24 24 0 1 1 43 11.1" stroke="#f2a93b" stroke-opacity=".6" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="11" fill="#f2a93b"/><circle cx="28.5" cy="28" r="3.2" fill="#fff" fill-opacity=".55"/></svg>Garu</a></div></nav>
+
+<main><div class="wrap">
+  <h1>Privacy</h1>
+  <div class="sub">Applies to the Garu app for Android and iOS, the Garu control room, and the <code>garu</code> command. Last updated October 8, 2026.</div>
+
+  <p><b>The short version: Garu collects nothing about you.</b> There is no Garu account, no Garu server, and no analytics. Everything Garu does happens on your own computer and your own devices.</p>
+
+  <h2>What the app stores</h2>
+  <p>When you pair the app with the Garu running on your computer, the app stores two things on your phone: the address of that computer on your private network, and the control room's sign-in token. They stay on the phone and are used only to talk to that computer. <b>Forget it</b> in the app's Settings deletes both.</p>
+
+  <h2>Where your data goes</h2>
+  <p>The app talks to exactly one place: the control room you paired it with, which is software you run on a computer you control. Nothing is sent to the author of Garu or to any third party by the app. Your agents' logs, conversations and approvals live in files on that computer, under the folder you run Garu from.</p>
+  <p>Your agents themselves may call the model provider and the tool servers <i>you</i> configured in their Garufiles (for example Google's Gemini API, or a Slack webhook). Those connections are made by your computer under your account with those services, according to their own privacy policies. Garu's policy engine decides, per tool call, what an agent is allowed to do; the flight recorder keeps a record of it on your computer.</p>
+
+  <h2>Camera</h2>
+  <p>The app asks for the camera only when you choose <b>Scan the code</b> on the pairing screen, to read the QR code shown by your control room. Frames are processed on the device and are never stored or sent anywhere. You can pair without the camera by pasting the link instead.</p>
+
+  <h2>Notifications</h2>
+  <p>The app has no push notification service. If you set up push yourself with a service such as ntfy, that is your configuration and your account with that service.</p>
+
+  <h2>Website</h2>
+  <p>This website is static files hosted on GitHub Pages. It sets no cookies and runs no analytics scripts. Fonts are loaded from Google Fonts, which may log the request as any web request is logged.</p>
+
+  <h2>Children</h2>
+  <p>Garu is a developer tool and is not directed at children.</p>
+
+  <h2>Changes and contact</h2>
+  <p>If this policy changes, the new version will be published at this address with a new date. Questions: open an issue at <a href="https://github.com/humbertovillanueva/garu/issues">github.com/humbertovillanueva/garu</a> or write to the author through <a href="https://humbertovillanueva.dev">humbertovillanueva.dev</a>.</p>
+</div></main>
+
+<footer><div class="wrap">
+  <a href="./">Garu</a>
+  <a href="https://github.com/humbertovillanueva/garu">GitHub</a>
+  <a href="https://github.com/humbertovillanueva/garu/blob/main/LICENSE">Apache-2.0</a>
+</div></footer>
+</body>
+</html>
