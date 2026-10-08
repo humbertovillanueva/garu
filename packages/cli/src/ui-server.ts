@@ -447,7 +447,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
 
   server.on("error", (e: NodeJS.ErrnoException) => {
     if (e.code === "EADDRINUSE") {
-      opts.log(`port ${opts.port} is already in use — another control room is probably still running. Stop it, or pick a port with --port.`);
+      opts.log(`port ${opts.port} is already in use — another control room is probably still running (a terminal, or the login service: \`garu service status\`). Stop it, or pick a port with --port.`);
       process.exit(1);
     }
     throw e;

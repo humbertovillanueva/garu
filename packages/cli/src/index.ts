@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { spawn } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { execFile, spawn } from "node:child_process";
+import { promisify } from "node:util";
 import { createServer as createHttpServer } from "node:http";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -43,6 +44,7 @@ import {
 
 import { startUiServer } from "./ui-server.js";
 import { KINDS, SCHEDULES, cronFor, isFreeModel, renderGarufile, suggestModel, type Kind, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
+import { launchdLabel, launchdPlist, launchdPlistPath, logPath, servicePath, serviceName, systemdUnit, systemdUnitPath } from "./service.js";
 
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
 const DEFAULT_INBOX_ROOT = resolve(process.cwd(), ".garu", "inbox");
@@ -234,6 +236,97 @@ sandboxCmd
       fail(`docker build exited with ${code}`);
     }
     stdout.write(`✔ built ${opts.tag}. Agents with a \`sandbox:\` block will use it.\n`);
+  });
+
+const service = program.command("service").description("Run the control room and the schedules as a login service, so a reboot doesn't take your agents down.");
+const run = promisify(execFile);
+const quiet = async (cmd: string, args: string[]) => { try { await run(cmd, args); return true; } catch { return false; } };
+
+service
+  .command("install")
+  .option("-p, --port <n>", "port", "4000")
+  .option("--host <host>", "bind address", "127.0.0.1")
+  .option("--as <name>", "your name", process.env["GARU_USER"] ?? process.env["USER"] ?? "you")
+  .option("--notify <url>", "POST approval requests to this URL")
+  .option("--ask-timeout <minutes>", "deny approvals nobody answers after this long", "30")
+  .description("Start `garu ui --up` for this folder at every login, and now.")
+  .action(async (opts: { port: string; host: string; as: string; notify?: string; askTimeout: string }) => {
+    loadDotEnv();
+    const root = process.cwd();
+    const as = process.env["GARU_USER"] && opts.as === (process.env["USER"] ?? "you") ? process.env["GARU_USER"] : opts.as;
+    const args = ["--up", "--as", as, "--port", opts.port, "--host", opts.host, "--ask-timeout", opts.askTimeout, ...(opts.notify ? ["--notify", opts.notify] : [])];
+    const spec = { root, node: process.execPath, entry: fileURLToPath(import.meta.url), args, path: servicePath(process.env["PATH"]) };
+    mkdirSync(join(root, ".garu"), { recursive: true });
+    if (process.platform === "darwin") {
+      const plist = launchdPlistPath(root);
+      mkdirSync(dirname(plist), { recursive: true });
+      const label = launchdLabel(root);
+      const uid = String(process.getuid?.() ?? 501);
+      await quiet("launchctl", ["bootout", `gui/${uid}/${label}`]);
+      writeFileSync(plist, launchdPlist(spec));
+      const ok = (await quiet("launchctl", ["bootstrap", `gui/${uid}`, plist])) || (await quiet("launchctl", ["load", "-w", plist]));
+      if (!ok) { stderr.write(`wrote ${plist} but launchctl refused to load it. Try: launchctl bootstrap gui/${uid} ${plist}\n`); process.exit(1); }
+      stdout.write(`✔ Garu will start at login and is starting now.\n  folder   ${root}\n  service  ${label}\n  log      ${logPath(root)}\n  control room → http://localhost:${opts.port}\n\nIf you had \`garu ui\` running in a terminal, stop it (Ctrl-C): the service has the port now.\n`);
+    } else if (process.platform === "linux") {
+      const unit = systemdUnitPath(root);
+      mkdirSync(dirname(unit), { recursive: true });
+      writeFileSync(unit, systemdUnit(spec));
+      const name = serviceName(root);
+      const ok = (await quiet("systemctl", ["--user", "daemon-reload"])) && (await quiet("systemctl", ["--user", "enable", "--now", `${name}.service`]));
+      if (!ok) { stderr.write(`wrote ${unit} but systemctl --user could not enable it. Is this a desktop session? Try: systemctl --user enable --now ${name}\n`); process.exit(1); }
+      stdout.write(`✔ Garu will start at login and is starting now.\n  folder   ${root}\n  service  ${name}\n  log      ${logPath(root)}\n  control room → http://localhost:${opts.port}\n\nOn a server with no login session: loginctl enable-linger $USER keeps it running after you log out.\n`);
+    } else {
+      stderr.write(`garu service is for macOS and Linux today. On Windows, run \`garu ui --up\` from Task Scheduler at log on.\n`);
+      process.exit(1);
+    }
+  });
+
+service
+  .command("uninstall")
+  .description("Stop the login service for this folder and remove it.")
+  .action(async () => {
+    const root = process.cwd();
+    if (process.platform === "darwin") {
+      const plist = launchdPlistPath(root);
+      const uid = String(process.getuid?.() ?? 501);
+      await quiet("launchctl", ["bootout", `gui/${uid}/${launchdLabel(root)}`]);
+      if (existsSync(plist)) unlinkSync(plist);
+    } else if (process.platform === "linux") {
+      const name = serviceName(root);
+      await quiet("systemctl", ["--user", "disable", "--now", `${name}.service`]);
+      const unit = systemdUnitPath(root);
+      if (existsSync(unit)) unlinkSync(unit);
+      await quiet("systemctl", ["--user", "daemon-reload"]);
+    }
+    stdout.write(`✔ removed. Garu no longer starts at login for ${root}.\n`);
+  });
+
+service
+  .command("status")
+  .description("Is the login service for this folder installed and running?")
+  .action(async () => {
+    const root = process.cwd();
+    const installed = process.platform === "darwin" ? existsSync(launchdPlistPath(root)) : process.platform === "linux" ? existsSync(systemdUnitPath(root)) : false;
+    if (!installed) { stdout.write(`not installed for ${root}. \`garu service install\` sets it up.\n`); return; }
+    let running = false;
+    if (process.platform === "darwin") {
+      const uid = String(process.getuid?.() ?? 501);
+      running = await quiet("launchctl", ["print", `gui/${uid}/${launchdLabel(root)}`]);
+    } else if (process.platform === "linux") {
+      running = await quiet("systemctl", ["--user", "is-active", "--quiet", `${serviceName(root)}.service`]);
+    }
+    stdout.write(`${running ? "● running" : "○ installed but not running"} — ${process.platform === "darwin" ? launchdLabel(root) : serviceName(root)}\n  log: ${logPath(root)}\n`);
+  });
+
+service
+  .command("logs")
+  .option("-n <lines>", "how many lines", "60")
+  .description("Show the end of the service log.")
+  .action((opts: { n: string }) => {
+    const p = logPath(process.cwd());
+    if (!existsSync(p)) { stdout.write(`no log yet at ${p}\n`); return; }
+    const lines = readFileSync(p, "utf8").split("\n");
+    stdout.write(lines.slice(-Number(opts.n)).join("\n") + "\n");
   });
 
 program

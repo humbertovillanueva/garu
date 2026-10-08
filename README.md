@@ -171,6 +171,7 @@ The complaint practitioners make about always-on agents is that *their* throughp
 |---|---|
 | `garu new [name]` | Make your own agent: a few questions, then a Garufile with a closed policy. Flags for scripting (`--task`, `--when`, `--web`, `--fs`, `-y`). |
 | `garu ui [--up] [--as Name] [--notify URL]` | Control room at localhost:4000. `--up` also runs every cron schedule found under the current folder. |
+| `garu service install` · `status` · `logs` · `uninstall` | Run `garu ui --up` for this folder as a login service (launchd on macOS, systemd on Linux), so a reboot doesn't take your agents down. |
 | `garu run <Garufile> [-i note]` | Run an agent once, approving in the terminal. |
 | `garu up <Garufiles…>` | Run schedules without the UI; `--on-ask inbox\|deny\|allow\|terminal`. |
 | `garu inbox` · `garu approve <id> [--for 24h]` · `garu deny <id>` | The inbox from the terminal. |

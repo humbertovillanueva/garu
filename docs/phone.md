@@ -22,6 +22,8 @@ The code is a link that carries the token, which is why it should be scanned by 
 
 `--bg` keeps it serving after you close the terminal; `tailscale serve off` stops it. The control room itself keeps listening on `127.0.0.1:4000`, so nothing on your local network can reach it directly.
 
+To make the other half survive a reboot too, run `garu service install` in your Garu folder once: the control room and the schedules then start at login (and restart if they crash), with their output in `.garu/ui.log`. Stop the `garu ui` you had in a terminal first, since the service takes the port.
+
 ## Install it
 
 **iPhone (Safari):** Share → *Add to Home Screen*. It opens full-screen with its own icon.
