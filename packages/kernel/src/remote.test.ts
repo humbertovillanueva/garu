@@ -134,3 +134,16 @@ describe("FileOAuthProvider", () => {
     expect(p.redirectUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/callback$/);
   });
 });
+
+describe("missingEnv", () => {
+  it("lists every unset ${VAR} across local and remote servers, once, sorted", async () => {
+    const { missingEnv } = await import("./bus.js");
+    const tools = [
+      { name: "web", command: "node", args: ["x.js", "${A}"], env: { W: "${B}", X: "${B}" } },
+      { name: "gh", url: "https://h/${C}", headers: { Authorization: "Bearer ${A}" }, auth: "none" as const },
+    ];
+    expect(missingEnv(tools, { B: "set" })).toEqual(["A", "C"]);
+    expect(missingEnv(tools, { A: "1", B: "2", C: "3" })).toEqual([]);
+    expect(missingEnv(tools, { A: "", B: "2", C: "3" })).toEqual(["A"]);
+  });
+});

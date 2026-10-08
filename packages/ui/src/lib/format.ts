@@ -59,10 +59,11 @@ export function agentColor(name: string): string {
 }
 
 /** First-person status line, the way a colleague would say it. */
-export function statusLine(a: { status: string; inFlight: { turn: number } | null; pending: number; nextRun: string | null; lastRun: { status: string; startedAt: string } | null; cron: string | null; configured: boolean }): string {
+export function statusLine(a: { status: string; inFlight: { turn: number } | null; pending: number; nextRun: string | null; lastRun: { status: string; startedAt: string } | null; cron: string | null; configured: boolean; needs?: string[] }): string {
   if (a.status === "waiting") return a.pending === 1 ? "Waiting for you to approve one action" : `Waiting for you on ${a.pending} actions`;
   if (a.status === "working") return a.inFlight ? `Working — turn ${a.inFlight.turn}` : "Working";
   if (a.status === "scheduled") return `Sleeping — next run in ${until(a.nextRun)}`;
+  if (a.status === "needs-setup") return `Needs setup — add ${(a.needs ?? []).join(", ")} to .env`;
   if (!a.configured) return "No Garufile found — history only";
   if (a.lastRun) return `Idle — last ran ${when(a.lastRun.startedAt)} (${statusLabel(a.lastRun.status)})`;
   if (a.cron) return "Scheduled, but nothing is running the schedule — start `garu ui --up`";

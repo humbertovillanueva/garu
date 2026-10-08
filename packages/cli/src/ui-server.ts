@@ -31,6 +31,7 @@ import {
   type DiscoveredAgent,
   type Envelope,
   type RunResult,
+  missingEnv,
 } from "@garu/kernel";
 
 export interface UiServerOptions {
@@ -159,7 +160,13 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         else if (e.type === "skip.overlap") opts.log(`↷ ${e.agent}: still running, skipped`);
       },
     });
-    scheduled = scheduler.start(discover().agents);
+    const all = discover().agents;
+    const ready = all.filter((a) => {
+      const needs = missingEnv(a.garufile.tools, process.env);
+      if (needs.length && a.garufile.triggers.some((t) => t.cron)) opts.log(`${a.garufile.name}: not scheduled — needs ${needs.join(", ")} in .env`);
+      return needs.length === 0;
+    });
+    scheduled = scheduler.start(ready);
   }
 
   const agentView = (a: DiscoveredAgent | undefined, name: string) => {
@@ -178,7 +185,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         /* invalid cron already reported by validate */
       }
     }
-    const status = pending.length ? "waiting" : inFlight ? "working" : cron && opts.up ? "scheduled" : "idle";
+    const needs = g ? missingEnv(g.tools, process.env) : [];
+    const status = pending.length ? "waiting" : inFlight ? "working" : needs.length ? "needs-setup" : cron && opts.up ? "scheduled" : "idle";
     const price = g ? (g.budget.pricing ?? priceFor(g.model)) : null;
     return {
       name,
@@ -186,6 +194,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       model: g?.model ?? runs[0]?.model ?? null,
       source: a?.source ?? null,
       configured: Boolean(g),
+      needs,
       status,
       inFlight: inFlight ?? null,
       pending: pending.length,

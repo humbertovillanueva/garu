@@ -241,6 +241,22 @@ export function expandSpec(spec: McpServerSpec, env: NodeJS.ProcessEnv): McpServ
   };
 }
 
+/** Every ${VAR} an agent's tool servers need that is not set. Empty means it can run. */
+export function missingEnv(tools: readonly McpServerSpec[], env: NodeJS.ProcessEnv): string[] {
+  const out = new Set<string>();
+  const scan = (s: string) => {
+    for (const m of s.matchAll(/\$\{([A-Z_][A-Z0-9_]*)\}/g)) {
+      const v = env[m[1]!];
+      if (v === undefined || v === "") out.add(m[1]!);
+    }
+  };
+  for (const t of tools) {
+    if (isRemoteServer(t)) { scan(t.url); Object.values(t.headers).forEach(scan); }
+    else { t.args.forEach(scan); Object.values(t.env).forEach(scan); }
+  }
+  return [...out].sort();
+}
+
 /**
  * Build the Streamable HTTP transport for a remote server. During a run the
  * provider has no way to open a browser, so a server that demands sign-in

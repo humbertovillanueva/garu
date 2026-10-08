@@ -18,7 +18,7 @@ export interface RunSummary {
   summary: string | null;
 }
 
-export type AgentStatus = "idle" | "scheduled" | "working" | "waiting";
+export type AgentStatus = "idle" | "scheduled" | "working" | "waiting" | "needs-setup";
 
 export interface Agent {
   name: string;
@@ -26,6 +26,8 @@ export interface Agent {
   model: string | null;
   source: string | null;
   configured: boolean;
+  /** ${VAR}s its tool servers need that are not set in .env. */
+  needs: string[];
   status: AgentStatus;
   inFlight: { runId: string; startedAt: string; turn: number; trigger: string } | null;
   pending: number;

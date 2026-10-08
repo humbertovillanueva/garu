@@ -14,6 +14,7 @@ import {
   AUTH_REDIRECT_URL,
   FileOAuthProvider,
   expandSpec,
+  missingEnv,
   isRemoteServer,
   remoteTransport,
   DEFAULT_SANDBOX_IMAGE,
@@ -65,10 +66,13 @@ program
   .argument("[file]", "Garufile path", "Garufile.yaml")
   .description("Parse a Garufile and lint its policy")
   .action((file: string) => {
+    loadDotEnv();
     const g = loadGarufile(file);
     const engine = new PolicyEngine(g.policy);
     const dead = engine.unreachableRules();
     stdout.write(`✔ ${file}: agent "${g.name}", model ${g.model}, ${g.tools.length} tool server(s), ${g.policy.length} policy rule(s)\n`);
+    const needs = missingEnv(g.tools, process.env);
+    if (needs.length) stdout.write(`  ⚠ needs ${needs.map((n) => `$\{${n}\}`).join(", ")} — not set in .env, so this agent cannot run here yet\n`);
     for (const t of g.tools) {
       if (!isRemoteServer(t)) continue;
       const signedIn = t.auth === "oauth" ? new FileOAuthProvider({ root: resolve(process.cwd(), ".garu", "auth"), server: t.name, url: t.url }).signedIn() : null;
@@ -148,7 +152,12 @@ program
   .description("Run agents on their schedules until stopped (Ctrl-C)")
   .action(async (files: string[], opts: { onAsk: string; askTimeout: string; notify?: string; inboxRoot: string; logRoot: string; quiet?: boolean; once?: boolean }) => {
     loadDotEnv();
-    const agents = files.map((f) => ({ source: f, garufile: loadGarufile(f) }));
+    const agents = files.map((f) => ({ source: f, garufile: loadGarufile(f) })).filter((a) => {
+      const needs = missingEnv(a.garufile.tools, process.env);
+      if (needs.length) stderr.write(`${a.garufile.name}: not scheduled — needs ${needs.join(", ")} in .env\n`);
+      return needs.length === 0;
+    });
+    if (agents.length === 0) fail("nothing to run: every agent given is missing something in .env");
     if (!["inbox", "deny", "allow", "terminal"].includes(opts.onAsk)) fail(`--on-ask must be inbox, deny, allow or terminal (got "${opts.onAsk}")`);
     const timeoutMin = Number(opts.askTimeout);
     if (!Number.isFinite(timeoutMin) || timeoutMin <= 0) fail(`--ask-timeout must be a positive number of minutes`);
