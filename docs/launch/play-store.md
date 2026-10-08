@@ -66,16 +66,13 @@ app is a companion to software you run yourself; it is not a cloud service.
 >
 > Source, docs and guides: github.com/humbertovillanueva/garu
 
-## Graphics
+## Graphics (ready in `docs/launch/play/`)
 
-- App icon: 512×512 PNG, no transparency → `packages/app/assets/icon-only.png`
-  (regenerate at 512 if the console complains about size).
-- Feature graphic: 1024×500 PNG. Dark background, mark on the left, line
-  "Your always-on agents, in your pocket." — to make.
-- Phone screenshots: at least 2, 16:9 or 9:16, 320–3840 px. Take from the
-  emulator (Pixel 8, dark): Home with a decision waiting, a review card, an
-  agent's conversation, the Cost page, the pairing screen. Add a one-line
-  caption on each in the brand style — to make.
+- App icon: `icon-512.png` (512×512, opaque).
+- Feature graphic: `feature-graphic.png` (1024×500).
+- Phone screenshots, 1080×1920 with captions, in this order: `home.png`,
+  `inbox.png`, `agent.png`, `agents.png`, `cost.png`, `pair.png`. Made from the
+  demo data with `scripts/demo-data.mjs`; retake after any big UI change.
 
 ## Data safety form (answers)
 
