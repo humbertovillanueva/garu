@@ -10,6 +10,7 @@ Any model. Any MCP tool. Every action through a policy you wrote, recorded, capp
 
 <p align="center">
   <a href="https://humbertovillanueva.github.io/garu/">Website</a> ·
+  <a href="docs/why.md">Why Garu</a> ·
   <a href="#try-it-in-five-minutes-free">Quickstart</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#the-garufile">Garufile</a> ·
