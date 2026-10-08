@@ -36,6 +36,7 @@ import {
   FileOAuthProvider,
 } from "@garu/kernel";
 import { authenticate, clearSessionCookie, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, rotateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
+import { SeenHosts, tailscaleAddresses, type Address } from "./ui-addresses.js";
 
 export interface UiServerOptions {
   port: number;
@@ -229,11 +230,20 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
 
   let token = loadOrCreateToken(opts.tokenPath);
   const requireLogin = Boolean(opts.requireLogin);
+  const seen = new SeenHosts();
+  /** Where a phone can reach us: Tailscale's address if it serves us, plus any proxy address already used. */
+  const addresses = async (): Promise<Address[]> => {
+    const ts = await tailscaleAddresses(opts.port);
+    const out: Address[] = ts.map((url) => ({ url, via: "tailscale" as const }));
+    for (const url of seen.list()) if (!ts.includes(url)) out.push({ url, via: "seen" });
+    return out;
+  };
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
     const path = url.pathname;
     try {
+      seen.note(req.headers);
       // --- who is this? ---
       if (isCrossSiteWrite(req)) return json(res, { error: "cross-site request refused" }, 403);
       const linkToken = url.searchParams.get("token");
@@ -266,11 +276,11 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         token = rotateToken(opts.tokenPath);
         opts.log("sign-in token rotated from the control room; other devices must sign in again");
         res.setHeader("set-cookie", sessionCookie(token, isHttps(req)));
-        return json(res, { token, direct: isDirectLoopback(req) });
+        return json(res, { token, direct: isDirectLoopback(req), addresses: await addresses() });
       }
       if (path === "/api/pair") {
         // Only for someone already in: the token, so the QR code on Settings can carry it to a phone.
-        return json(res, { token, direct: isDirectLoopback(req) });
+        return json(res, { token, direct: isDirectLoopback(req), addresses: await addresses() });
       }
 
       if (path === "/api/events") return sse(res, clients);

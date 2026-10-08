@@ -130,6 +130,13 @@ export interface InboxResponse {
   suggestions: Suggestion[];
 }
 
+/** The sign-in token plus the addresses a phone could use to reach this control room. */
+export interface Pair {
+  token: string;
+  direct: boolean;
+  addresses: { url: string; via: "tailscale" | "seen" }[];
+}
+
 export interface Settings {
   version: string;
   root: string;

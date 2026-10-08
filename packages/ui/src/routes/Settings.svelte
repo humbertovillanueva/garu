@@ -20,21 +20,39 @@
   let copied = $state(false);
   const isLocalhost = $derived(/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname));
   let rotated = $state(false);
-  async function render(token: string) {
-    pairLink = `${location.origin}/?token=${token}`;
+  let pairToken = $state<string | null>(null);
+  // Where the code points. Tailscale's address first when it is serving us; this page's own address is always an option.
+  let options = $state<{ url: string; label: string }[]>([]);
+  let chosen = $state<string>("");
+  function setOptions(p: import("../lib/types").Pair) {
+    const here = `${location.origin}/`;
+    const list = p.addresses.map((a) => ({ url: a.url, label: a.via === "tailscale" ? "Tailscale" : new URL(a.url).host }));
+    if (!list.some((o) => o.url === here)) list.push({ url: here, label: isLocalhost ? "this computer only" : "this address" });
+    options = list;
+    if (!options.some((o) => o.url === chosen)) chosen = options[0]!.url;
+  }
+  async function render() {
+    if (!pairToken) return;
+    pairLink = `${chosen}?token=${pairToken}`;
     pairSvg = await QRCode.toString(pairLink, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#0a0c0f", light: "#f4f1ea" } });
   }
   async function openPair() {
     pairOpen = true;
     if (pairSvg) return;
-    await render((await api.pair()).token);
+    const p = await api.pair();
+    pairToken = p.token; setOptions(p);
+    await render();
   }
+  async function choose(url: string) { chosen = url; await render(); }
   async function rotate() {
     if (!confirm("Make a new token? Every phone or computer signed in with the current one will have to scan again.")) return;
     showToken = false;
-    await render((await api.rotateToken()).token);
+    const p = await api.rotateToken();
+    pairToken = p.token; setOptions(p);
+    await render();
     rotated = true; setTimeout(() => (rotated = false), 4000);
   }
+  const chosenIsLocal = $derived(/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])/.test(chosen));
   async function copyLink() {
     if (!pairLink) return;
     try { await navigator.clipboard.writeText(pairLink); copied = true; setTimeout(() => (copied = false), 1500); } catch { showToken = true; }
@@ -76,18 +94,27 @@
         {:else}
           <p class="text-[13px] text-fg-2">This device is signed in with the token. <button class="text-fg-2 underline hover:text-fg" onclick={() => api.logout()}>Sign out</button></p>
         {/if}
-        {#if isLocalhost}
-          <p class="mt-2 text-[12.5px] text-mute">A phone can't reach <span class="mono">localhost</span>. Put the control room on your private network first — <span class="mono">tailscale serve --bg {s.port}</span> — then open <em>this page</em> from that address and the code below will point there.</p>
-        {/if}
         {#if !pairOpen}
           <button class="btn mt-3" onclick={openPair}>Show sign-in code</button>
         {:else if !pairSvg}
           <Skeleton rows={1} h={180} />
         {:else}
+          {#if options.length > 1}
+            <div class="mt-3 flex flex-wrap items-center gap-1.5 text-[12px]">
+              <span class="text-mute">Code points to</span>
+              {#each options as o (o.url)}
+                <button class="rounded-full border px-2.5 py-0.5 transition-colors" class:border-accent={chosen === o.url} class:text-fg={chosen === o.url} class:hairline={chosen !== o.url} class:text-mute={chosen !== o.url} onclick={() => choose(o.url)} title={o.url}>{o.label}</button>
+              {/each}
+            </div>
+          {/if}
           <div class="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start">
             <div class="qr w-[180px] flex-none rounded-xl p-2" style="background:#f4f1ea">{@html pairSvg}</div>
             <div class="min-w-0 flex-1 text-[13px] text-fg-2">
-              <p>Scan with your phone's camera. It opens this control room signed in — then <em>Add to Home Screen</em> to make it an app.</p>
+              {#if chosenIsLocal}
+                <p style="color: var(--color-ask)">This code points at <span class="mono">{new URL(chosen).host}</span>, which a phone can't reach. Put the control room on your private network first: <span class="mono">tailscale serve --bg {s.port}</span> on this computer, then come back here and the code will point there by itself.</p>
+              {:else}
+                <p>Scan with your phone's camera. It opens <span class="mono">{new URL(chosen).host}</span> signed in — then <em>Add to Home Screen</em> to make it an app.</p>
+              {/if}
               <p class="mt-2 text-[12px] text-mute">This code is a key. Anyone who scans it can approve actions as you.</p>
               <div class="mt-3 flex flex-wrap gap-2">
                 <button class="btn" onclick={copyLink}>{copied ? "Copied" : "Copy link"}</button>
