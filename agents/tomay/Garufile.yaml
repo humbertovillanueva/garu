@@ -36,11 +36,12 @@ policy:
     action: allow
     when:
       url: { matches: "^https://(api\\.github\\.com/|dev\\.to/api/|hn\\.algolia\\.com/api/|api\\.open-meteo\\.com/)" }
-  # Posting to your channel: always ask first. The tool can only post to the one
-  # webhook in .env; the model never sees or chooses the URL.
+  # Posting to your channel. The tool can only post to the one webhook in .env;
+  # the model never sees or chooses the URL, so this is allowed outright: a brief
+  # that waits for a tap at 7am is a brief nobody reads. (It was `ask` for the first
+  # few runs, until the output had earned it.)
   - tool: "web.post_message"
-    action: ask
-    reason: posting the brief to your channel
+    action: allow
   - tool: "web.*"
     action: block
     reason: Tomay only reads from its four known sources
