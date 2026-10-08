@@ -352,6 +352,30 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       }
       if (path === "/api/feed") return json(res, feed(store, inbox, Number(url.searchParams.get("limit") ?? 80)));
       if (path === "/api/cost") return json(res, store.costByDay(Number(url.searchParams.get("days") ?? 14)));
+      if (path === "/api/settings") {
+        // Only whether a key is set — never its value.
+        const isSet = (k: string) => Boolean(process.env[k]);
+        const agents = discover().agents;
+        const referenced = new Set<string>();
+        for (const a of agents) for (const t of a.garufile.tools) {
+          const scan = (v: string) => { for (const m of v.matchAll(/\$\{([A-Z_][A-Z0-9_]*)\}/g)) referenced.add(m[1]!); };
+          if (isRemoteServer(t)) { scan(t.url); Object.values(t.headers).forEach(scan); } else { t.args.forEach(scan); Object.values(t.env).forEach(scan); }
+        }
+        const remotes = agents.flatMap((a) => a.garufile.tools.filter(isRemoteServer).map((t) => ({ agent: a.garufile.name, source: a.source, server: t.name, url: t.url, auth: t.auth, signedIn: t.auth === "oauth" ? new FileOAuthProvider({ root: authRoot, server: t.name, url: t.url }).signedIn() : null })));
+        return json(res, {
+          version: "0.1.0",
+          root: opts.root,
+          up: opts.up,
+          user: opts.userName,
+          host: opts.host,
+          port: opts.port,
+          providers: { gemini: isSet("GEMINI_API_KEY"), anthropic: isSet("ANTHROPIC_API_KEY"), ollamaHost: isSet("OLLAMA_HOST") },
+          env: [...referenced].sort().map((k) => ({ name: k, set: isSet(k) })),
+          remotes,
+          notify: Boolean(opts.notify),
+          askTimeoutMin: Math.round((opts.askTimeoutMs ?? 30 * 60_000) / 60_000),
+        });
+      }
       if (path.startsWith("/api/")) return json(res, { error: "not found" }, 404);
       return serveStatic(res, opts.staticDir, path);
     } catch (e) {

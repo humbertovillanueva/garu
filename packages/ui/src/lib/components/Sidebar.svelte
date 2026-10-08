@@ -1,65 +1,78 @@
 <script lang="ts">
   import { route, href } from "../router.svelte";
   import { live } from "../api.svelte";
+  import { statusLine } from "../format";
   import Mark from "./Mark.svelte";
   import Icon from "./Icon.svelte";
 
   const isActive = (name: string, part?: string) => route.name === name && (part === undefined || route.parts[0] === part);
   const shortRoot = $derived(live.root.replace(/^\/Users\/[^/]+/, "~").replace(/^\/home\/[^/]+/, "~"));
+  const nav = [
+    { n: "home", label: "Home", icon: "home" as const, active: () => isActive("home") },
+    { n: "inbox", label: "Inbox", icon: "inbox" as const, active: () => isActive("inbox") },
+    { n: "runs", label: "Runs", icon: "runs" as const, active: () => isActive("runs") || route.name === "run" },
+    { n: "cost", label: "Cost", icon: "cost" as const, active: () => isActive("cost") },
+  ];
+  const short = (a: { status: string; needs: string[]; signIn: string[]; cron: string | null; nextRun: string | null; inFlight: { turn: number } | null; pending: number; lastRun: { status: string; startedAt: string } | null; configured: boolean }) =>
+    a.status === "needs-setup" ? "needs setup" : a.status === "waiting" ? "waiting for you" : a.status === "working" ? "working" : a.status === "scheduled" ? statusLine(a).replace("Sleeping — ", "") : "";
 </script>
 
 <!-- Desktop sidebar -->
-<aside class="hidden h-screen w-60 flex-none flex-col border-r hairline bg-bg lg:flex sticky top-0">
-  <a href={href("home")} class="flex items-center gap-2.5 px-4 pt-5 pb-4">
+<aside class="hidden h-screen w-64 flex-none flex-col border-r hairline bg-bg lg:flex sticky top-0">
+  <a href={href("home")} class="flex items-center gap-2.5 px-5 pt-5 pb-4">
     <span class="relative grid h-7 w-7 place-items-center">
       <span class="absolute h-7 w-7 rounded-full border border-accent/35"></span>
       <span class="h-3 w-3 rounded-full bg-accent"></span>
     </span>
     <span class="text-[16px] font-semibold tracking-tight">Garu</span>
-    <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute">
+    <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute" title={live.connected ? "connected to the control room" : "reconnecting…"}>
       <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{live.connected ? "live" : "…"}
     </span>
   </a>
 
   <nav class="space-y-0.5 px-3">
-    <a href={href("home")} class="navitem" class:active={isActive("home")}>
-      <span class="w-4 text-center">⌂</span> Home
-    </a>
-    <a href={href("inbox")} class="navitem" class:active={isActive("inbox")}>
-      <span class="w-4 text-center">◫</span> Inbox
-      {#if live.pending.length}<span class="mono ml-auto rounded-full bg-accent px-1.5 text-[11px] font-semibold text-bg">{live.pending.length}</span>{/if}
-    </a>
-    <a href={href("runs")} class="navitem" class:active={isActive("runs") || route.name === "run"}>
-      <span class="w-4 text-center">≡</span> Runs
-    </a>
-    <a href={href("cost")} class="navitem" class:active={isActive("cost")}>
-      <span class="w-4 text-center">$</span> Cost
-    </a>
+    {#each nav as item}
+      <a href={href(item.n)} class="navitem" class:active={item.active()}>
+        <span class="navicon"><Icon name={item.icon} size={17} /></span>
+        <span>{item.label}</span>
+        {#if item.n === "inbox" && live.pending.length}<span class="mono ml-auto rounded-full bg-accent px-1.5 text-[11px] font-semibold text-bg">{live.pending.length}</span>{/if}
+      </a>
+    {/each}
   </nav>
 
   <div class="mt-6 flex items-center justify-between px-5 text-[11px] uppercase tracking-wider text-mute">
-    <span>Agents</span>
+    <a href={href("agents")} class="hover:text-fg">Agents</a>
     <span class="mono">{live.agents.length}</span>
   </div>
   <nav class="mt-1 flex-1 space-y-0.5 overflow-y-auto px-3 pb-3">
     {#each live.agents as a (a.name)}
-      <a href={href("agent", a.name)} class="navitem" class:active={isActive("agent", a.name)}>
-        <Mark name={a.name} size={20} status={a.status} />
-        <span class="truncate">{a.name}</span>
-        {#if a.status === "waiting"}<span class="dot ml-auto bg-accent"></span>
-        {:else if a.status === "working"}<span class="dot pulse ml-auto bg-accent"></span>
-        {:else if a.status === "scheduled"}<span class="ml-auto text-[11px] text-mute">⏱</span>
-        {:else if a.status === "needs-setup"}<span class="ml-auto text-[11px]" style="color: var(--color-ask)" title="needs setup">!</span>{/if}
+      {@const sub = short(a)}
+      <a href={href("agent", a.name)} class="navitem agent" class:active={isActive("agent", a.name)}>
+        <Mark name={a.name} size={22} status={a.status} />
+        <span class="min-w-0 flex-1 leading-tight">
+          <span class="block truncate">{a.name}</span>
+          {#if sub}<span class="block truncate text-[11px]" style="color: {a.status === 'needs-setup' ? 'var(--color-ask)' : 'var(--color-mute)'}">{sub}</span>{/if}
+        </span>
+        {#if a.status === "waiting"}<span class="dot bg-accent"></span>
+        {:else if a.status === "working"}<span class="dot pulse bg-accent"></span>
+        {:else if a.status === "scheduled"}<span class="text-mute"><Icon name="clock" size={13} /></span>{/if}
       </a>
     {/each}
     {#if live.loaded && live.agents.length === 0}
-      <div class="px-2 py-3 text-[12.5px] text-mute">No Garufiles found under this folder yet.</div>
+      <div class="px-2 py-3 text-[12.5px] text-mute">No Garufiles found under this folder yet. <span class="mono">garu new</span> makes one.</div>
     {/if}
   </nav>
 
-  <div class="border-t hairline px-4 py-3">
-    <div class="mono truncate text-[11px] text-mute" title={live.root}>{shortRoot || "…"}</div>
-    <div class="mt-1 text-[11px] text-mute">{live.up ? "schedules running here" : "schedules not running · garu ui --up"}</div>
+  <div class="border-t hairline px-3 py-2">
+    <a href={href("settings")} class="navitem" class:active={isActive("settings")}>
+      <span class="navicon"><Icon name="settings" size={17} /></span>
+      <span>Settings</span>
+    </a>
+    <div class="flex items-center gap-2 px-2.5 pb-1 pt-2 text-[11px] text-mute">
+      <span class="dot" style="background: {live.up ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>
+      <span class="truncate">{live.up ? "schedules running" : "schedules off"}</span>
+      <span class="mono ml-auto truncate" title={live.root}>{shortRoot || "…"}</span>
+    </div>
   </div>
 </aside>
 
@@ -72,6 +85,7 @@
   <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute">
     <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{live.connected ? "live" : "…"}
   </span>
+  <a href={href("settings")} class="text-mute hover:text-fg" aria-label="Settings"><Icon name="settings" size={18} /></a>
 </header>
 
 <!-- Phone: bottom tab bar, within thumb reach -->

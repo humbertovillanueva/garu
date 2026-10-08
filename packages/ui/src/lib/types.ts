@@ -128,3 +128,17 @@ export interface InboxResponse {
   grants: Grant[];
   suggestions: Suggestion[];
 }
+
+export interface Settings {
+  version: string;
+  root: string;
+  up: boolean;
+  user: string;
+  host: string;
+  port: number;
+  providers: { gemini: boolean; anthropic: boolean; ollamaHost: boolean };
+  env: { name: string; set: boolean }[];
+  remotes: { agent: string; source: string; server: string; url: string; auth: "none" | "oauth"; signedIn: boolean | null }[];
+  notify: boolean;
+  askTimeoutMin: number;
+}

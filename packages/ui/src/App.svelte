@@ -8,6 +8,7 @@
   import Run from "./routes/Run.svelte";
   import Inbox from "./routes/Inbox.svelte";
   import Cost from "./routes/Cost.svelte";
+  import Settings from "./routes/Settings.svelte";
   import { route, startRouter } from "./lib/router.svelte";
   import { connectLive, live } from "./lib/api.svelte";
 
@@ -36,6 +37,8 @@
           <Inbox />
         {:else if route.name === "cost"}
           <Cost />
+        {:else if route.name === "settings"}
+          <Settings />
         {:else}
           <Home />
         {/if}

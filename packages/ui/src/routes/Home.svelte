@@ -17,7 +17,12 @@
   const runsToday = $derived(live.agents.reduce((s, a) => s + a.runsToday, 0));
   const spendToday = $derived(live.agents.reduce((s, a) => s + a.costTodayUsd, 0));
   const working = $derived(live.agents.filter((a) => a.status === "working"));
-  const active = $derived(live.agents.filter((a) => a.status !== "idle" || a.pending > 0));
+  const active = $derived(live.agents.filter((a) => a.status !== "idle" && a.status !== "needs-setup" || a.pending > 0));
+  const needsSetup = $derived(live.agents.filter((a) => a.status === "needs-setup"));
+  const totalRuns = $derived(live.agents.reduce((s, a) => s + a.runs, 0));
+  const scheduled = $derived(live.agents.filter((a) => a.cron && a.status !== "needs-setup").length);
+  // First week: show the way in until there's real history.
+  const firstRun = $derived(live.loaded && totalRuns < 3);
 
   // Feed minus pending approvals (they get their own cards up top), grouped by day.
   const groups = $derived.by(() => {
@@ -44,6 +49,42 @@
       {:else}Quiet so far today. Nothing needs you.{/if}
     </p>
   </div>
+
+  {#if live.loaded}
+    <div class="rise grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div class="panel stat"><div class="k">Agents</div><div class="v">{live.agents.length}</div><div class="s">{scheduled} on a schedule{live.up ? "" : " · not running"}</div></div>
+      <div class="panel stat"><div class="k">Runs today</div><div class="v">{runsToday}</div><div class="s">{totalRuns} all time</div></div>
+      <div class="panel stat"><div class="k">Spend today</div><div class="v">{usd(spendToday)}</div><div class="s">estimated at list price</div></div>
+      <a href={href("inbox")} class="panel stat card-hover"><div class="k">Waiting on you</div><div class="v" style="color: {live.pending.length ? 'var(--color-accent)' : 'inherit'}">{live.pending.length}</div><div class="s">{live.pending.length ? "open the inbox" : "nothing to approve"}</div></a>
+    </div>
+  {/if}
+
+  {#if firstRun}
+    <div class="panel-raised rise p-5">
+      <div class="mb-1 text-[15px] font-semibold">Welcome. Three steps to your first agent.</div>
+      <p class="mb-4 text-[13.5px] text-fg-2">Garu runs agents that can only act through a policy you wrote. Nothing happens without a rule allowing it, or you approving it.</p>
+      <ol class="grid gap-3 text-[13.5px] sm:grid-cols-3">
+        <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">1</div><div class="font-medium">Run <span class="mono">hello</span></div><div class="mt-0.5 text-fg-2">Open <a class="underline hover:text-fg" href={href("agent", "hello")}>hello</a> and press <span class="font-medium text-fg">Run job</span>. It reads a notes file and asks before writing a summary.</div></li>
+        <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">2</div><div class="font-medium">Approve it</div><div class="mt-0.5 text-fg-2">The pause is the product. Approve once, approve for 24h, or decline with a note it reads.</div></li>
+        <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">3</div><div class="font-medium">Make your own</div><div class="mt-0.5 text-fg-2"><span class="mono">npm run garu -- new</span> asks what it should do and writes a Garufile with a closed policy.</div></li>
+      </ol>
+    </div>
+  {/if}
+
+  {#if needsSetup.length}
+    <div>
+      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Needs setup</h2>
+      <div class="panel divide-y divide-line">
+        {#each needsSetup as a (a.name)}
+          <a href={href("agent", a.name)} class="card-hover flex items-center gap-3 px-3 py-2.5 first:rounded-t-xl last:rounded-b-xl">
+            <Mark name={a.name} size={26} status={a.status} />
+            <span class="font-medium">{a.name}</span>
+            <span class="mono truncate text-[12.5px]" style="color: var(--color-ask)">{[...a.needs.map((v) => `add ${v} to .env`), ...a.signIn.map((s) => `garu auth ${a.source} ${s}`)].join(" · ")}</span>
+          </a>
+        {/each}
+      </div>
+    </div>
+  {/if}
 
   {#if live.pending.length || live.suggestions.length}
     <div class="space-y-3">

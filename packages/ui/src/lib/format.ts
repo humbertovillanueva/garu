@@ -74,3 +74,21 @@ export function statusLine(a: { status: string; inFlight: { turn: number } | nul
   if (a.cron) return "Scheduled, but nothing is running the schedule — start `garu ui --up`";
   return "Idle — hasn't run yet";
 }
+
+/** A cron expression in words for the common shapes; the raw expression otherwise. */
+export function cronLabel(cron: string | null): string {
+  if (!cron) return "when told";
+  const p = cron.trim().split(/\s+/);
+  if (p.length !== 5) return cron;
+  const [min, hour, dom, mon, dow] = p as [string, string, string, string, string];
+  const hhmm = (h: string, m: string) => `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
+  const dows: Record<string, string> = { "1-5": "weekdays", "0,6": "weekends", "6,0": "weekends", "*": "" };
+  if (/^\*\/(\d+)$/.test(min) && hour === "*" && dom === "*" && mon === "*" && dow === "*") return `every ${min.slice(2)} min`;
+  if (min === "0" && hour === "*" && dom === "*" && mon === "*" && dow === "*") return "every hour";
+  if (/^\d+$/.test(min) && /^\*\/(\d+)$/.test(hour) && dom === "*" && mon === "*" && dow === "*") return `every ${hour.slice(2)} h`;
+  if (/^\d+$/.test(min) && /^\d+$/.test(hour) && dom === "*" && mon === "*") {
+    const d = dows[dow] ?? (/^[0-6]$/.test(dow) ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][Number(dow)] : dow);
+    return `${d ? d + " " : "daily "}${hhmm(hour, min)}`.trim();
+  }
+  return cron;
+}

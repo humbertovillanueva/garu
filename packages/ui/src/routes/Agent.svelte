@@ -1,7 +1,7 @@
 <script lang="ts">
   import { api, live, agentByName } from "../lib/api.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, when, statusLine, statusLabel, until, duration, tokens } from "../lib/format";
+  import { usd, when, statusLine, statusLabel, until, duration, tokens, cronLabel } from "../lib/format";
   import Mark from "../lib/components/Mark.svelte";
   import Status from "../lib/components/Status.svelte";
   import Budget from "../lib/components/Budget.svelte";
@@ -102,17 +102,6 @@
         </div>
         <p class="mt-0.5 text-[14px] text-fg-2">{a.description || statusLine(a)}</p>
         {#if a.description}<p class="mt-0.5 text-[13px] text-mute">{statusLine(a)}</p>{/if}
-        <div class="mt-3 flex flex-wrap gap-1.5">
-          {#if a.model}<span class="chip mono">{a.model}</span>{/if}
-          {#each a.tools as t}<span class="chip"><span class="dot" style="background: var(--color-fg-2)"></span>{t}</span>{/each}
-          {#if a.policy}<span class="chip mono"><span style="color: var(--color-ok)">{a.policy.allow} allow</span>·<span style="color: var(--color-ask)">{a.policy.ask} ask</span>·<span style="color: var(--color-bad)">{a.policy.block} block</span></span>{/if}
-          {#if a.sandbox}<span class="chip">sandboxed · net {a.sandbox.network}</span>{:else if a.configured}<span class="chip" style="color: var(--color-ask)">no sandbox</span>{/if}
-          {#each a.needs ?? [] as v}<span class="chip mono" style="color: var(--color-ask); border-color: color-mix(in oklab, var(--color-ask) 40%, var(--color-line-2))">needs ${"{"}{v}{"}"} in .env</span>{/each}
-          {#each a.signIn ?? [] as srv}<span class="chip mono" style="color: var(--color-ask); border-color: color-mix(in oklab, var(--color-ask) 40%, var(--color-line-2))">{srv}: not signed in</span>{/each}
-          {#if a.cron}<span class="chip mono">⏱ {a.cron}{#if a.nextRun} · next {until(a.nextRun)}{/if}</span>{/if}
-          {#if a.budget?.maxCostUsd}<span class="chip mono">cap {usd(a.budget.maxCostUsd)}/run</span>{:else if a.budget?.free}<span class="chip mono">$0 model</span>{/if}
-          {#if a.source}<span class="chip mono text-mute">{a.source}</span>{/if}
-        </div>
       </div>
       <div class="mono grid grid-cols-3 gap-4 text-right text-[12px] text-mute sm:ml-auto">
         <div><div>runs</div><div class="text-[18px] text-fg">{a.runs}</div></div>
@@ -120,6 +109,35 @@
         <div><div>spend today</div><div class="text-[18px] text-fg">{usd(a.costTodayUsd)}</div></div>
       </div>
     </div>
+
+    <!-- Facts: what it runs on, what it can touch, when, for how much -->
+    {#if a.configured}
+      {@const total = (a.policy?.allow ?? 0) + (a.policy?.ask ?? 0) + (a.policy?.block ?? 0) || 1}
+      <div class="rise facts">
+        <div class="fact"><div class="k">Model</div><div class="v mono" title={a.model ?? ""}>{a.model}</div></div>
+        <div class="fact"><div class="k">Tools</div><div class="v" title={a.tools.join(", ")}>{a.tools.length ? a.tools.join(" · ") : "none"}</div></div>
+        <div class="fact"><div class="k">Runs</div><div class="v" title={a.cron ?? ""}>{cronLabel(a.cron)}{#if a.nextRun}<span class="text-mute"> · next {until(a.nextRun)}</span>{/if}</div></div>
+        <div class="fact"><div class="k">Cap</div><div class="v mono">{a.budget?.maxCostUsd ? `${usd(a.budget.maxCostUsd)} / run` : a.budget?.free ? "$0 model" : "none"}</div></div>
+        <div class="fact">
+          <div class="k">Policy</div>
+          <div class="v flex items-center gap-2">
+            <span class="policybar flex-1" title="{a.policy?.allow} allow · {a.policy?.ask} ask · {a.policy?.block} block">
+              <span style="width: {((a.policy?.allow ?? 0) / total) * 100}%; background: var(--color-ok)"></span>
+              <span style="width: {((a.policy?.ask ?? 0) / total) * 100}%; background: var(--color-ask)"></span>
+              <span style="width: {((a.policy?.block ?? 0) / total) * 100}%; background: var(--color-bad)"></span>
+            </span>
+            <span class="mono text-[11.5px] text-mute">{a.policy?.allow}·{a.policy?.ask}·{a.policy?.block}</span>
+          </div>
+        </div>
+        <div class="fact"><div class="k">Sandbox</div><div class="v" style="color: {a.sandbox ? 'var(--color-fg)' : 'var(--color-ask)'}">{a.sandbox ? `on · net ${a.sandbox.network}` : "off"}</div></div>
+      </div>
+      {#if a.needs.length || a.signIn.length}
+        <div class="rise flex flex-wrap gap-1.5">
+          {#each a.needs as v}<span class="chip mono" style="color: var(--color-ask); border-color: color-mix(in oklab, var(--color-ask) 40%, var(--color-line-2))">needs ${"{"}{v}{"}"} in .env</span>{/each}
+          {#each a.signIn as srv}<span class="chip mono" style="color: var(--color-ask); border-color: color-mix(in oklab, var(--color-ask) 40%, var(--color-line-2))">{srv}: not signed in</span>{/each}
+        </div>
+      {/if}
+    {/if}
 
     <!-- Conversation -->
     {#if messages === null}
