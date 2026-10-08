@@ -61,3 +61,15 @@ describe("control room auth", () => {
     expect(sessionCookie("t", false)).not.toContain("Secure");
   });
 });
+
+describe("rotating the token", () => {
+  it("writes a different token to the same file", async () => {
+    const { rotateToken } = await import("./ui-auth.js");
+    const dir = mkdtempSync(join(tmpdir(), "garu-auth-"));
+    const p = join(dir, "ui-token");
+    const a = loadOrCreateToken(p);
+    const b = rotateToken(p);
+    expect(b).not.toBe(a);
+    expect(loadOrCreateToken(p)).toBe(b);
+  });
+});

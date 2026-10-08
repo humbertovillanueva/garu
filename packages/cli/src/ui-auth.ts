@@ -20,6 +20,11 @@ export function loadOrCreateToken(path: string): string {
     const t = readFileSync(path, "utf8").trim();
     if (/^[A-Za-z0-9_-]{32,}$/.test(t)) return t;
   }
+  return rotateToken(path);
+}
+
+/** Make a fresh token and write it. Every device signed in with the old one is out. */
+export function rotateToken(path: string): string {
   const t = randomBytes(32).toString("base64url");
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${t}\n`, { mode: 0o600 });

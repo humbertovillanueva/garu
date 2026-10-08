@@ -38,6 +38,7 @@ export const api = {
   chat: (agent: string) => get<ChatMessage[]>(`/api/agents/${encodeURIComponent(agent)}/chat`),
   settings: () => get<import("./types").Settings>("/api/settings"),
   pair: () => get<{ token: string; direct: boolean }>("/api/pair"),
+  rotateToken: () => post<{ token: string; direct: boolean }>("/api/pair"),
   login: async (token: string) => { await post<{ ok: true }>("/api/login", { token }); live.signIn = false; connectLive(true); },
   logout: async () => { await post<{ ok: true }>("/api/logout"); location.reload(); },
   send: (agent: string, text: string) => post<{ started: boolean; runId: string | null }>(`/api/agents/${encodeURIComponent(agent)}/chat`, { text }),

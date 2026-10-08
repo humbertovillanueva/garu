@@ -19,12 +19,21 @@
   let showToken = $state(false);
   let copied = $state(false);
   const isLocalhost = $derived(/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname));
+  let rotated = $state(false);
+  async function render(token: string) {
+    pairLink = `${location.origin}/?token=${token}`;
+    pairSvg = await QRCode.toString(pairLink, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#0a0c0f", light: "#f4f1ea" } });
+  }
   async function openPair() {
     pairOpen = true;
     if (pairSvg) return;
-    const { token } = await api.pair();
-    pairLink = `${location.origin}/?token=${token}`;
-    pairSvg = await QRCode.toString(pairLink, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#0a0c0f", light: "#f4f1ea" } });
+    await render((await api.pair()).token);
+  }
+  async function rotate() {
+    if (!confirm("Make a new token? Every phone or computer signed in with the current one will have to scan again.")) return;
+    showToken = false;
+    await render((await api.rotateToken()).token);
+    rotated = true; setTimeout(() => (rotated = false), 4000);
   }
   async function copyLink() {
     if (!pairLink) return;
@@ -85,7 +94,7 @@
                 <button class="btn" onclick={() => (showToken = !showToken)}>{showToken ? "Hide token" : "Show token"}</button>
               </div>
               {#if showToken}<div class="mono mt-2 break-all rounded-lg border hairline bg-bg px-2.5 py-2 text-[12px] select-all">{pairLink?.split("token=")[1]}</div>{/if}
-              <p class="mt-2 text-[12px] text-mute">Lost it, or someone else saw it? Stop garu, delete <span class="mono">{shortRoot(s.login.tokenPath)}</span>, start again: a new one is made.</p>
+              <p class="mt-2 text-[12px] text-mute">Someone else saw it? <button class="underline hover:text-fg" onclick={rotate}>Make a new token</button>{#if rotated}<span class="ml-2" style="color: var(--color-ok)">done — other devices are signed out</span>{/if}. It lives in <span class="mono">{shortRoot(s.login.tokenPath)}</span>.</p>
             </div>
           </div>
         {/if}

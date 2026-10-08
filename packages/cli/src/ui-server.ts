@@ -35,7 +35,7 @@ import {
   isRemoteServer,
   FileOAuthProvider,
 } from "@garu/kernel";
-import { authenticate, clearSessionCookie, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
+import { authenticate, clearSessionCookie, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, rotateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
 
 export interface UiServerOptions {
   port: number;
@@ -227,7 +227,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     };
   };
 
-  const token = loadOrCreateToken(opts.tokenPath);
+  let token = loadOrCreateToken(opts.tokenPath);
   const requireLogin = Boolean(opts.requireLogin);
 
   const server = createServer(async (req, res) => {
@@ -260,6 +260,13 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       if (path.startsWith("/api/")) {
         const who = authenticate(req, url, token, requireLogin);
         if (who !== "ok") return json(res, { error: who === "bad" ? "wrong token" : "sign in", signIn: true }, 401);
+      }
+      if (path === "/api/pair" && req.method === "POST") {
+        // A new key. Whoever asked stays signed in (fresh cookie); every other device is out.
+        token = rotateToken(opts.tokenPath);
+        opts.log("sign-in token rotated from the control room; other devices must sign in again");
+        res.setHeader("set-cookie", sessionCookie(token, isHttps(req)));
+        return json(res, { token, direct: isDirectLoopback(req) });
       }
       if (path === "/api/pair") {
         // Only for someone already in: the token, so the QR code on Settings can carry it to a phone.
