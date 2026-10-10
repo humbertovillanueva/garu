@@ -47,13 +47,27 @@ docs/video/remotion the launch video's source (Remotion 4, React); see "Launch v
 
 ```
 npm install && npm run build          # all workspaces
-npm run typecheck && npm test         # tsc -b, vitest (157 tests); run before every commit
+npm run typecheck && npm test         # tsc -b, vitest (162 tests); run before every commit
 npx svelte-check --workspace packages/ui
 npm run garu -- <cmd>                 # the CLI from the repo (no global install yet)
 npm run garu -- service install|status|logs|restart|uninstall   # Garu as a login service (launchd)
 GARU_APP=1 npm run build:app -w @garu/ui && (cd packages/app && npx cap sync android)   # app bundle
-cd packages/app/android && gradle assembleDebug   # debug APK (needs ANDROID_HOME)
 ```
+
+Phone app on the emulator (no more dragging APKs): boot `~/Library/Android/sdk/emulator/emulator
+-avd Pixel_8` (the AVD with Tailscale, already paired), then build and install over the old copy:
+
+```
+export ANDROID_HOME=~/Library/Android/sdk JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
+(cd packages/app/android && ./gradlew assembleDebug -q)
+~/Library/Android/sdk/platform-tools/adb install -r packages/app/android/app/build/outputs/apk/debug/app-debug.apk
+~/Library/Android/sdk/platform-tools/adb exec-out screencap -p > /tmp/shot.png   # to look at it
+```
+
+Debug builds are signed with `~/.android/debug.keystore` (made 2026-10-10). Keep it: an APK signed
+with another key won't install over the old one, and replacing means uninstalling, which wipes the
+pairing. To try UI changes without touching the running Garu: `npm run dev -w @garu/ui -- --port 5173`
+(proxies /api to :4000); add `GARU_APP=1` and `--port 5174` for the phone build in a browser.
 
 Garu on Humberto's Mac runs as the login service: after a build or a Garufile schedule change,
 `npm run build && npm run garu -- service restart`. Control room: http://localhost:4000. Phone pairs
@@ -63,6 +77,15 @@ Seeded screens without touching the real `.garu/`: copy `agents/ examples/ scrip
 temp dir, symlink `packages` and `node_modules` into it, run `node scripts/demo-data.mjs` there, then
 `npm run garu -- ui -p 4100` from it. The greeting ("Still up" / "Good morning" …) follows the
 browser's clock and schedules follow the server's `TZ`, so set both to the same zone for captures.
+
+## Working with Humberto
+
+- He's new to AI and agents and wants to learn the process to teach it. Narrate in plain words what
+  you're doing and why (look → find the root cause → propose → change → verify like a user → report);
+  don't explain code.
+- Ask before changing his project. Small fixes he already approved can go ahead.
+- Before any push, show each commit's message and the files it changes; push only when he says so.
+- He follows along in VS Code (`code ~/garu`, Source Control panel). Name the files you touch.
 
 ## Conventions
 
@@ -91,7 +114,13 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 Done: kernel, CLI, control room, Android debug app (pair by QR, intro, reconnect, pull-to-refresh,
 diff review cards, Help/About/Report a problem), login service, catch-up, agents that know their own
 runs, brand (ninja cat in a ring, `docs/brand/mark.svg`), Owner's Guide, review-card copy and
-narrow-screen fixes, launch video v6 (below).
+narrow-screen fixes, launch video v6 (below). On 2026-10-10 also: a UI audit fixed in four batches
+(the app works when the computer is unreachable, approvals can't double-fire, days are local not UTC,
+no CLI or .env on phone screens, plain-language run page, 44 px tap targets); Tick replies in plain
+words and machine timestamps in summaries show as times; remote servers can bring their own OAuth
+client (`oauth:` block, for Google). Not fixed yet: the "The website" link on the intro's pairing
+slide doesn't look like a link; the run timeline still shows seconds (allowed by a comment in
+`format.ts`, against the rule above: Humberto to decide).
 
 Not launching yet. Order: understand → real app → Play closed test → launch → beyond. Still on the
 real-app list: crash screen, accessibility pass, theme setting, release signing (Humberto makes the
@@ -99,7 +128,33 @@ keystore), support path, Why Garu page + fresh screenshots, privacy review. Then
 the video is done). Roadmap after that: push via a relay, hosted Garu, `garu install` registry, iOS,
 two-way Slack.
 
-## Launch video (done: v6, committed 2026-10-10)
+## Agents rework (in progress, 2026-10-10)
+
+The demo agents (weather, GitHub stars, a heartbeat) prove Garu works but take nothing off anyone's
+plate. Humberto wants agents that do real chores, on Gmail and Google Calendar:
+
+- **Tomay → "Your day"**: `agents/tomay/Garufile.next.yaml`. Weekdays 7:00: reads today's calendar,
+  writes a prep note per meeting from recent email with the attendees, lists free blocks. Read-only
+  scopes; writes only `briefs/<date>.md`; posts nothing (the brief stays in Garu, by his choice).
+- **Bea (bee)**: `agents/bea/Garufile.next.yaml`. Weekdays 7:15: files new threads under Gmail labels
+  Garu/Needs reply, Garu/FYI, Garu/Receipts, Garu/Newsletters (he creates them once) and drafts
+  replies; `create_draft` is `ask`, labeling is `allow`, nothing can send (Google's Gmail MCP has no
+  send tool). Scopes include gmail.modify for labeling; check at first sign-in whether it's needed.
+- Both are `.next.yaml` so Garu ignores them (it loads only `Garufile.yaml`); the current Tomay keeps
+  running. They are untracked on purpose: commit once they've run for real. Switching on = rename,
+  then `npm run garu -- service restart`.
+- They use Google's official remote MCP servers (`calendarmcp.googleapis.com`, `gmailmcp.googleapis.com`),
+  in the Workspace Developer Preview. Humberto's steps (his account, so he does them; guide him): join
+  the Developer Preview Program; create a Google Cloud project "Garu"; enable the Gmail and Calendar
+  APIs and their MCP services; OAuth consent screen in Testing with himself as test user; create an
+  OAuth client of type Desktop app; he pastes `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` into
+  `.env` himself. Then `npm run garu -- auth agents/<name>/Garufile.next.yaml <server>` and he signs in.
+  In Testing mode Google expires the sign-in every 7 days (Gmail is a restricted scope); the agent then
+  shows "needs sign-in". Their email text goes to the model (Gemini today); a local model avoids that.
+- Next, in order: Google setup → test both agents on real mail and tune → switch on → update the
+  onboarding (Intro slides, Help) and the launch video around these agents instead of weather.
+
+## Launch video (done: v6, committed 2026-10-10; to be updated for the new agents)
 
 `docs/video/garu-v6-9x16.mp4` (1080×1920, socials) and `garu-v6-16x9.mp4` (1920×1080, README), 45 s,
 with sound. Source: `docs/video/remotion/` (its README has the scene table).
