@@ -48,6 +48,11 @@ export interface FileOAuthProviderOptions {
   redirectUrl?: string;
   /** Called with the authorization URL when a human must sign in. Absent = unattended = fail clearly. */
   onAuthorize?: (url: URL) => void | Promise<void>;
+  /**
+   * Your own OAuth client, for servers that don't register one for us (no dynamic client
+   * registration). Values are already expanded from .env.
+   */
+  client?: { clientId: string; clientSecret?: string | undefined; scopes?: string[] | undefined; authorizationParams?: Record<string, string> | undefined };
 }
 
 export function authFileFor(root: string, url: string): string {
@@ -69,13 +74,15 @@ export class FileOAuthProvider implements OAuthClientProvider {
   }
 
   get clientMetadata(): OAuthClientMetadata {
+    const c = this.opts.client;
     return {
       client_name: "Garu",
       client_uri: "https://github.com/humbertovillanueva/garu",
       redirect_uris: [this.redirectUrl],
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
-      token_endpoint_auth_method: "none",
+      token_endpoint_auth_method: c?.clientSecret ? "client_secret_post" : "none",
+      ...(c?.scopes?.length ? { scope: c.scopes.join(" ") } : {}),
     };
   }
 
@@ -97,6 +104,9 @@ export class FileOAuthProvider implements OAuthClientProvider {
   }
 
   clientInformation(): OAuthClientInformationMixed | undefined {
+    // A client named in the Garufile wins over anything registered earlier, so changing it takes effect.
+    const c = this.opts.client;
+    if (c) return { client_id: c.clientId, ...(c.clientSecret ? { client_secret: c.clientSecret } : {}) };
     return this.read().client;
   }
   saveClientInformation(client: OAuthClientInformationMixed): void {
@@ -119,7 +129,21 @@ export class FileOAuthProvider implements OAuthClientProvider {
 
   async redirectToAuthorization(authorizationUrl: URL): Promise<void> {
     if (!this.opts.onAuthorize) throw new NeedsSignInError(this.opts.server, this.opts.url);
-    await this.opts.onAuthorize(authorizationUrl);
+    await this.opts.onAuthorize(this.withClientParams(authorizationUrl));
+  }
+
+  /**
+   * The sign-in URL with what the Garufile asks for: exactly its scopes (not whatever the server
+   * advertises), plus extra parameters such as Google's access_type=offline, without which no
+   * refresh token is issued and every scheduled run would need you at the browser again.
+   */
+  withClientParams(authorizationUrl: URL): URL {
+    const c = this.opts.client;
+    if (!c) return authorizationUrl;
+    const url = new URL(authorizationUrl.href);
+    if (c.scopes?.length) url.searchParams.set("scope", c.scopes.join(" "));
+    for (const [k, v] of Object.entries(c.authorizationParams ?? {})) url.searchParams.set(k, v);
+    return url;
   }
 
   /** True when a sign-in has been completed for this server (tokens on disk). */

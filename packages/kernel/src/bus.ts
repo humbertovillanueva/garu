@@ -254,6 +254,15 @@ export function expandSpec(spec: McpServerSpec, env: NodeJS.ProcessEnv): McpServ
       ...spec,
       url: expand(spec.url, "the url"),
       headers: Object.fromEntries(Object.entries(spec.headers).map(([k, v]) => [k, expand(v, `header ${k}`)])),
+      ...(spec.oauth
+        ? {
+            oauth: {
+              ...spec.oauth,
+              clientId: expand(spec.oauth.clientId, "oauth.clientId"),
+              ...(spec.oauth.clientSecret !== undefined ? { clientSecret: expand(spec.oauth.clientSecret, "oauth.clientSecret") } : {}),
+            },
+          }
+        : {}),
     };
   }
   return {
@@ -273,7 +282,11 @@ export function missingEnv(tools: readonly McpServerSpec[], env: NodeJS.ProcessE
     }
   };
   for (const t of tools) {
-    if (isRemoteServer(t)) { scan(t.url); Object.values(t.headers).forEach(scan); }
+    if (isRemoteServer(t)) {
+      scan(t.url);
+      Object.values(t.headers).forEach(scan);
+      if (t.oauth) { scan(t.oauth.clientId); if (t.oauth.clientSecret !== undefined) scan(t.oauth.clientSecret); }
+    }
     else { t.args.forEach(scan); Object.values(t.env).forEach(scan); }
   }
   return [...out].sort();
@@ -292,7 +305,13 @@ export function remoteTransport(
   const headers = Object.keys(spec.headers).length ? { headers: spec.headers } : {};
   const authProvider =
     spec.auth === "oauth"
-      ? new FileOAuthProvider({ root: authRoot, server: spec.name, url: spec.url, ...(oauth ? { redirectUrl: oauth.redirectUrl, onAuthorize: oauth.onAuthorize } : {}) })
+      ? new FileOAuthProvider({
+          root: authRoot,
+          server: spec.name,
+          url: spec.url,
+          ...(spec.oauth ? { client: spec.oauth } : {}),
+          ...(oauth ? { redirectUrl: oauth.redirectUrl, onAuthorize: oauth.onAuthorize } : {}),
+        })
       : undefined;
   return new StreamableHTTPClientTransport(new URL(spec.url), {
     ...(Object.keys(headers).length ? { requestInit: headers } : {}),

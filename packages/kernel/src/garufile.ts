@@ -58,9 +58,26 @@ export const StdioServerSpec = z
 export type StdioServerSpec = z.infer<typeof StdioServerSpec>;
 
 /**
+ * Your own OAuth client, for servers that don't hand one out (Google's MCP servers, for one).
+ * Values may be ${VAR}s from .env, so the secret never sits in the Garufile.
+ */
+export const OAuthClientSpec = z
+  .object({
+    clientId: z.string().min(1),
+    clientSecret: z.string().optional(),
+    /** The permissions to ask for, sent as the `scope` of the sign-in. */
+    scopes: z.array(z.string().min(1)).optional(),
+    /** Extra sign-in parameters, e.g. Google's access_type: offline so runs can refresh without you. */
+    authorizationParams: z.record(z.string(), z.string()).default({}),
+  })
+  .strict();
+export type OAuthClientSpec = z.infer<typeof OAuthClientSpec>;
+
+/**
  * A remote MCP server over Streamable HTTP: a URL Garu connects to. Static
  * headers carry API keys from .env via ${VAR}; `auth: oauth` uses tokens from
- * `garu auth`. Nothing runs locally, so the sandbox does not apply.
+ * `garu auth`, with `oauth:` naming your own client when the server needs one.
+ * Nothing runs locally, so the sandbox does not apply.
  */
 export const HttpServerSpec = z
   .object({
@@ -71,8 +88,10 @@ export const HttpServerSpec = z
       .refine((u) => /^https:\/\//.test(u) || /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/.test(u), "remote server url must be https:// (http:// only for localhost)"),
     headers: z.record(z.string(), z.string()).default({}),
     auth: z.enum(["none", "oauth"]).default("none"),
+    oauth: OAuthClientSpec.optional(),
   })
-  .strict();
+  .strict()
+  .refine((s) => !s.oauth || s.auth === "oauth", { message: "an oauth: client only applies with auth: oauth", path: ["oauth"] });
 export type HttpServerSpec = z.infer<typeof HttpServerSpec>;
 
 export const McpServerSpec = z.union([StdioServerSpec, HttpServerSpec]);

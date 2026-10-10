@@ -149,6 +149,19 @@ policy:
     action: block        # GitHub's server offers 46 tools; the model only ever sees these three
 ```
 
+Some servers don't hand out an OAuth client of their own; Google's Gmail and Calendar servers want yours, from a Google Cloud project. Name it under `oauth:`, with the id and secret in `.env`, the exact scopes to ask for (otherwise a server may offer, and you may grant, far more than the agent needs), and any extra sign-in parameters:
+
+```yaml
+  - name: calendar
+    url: https://calendarmcp.googleapis.com/mcp/v1
+    auth: oauth
+    oauth:
+      clientId: ${GOOGLE_CLIENT_ID}
+      clientSecret: ${GOOGLE_CLIENT_SECRET}
+      scopes: [https://www.googleapis.com/auth/calendar.events.readonly]
+      authorizationParams: { access_type: offline, prompt: consent }   # so runs can refresh without you
+```
+
 Tokens live in `.garu/auth/` (gitignored), one file per server URL, refreshed automatically; an unattended run that would need a browser stops with the exact `garu auth` command to run instead. Remote servers run on someone else's machine, so the sandbox block doesn't apply to them — the policy is the whole boundary, which is why `block` by default matters.
 
 <p align="center"><img src="docs/screenshots/agent.png" alt="An agent's page: its identity, permissions, a conversation thread, and the brief it wrote" width="900"></p>
