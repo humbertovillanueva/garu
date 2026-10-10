@@ -39,7 +39,7 @@ packages/mcp-google Gmail + Calendar MCP server (read, label, draft; no send); G
 agents/             real agents: tomay (fox, your day from calendar + email), bea (bee, sorts the inbox,
                     drafts replies), rook (owl, weekly repo check), atlas (octopus, Linear)
 examples/           pip, nook (Ollama), tick (hourly heartbeat), vault (sandboxed)
-docs/               why.md, phone.md, android.md, privacy.html, brand/, launch/, video/
+docs/               why.md, google.md (Google setup), phone.md, android.md, privacy.html, brand/, launch/, video/
 docs/video/remotion the launch video's source (Remotion 4, React); see "Launch video" below
 ```
 

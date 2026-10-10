@@ -47,5 +47,8 @@ plate. Humberto wants agents that do real chores, on Gmail and Google Calendar:
   thread per call, so `label_thread` now takes a batch (second run: 7 threads, 9 turns, $0.004). She
   drafted a reply to invitations@linkedin.com, so her prompt now says automated senders are
   Newsletters and never get a draft.
-- Next, in order: watch the first weekday mornings and tune → update the onboarding (Intro slides,
-  Help) and the launch video around these agents instead of weather.
+- Onboarding 2026-10-10: Intro slides show Bea (all three rules) and her draft card; demo data seeds
+  "Your day" and Bea with made-up people at example.com; README quotes Bea's real Garufile; the
+  Google setup for anyone cloning is docs/google.md.
+- Next, in order: video v7 → new screenshots and README GIF from the demo data → watch the first
+  weekday mornings and tune.

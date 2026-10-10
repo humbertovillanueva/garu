@@ -61,6 +61,8 @@ npm run garu -- log      pip                          # replay the flight record
 
 **Sandboxed:** with Docker running, `npm run garu -- sandbox build` once, then `npm run garu -- run examples/vault/Garufile.yaml`.
 
+**Your day and your inbox:** the two agents in `agents/` work on Gmail and Google Calendar. Tomay reads your calendar every weekday at 7 and writes a prep note for each meeting; Bea files the last day's mail under four labels at 7:15 and drafts replies that wait for you. They need a free Google Cloud project once: [docs/google.md](docs/google.md) walks through it in about fifteen minutes.
+
 ## How it works
 
 ```
@@ -80,46 +82,50 @@ An agent only ever touches the world through the [Model Context Protocol](https:
 
 ## The Garufile
 
-One file describes an agent: who it is, what it may touch, when it wakes up, and how much it may spend. This is a real one from this repo, the agent that writes the author's morning brief:
+One file describes an agent: who it is, what it may touch, when it wakes up, and how much it may spend. This is a real one from this repo, a little trimmed: the agent that sorts the author's inbox every weekday morning.
 
 ```yaml
-name: tomay
-description: Writes a short morning brief — weather, Garu repo, dev.to, AI news.
+name: bea
+description: Sorts what arrived overnight into four labels and drafts replies to what needs one. Never sends.
+persona: { kind: bee, tagline: "Sorts the inbox so you don't have to." }
 model: gemini/gemini-3.5-flash-lite
 
 triggers:
-  - cron: "0 7 * * 1-5"          # weekdays at 7, in your local time
+  - cron: "15 7 * * 1-5"          # weekdays at 7:15, in your local time
 
 budget:
-  maxCostUsd: 0.05               # per run; the run stops if it would cross this
+  maxCostUsd: 0.05                # per run; the run stops if it would cross this
 
 tools:
-  - name: web
+  - name: gmail                   # Garu's own Gmail server: no send or delete tool exists
     command: node
-    args: ["packages/mcp-fetch/dist/index.js"]
-  - name: fs
-    command: npx
-    args: ["-y", "@modelcontextprotocol/server-filesystem", "./agents/tomay/briefs"]
+    args: ["packages/mcp-google/dist/index.js", "gmail"]
+    auth: oauth                   # Garu signs in once (garu auth) and hands it a one-hour token
+    oauth:
+      issuer: https://accounts.google.com
+      clientId: ${GOOGLE_CLIENT_ID}
+      clientSecret: ${GOOGLE_CLIENT_SECRET}
+      scopes: [https://www.googleapis.com/auth/gmail.modify]
+      authorizationParams: { access_type: offline, prompt: consent }
 
 policy:
-  - tool: "web.fetch_json"       # read only from these four hosts
+  - tool: "gmail.search_threads"  # reading: always fine
     action: allow
-    when:
-      url: { matches: "^https://(api\\.github\\.com/|dev\\.to/api/|hn\\.algolia\\.com/api/|api\\.open-meteo\\.com/)" }
-  - tool: "web.*"
-    action: block
-  - tool: "fs.write_file"        # write only a dated brief, nothing else
+  - tool: "gmail.get_thread"
     action: allow
-    when:
-      path: { matches: "briefs/\\d{4}-\\d{2}-\\d{2}\\.md$" }
-  - tool: "fs.list_*"
+  - tool: "gmail.label_thread"    # filing: a label comes off in one click, so it doesn't wait
     action: allow
+  - tool: "gmail.create_draft"    # a draft is words in your name: you see each one first
+    action: ask
+    reason: a draft reply in your name
   - tool: "*"
     action: block
 
 prompt: |
-  You are Tomay. Write Humberto's morning brief for today…
+  You are Bea. Sort Humberto's inbox from the last day…
 ```
+
+Its partner, [Tomay](agents/tomay/Garufile.yaml), only reads: calendar and mail are allowed read tools, its one write is today's brief in its own folder (`fs.write_file` with `when: { path: { matches: "briefs/\\d{4}-\\d{2}-\\d{2}\\.md$" } }`), and everything else is blocked, so it never pauses at all.
 
 Rules are evaluated top to bottom; the first match wins; nothing matching means `ask`, never a silent allow. `when` predicates (`eq`, `matches`, `gt`, `in`, …) let you allow a tool for one path or one host and block it everywhere else. `garu validate` lints the file and tells you which rules are unreachable.
 
@@ -149,7 +155,7 @@ policy:
     action: block        # GitHub's server offers 46 tools; the model only ever sees these three
 ```
 
-Some servers don't hand out an OAuth client of their own; Google's Gmail and Calendar servers want yours, from a Google Cloud project. Name it under `oauth:`, with the id and secret in `.env`, the exact scopes to ask for (otherwise a server may offer, and you may grant, far more than the agent needs), and any extra sign-in parameters:
+Some servers don't hand out an OAuth client of their own; Google's Workspace MCP servers (in a developer preview for now) want yours, from a Google Cloud project. Name it under `oauth:`, with the id and secret in `.env`, the exact scopes to ask for (otherwise a server may offer, and you may grant, far more than the agent needs), and any extra sign-in parameters:
 
 ```yaml
   - name: calendar
@@ -163,6 +169,10 @@ Some servers don't hand out an OAuth client of their own; Google's Gmail and Cal
 ```
 
 Tokens live in `.garu/auth/` (gitignored), one file per server URL, refreshed automatically; an unattended run that would need a browser stops with the exact `garu auth` command to run instead. Remote servers run on someone else's machine, so the sandbox block doesn't apply to them — the policy is the whole boundary, which is why `block` by default matters.
+
+### Signing in for a local server
+
+A local server can sign in too: give it `auth: oauth` and an `oauth:` block that names who to sign in with (`issuer:`), as Bea's Gmail server does above. `garu auth` does the sign-in once; Garu keeps the tokens and starts the server with a one-hour access token in its environment, so the server never holds the client secret or the refresh token. Local sign-ins are filed by issuer and permissions, so an agent that asks for read-only Gmail never shares a token with one that can write.
 
 <p align="center"><img src="docs/screenshots/agent.png" alt="An agent's page: its identity, permissions, a conversation thread, and the brief it wrote" width="900"></p>
 
@@ -208,7 +218,7 @@ Garu is a week old and already runs the author's own agents every day. Expect sh
 2. **Hosted Garu:** agents that keep running when your laptop is closed, tap-to-approve from anywhere, EU-friendly by default.
 3. Delegation between agents over A2A; transparent, editable memory.
 
-Done since the first commit: remote MCP servers (Streamable HTTP + OAuth), the phone app over Tailscale with a sign-in token ([docs/phone.md](docs/phone.md)), a native Android app that pairs by scanning a code ([docs/android.md](docs/android.md)), `garu new`, personas, decline-with-a-note.
+Done since the first commit: Gmail and Google Calendar through Garu's own server, with sign-in for local servers; remote MCP servers (Streamable HTTP + OAuth), the phone app over Tailscale with a sign-in token ([docs/phone.md](docs/phone.md)), a native Android app that pairs by scanning a code ([docs/android.md](docs/android.md)), `garu new`, personas, decline-with-a-note.
 
 ## Layout
 
@@ -218,7 +228,8 @@ packages/cli        the garu command
 packages/ui         the control room (Svelte 5 + Tailwind 4)
 packages/app        the control room as a native Android app (Capacitor), pairs with a running garu ui
 packages/mcp-fetch  a tiny MCP server: fetch_json / fetch_text, GET only
-agents/             real agents that run from this repo (tomay)
+packages/mcp-google Gmail and Calendar MCP server: read, label, draft; no send, no delete
+agents/             real agents that run from this repo (tomay, bea, rook, atlas)
 examples/           Garufiles to learn from
 docker/sandbox      the default sandbox image
 ```
