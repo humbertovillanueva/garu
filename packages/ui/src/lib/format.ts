@@ -156,3 +156,14 @@ export function decidedBy(by: string | undefined): string {
   return by;
 }
 export const expired = (by: string | undefined) => !!by && /expired/.test(by);
+
+/**
+ * An agent's own words with any machine timestamp ("2026-10-10T21:00:01.052Z") said as a time instead
+ * ("3:00 PM", "Yesterday 3:00 PM"). The agent's text is otherwise left exactly as it wrote it.
+ */
+export function plainTimes(text: string): string {
+  return text.replace(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})\b/g, (iso) => {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? iso : humanTime(iso);
+  });
+}

@@ -44,4 +44,7 @@ prompt: |
   Look at the files in the allowed directory. If tick.log exists, read it.
   Then write tick.log back with all its previous lines plus ONE new line at the end
   in the form "<ISO timestamp> — <N> file(s): <comma-separated names>".
-  Do nothing else. Reply with the line you added.
+  Do nothing else.
+  Reply with one short sentence for a person, comparing with the previous line: what changed, or that
+  nothing did, e.g. "Nothing new: 2 files." or "1 new file: notes.md." No timestamps: the control room
+  already shows when it ran.

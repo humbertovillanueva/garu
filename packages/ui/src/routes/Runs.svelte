@@ -7,7 +7,7 @@
   import { api, live, loader } from "../lib/api.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, clock, dayLabel, duration, statusLabel, triggerLabel } from "../lib/format";
+  import { usd, clock, dayLabel, duration, statusLabel, triggerLabel, plainTimes } from "../lib/format";
   import Status from "../lib/components/Status.svelte";
   import Mark from "../lib/components/Mark.svelte";
   import Skeleton from "../lib/components/Skeleton.svelte";
@@ -36,7 +36,7 @@
   let open = $state<Record<string, boolean>>({});
   const key = (row: Row) => row.runs[0]!.runId;
   const total = $derived((runs ?? []).reduce((s, r) => s + r.costUsd, 0));
-  const summary = (r: RunSummary) => (r.summary ?? "").replace(/\s+/g, " ").trim();
+  const summary = (r: RunSummary) => plainTimes(r.summary ?? "").replace(/\s+/g, " ").trim();
 </script>
 
 <section class="space-y-5">

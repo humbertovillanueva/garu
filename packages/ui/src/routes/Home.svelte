@@ -2,7 +2,7 @@
   import { api, live, loader } from "../lib/api.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, clock, dayLabel, statusLabel, statusLine, until, cronLabel, humanTime } from "../lib/format";
+  import { usd, clock, dayLabel, statusLabel, statusLine, until, cronLabel, humanTime, plainTimes } from "../lib/format";
   import Mark from "../lib/components/Mark.svelte";
   import ReviewCard from "../lib/components/ReviewCard.svelte";
   import SuggestionCard from "../lib/components/SuggestionCard.svelte";
@@ -48,7 +48,7 @@
     }
     return out;
   });
-  const oneLine = (t: string) => t.replace(/[#*_`>]/g, "").replace(/\s+/g, " ").trim();
+  const oneLine = (t: string) => plainTimes(t).replace(/[#*_`>]/g, "").replace(/\s+/g, " ").trim();
   const kindColor = (k: string) => k === "run.ok" ? "var(--color-ok)" : k.startsWith("run.") ? "var(--color-bad)" : "var(--color-mute)";
 </script>
 

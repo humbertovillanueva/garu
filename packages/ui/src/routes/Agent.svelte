@@ -2,7 +2,7 @@
   import { api, live, agentByName, loader } from "../lib/api.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, humanTime, statusLine, until, duration, cronLabel, triggerLabel } from "../lib/format";
+  import { usd, humanTime, statusLine, until, duration, cronLabel, triggerLabel, plainTimes } from "../lib/format";
   import Mark from "../lib/components/Mark.svelte";
   import Status from "../lib/components/Status.svelte";
   import Budget from "../lib/components/Budget.svelte";
@@ -210,7 +210,7 @@
               <Status status={r.status} />
               <span class="text-[12.5px] text-fg-2">{humanTime(r.startedAt)}</span>
               <span class="text-[12px] text-mute">{triggerLabel(r.trigger)}</span>
-              <span class="min-w-0 flex-1 truncate text-[13px] text-fg-2">{r.summary ?? ""}</span>
+              <span class="min-w-0 flex-1 truncate text-[13px] text-fg-2">{plainTimes(r.summary ?? "")}</span>
               <span class="hidden text-[12px] text-mute sm:inline">{usd(r.costUsd, r.priced)} · {duration(r.startedAt, r.endedAt)}</span>
             </a>
           {/each}
