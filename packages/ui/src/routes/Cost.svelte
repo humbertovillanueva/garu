@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api, live } from "../lib/api.svelte";
   import { usd, agentColor } from "../lib/format";
+  import { KIND_COLOR } from "../lib/colors";
   import Mark from "../lib/components/Mark.svelte";
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
@@ -37,7 +38,8 @@
   const total = $derived((rows ?? []).reduce((s, r) => s + r.costUsd, 0));
   const totalRuns = $derived((rows ?? []).reduce((s, r) => s + r.runs, 0));
   const dayWord = (d: string) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  const colorFor = (agent: string) => (agentOrder.indexOf(agent) < 6 ? agentColor(agent) : "var(--color-s-other)");
+  // The same color as the agent's avatar, so the legend needs no decoding.
+  const colorFor = (agent: string) => { const k = live.agents.find((a) => a.name === agent)?.persona?.kind; return k ? KIND_COLOR[k] : agentOrder.indexOf(agent) < 6 ? agentColor(agent) : "var(--color-s-other)"; };
 </script>
 
 <section class="space-y-5">
@@ -57,11 +59,12 @@
   {:else if rows.length === 0}
     <Empty title="No spend recorded in this window" />
   {:else}
-    <div class="grid gap-3 sm:grid-cols-3">
-      <div class="panel-raised rise p-4"><div class="text-[11px] uppercase tracking-wider text-mute">Total</div><div class="mono mt-1 text-[26px]">{usd(total)}</div></div>
-      <div class="panel-raised rise p-4"><div class="text-[11px] uppercase tracking-wider text-mute">Runs</div><div class="mono mt-1 text-[26px]">{totalRuns}</div></div>
-      <div class="panel-raised rise p-4"><div class="text-[11px] uppercase tracking-wider text-mute">Per run</div><div class="mono mt-1 text-[26px]">{usd(totalRuns ? total / totalRuns : 0)}</div></div>
+    <div class="panel rise grid grid-cols-3 divide-x divide-line">
+      <div class="px-4 py-3"><div class="text-[11px] uppercase tracking-wider text-mute">Total</div><div class="mt-0.5 text-[20px] font-semibold tabular-nums">{usd(total)}</div></div>
+      <div class="px-4 py-3"><div class="text-[11px] uppercase tracking-wider text-mute">Runs</div><div class="mt-0.5 text-[20px] font-semibold tabular-nums">{totalRuns}</div></div>
+      <div class="px-4 py-3"><div class="text-[11px] uppercase tracking-wider text-mute">Per run</div><div class="mt-0.5 text-[20px] font-semibold tabular-nums">{usd(totalRuns ? total / totalRuns : 0)}</div></div>
     </div>
+    <p class="text-[12.5px] text-mute">Estimated from real token counts at list price. Free tiers and local models bill $0; the estimate still shows what it would cost.</p>
 
     <div class="panel p-4">
       <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
@@ -100,8 +103,8 @@
             <tr class="border-b hairline last:border-0">
               <td class="px-4 py-2 text-fg-2">{dayWord(r.day)}</td>
               <td class="px-3 py-2"><span class="flex items-center gap-2"><Mark name={r.agent} size={18} />{r.agent}</span></td>
-              <td class="mono px-3 py-2 text-right">{r.runs}</td>
-              <td class="mono px-3 py-2 text-right">{usd(r.costUsd)}</td>
+              <td class="px-3 py-2 text-right tabular-nums">{r.runs}</td>
+              <td class="px-3 py-2 text-right tabular-nums">{usd(r.costUsd)}</td>
             </tr>
           {/each}
         </tbody>

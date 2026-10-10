@@ -87,9 +87,9 @@
 </header>
 
 <!-- Phone: bottom tab bar, within thumb reach -->
-<nav class="phonebar fixed inset-x-0 bottom-0 z-10 grid grid-cols-5 border-t hairline bg-bg/95 backdrop-blur lg:hidden" style="padding-bottom: env(safe-area-inset-bottom)">
-  {#each [["home", "Home"], ["inbox", "Inbox"], ["agents", "Agents"], ["runs", "Runs"], ["cost", "Cost"]] as const as [n, l]}
-    {@const active = route.name === n || (n === "agents" && route.name === "agent") || (n === "runs" && route.name === "run")}
+<nav class="phonebar fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t hairline bg-bg/95 backdrop-blur lg:hidden" style="padding-bottom: env(safe-area-inset-bottom)">
+  {#each [["home", "Home"], ["inbox", "Inbox"], ["agents", "Agents"], ["runs", "Runs"]] as const as [n, l]}
+    {@const active = route.name === n || (n === "agents" && route.name === "agent") || (n === "runs" && (route.name === "run" || route.name === "cost"))}
     <a href={href(n)} class="tab" class:active aria-label={l}>
       <span class="relative">
         <Icon name={n} />

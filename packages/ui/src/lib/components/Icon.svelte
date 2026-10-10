@@ -9,7 +9,7 @@
   {:else if name === "inbox"}
     <path d="M4 13h4l1.5 2.5h5L16 13h4" /><path d="M5.5 6h13l1.5 7v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-5z" />
   {:else if name === "agents"}
-    <circle cx="12" cy="8" r="3.5" /><path d="M5 19.5c1.2-3.2 3.7-4.8 7-4.8s5.8 1.6 7 4.8" />
+    <path d="M5.5 10.5 5 4l4.3 3.2h5.4L19 4l-.5 6.5" /><path d="M5.5 10.5a6.5 6.5 0 1 0 13 0" /><path d="M9.5 13h.01M14.5 13h.01" stroke-width="2.4" />
   {:else if name === "runs"}
     <path d="M5 7h14M5 12h14M5 17h9" />
   {:else if name === "cost"}
