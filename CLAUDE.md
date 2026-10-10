@@ -14,9 +14,7 @@ Repo: https://github.com/humbertovillanueva/garu · Site: https://humbertovillan
 - Commits are authored by `Humberto Villanueva <umbertocornejo8@gmail.com>` only. No Co-Authored-By,
   no AI mention in commits, code comments, docs, UI or posts (this file is the one exception). Set `TZ=America/Denver` before
   committing so timestamps fall on his day. Only touch this repo.
-- Never force-push or rewrite history unless Humberto asks for it in so many words. (Once, on
-  2026-10-10, two pushed commits carried a Co-Authored-By trailer; he asked for it gone, and main was
-  rewritten with `--force-with-lease`. That is the exception, not a precedent.)
+- Never force-push or rewrite history unless Humberto asks for it in so many words.
 - Never print, log or paste secrets. They live in `.env` (gitignored): `GEMINI_API_KEY`, `GITHUB_TOKEN`,
   `GARU_USER`, `BRIEF_WEBHOOK_URL`, `REPO_WATCH_WEBHOOK_URL`. The control-room sign-in token is
   `.garu/ui-token`; never show it in screenshots or recordings.
@@ -37,7 +35,9 @@ packages/cli        the `garu` command; ui-server.ts (control room API), ui-auth
 packages/ui         control room, Svelte 5 runes + Tailwind v4 + Vite; also the phone PWA
 packages/app        Capacitor 8 Android wrapper of the UI (appId io.github.humbertovillanueva.garu)
 packages/mcp-fetch  tiny MCP server: fetch_json / fetch_text (GET only) + post_message to a webhook
-agents/             real agents: tomay (fox, weekday brief), rook (owl, weekly repo check), atlas (octopus, Linear)
+packages/mcp-google Gmail + Calendar MCP server (read, label, draft; no send); Garu signs in for it
+agents/             real agents: tomay (fox, your day from calendar + email), bea (bee, sorts the inbox,
+                    drafts replies), rook (owl, weekly repo check), atlas (octopus, Linear)
 examples/           pip, nook (Ollama), tick (hourly heartbeat), vault (sandboxed)
 docs/               why.md, phone.md, android.md, privacy.html, brand/, launch/, video/
 docs/video/remotion the launch video's source (Remotion 4, React); see "Launch video" below
@@ -86,6 +86,9 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 - Ask before changing his project. Small fixes he already approved can go ahead.
 - Before any push, show each commit's message and the files it changes; push only when he says so.
 - He follows along in VS Code (`code ~/garu`, Source Control panel). Name the files you touch.
+- Keep this file short. When a piece of work is finished, trim its section down to the lasting
+  rules and delete the play-by-play (what was done, when, in what order). Work in progress gets its
+  own file under `docs/` and a two-line pointer here.
 
 ## Conventions
 
@@ -111,16 +114,10 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 
 ## Status (2026-10-10)
 
-Done: kernel, CLI, control room, Android debug app (pair by QR, intro, reconnect, pull-to-refresh,
-diff review cards, Help/About/Report a problem), login service, catch-up, agents that know their own
-runs, brand (ninja cat in a ring, `docs/brand/mark.svg`), Owner's Guide, review-card copy and
-narrow-screen fixes, launch video v6 (below). On 2026-10-10 also: a UI audit fixed in four batches
-(the app works when the computer is unreachable, approvals can't double-fire, days are local not UTC,
-no CLI or .env on phone screens, plain-language run page, 44 px tap targets); Tick replies in plain
-words and machine timestamps in summaries show as times; remote servers can bring their own OAuth
-client (`oauth:` block, for Google). Not fixed yet: the "The website" link on the intro's pairing
-slide doesn't look like a link; the run timeline still shows seconds (allowed by a comment in
-`format.ts`, against the rule above: Humberto to decide).
+Built: kernel, CLI, control room, Android debug app, login service, catch-up, brand, Owner's Guide,
+launch video v6. Open: the "The website" link on the intro's pairing slide doesn't look like a link;
+the run timeline still shows seconds (allowed by a comment in `format.ts`, against the rule above:
+Humberto to decide).
 
 Not launching yet. Order: understand → real app → Play closed test → launch → beyond. Still on the
 real-app list: crash screen, accessibility pass, theme setting, release signing (Humberto makes the
@@ -128,59 +125,13 @@ keystore), support path, Why Garu page + fresh screenshots, privacy review. Then
 the video is done). Roadmap after that: push via a relay, hosted Garu, `garu install` registry, iOS,
 two-way Slack.
 
-## Agents rework (in progress, 2026-10-10)
+## Agents rework (in progress)
 
-The demo agents (weather, GitHub stars, a heartbeat) prove Garu works but take nothing off anyone's
-plate. Humberto wants agents that do real chores, on Gmail and Google Calendar:
+New Tomay ("Your day") and Bea (inbox sorter) on Gmail and Google Calendar, switched on 2026-10-10.
+Plan, Google setup steps and what's next (onboarding, video): `docs/agents-plan.md`.
 
-- **Tomay → "Your day"**: `agents/tomay/Garufile.next.yaml`. Weekdays 7:00: reads today's calendar,
-  writes a prep note per meeting from recent email with the attendees, lists free blocks. Read-only
-  scopes; writes only `briefs/<date>.md`; posts nothing (the brief stays in Garu, by his choice).
-- **Bea (bee)**: `agents/bea/Garufile.next.yaml`. Weekdays 7:15: files new threads under Gmail labels
-  Garu/Needs reply, Garu/FYI, Garu/Receipts, Garu/Newsletters (he creates them once) and drafts
-  replies; `create_draft` is `ask`, labeling is `allow`, nothing can send (Google's Gmail MCP has no
-  send tool). Scopes include gmail.modify for labeling; check at first sign-in whether it's needed.
-- Both are `.next.yaml` so Garu ignores them (it loads only `Garufile.yaml`); the current Tomay keeps
-  running. They are untracked on purpose: commit once they've run for real. Switching on = rename,
-  then `npm run garu -- service restart`.
-- They use Google's official remote MCP servers (`calendarmcp.googleapis.com`, `gmailmcp.googleapis.com`),
-  in the Workspace Developer Preview. Humberto's steps (his account, so he does them; guide him): join
-  the Developer Preview Program; create a Google Cloud project "Garu"; enable the Gmail and Calendar
-  APIs and their MCP services; OAuth consent screen in Testing with himself as test user; create an
-  OAuth client of type Desktop app; he pastes `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` into
-  `.env` himself. Then `npm run garu -- auth agents/<name>/Garufile.next.yaml <server>` and he signs in.
-  In Testing mode Google expires the sign-in every 7 days (Gmail is a restricted scope); the agent then
-  shows "needs sign-in". Their email text goes to the model (Gemini today); a local model avoids that.
-- Next, in order: Google setup → test both agents on real mail and tune → switch on → update the
-  onboarding (Intro slides, Help) and the launch video around these agents instead of weather.
+## Launch video
 
-## Launch video (done: v6, committed 2026-10-10; to be updated for the new agents)
-
-`docs/video/garu-v6-9x16.mp4` (1080×1920, socials) and `garu-v6-16x9.mp4` (1920×1080, README), 45 s,
-with sound. Source: `docs/video/remotion/` (its README has the scene table).
-
-```
-cd docs/video/remotion && npm install
-npm run dev                                                   # Remotion Studio, scrub frame by frame
-npx remotion render src/index.ts Garu-9x16 ../garu-v6-9x16.mp4 --crf=16
-npx remotion render src/index.ts Garu-16x9 ../garu-v6-16x9.mp4 --crf=16
-python tools/score.py public/audio                            # regenerate the score (needs numpy)
-```
-
-- Written for non-developers first, with real UI and a little real config as proof for developers:
-  hook ("AI agents can work while you sleep. But would you trust one?") → meet the agents → morning
-  brief → "It only touches what you allow" (Tomay's policy in plain words; the ask row morphs into the
-  approval card) → one-tap approve → "It learns what you trust" → free / runs on your computer /
-  Gemini, Claude or local → logo + `git clone`.
-- Look: no phone mockups, no stock or generated footage, no fake 3D. The control room's surfaces are
-  rebuilt as React components from the `app.css` tokens and `Creature.svelte` (`src/ui.tsx`), shown
-  large; one idea per scene; Inter headlines revealed word by word; color only for allow/ask/block.
-  Earlier cuts (tilted phone frames, the Higgsfield clips composited, floating UI) were judged dated.
-- Timing: 30 fps, scene changes on the score's bar lines (150 bpm, 1 bar = 48 frames), 0.4 s
-  transitions. The score and effects are synthesized by `tools/score.py` (no samples, no licensing).
-  In 9:16, keep headlines to two lines of ~19 characters at 104 px.
-- Truthfulness: every name, schedule, rule, command and model on screen is Garu's real data. Tomay's
-  post rule is shown as `ask` (as it first shipped), then the learned `allow` goes in above it, which
-  is how the real Garufile got to `allow`.
-- The source clips (`01-nightstand.mp4`, `02-approve.mp4`, `06-outro.mp4`, `garu-v1.mp4`) are untracked
-  and unused by v6; leave them unless Humberto says otherwise. Only final renders get committed.
+v6 is done (`docs/video/garu-v6-9x16.mp4`, `garu-v6-16x9.mp4`); to be redone around the new agents.
+Source, commands, scenes and the rules for the next cut: `docs/video/remotion/README.md`. Every
+name, schedule, rule and model on screen must be Garu's real data.

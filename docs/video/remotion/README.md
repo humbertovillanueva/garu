@@ -31,3 +31,11 @@ Written for people who aren't developers first, with the real UI and a little re
 Data shown is Garu's: agent descriptions and schedules from the Garufiles, the brief from `scripts/demo-data.mjs`, the suggestion card and rule from `SuggestionCard.svelte` / `suggest.ts`, the startup lines `garu ui` prints, the models from the README. Tomay's post rule is shown as `ask` (as it first shipped), then the learned `allow` goes in above it, which is how the repo's Garufile got to `allow`.
 
 `tools/score.py` synthesizes the score (150 bpm, arranged to the scenes) and the one-shots into `public/audio/`; no samples. Run it with a Python that has `numpy`: `python tools/score.py public/audio`.
+
+## Rules for the next cut
+
+- Transitions are 0.4 s. In 9:16, keep headlines to two lines of about 19 characters at 104 px.
+- Every name, schedule, rule, command and model on screen is Garu's real data.
+- Earlier cuts (tilted phone frames, composited stock clips, floating UI) were judged dated; don't go back.
+- The source clips in `docs/video/` (`01-nightstand.mp4`, `02-approve.mp4`, `06-outro.mp4`, `garu-v1.mp4`)
+  are untracked and unused; leave them. Only final renders get committed.
