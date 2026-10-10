@@ -45,18 +45,6 @@ export type PolicyRule = z.infer<typeof PolicyRule>;
 
 const serverName = z.string().regex(/^[a-z][a-z0-9_-]*$/, "server name: lowercase, digits, - or _");
 
-/** A local MCP server: a process Garu starts (and can sandbox). */
-export const StdioServerSpec = z
-  .object({
-    name: serverName,
-    command: z.string().min(1),
-    args: z.array(z.string()).default([]),
-    env: z.record(z.string(), z.string()).default({}),
-    cwd: z.string().optional(),
-  })
-  .strict();
-export type StdioServerSpec = z.infer<typeof StdioServerSpec>;
-
 /**
  * Your own OAuth client, for servers that don't hand one out (Google's MCP servers, for one).
  * Values may be ${VAR}s from .env, so the secret never sits in the Garufile.
@@ -69,9 +57,34 @@ export const OAuthClientSpec = z
     scopes: z.array(z.string().min(1)).optional(),
     /** Extra sign-in parameters, e.g. Google's access_type: offline so runs can refresh without you. */
     authorizationParams: z.record(z.string(), z.string()).default({}),
+    /**
+     * Who you sign in with, e.g. https://accounts.google.com. Needed for a local server, which has
+     * no URL to discover it from; a remote server finds it on its own.
+     */
+    issuer: z.string().url().refine((u) => /^https:\/\//.test(u), "oauth.issuer must be https://").optional(),
   })
   .strict();
 export type OAuthClientSpec = z.infer<typeof OAuthClientSpec>;
+
+/**
+ * A local MCP server: a process Garu starts (and can sandbox). With `auth: oauth`, Garu signs in
+ * for it (`garu auth`) and hands it a short-lived access token in GARU_OAUTH_ACCESS_TOKEN at start;
+ * the server never sees the client secret or the refresh token.
+ */
+export const StdioServerSpec = z
+  .object({
+    name: serverName,
+    command: z.string().min(1),
+    args: z.array(z.string()).default([]),
+    env: z.record(z.string(), z.string()).default({}),
+    cwd: z.string().optional(),
+    auth: z.enum(["none", "oauth"]).optional(),
+    oauth: OAuthClientSpec.optional(),
+  })
+  .strict()
+  .refine((s) => !s.oauth || s.auth === "oauth", { message: "an oauth: client only applies with auth: oauth", path: ["oauth"] })
+  .refine((s) => s.auth !== "oauth" || Boolean(s.oauth?.issuer), { message: "a local server with auth: oauth needs oauth: with an issuer (who to sign in with) and a clientId", path: ["oauth"] });
+export type StdioServerSpec = z.infer<typeof StdioServerSpec>;
 
 /**
  * A remote MCP server over Streamable HTTP: a URL Garu connects to. Static

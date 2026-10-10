@@ -33,7 +33,7 @@ import {
   type RunResult,
   missingEnv,
   isRemoteServer,
-  FileOAuthProvider,
+  signInFor,
   lineDiff,
   diffStats,
   localDay,
@@ -184,7 +184,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     const all = discover().agents;
     const ready = all.filter((a) => {
       const needs = missingEnv(a.garufile.tools, process.env);
-      const signIn = a.garufile.tools.filter((t) => isRemoteServer(t) && t.auth === "oauth" && !new FileOAuthProvider({ root: authRoot, server: t.name, url: (t as { url: string }).url }).signedIn()).map((t) => t.name);
+      const signIn = a.garufile.tools.filter((t) => t.auth === "oauth" && !signInFor(t, authRoot).signedIn()).map((t) => t.name);
       const hasCron = a.garufile.triggers.some((t) => t.cron);
       if (needs.length && hasCron) opts.log(`${a.garufile.name}: not scheduled — needs ${needs.join(", ")} in .env`);
       if (signIn.length && hasCron) opts.log(`${a.garufile.name}: not scheduled — sign in first: garu auth ${a.source} ${signIn[0]}`);
@@ -210,7 +210,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       }
     }
     const needs = g ? missingEnv(g.tools, process.env) : [];
-    const signIn = g ? g.tools.filter((t) => isRemoteServer(t) && t.auth === "oauth" && !new FileOAuthProvider({ root: authRoot, server: t.name, url: (t as { url: string }).url }).signedIn()).map((t) => t.name) : [];
+    const signIn = g ? g.tools.filter((t) => t.auth === "oauth" && !signInFor(t, authRoot).signedIn()).map((t) => t.name) : [];
     const status = pending.length ? "waiting" : inFlight ? "working" : needs.length || signIn.length ? "needs-setup" : cron && opts.up ? "scheduled" : "idle";
     const price = g ? (g.budget.pricing ?? priceFor(g.model)) : null;
     return {
@@ -470,7 +470,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           const scan = (v: string) => { for (const m of v.matchAll(/\$\{([A-Z_][A-Z0-9_]*)\}/g)) referenced.add(m[1]!); };
           if (isRemoteServer(t)) { scan(t.url); Object.values(t.headers).forEach(scan); } else { t.args.forEach(scan); Object.values(t.env).forEach(scan); }
         }
-        const remotes = agents.flatMap((a) => a.garufile.tools.filter(isRemoteServer).map((t) => ({ agent: a.garufile.name, source: a.source, server: t.name, url: t.url, auth: t.auth, signedIn: t.auth === "oauth" ? new FileOAuthProvider({ root: authRoot, server: t.name, url: t.url }).signedIn() : null })));
+        // Remote servers, plus local ones that sign in (shown with who they sign in with).
+        const remotes = agents.flatMap((a) => a.garufile.tools.filter((t) => isRemoteServer(t) || t.auth === "oauth").map((t) => ({ agent: a.garufile.name, source: a.source, server: t.name, url: isRemoteServer(t) ? t.url : (t.oauth?.issuer ?? ""), auth: t.auth ?? "none", signedIn: t.auth === "oauth" ? signInFor(t, authRoot).signedIn() : null })));
         return json(res, {
           version: "0.1.0",
           root: opts.root,

@@ -6,12 +6,16 @@
  * one JSON file per server URL under .garu/auth/ — and decides what happens
  * when a server wants a human in a browser: during `garu auth` we open one;
  * during an unattended run we stop with a message that says to run `garu auth`.
+ *
+ * Local servers can sign in too (`auth: oauth` with an `oauth.issuer`): Garu keeps the
+ * tokens here and hands the process only a current access token (localAccessToken).
  */
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, renameSync } from "node:fs";
 import { join } from "node:path";
-import type { OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth.js";
+import { auth, type OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth.js";
 import type { OAuthClientInformationMixed, OAuthClientMetadata, OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
+import { isRemoteServer, type McpServerSpec, type StdioServerSpec } from "./garufile.js";
 
 /**
  * One fixed loopback redirect for every sign-in. Authorization servers bind the
@@ -32,7 +36,9 @@ export class NeedsSignInError extends Error {
 interface Stored {
   url: string;
   client?: OAuthClientInformationMixed;
-  tokens?: OAuthTokens;
+  tokens?: OAuthTokens | undefined;
+  /** When the tokens were saved, to know when the access token runs out (expires_in is relative). */
+  tokensSavedAt?: string | undefined;
   codeVerifier?: string;
   updatedAt: string;
 }
@@ -42,8 +48,10 @@ export interface FileOAuthProviderOptions {
   root: string;
   /** Server name from the Garufile, for messages. */
   server: string;
-  /** The MCP server URL. Tokens are keyed by it, so two agents using one server share a sign-in. */
+  /** The MCP server URL (for a local server, the issuer). Tokens are keyed by it, so two agents using one server share a sign-in. */
   url: string;
+  /** What the sign-in is filed under, when not the URL (local servers: issuer and permissions). */
+  key?: string;
   /** Where the authorization server sends the browser back. Set by `garu auth`; absent during runs. */
   redirectUrl?: string;
   /** Called with the authorization URL when a human must sign in. Absent = unattended = fail clearly. */
@@ -55,8 +63,8 @@ export interface FileOAuthProviderOptions {
   client?: { clientId: string; clientSecret?: string | undefined; scopes?: string[] | undefined; authorizationParams?: Record<string, string> | undefined };
 }
 
-export function authFileFor(root: string, url: string): string {
-  const key = createHash("sha256").update(new URL(url).href).digest("hex").slice(0, 16);
+export function authFileFor(root: string, id: string): string {
+  const key = createHash("sha256").update(URL.canParse(id) ? new URL(id).href : id).digest("hex").slice(0, 16);
   return join(root, `${key}.json`);
 }
 
@@ -64,7 +72,7 @@ export class FileOAuthProvider implements OAuthClientProvider {
   private readonly file: string;
 
   constructor(private readonly opts: FileOAuthProviderOptions) {
-    this.file = authFileFor(opts.root, opts.url);
+    this.file = authFileFor(opts.root, opts.key ?? opts.url);
   }
 
   get redirectUrl(): string {
@@ -116,7 +124,17 @@ export class FileOAuthProvider implements OAuthClientProvider {
     return this.read().tokens;
   }
   saveTokens(tokens: OAuthTokens): void {
-    this.write({ tokens });
+    this.write({ tokens, tokensSavedAt: new Date().toISOString() });
+  }
+  /** A refresh the issuer refused (sign-in revoked or expired) clears the tokens, so it shows as "needs sign-in". */
+  invalidateCredentials(scope: "all" | "client" | "tokens" | "verifier" | "discovery"): void {
+    if (scope === "tokens" || scope === "all") this.write({ tokens: undefined, tokensSavedAt: undefined });
+  }
+  /** True when the access token has under five minutes left, or we can't tell. */
+  expiresSoon(now = Date.now()): boolean {
+    const s = this.read();
+    if (!s.tokens?.expires_in || !s.tokensSavedAt) return true;
+    return Date.parse(s.tokensSavedAt) + s.tokens.expires_in * 1000 - now < 5 * 60_000;
   }
   saveCodeVerifier(codeVerifier: string): void {
     this.write({ codeVerifier });
@@ -155,4 +173,48 @@ export class FileOAuthProvider implements OAuthClientProvider {
   forget(): void {
     if (existsSync(this.file)) unlinkSync(this.file);
   }
+}
+
+/**
+ * The sign-in for one tool server. A remote server's is filed under its URL, so agents using that
+ * server share it. A local server's is filed under who it signs in with and the permissions it asks
+ * for: agents asking Google for the same permissions share a sign-in, and one asking for less
+ * (read-only Gmail) keeps its own, so a read-only agent never holds a token that can write.
+ */
+export function signInFor(
+  spec: McpServerSpec,
+  root: string,
+  interactive?: { redirectUrl: string; onAuthorize: (url: URL) => void | Promise<void> },
+): FileOAuthProvider {
+  const client = spec.oauth ? { client: spec.oauth } : {};
+  if (isRemoteServer(spec)) return new FileOAuthProvider({ root, server: spec.name, url: spec.url, ...client, ...(interactive ?? {}) });
+  const issuer = spec.oauth?.issuer ?? "";
+  const key = `${issuer} ${[...(spec.oauth?.scopes ?? [])].sort().join(" ")}`;
+  return new FileOAuthProvider({ root, server: spec.name, url: issuer, key, ...client, ...(interactive ?? {}) });
+}
+
+/**
+ * A current access token for a local server that signs in: the saved one while it has more than
+ * five minutes left, otherwise a refreshed one. No saved sign-in, or a refresh the issuer refuses,
+ * is a NeedsSignInError; an unattended run never opens a browser.
+ */
+export async function localAccessToken(spec: StdioServerSpec, root: string, fetchFn?: typeof fetch): Promise<string> {
+  const issuer = spec.oauth?.issuer;
+  if (spec.auth !== "oauth" || !issuer) throw new Error(`tool server "${spec.name}" doesn't sign in (no auth: oauth with an oauth.issuer)`);
+  const p = signInFor(spec, root);
+  if (!p.signedIn()) throw new NeedsSignInError(spec.name, issuer);
+  if (p.expiresSoon()) {
+    try {
+      const r = await auth(p, { serverUrl: issuer, ...(fetchFn ? { fetchFn } : {}) });
+      if (r !== "AUTHORIZED") throw new NeedsSignInError(spec.name, issuer);
+    } catch (e) {
+      if (e instanceof NeedsSignInError) throw e;
+      const msg = (e as Error).message ?? String(e);
+      if (/fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN/i.test(msg)) throw new Error(`couldn't reach ${issuer} to renew the sign-in for "${spec.name}": ${msg}`);
+      throw new NeedsSignInError(spec.name, issuer);
+    }
+  }
+  const token = p.tokens()?.access_token;
+  if (!token) throw new NeedsSignInError(spec.name, issuer);
+  return token;
 }

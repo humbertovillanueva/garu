@@ -21,7 +21,7 @@ export interface SandboxedCommand {
 }
 
 /** Build the `docker run` invocation for one tool server. Pure: easy to test, no Docker needed. */
-export function dockerArgs(spec: StdioServerSpec, sandbox: Sandbox, agent: string, cwd = process.cwd()): SandboxedCommand {
+export function dockerArgs(spec: StdioServerSpec, sandbox: Sandbox, agent: string, cwd = process.cwd(), passByName: readonly string[] = []): SandboxedCommand {
   const containerName = `garu-${safe(agent)}-${safe(spec.name)}-${randomUUID().slice(0, 8)}`;
   const args: string[] = [
     "run",
@@ -47,6 +47,9 @@ export function dockerArgs(spec: StdioServerSpec, sandbox: Sandbox, agent: strin
   for (const [k, v] of Object.entries(spec.env)) {
     args.push("-e", `${k}=${v}`);
   }
+  // Secrets Garu adds (an access token) go by name only: docker reads the value from its own
+  // environment, so it never shows on a command line.
+  for (const k of passByName) args.push("-e", k);
   args.push(sandbox.image, spec.command, ...spec.args);
   return { command: "docker", args, containerName };
 }

@@ -101,6 +101,11 @@ describe("remote MCP servers over Streamable HTTP", () => {
     const bus = new ToolBus({ policy, recorder: rec(), approver: async () => ({ approved: true, by: "t" }), authRoot: mkdtempSync(join(tmpdir(), "garu-auth-")) });
     await expect(bus.connect([{ name: "locked", url: locked.url, headers: {}, auth: "oauth" }])).rejects.toThrow(/garu auth <Garufile> locked/);
   });
+
+  it("asks for a sign-in even when the server lists its tools without one (as Google's do)", async () => {
+    const bus = new ToolBus({ policy, recorder: rec(), approver: async () => ({ approved: true, by: "t" }), authRoot: mkdtempSync(join(tmpdir(), "garu-auth-")) });
+    await expect(bus.connect([{ name: "calendar", url: open.url, headers: {}, auth: "oauth" }])).rejects.toBeInstanceOf(NeedsSignInError);
+  });
 });
 
 describe("FileOAuthProvider", () => {

@@ -44,7 +44,7 @@
 
   type Shape = "email" | "post" | "file" | "command" | "generic";
   const shape = $derived.by((): Shape => {
-    if (/send|mail|message|reply/i.test(tool) && (a["to"] || a["subject"] || a["body"] || a["recipients"])) return "email";
+    if (/send|mail|message|reply|draft/i.test(tool) && (a["to"] || a["subject"] || a["body"] || a["recipients"])) return "email";
     if (/post|publish|message|notify|announce|say|chat/i.test(tool) && (str("text") || str("message") || str("content"))) return "post";
     if (/write|edit|create|append|save/i.test(tool) && (str("path") || str("file") || str("filename")) && (str("content") || str("text"))) return "file";
     if (/exec|shell|command|run|bash|terminal/i.test(tool) && (str("command") || str("cmd"))) return "command";
@@ -56,7 +56,8 @@
   const postText = $derived(str("text") ?? str("message") ?? str("content") ?? "");
   const postTo = $derived(str("channel") ?? str("room") ?? str("chat_id") ?? str("recipient"));
   const object = $derived(shape === "file" ? fileName : shape === "email" ? "an email" : shape === "post" ? (postTo ? `a message to ${postTo}` : "a message") : "a command");
-  const verb = $derived(shape === "email" ? "wants to send" : shape === "post" ? "wants to post" : shape === "file" ? "wants to write" : shape === "command" ? "wants to run" : "wants to call");
+  // A draft only waits in Drafts; saying "send" would promise more than happens.
+  const verb = $derived(shape === "email" ? (/draft/i.test(tool) ? "wants to draft" : "wants to send") : shape === "post" ? "wants to post" : shape === "file" ? "wants to write" : shape === "command" ? "wants to run" : "wants to call");
 
   // For a file write: what would actually change. Unchanged lines collapse to a little context; tap to see everything.
   let diff = $state<WriteDiff | null>(null);

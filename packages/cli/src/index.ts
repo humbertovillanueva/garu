@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
@@ -13,7 +14,7 @@ import { join, relative, resolve } from "node:path";
 import {
   AUTH_CALLBACK_PORT,
   AUTH_REDIRECT_URL,
-  FileOAuthProvider,
+  signInFor,
   expandSpec,
   missingEnv,
   isRemoteServer,
@@ -78,9 +79,9 @@ program
     const needs = missingEnv(g.tools, process.env);
     if (needs.length) stdout.write(`  ⚠ needs ${needs.map((n) => `$\{${n}\}`).join(", ")} — not set in .env, so this agent cannot run here yet\n`);
     for (const t of g.tools) {
-      if (!isRemoteServer(t)) continue;
-      const signedIn = t.auth === "oauth" ? new FileOAuthProvider({ root: resolve(process.cwd(), ".garu", "auth"), server: t.name, url: t.url }).signedIn() : null;
-      stdout.write(`  remote: ${t.name} → ${t.url}${t.auth === "oauth" ? (signedIn ? " · signed in" : ` · ✖ not signed in — run: garu auth ${file} ${t.name}`) : Object.keys(t.headers).length ? " · headers from .env" : ""}\n`);
+      const signIn = t.auth === "oauth" ? (signInFor(t, resolve(process.cwd(), ".garu", "auth")).signedIn() ? " · signed in" : ` · ✖ not signed in — run: garu auth ${file} ${t.name}`) : "";
+      if (isRemoteServer(t)) stdout.write(`  remote: ${t.name} → ${t.url}${signIn || (Object.keys(t.headers).length ? " · headers from .env" : "")}\n`);
+      else if (signIn) stdout.write(`  local: ${t.name} signs in with ${t.oauth?.issuer}${signIn}\n`);
     }
     for (const i of dead) {
       stdout.write(`  ⚠ policy rule #${i + 1} (${g.policy[i]!.tool}) is unreachable: an earlier rule matches everything\n`);
@@ -686,23 +687,28 @@ program
 program
   .command("auth")
   .argument("<file>", "Garufile path")
-  .argument("<server>", "name of a remote tool server with `auth: oauth`")
+  .argument("<server>", "name of a tool server with `auth: oauth`")
   .option("--forget", "remove the saved sign-in for this server")
   .option("--auth-root <dir>", "where sign-ins are kept", resolve(process.cwd(), ".garu", "auth"))
-  .description("Sign in to a remote MCP server in your browser, once. Runs then use the saved tokens.")
+  .description("Sign in for a tool server in your browser, once. Runs then use the saved tokens.")
   .action(async (file: string, serverName: string, opts: { forget?: boolean; authRoot: string }) => {
     loadDotEnv();
     const g = loadGarufile(file);
     const raw = g.tools.find((t) => t.name === serverName);
     if (!raw) fail(`no tool server "${serverName}" in ${file} (have: ${g.tools.map((t) => t.name).join(", ") || "none"})`);
     const spec = expandSpec(raw, process.env);
-    if (!isRemoteServer(spec)) fail(`"${serverName}" is a local server (command: ${raw && "command" in raw ? raw.command : "?"}); only remote servers (url:) sign in`);
-    if (spec.auth !== "oauth") fail(`"${serverName}" has auth: ${spec.auth}. Set \`auth: oauth\` on it in ${file} first.`);
+    if (spec.auth !== "oauth") {
+      fail(isRemoteServer(spec)
+        ? `"${serverName}" has auth: ${spec.auth}. Set \`auth: oauth\` on it in ${file} first.`
+        : `"${serverName}" is a local server that doesn't sign in. To give it one, add auth: oauth and an oauth: block with an issuer in ${file}.`);
+    }
+    // A remote server is asked who to sign in with; a local one names it (oauth.issuer).
+    const where = isRemoteServer(spec) ? spec.url : spec.oauth!.issuer!;
 
-    const provider = new FileOAuthProvider({ root: opts.authRoot, server: spec.name, url: spec.url });
+    const provider = signInFor(spec, opts.authRoot);
     if (opts.forget) {
       provider.forget();
-      stdout.write(`forgot the sign-in for ${spec.name} (${spec.url})\n`);
+      stdout.write(`forgot the sign-in for ${spec.name} (${where})\n`);
       return;
     }
 
@@ -732,19 +738,42 @@ program
         const args = process.platform === "win32" ? ["/c", "start", "", url.href] : [url.href];
         try { spawn(cmd, args, { stdio: "ignore", detached: true }).on("error", () => {}).unref(); } catch { /* printed above */ }
       };
+      const interactive = signInFor(spec, opts.authRoot, { redirectUrl: AUTH_REDIRECT_URL, onAuthorize: openBrowser });
+      const waitForCode = () => {
+        stdout.write(`waiting for the sign-in to finish (5 minutes)…\n`);
+        return Promise.race([code, new Promise<string>((_, rej) => setTimeout(() => rej(new Error("timed out waiting for the browser")), 5 * 60_000))]);
+      };
+
+      if (!isRemoteServer(spec)) {
+        // A local server has nothing to connect to yet: sign in with the issuer directly. Garu keeps
+        // the tokens and hands the server a current access token at the start of each run.
+        if (provider.signedIn()) {
+          stdout.write(`✔ already signed in for ${spec.name} (${where})\n`);
+        } else {
+          if ((await auth(interactive, { serverUrl: where })) === "REDIRECT") await auth(interactive, { serverUrl: where, authorizationCode: await waitForCode() });
+          if (!provider.signedIn()) fail(`the sign-in for ${spec.name} didn't finish; run this again`);
+          stdout.write(`✔ signed in for ${spec.name} with ${new URL(where).host} — ${spec.oauth?.scopes?.length ?? 0} permission(s) asked for\n`);
+        }
+        stdout.write(`  tokens: ${opts.authRoot}/ (shared by every agent asking ${where} for the same permissions)\n`);
+        return;
+      }
+
       const transport = remoteTransport(spec, opts.authRoot, { redirectUrl: AUTH_REDIRECT_URL, onAuthorize: openBrowser });
       const client = new Client({ name: "garu", version: "0.1.0" });
-      let needsCode = false;
-      try {
-        await client.connect(transport as unknown as Parameters<Client["connect"]>[0]);
-      } catch (e) {
-        if ((e as Error).name === "UnauthorizedError" || /unauthori[sz]ed|401/i.test((e as Error).message)) needsCode = true;
-        else throw e;
+      // Nothing saved yet: start the sign-in now rather than waiting for a 401. Some servers
+      // (Google's) list their tools to anyone and refuse only a real call, so a clean connect
+      // would look like a sign-in that never happened.
+      let needsCode = !provider.signedIn() && (await auth(interactive, { serverUrl: spec.url })) === "REDIRECT";
+      if (!needsCode) {
+        try {
+          await client.connect(transport as unknown as Parameters<Client["connect"]>[0]);
+        } catch (e) {
+          if ((e as Error).name === "UnauthorizedError" || /unauthori[sz]ed|401/i.test((e as Error).message)) needsCode = true;
+          else throw e;
+        }
       }
       if (needsCode) {
-        stdout.write(`waiting for the sign-in to finish (5 minutes)…\n`);
-        const c = await Promise.race([code, new Promise<string>((_, rej) => setTimeout(() => rej(new Error("timed out waiting for the browser")), 5 * 60_000))]);
-        await transport.finishAuth(c);
+        await transport.finishAuth(await waitForCode());
         await transport.close().catch(() => {});
         // Prove it: connect again with the saved tokens and list the tools.
         const t2 = remoteTransport(spec, opts.authRoot);

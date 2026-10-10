@@ -15,7 +15,7 @@ import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { resolve } from "node:path";
 import { isRemoteServer, type McpServerSpec, type Sandbox } from "./garufile.js";
-import { FileOAuthProvider, NeedsSignInError } from "./oauth.js";
+import { FileOAuthProvider, NeedsSignInError, localAccessToken, signInFor } from "./oauth.js";
 import { dockerArgs, explainDockerError } from "./sandbox.js";
 import type { Decision, PolicyEngine, ToolCallRequest } from "./policy.js";
 import type { Recorder } from "./recorder.js";
@@ -78,10 +78,14 @@ export class ToolBus {
   /** Spawn and handshake with every server. Fails loudly on the first that won't start. */
   async connect(rawSpecs: readonly McpServerSpec[]): Promise<void> {
     const specs = rawSpecs.map((s) => expandSpec(s, process.env));
+    const authRoot = this.opts.authRoot ?? resolve(process.cwd(), ".garu", "auth");
     for (const spec of specs) {
       if (isRemoteServer(spec)) {
+        // Don't wait for a 401: some servers (Google's) list their tools without a sign-in and refuse
+        // only the calls, so the run would start and then fail on every tool.
+        if (spec.auth === "oauth" && !signInFor(spec, authRoot).signedIn()) throw new NeedsSignInError(spec.name, spec.url);
         const client = new Client({ name: "garu", version: "0.1.0" });
-        const transport = remoteTransport(spec, this.opts.authRoot ?? resolve(process.cwd(), ".garu", "auth"));
+        const transport = remoteTransport(spec, authRoot);
         try {
           // The SDK's own Transport type trips exactOptionalPropertyTypes on sessionId; the object is fine.
           await client.connect(transport as unknown as Parameters<Client["connect"]>[0]);
@@ -96,13 +100,17 @@ export class ToolBus {
         this.servers.set(spec.name, { spec, client, transport });
         continue;
       }
+      // A server that signs in gets a current access token, and only that: never the client secret
+      // or the refresh token. It goes in through the environment (in a container, passed by name),
+      // so it isn't on any command line.
+      const signedIn = spec.auth === "oauth" ? { GARU_OAUTH_ACCESS_TOKEN: await localAccessToken(spec, authRoot) } : {};
       const sb = this.opts.sandbox;
-      const wrapped = sb ? dockerArgs(spec, sb, this.opts.agent ?? "agent") : undefined;
+      const wrapped = sb ? dockerArgs(spec, sb, this.opts.agent ?? "agent", process.cwd(), Object.keys(signedIn)) : undefined;
       const makeTransport = () => new StdioClientTransport({
         command: wrapped?.command ?? spec.command,
         args: wrapped?.args ?? spec.args,
         // inside a container, env goes in via -e; on the host, into the process
-        env: wrapped ? getDefaultEnvironment() : { ...getDefaultEnvironment(), ...spec.env },
+        env: wrapped ? { ...getDefaultEnvironment(), ...signedIn } : { ...getDefaultEnvironment(), ...spec.env, ...signedIn },
         stderr: "pipe",
         ...(spec.cwd && !wrapped ? { cwd: spec.cwd } : {}),
       });
@@ -269,6 +277,15 @@ export function expandSpec(spec: McpServerSpec, env: NodeJS.ProcessEnv): McpServ
     ...spec,
     args: spec.args.map((a) => expand(a, "an argument")),
     env: Object.fromEntries(Object.entries(spec.env).map(([k, v]) => [k, expand(v, `env ${k}`)])),
+    ...(spec.oauth
+      ? {
+          oauth: {
+            ...spec.oauth,
+            clientId: expand(spec.oauth.clientId, "oauth.clientId"),
+            ...(spec.oauth.clientSecret !== undefined ? { clientSecret: expand(spec.oauth.clientSecret, "oauth.clientSecret") } : {}),
+          },
+        }
+      : {}),
   };
 }
 
@@ -287,7 +304,11 @@ export function missingEnv(tools: readonly McpServerSpec[], env: NodeJS.ProcessE
       Object.values(t.headers).forEach(scan);
       if (t.oauth) { scan(t.oauth.clientId); if (t.oauth.clientSecret !== undefined) scan(t.oauth.clientSecret); }
     }
-    else { t.args.forEach(scan); Object.values(t.env).forEach(scan); }
+    else {
+      t.args.forEach(scan);
+      Object.values(t.env).forEach(scan);
+      if (t.oauth) { scan(t.oauth.clientId); if (t.oauth.clientSecret !== undefined) scan(t.oauth.clientSecret); }
+    }
   }
   return [...out].sort();
 }

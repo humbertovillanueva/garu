@@ -1,0 +1,15 @@
+{
+  "name": "@garu/mcp-google",
+  "version": "0.1.0",
+  "description": "A small MCP server for Gmail and Google Calendar: read, label and draft. It has no send, delete or edit tools. Garu signs in for it and hands it a short-lived token.",
+  "license": "Apache-2.0",
+  "author": "Humberto Villanueva (https://humbertovillanueva.dev)",
+  "type": "module",
+  "bin": { "garu-mcp-google": "./dist/index.js" },
+  "files": ["dist"],
+  "scripts": { "build": "tsc -b" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "zod": "^4.0.0"
+  }
+}
