@@ -88,7 +88,7 @@ Not slides; runs. Tomay reads the calendar every weekday at 7 and writes a prep 
 
 ## Vocabulary
 
-A **Garufile** is the YAML file that defines an agent. A **tool server** is an MCP server, local (a command) or remote (a URL). The **policy** is the ordered list of rules; **allow**, **ask** and **block** are the three decisions. **Static hiding** means tools that can never be allowed are not offered to the model. The **inbox** holds asks waiting for a human; a **review card** is one of them. A **grant** is a temporary scoped allow made by "Approve for 24h". A **suggestion** is a rule Garu proposes after repeated approvals. The **flight recorder** is the per-run JSONL log; a **run** is one execution with its own id. A **trigger** is what starts a run: cron, a message, or Run job. The **control room** is the web and phone UI; `garu ui --up` runs it together with the schedules.
+A **Garufile** is the YAML file that defines an agent. A **tool server** is an MCP server, local (a command) or remote (a URL). The **policy** is the ordered list of rules; **allow**, **ask** and **block** are the three decisions. **Static hiding** means tools that can never be allowed are not offered to the model. The **inbox** holds asks waiting for a human; a **review card** is one of them. A **grant** is a temporary scoped allow made by "Approve for 24h". A **suggestion** is a rule Garu proposes after repeated approvals. The **flight recorder** is the per-run JSONL log; a **run** is one execution with its own id. A **trigger** is what starts a run: cron, a message, or Run now. The **control room** is the web and phone UI; `garu ui --up` runs it together with the schedules.
 
 ## How to say it
 

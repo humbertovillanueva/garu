@@ -59,7 +59,7 @@
   @media (max-width: 760px) { .install { display: none; } }
 
   .shot { margin: 44px auto 0; max-width: 1000px; border: 1px solid var(--line-2); border-radius: 14px; overflow: hidden; background: var(--panel); box-shadow: 0 30px 80px -30px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.02) inset; }
-  .shot img { display: block; width: 100%; height: auto; }
+  .shot img, .shot video { display: block; width: 100%; height: auto; }
   .caption { margin-top: 14px; text-align: center; color: var(--mute); font-size: 13.5px; }
   .caption code { color: var(--fg-2); font-size: 12.5px; }
 
@@ -142,8 +142,8 @@
   </div>
   <div class="install"><span>$</span> git clone https://github.com/humbertovillanueva/garu &amp;&amp; cd garu &amp;&amp; npm install &amp;&amp; npm run build</div>
 
-  <div class="shot"><img src="demo.gif" alt="Tomay, a morning-brief agent, is told to write today's brief and post it. It fetches four sources and writes the file under allow rules, pauses on post_message because the policy says ask, and one click posts the brief to Slack." width="1000" height="516" loading="eager"></div>
-  <p class="caption">A real run, 20 seconds, <code>$0.003</code>. Four fetches and a file write allowed by policy; one post paused for a human; approved; in Slack.</p>
+  <div class="shot"><video src="video/garu-v7-16x9.mp4" poster="screenshots/video-poster.jpg" width="1000" height="563" autoplay muted loop playsinline controls preload="metadata" aria-label="Garu's launch video: Tomay prepares your day from your calendar, Bea sorts your inbox and drafts replies that wait for your approval, and Garu learns which approvals you'd rather skip."></video></div>
+  <p class="caption">The 45-second launch video (sound off here). Tomay preps your day; Bea files your mail and drafts replies that wait for one tap, and can't send. The control room's surfaces rebuilt for video; the meetings and emails are examples.</p>
 </header>
 
 <section id="why" class="wrap">
@@ -151,8 +151,8 @@
   <h2>Agents that work while you sleep are only useful if you can let them.</h2>
   <p class="sub">OpenAI's Dots and Meta's Muse run all day and act for you — closed, one vendor, unavailable in much of the world. Garu is the open version, built around the part they treat as an afterthought: control.</p>
   <div class="grid">
-    <div class="card"><div class="tag allow">allow</div><h3>A policy kernel in front of every tool</h3><p>Rules by tool name <em>and</em> by argument: allow <code>fetch_json</code> for four hosts, write only <code>briefs/2026-*.md</code>, block everything else. Tools that can never pass policy are never shown to the model.</p></div>
-    <div class="card"><div class="tag ask">ask</div><h3>An inbox, not a firehose</h3><p>When a rule says ask, the run pauses. You see the email as an email, the file as a file, the post as a message. Approve once, approve for 24 hours, or decline. Silence is a deny.</p></div>
+    <div class="card"><div class="tag allow">allow</div><h3>A policy kernel in front of every tool</h3><p>Rules by tool name <em>and</em> by argument: let an agent file mail but ask before each draft, write only <code>briefs/2026-*.md</code>, block everything else. Tools that can never pass policy are never shown to the model.</p></div>
+    <div class="card"><div class="tag ask">ask</div><h3>An inbox, not a firehose</h3><p>When a rule says ask, the run pauses. You see the email as an email, the file as a file, the draft as a draft. Approve once, approve for 24 hours, or decline. Silence is a deny.</p></div>
     <div class="card"><div class="tag block">block</div><h3>Policy that learns, with you in control</h3><p>Approve the same thing three times and Garu proposes the narrowest rule that covers exactly what you approved, and writes it into your file when you say so. Comments preserved.</p></div>
     <div class="card"><div class="tag">recorder</div><h3>A flight recorder</h3><p>Every model turn, tool call, decision and approval in an append-only log, one file per run. Replay any run as a timeline, in the browser or with <code>garu log</code>.</p></div>
     <div class="card"><div class="tag">$ cap</div><h3>A budget on every run</h3><p>Cost is estimated from real token counts at list price. A run stops the moment it would cross <code>maxCostUsd</code>. Local models bill $0 and still show what it would have cost.</p></div>
@@ -210,52 +210,45 @@
 <section id="garufile" class="wrap">
   <div class="eyebrow">The Garufile</div>
   <h2>An agent is a small YAML file. The policy is the interesting part.</h2>
-  <p class="sub">This is Tomay, the agent in the demo: a morning brief at 7 on weekdays, four read-only sources, one file it may write, one post that always asks.</p>
+  <p class="sub">This is Bea, one of the agents in this repo: at 7:15 on weekdays she files the day's mail under four labels and drafts the replies. Reading and filing are allowed, every draft asks you, and her Gmail server has no send tool at all.</p>
   <div class="two">
-<pre class="code"><span class="k">name:</span> tomay
+<pre class="code"><span class="k">name:</span> bea
+<span class="k">persona:</span> { <span class="k">kind:</span> bee, <span class="k">tagline:</span> <span class="s">"Sorts the inbox so you don't have to."</span> }
 <span class="k">model:</span> gemini/gemini-3.5-flash-lite
 <span class="k">triggers:</span>
-  - <span class="k">cron:</span> <span class="s">"0 7 * * 1-5"</span>
+  - <span class="k">cron:</span> <span class="s">"15 7 * * 1-5"</span>
 <span class="k">budget:</span> { <span class="k">maxCostUsd:</span> 0.05 }
 
 <span class="k">tools:</span>
-  - <span class="k">name:</span> web
+  - <span class="k">name:</span> gmail                 <span class="c"># Garu's own Gmail server</span>
     <span class="k">command:</span> node
-    <span class="k">args:</span> [<span class="s">"packages/mcp-fetch/dist/index.js"</span>]
-    <span class="k">env:</span> { <span class="k">WEBHOOK_URL:</span> <span class="s">"${BRIEF_WEBHOOK_URL}"</span> }
-  - <span class="k">name:</span> fs
-    <span class="k">command:</span> npx
-    <span class="k">args:</span>
-      - <span class="s">"-y"</span>
-      - <span class="s">"@modelcontextprotocol/server-filesystem"</span>
-      - <span class="s">"./briefs"</span>
+    <span class="k">args:</span> [<span class="s">"packages/mcp-google/dist/index.js"</span>, <span class="s">"gmail"</span>]
+    <span class="k">auth:</span> oauth                   <span class="c"># sign in once: garu auth</span>
+    <span class="k">oauth:</span>
+      <span class="k">issuer:</span> https://accounts.google.com
+      <span class="k">clientId:</span> <span class="s">${GOOGLE_CLIENT_ID}</span>
+      <span class="k">clientSecret:</span> <span class="s">${GOOGLE_CLIENT_SECRET}</span>
+      <span class="k">scopes:</span> [https://www.googleapis.com/auth/gmail.modify]
 
 <span class="k">policy:</span>
-  - <span class="k">tool:</span> <span class="s">"web.fetch_json"</span>     <span class="c"># four hosts, nothing else</span>
+  - <span class="k">tool:</span> <span class="s">"gmail.search_threads"</span>  <span class="c"># reading: always fine</span>
     <span class="k">action:</span> <span class="a">allow</span>
-    <span class="k">when:</span>
-      <span class="k">url:</span>
-        <span class="k">matches:</span> <span class="s">"^https://(api\.github\.com/|dev\.to/api/|hn\.algolia\.com/api/|api\.open-meteo\.com/)"</span>
-  - <span class="k">tool:</span> <span class="s">"web.post_message"</span>   <span class="c"># your channel: ask, every time</span>
+  - <span class="k">tool:</span> <span class="s">"gmail.get_thread"</span>
+    <span class="k">action:</span> <span class="a">allow</span>
+  - <span class="k">tool:</span> <span class="s">"gmail.label_thread"</span>    <span class="c"># filing comes off in one click</span>
+    <span class="k">action:</span> <span class="a">allow</span>
+  - <span class="k">tool:</span> <span class="s">"gmail.create_draft"</span>    <span class="c"># words in your name: you see each one</span>
     <span class="k">action:</span> <span class="q">ask</span>
-  - <span class="k">tool:</span> <span class="s">"web.*"</span>
-    <span class="k">action:</span> <span class="b">block</span>
-  - <span class="k">tool:</span> <span class="s">"fs.write_file"</span>       <span class="c"># only a dated brief</span>
-    <span class="k">action:</span> <span class="a">allow</span>
-    <span class="k">when:</span>
-      <span class="k">path:</span> { <span class="k">matches:</span> <span class="s">"briefs/\d{4}-\d{2}-\d{2}\.md$"</span> }
-  - <span class="k">tool:</span> <span class="s">"fs.list_*"</span>
-    <span class="k">action:</span> <span class="a">allow</span>
   - <span class="k">tool:</span> <span class="s">"*"</span>
     <span class="k">action:</span> <span class="b">block</span>
 
 <span class="k">prompt:</span> |
-  You are Tomay. Write Humberto's morning brief for today…</pre>
+  You are Bea. Sort Humberto's inbox from the last day…</pre>
     <div class="steps">
       <div class="step"><h3>First match wins</h3><p>Rules are read top to bottom. Nothing matching means <code>ask</code> — never a silent allow.</p></div>
       <div class="step"><h3>Rules see arguments</h3><p><code>when</code> predicates (<code>eq</code>, <code>matches</code>, <code>gt</code>, <code>in</code>, …) allow a tool for one host or one path and block it everywhere else.</p></div>
       <div class="step"><h3>Blocked means invisible</h3><p>A tool no rule can ever allow is not offered to the model, so it never wastes a turn trying.</p></div>
-      <div class="step"><h3>Secrets stay out of the file</h3><p><code>${VAR}</code> in args and env is read from <code>.env</code> at run time. The model never sees the webhook URL and cannot choose where messages go.</p></div>
+      <div class="step"><h3>Secrets stay out of the file</h3><p><code>${VAR}</code> is read from <code>.env</code> at run time. The model never sees your keys, and a server that signs in gets only a one-hour token, never the client secret.</p></div>
       <div class="step"><h3><code>garu validate</code> lints it</h3><p>Unreachable rules, bad globs, a missing key — caught before the agent runs.</p></div>
     </div>
   </div>
@@ -272,7 +265,7 @@
 <span class="c"># Safari → Share → Add to Home Screen</span></pre>
       <p class="sub" style="margin-top:14px;font-size:14.5px"><a href="https://github.com/humbertovillanueva/garu/blob/main/docs/phone.md" style="color:var(--fg)">Read the phone guide →</a></p>
     </div>
-    <img src="screenshots/phone-approve.png" alt="The control room on a phone: Tomay's paused post_message call shown as a message, with Approve, Approve for 24h and Decline buttons above a five-tab bar." width="390" height="844" loading="eager">
+    <img src="screenshots/phone-approve.png" alt="The control room on a phone: Bea's draft reply to Lena shown as an email, with To, Subject and the text, and Approve, Approve for 24h and Decline buttons above a four-tab bar." width="390" height="844" loading="eager">
   </div>
 </section>
 
@@ -286,7 +279,8 @@ npm install &amp;&amp; npm run build
 printf 'GEMINI_API_KEY=your-key\nGARU_USER=YourName\n' &gt; .env
 
 npm run garu -- ui --up --as YourName       <span class="c"># control room at http://localhost:4000</span></pre>
-    <p style="margin-top:16px">Click <b>pip</b> in the sidebar and press <b>Run job</b>. It reads a notes file, pauses to ask before writing a summary, and you approve from the browser. Then type a message to it.</p>
+    <p style="margin-top:16px">Click <b>pip</b> in the sidebar and press <b>Run now</b>. It reads a notes file, pauses to ask before writing a summary, and you approve from the browser. Then type a message to it.</p>
+    <p style="margin-top:10px">The real agents, <b>Tomay</b> (your day, from your calendar and email) and <b>Bea</b> (your inbox, sorted, replies drafted), need a free Google Cloud project once: <a href="https://github.com/humbertovillanueva/garu/blob/main/docs/google.md" style="color:var(--fg)">the Google guide</a> takes about fifteen minutes.</p>
 <pre>npm run garu -- run examples/nook/Garufile.yaml      <span class="c"># fully local with Ollama, $0</span>
 npm run garu -- run examples/vault/Garufile.yaml  <span class="c"># tools in Docker, network off</span>
 npm run garu -- log pip                                   <span class="c"># replay the flight recorder</span></pre>

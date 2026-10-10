@@ -1,7 +1,7 @@
 <p align="center">
-  <img src="docs/demo.gif" alt="Tomay, a morning-brief agent, is told to write today's brief and post it. It fetches four sources and writes the file under allow rules, then pauses on post_message, which the policy marks ask. One click approves it and the brief appears in Slack." width="900">
+  <img src="docs/demo.gif" alt="Bea, an inbox agent, and her rules in plain words: reading and filing mail are allowed, she can't send email at all, and drafting a reply asks first. The draft-a-reply rule grows into an approval card for a reply to Lena; one tap approves it and it's saved in Drafts, not sent." width="900">
 </p>
-<p align="center"><sub>Real run, real model, real Slack: four fetches and a file write allowed by policy, one post paused for a human, $0.003.</sub></p>
+<p align="center"><sub>From the <a href="docs/video/garu-v7-16x9.mp4">45-second launch video</a>: Bea's real rules, a draft that waits for your tap, saved and never sent. The control room's surfaces rebuilt for video; the email is an example.</sub></p>
 
 <p align="center"><img src="docs/brand/logo.png" alt="Garu" width="180"></p>
 
@@ -45,7 +45,7 @@ printf 'GEMINI_API_KEY=your-key\nGARU_USER=YourName\n' > .env
 npm run garu -- ui --up --as YourName       # control room at http://localhost:4000
 ```
 
-Open the control room, click **pip** in the sidebar, and press **Run job**. It reads `examples/pip/workspace/notes.md`, pauses to ask before writing a summary, and you approve from the browser. Then type a message to it.
+Open the control room, click **pip** in the sidebar, and press **Run now**. It reads `examples/pip/workspace/notes.md`, pauses to ask before writing a summary, and you approve from the browser. Then type a message to it.
 
 Prefer the terminal?
 
@@ -57,7 +57,7 @@ npm run garu -- log      pip                          # replay the flight record
 
 **Fully local, $0:** install [Ollama](https://ollama.com), `ollama pull qwen3:8b`, then `npm run garu -- run examples/nook/Garufile.yaml`.
 
-**Your own agent:** `npm run garu -- new` asks what it should do, when, which model, which folder and which hosts, and writes `agents/<name>/Garufile.yaml` with a policy that starts closed — only the tools you named, writes ask first, everything else blocked. Then `Run job` in the control room.
+**Your own agent:** `npm run garu -- new` asks what it should do, when, which model, which folder and which hosts, and writes `agents/<name>/Garufile.yaml` with a policy that starts closed — only the tools you named, writes ask first, everything else blocked. Then **Run now** in the control room.
 
 **Sandboxed:** with Docker running, `npm run garu -- sandbox build` once, then `npm run garu -- run examples/vault/Garufile.yaml`.
 
@@ -174,7 +174,7 @@ Tokens live in `.garu/auth/` (gitignored), one file per server URL, refreshed au
 
 A local server can sign in too: give it `auth: oauth` and an `oauth:` block that names who to sign in with (`issuer:`), as Bea's Gmail server does above. `garu auth` does the sign-in once; Garu keeps the tokens and starts the server with a one-hour access token in its environment, so the server never holds the client secret or the refresh token. Local sign-ins are filed by issuer and permissions, so an agent that asks for read-only Gmail never shares a token with one that can write.
 
-<p align="center"><img src="docs/screenshots/agent.png" alt="An agent's page: its identity, permissions, a conversation thread, and the brief it wrote" width="900"></p>
+<p align="center"><img src="docs/screenshots/agent.png" alt="Tomay's page: what it does, its schedule, model, tools and policy, a conversation, and its recent runs" width="900"></p>
 
 ## Approvals that get smarter
 
