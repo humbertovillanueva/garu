@@ -6,6 +6,8 @@
 //   node scripts/demo-data.mjs
 //
 // It only writes under .garu/ (gitignored) and never touches your Garufiles.
+// The people, meetings and emails are made up (example.com); the agents, their
+// tools, rules and schedules are the real ones in agents/.
 
 import { mkdirSync, writeFileSync, appendFileSync } from "node:fs";
 import { resolve, join } from "node:path";
@@ -18,21 +20,51 @@ mkdirSync(runs, { recursive: true });
 const minutesAgo = (m) => new Date(Date.now() - m * 60_000);
 const stamp = (d) => d.toISOString().replace(/[-:T]/g, "").slice(0, 15).replace(/^(\d{8})(\d{6}).*/, "$1-$2");
 const hex = () => Math.random().toString(16).slice(2, 10);
+const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+/** How many minutes ago hh:mm was on the last `n` weekdays where it has already passed, newest first. */
+function weekdayMornings(n, h, m) {
+  const now = new Date();
+  const out = [];
+  for (let back = 0; out.length < n && back < 21; back++) {
+    const t = new Date(now.getFullYear(), now.getMonth(), now.getDate() - back, h, m);
+    if (t.getDay() === 0 || t.getDay() === 6 || t > now) continue;
+    out.push((now.getTime() - t.getTime()) / 60_000);
+  }
+  return out;
+}
 
-const BRIEF = `# Morning brief — ${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-## Weather
-High 71°F / Low 48°F, clear.
-## Garu
-3 stars, 1 fork, 0 open issues, pushed 2 hours ago.
-## Writing
-Make Document Pipelines Fail Loudly — 4 reactions, 1 comment.
-## AI & agents on Hacker News
-- Show HN: Durable Actors (212 pts) — a primitive for long-lived agents.
-- Running agents inside Docker for dev workflows (96 pts).
-- Agent.reviews — agents writing reviews for agents (41 pts).`;
+const BRIEF = `# Your day — ${today}
+## Schedule
+- 10:00 Design review with Lena and Sam (prep below)
+- 12:30 Lunch with Priya (prep below)
+- 15:00 1:1 with Jordan (prep below)
+- 16:30 Focus: write the launch post
+## Free blocks
+8:00–10:00 · 11:00–12:30 · 13:30–15:00 · 15:30–16:30
+## 10:00 · Design review
+- **Who:** Lena Ortiz (design) and Sam Park (engineering).
+- **Last time:** Thursday, Lena sent the homepage draft; Sam asked whether the hero image slows the page down.
+- **Still open:** the pricing copy Lena is waiting on.
+- **Bring:** the pricing copy, or a date for it.
+## 12:30 · Lunch with Priya
+- **Who:** Priya Nair.
+- **Last time:** Tuesday, she suggested the Thai place on 3rd and asked how the trip went.
+- **Still open:** nothing open.
+## 15:00 · 1:1 with Jordan
+- **Who:** Jordan Lee.
+- **Last time:** Friday, Jordan shared the Q4 plan and asked for comments before this meeting.
+- **Still open:** your comments on the Q4 plan.
+- **Bring:** your notes on the plan.`;
+
+const DRAFT = {
+  to: ["Lena Ortiz <lena@example.com>"],
+  subject: "Re: Homepage draft",
+  body: "Hi Lena,\n\nThanks for sending the homepage draft, it reads well. I'll get back to you on the pricing copy before our review.\n\nHumberto",
+  threadId: "18c2f04a9e7b1d36",
+};
 
 /** Write one run as the kernel would, with timestamps spread over `secs` seconds ending `endMinutesAgo` ago. */
-function run(agent, { model, trigger, steps, status = "ok", summary, cost, endMinutesAgo, secs = 6 }) {
+function run(agent, { model, trigger, offered, hidden = [], steps, status = "ok", summary, cost, endMinutesAgo, secs = 6 }) {
   const end = minutesAgo(endMinutesAgo);
   const start = new Date(end.getTime() - secs * 1000);
   const runId = `${stamp(start)}-${hex()}`;
@@ -43,7 +75,7 @@ function run(agent, { model, trigger, steps, status = "ok", summary, cost, endMi
   const lines = [];
   const push = (event) => lines.push(JSON.stringify({ seq: lines.length + 1, ts: at(), runId, agent, event }));
   push({ type: "run.start", agent, model, trigger });
-  push({ type: "tools.offered", offered: ["web.fetch_json", "web.post_message", "fs.read_file", "fs.write_file"], hidden: ["fs.move_file", "fs.create_directory", "web.fetch_text"] });
+  push({ type: "tools.offered", offered, hidden });
   let turn = 0;
   let spent = 0;
   for (const s of steps) {
@@ -66,43 +98,94 @@ function run(agent, { model, trigger, steps, status = "ok", summary, cost, endMi
   return runId;
 }
 
-const fetches = [
-  { tool: "web.fetch_json", args: { url: "https://api.open-meteo.com/v1/forecast?latitude=40.76&longitude=-111.89&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit" }, action: "allow", ms: 412, result: '{"daily":{"temperature_2m_max":[71.2]}}' },
-  { tool: "web.fetch_json", args: { url: "https://api.github.com/repos/humbertovillanueva/garu" }, action: "allow", ms: 288, result: '{"stargazers_count":3}' },
-  { tool: "web.fetch_json", args: { url: "https://dev.to/api/articles?username=humbertovillanueva" }, action: "allow", ms: 190, result: "[...]" },
-  { tool: "web.fetch_json", args: { url: "https://hn.algolia.com/api/v1/search?query=agents&tags=story" }, action: "allow", ms: 355, result: '{"hits":[...]}' },
+// Tomay: reads the calendar and the mail with the people in each meeting, writes the day's brief.
+// Rule numbers are agents/tomay/Garufile.yaml's, counted from 0.
+const TOMAY_TOOLS = {
+  offered: ["calendar.list_calendars", "calendar.list_events", "calendar.get_event", "gmail.search_threads", "gmail.get_thread", "fs.list_allowed_directories", "fs.list_directory", "fs.read_text_file", "fs.write_file"],
+  hidden: ["gmail.list_labels", "gmail.list_drafts", "gmail.label_thread", "gmail.create_draft", "fs.edit_file", "fs.move_file", "fs.create_directory"],
+};
+const day = new Date().toISOString().slice(0, 10);
+const tomaySteps = [
+  { turn: true, cost: 0.0002 },
+  { tool: "calendar.list_calendars", args: {}, action: "allow", rule: 0, ms: 230, result: '[{"id":"primary","name":"Humberto","primary":true}]' },
+  { turn: true, cost: 0.0003 },
+  { tool: "calendar.list_events", args: { calendarId: "primary", timeMin: `${day}T00:00:00-06:00`, timeMax: `${day}T23:59:59-06:00` }, action: "allow", rule: 1, ms: 180, result: '{"events":[{"title":"Design review"},{"title":"Lunch with Priya"},{"title":"1:1 with Jordan"},{"title":"Focus: write the launch post"}]}' },
+  { turn: true, cost: 0.0004 },
+  { tool: "gmail.search_threads", args: { query: "from:lena@example.com OR from:sam@example.com newer_than:60d" }, action: "allow", rule: 4, ms: 520, result: '{"threads":[{"subject":"Homepage draft"}]}' },
+  { tool: "gmail.search_threads", args: { query: "from:priya@example.com newer_than:60d" }, action: "allow", rule: 4, ms: 470, result: '{"threads":[{"subject":"Lunch Monday?"}]}' },
+  { tool: "gmail.search_threads", args: { query: "from:jordan@example.com newer_than:60d" }, action: "allow", rule: 4, ms: 490, result: '{"threads":[{"subject":"Q4 plan"}]}' },
+  { turn: true, cost: 0.0005 },
+  { tool: "gmail.get_thread", args: { threadId: "18c2f04a9e7b1d36" }, action: "allow", rule: 5, ms: 160, result: '{"subject":"Homepage draft","messages":[…]}' },
+  { tool: "gmail.get_thread", args: { threadId: "18c2e7713b0c5a12" }, action: "allow", rule: 5, ms: 140, result: '{"subject":"Q4 plan","messages":[…]}' },
+  { turn: true, cost: 0.0006 },
+  { tool: "fs.list_allowed_directories", args: {}, action: "allow", rule: 7, ms: 4, result: "agents/tomay/briefs" },
+  { turn: true, cost: 0.0007, in: 9800, out: 620 },
+  { tool: "fs.write_file", args: { path: `agents/tomay/briefs/${day}.md`, content: BRIEF }, action: "allow", rule: 9, ms: 5, result: "Successfully wrote file" },
+  { turn: true, cost: 0.0004 },
 ];
-const write = { tool: "fs.write_file", args: { path: `agents/tomay/briefs/${new Date().toISOString().slice(0, 10)}.md`, content: BRIEF }, action: "allow", rule: 4, ms: 4, result: "Successfully wrote file" };
-const post = (extra) => ({ tool: "web.post_message", args: { text: BRIEF }, action: "ask", rule: 1, reason: "posting the brief to your channel", ms: 265, result: "posted 612 chars to hooks.slack.com", ...extra });
+const TOMAY_SUMMARIES = [
+  "3 meetings today. The design review needs the most prep: Lena is still waiting on the pricing copy. Longest free block: 8:00 to 10:00.",
+  "2 meetings. The call with Dana needs the most prep: she asked for last year's receipts. Longest free block: 1:00 to 4:00.",
+  "No meetings with other people today. Longest free block: 8:00 to 12:00.",
+  "4 meetings. The planning session needs the most prep: Sam asked for the launch dates. Longest free block: 2:00 to 4:00.",
+];
+weekdayMornings(4, 7, 0).forEach((ago, i) => {
+  run("tomay", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron:0 7 * * 1-5", ...TOMAY_TOOLS, endMinutesAgo: ago - 0.2, secs: 11, steps: tomaySteps, summary: TOMAY_SUMMARIES[i] });
+});
 
-// Yesterday's and earlier briefs: the whole flow, approved.
-for (const d of [1, 2, 3]) {
-  run("tomay", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron", endMinutesAgo: d * 1440 - 420, secs: 9, cost: 0.0029,
-    summary: "I wrote today's brief and posted it to your channel.",
-    steps: [{ turn: true, cost: 0.0003 }, ...fetches, { turn: true, cost: 0.0012, in: 11200, out: 510 }, write, { turn: true, cost: 0.0011, in: 11400, out: 223 }, post({})] });
-}
-// Right now: paused on the post.
-const pausedRun = run("tomay", { model: "gemini/gemini-3.5-flash-lite", trigger: "chat", endMinutesAgo: 0.5, secs: 7,
-  steps: [{ turn: true, cost: 0.0003 }, ...fetches, { turn: true, cost: 0.0012, in: 11200, out: 510 }, write, { turn: true, cost: 0.0011, in: 11400, out: 223 }, post({ pending: true })] });
+// Bea: files the last day's mail under four labels and drafts replies; every draft waits for you.
+// Rule numbers are agents/bea/Garufile.yaml's, counted from 0.
+const BEA_TOOLS = { offered: ["gmail.search_threads", "gmail.get_thread", "gmail.list_labels", "gmail.list_drafts", "gmail.label_thread", "gmail.create_draft"], hidden: [] };
+const draft = (to, subject, body, threadId, extra = {}) => ({ tool: "gmail.create_draft", args: { to: [to], subject, body, threadId }, action: "ask", rule: 5, reason: "a draft reply in your name", ms: 460, result: '{"saved":"in Drafts, not sent"}', ...extra });
+const JORDAN = draft("Jordan Lee <jordan@example.com>", "Re: Q4 plan", "Hi Jordan,\n\nThanks for sharing the Q4 plan. I'll send you my comments before our 1:1.\n\nHumberto", "18c2e7713b0c5a12");
+const PRIYA = draft("Priya Nair <priya@example.com>", "Re: Lunch Monday?", "Hi Priya,\n\nMonday works. The Thai place on 3rd sounds good, see you at 12:30.\n\nHumberto", "18c2d1f65a2e9c40");
+const label = (name, n) => ({ tool: "gmail.label_thread", args: { threadIds: Array.from({ length: n }, () => hex() + hex()), labelIds: [`Label_${name}`] }, action: "allow", rule: 4, ms: 380, result: `{"added":["Garu/${name}"],"filed":${n}}` });
+const beaSteps = (counts, drafts) => [
+  { turn: true, cost: 0.0001 },
+  { tool: "gmail.list_labels", args: {}, action: "allow", rule: 2, ms: 210, result: '[{"name":"Garu/Needs reply"},{"name":"Garu/FYI"},{"name":"Garu/Receipts"},{"name":"Garu/Newsletters"}]' },
+  { turn: true, cost: 0.0003 },
+  { tool: "gmail.search_threads", args: { query: "in:inbox newer_than:1d -label:garu-needs-reply -label:garu-fyi -label:garu-receipts -label:garu-newsletters" }, action: "allow", rule: 0, ms: 640, result: '{"threads":[…18 threads…]}' },
+  { turn: true, cost: 0.0006 },
+  { tool: "gmail.get_thread", args: { threadId: "18c2f04a9e7b1d36" }, action: "allow", rule: 1, ms: 150, result: '{"subject":"Homepage draft"}' },
+  { tool: "gmail.get_thread", args: { threadId: "18c2e7713b0c5a12" }, action: "allow", rule: 1, ms: 140, result: '{"subject":"Q4 plan"}' },
+  { turn: true, cost: 0.0007 },
+  ...Object.entries(counts).map(([name, n]) => label(name, n)),
+  ...drafts.flatMap((d) => [{ turn: true, cost: 0.0006 }, d]),
+  { turn: true, cost: 0.0004 },
+];
+// Earlier mornings, each draft approved.
+const [, ...earlier] = weekdayMornings(3, 7, 15);
+const BEA_DAYS = [
+  { summary: "9 new: 1 needs a reply (draft ready), 2 receipts, 5 newsletters, 1 FYI\nPriya Nair: asks if Monday lunch still works.", counts: { Newsletters: 5, Receipts: 2, FYI: 1, "Needs reply": 1 }, drafts: [PRIYA] },
+  { summary: "12 new: 0 need a reply, 1 receipt, 9 newsletters, 2 FYI", counts: { Newsletters: 9, Receipts: 1, FYI: 2 }, drafts: [] },
+];
+earlier.forEach((ago, i) => {
+  const d = BEA_DAYS[i];
+  run("bea", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron:15 7 * * 1-5", ...BEA_TOOLS, endMinutesAgo: ago - 0.25, secs: 14, steps: beaSteps(d.counts, d.drafts), summary: d.summary });
+});
+// Right now: 18 new threads filed, Jordan's draft approved, paused on Lena's, waiting for you.
+const pausedRun = run("bea", { model: "gemini/gemini-3.5-flash-lite", trigger: "ui", ...BEA_TOOLS, endMinutesAgo: 0.5, secs: 12,
+  steps: beaSteps({ Newsletters: 11, Receipts: 3, FYI: 2, "Needs reply": 2 }, [JORDAN, { ...draft(DRAFT.to[0], DRAFT.subject, DRAFT.body, DRAFT.threadId), pending: true }]) });
 
 // Two pip runs on a local model: one approved write, one declined.
-run("pip", { model: "ollama/qwen3:8b", trigger: "manual", endMinutesAgo: 95, secs: 14, cost: 0,
+const PIP_TOOLS = { offered: ["fs.read_text_file", "fs.list_directory", "fs.write_file"], hidden: ["fs.move_file", "fs.create_directory"] };
+run("pip", { model: "ollama/qwen3:8b", trigger: "manual", ...PIP_TOOLS, endMinutesAgo: 95, secs: 14, cost: 0,
   summary: "Summarised the three notes in the workspace into SUMMARY.md.",
-  steps: [{ turn: true, cost: 0 }, { tool: "fs.read_file", args: { path: "examples/pip/workspace/notes.md" }, action: "allow", ms: 3, result: "..." }, { turn: true, cost: 0 }, { tool: "fs.write_file", args: { path: "examples/pip/workspace/SUMMARY.md", content: "# Summary\n\n- …" }, action: "ask", rule: 2, reason: "writing outside the notes folder" }, { turn: true, cost: 0 }] });
-run("pip", { model: "ollama/qwen3:8b", trigger: "manual", endMinutesAgo: 180, secs: 11, status: "ok", cost: 0,
+  steps: [{ turn: true, cost: 0 }, { tool: "fs.read_text_file", args: { path: "examples/pip/workspace/notes.md" }, action: "allow", ms: 3, result: "..." }, { turn: true, cost: 0 }, { tool: "fs.write_file", args: { path: "examples/pip/workspace/SUMMARY.md", content: "# Summary\n\n- …" }, action: "ask", rule: 2, reason: "writing outside the notes folder" }, { turn: true, cost: 0 }] });
+run("pip", { model: "ollama/qwen3:8b", trigger: "manual", ...PIP_TOOLS, endMinutesAgo: 180, secs: 11, status: "ok", cost: 0,
   summary: "You declined the write, so I left the summary in this message instead.",
   steps: [{ turn: true, cost: 0 }, { tool: "fs.write_file", args: { path: "examples/pip/workspace/SUMMARY.md", content: "# Summary" }, action: "ask", rule: 2, approved: false, reason: "writing outside the notes folder" }, { turn: true, cost: 0 }] });
 for (let h = 1; h <= 6; h++) {
-  run("tick", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron", endMinutesAgo: h * 60, secs: 5, cost: 0.0016,
-    summary: `${new Date(Date.now() - h * 3600_000).toISOString()} — 2 file(s): .gitkeep, tick.log`,
+  run("tick", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron:0 * * * *", offered: ["fs.list_directory", "fs.write_file"], hidden: [], endMinutesAgo: h * 60, secs: 5, cost: 0.0016,
+    summary: "Nothing new: 2 files.",
     steps: [{ turn: true, cost: 0.0003 }, { tool: "fs.list_directory", args: { path: "examples/tick/workspace" }, action: "allow", ms: 2, result: "[FILE] tick.log" }, { turn: true, cost: 0.0013 }, { tool: "fs.write_file", args: { path: "examples/tick/workspace/tick.log", content: "…" }, action: "allow", ms: 3 }] });
 }
 
-// The paused approval, waiting in the inbox.
+// The paused draft, waiting in the inbox.
 const inbox = new Inbox({ root: join(root, "inbox") });
 const req = {
-  id: hex().slice(0, 6), agent: "tomay", runId: pausedRun, callId: crypto.randomUUID(), tool: "web.post_message",
-  args: { text: BRIEF }, reason: "posting the brief to your channel",
+  id: hex().slice(0, 6), agent: "bea", runId: pausedRun, callId: crypto.randomUUID(), tool: "gmail.create_draft",
+  args: DRAFT, reason: "a draft reply in your name",
   createdAt: minutesAgo(0.5).toISOString(), expiresAt: new Date(Date.now() + 29.5 * 60_000).toISOString(),
 };
 writeFileSync(join(inbox.root, `${req.id}.json`), JSON.stringify(req, null, 2));
@@ -112,8 +195,7 @@ appendFileSync(join(root, "grants.jsonl"), JSON.stringify({ id: hex().slice(0, 6
 
 // Chat with tomay.
 const chat = new ChatStore(join(root, "chat"));
-chat.append("tomay", { role: "user", text: "hey", kind: "chat", ts: minutesAgo(130).toISOString() });
-chat.append("tomay", { role: "agent", text: "Hey Humberto! Today's brief is in your briefs folder. Want me to post it?", kind: "chat", ts: minutesAgo(129.8).toISOString() });
-chat.append("tomay", { role: "user", text: "write today's brief and post it", kind: "chat", ts: minutesAgo(0.6).toISOString(), runId: pausedRun });
+chat.append("tomay", { role: "user", text: "what's on today?", kind: "chat", ts: minutesAgo(50).toISOString() });
+chat.append("tomay", { role: "agent", text: "Three meetings: the design review at 10, lunch with Priya at 12:30 and your 1:1 with Jordan at 3. The review needs the most prep; it's all in today's brief.", kind: "chat", ts: minutesAgo(49.8).toISOString() });
 
 console.log(`seeded ${root}`);

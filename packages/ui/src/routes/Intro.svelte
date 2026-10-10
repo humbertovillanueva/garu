@@ -30,9 +30,9 @@
 
   const kinds = [
     { kind: "owl", name: "Owl", does: "watches things", color: KIND_COLOR.owl },
-    { kind: "fox", name: "Fox", does: "brings you news", color: KIND_COLOR.fox },
+    { kind: "fox", name: "Fox", does: "preps your day", color: KIND_COLOR.fox },
     { kind: "turtle", name: "Turtle", does: "keeps a log", color: KIND_COLOR.turtle },
-    { kind: "bee", name: "Bee", does: "works in a box", color: KIND_COLOR.bee },
+    { kind: "bee", name: "Bee", does: "does chores", color: KIND_COLOR.bee },
     { kind: "cat", name: "Cat", does: "reads for you", color: KIND_COLOR.cat },
     { kind: "octopus", name: "Octopus", does: "juggles tasks", color: KIND_COLOR.octopus },
   ] as const;
@@ -61,14 +61,14 @@
         <h1>An agent is one file.</h1>
         <p>Who it is, which model it thinks with, when it runs, what tools it can reach, and what it's allowed to do. You can read it before you run it.</p>
         <div class="card yaml mono">
-          <span class="k">name:</span> <b>tomay</b><br>
-          <span class="k">persona:</span> fox · <i>“Gathers the morning.”</i><br>
+          <span class="k">name:</span> <b>bea</b><br>
+          <span class="k">persona:</span> bee · <i>“Sorts the inbox.”</i><br>
           <span class="k">model:</span> gemini/flash-lite<br>
-          <span class="k">when:</span> weekdays 07:00<br>
-          <span class="k">tools:</span> web, files<br>
+          <span class="k">when:</span> weekdays 07:15<br>
+          <span class="k">tools:</span> gmail<br>
           <span class="k">policy:</span><br>
-          &nbsp;&nbsp;fetch 4 sites <span class="hl">→ allow</span><br>
-          &nbsp;&nbsp;post to Slack <span class="hl">→ ask</span><br>
+          &nbsp;&nbsp;read and file mail <span class="hl">→ allow</span><br>
+          &nbsp;&nbsp;draft a reply <span class="hl">→ ask</span><br>
           &nbsp;&nbsp;anything else <span class="hl">→ block</span>
         </div>
       </section>
@@ -77,8 +77,8 @@
         <h1>Every action passes through your policy.</h1>
         <p>Allow runs. Ask pauses and comes to your phone. Block never reaches the agent at all. If you don't answer, the answer is no.</p>
         <div class="card rc">
-          <div class="h"><span class="orb" style="background:{KIND_COLOR.fox}"><Creature kind="fox" size={22} /></span><span><b>tomay</b> wants to post <b>a message</b> <span class="tag">post_message</span></span></div>
-          <div class="body"># Morning brief — Thursday<br>High 71°F / Low 48°F, clear.<br>3 stars, 1 fork, pushed 2 hours ago…</div>
+          <div class="h"><span class="orb" style="background:{KIND_COLOR.bee}"><Creature kind="bee" size={22} /></span><span><b>bea</b> wants to draft <b>an email</b> <span class="tag">create_draft</span></span></div>
+          <div class="body"><span class="lbl">To</span> Lena Ortiz<br><span class="lbl">Re</span> Homepage draft<br>Hi Lena, thanks for sending the draft. I'll get back to you on the pricing copy before our review…</div>
           <div class="btns"><span class="ok">Approve</span><span>For 24h</span><span class="no">Decline</span></div>
         </div>
       </section>
@@ -141,6 +141,7 @@
   .yaml { padding: 14px 16px; font-size: 12.5px; line-height: 1.7; color: var(--color-fg-2); } .yaml b { color: var(--color-fg); font-weight: 500; } .yaml .k { color: var(--color-mute); } .yaml .hl { color: var(--color-ask); }
   .rc { border-color: color-mix(in oklab, var(--color-ask) 40%, var(--color-line)); }
   .rc .h { display: flex; gap: 10px; align-items: center; padding: 12px 14px; font-size: 13.5px; } .rc .h b { font-weight: 600; }
+  .rc .body .lbl { color: var(--color-mute); display: inline-block; width: 22px; }
   .rc .body { margin: 0 14px; border: 1px solid var(--color-line); border-radius: 10px; background: color-mix(in oklab, var(--color-bg) 60%, transparent); font-size: 12px; color: var(--color-fg-2); padding: 10px 12px; line-height: 1.5; }
   .rc .btns { display: flex; gap: 8px; padding: 12px 14px; } .rc .btns span { flex: 1; text-align: center; padding: 9px; border-radius: 9px; border: 1px solid var(--color-line-2); font-size: 13px; }
   .rc .btns .ok { border-color: color-mix(in oklab, var(--color-ok) 40%, transparent); color: var(--color-ok); } .rc .btns .no { border-color: color-mix(in oklab, var(--color-bad) 40%, transparent); color: var(--color-bad); }
