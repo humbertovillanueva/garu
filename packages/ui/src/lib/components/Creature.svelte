@@ -17,7 +17,7 @@
     <circle cx="24" cy="30" r="8.5" fill="#f4f1ea"/><circle cx="40" cy="30" r="8.5" fill="#f4f1ea"/>
     <circle cx="25.5" cy="31" r="3.6" fill="#0a0c0f"/><circle cx="38.5" cy="31" r="3.6" fill="#0a0c0f"/>
     <circle cx="26.6" cy="29.8" r="1.1" fill="#fff" stroke="none"/><circle cx="39.6" cy="29.8" r="1.1" fill="#fff" stroke="none"/>
-    <path d="M32 36.5 L29.5 41 L34.5 41 Z" fill="#f2a93b" stroke="none"/>
+    <path d="M32 36.5 L29.5 41 L34.5 41 Z" fill="#f4f1ea" stroke="none"/>
     <path d="M22 50 q10 6 20 0" /><path d="M20 45 q12 7 24 0" opacity=".6"/>
     </g>
   {:else if kind === "fox"}

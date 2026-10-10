@@ -3,7 +3,7 @@
   import { href } from "../lib/router.svelte";
   import Logo from "../lib/components/Logo.svelte";
   import { build, isApp, server } from "../lib/server.svelte";
-  let version = $state<string | null>(null);
+  let version = $state<string | null | undefined>(undefined); // undefined while still asking
   $effect(() => { live.tick; api.settings().then((s) => (version = s.version)).catch(() => (version = null)); });
   import { humanTime } from "../lib/format";
   const [appVersion, commit, built] = build.split(" · ");
@@ -21,7 +21,7 @@
   <div class="panel rise divide-y divide-line text-[14px]">
     <div class="flex justify-between gap-4 px-4 py-3"><span class="text-mute">{isApp ? "This app" : "This page"}</span><span class="text-right">{appVersion}{#if commit}<span class="text-mute">, build {commit}</span>{/if}</span></div>
     {#if built}<div class="flex justify-between gap-4 px-4 py-3"><span class="text-mute">Built</span><span>{builtWhen}</span></div>{/if}
-    <div class="flex justify-between gap-4 px-4 py-3"><span class="text-mute">Garu on your computer</span><span>{version ? `version ${version}` : "not reachable"}</span></div>
+    <div class="flex justify-between gap-4 px-4 py-3"><span class="text-mute">Garu on your computer</span><span>{version === undefined ? "checking…" : version ? `version ${version}` : "not reachable"}</span></div>
     {#if isApp}<div class="flex justify-between gap-4 px-4 py-3"><span class="text-mute">Paired with</span><span class="truncate">{server.base.replace(/^https?:\/\//, "") || "—"}</span></div>{/if}
     <div class="flex justify-between gap-4 px-4 py-3"><span class="text-mute">License</span><span>Apache-2.0, open source</span></div>
     <div class="flex justify-between gap-4 px-4 py-3"><span class="text-mute">Made by</span><span>Humberto Villanueva, Salt Lake City</span></div>

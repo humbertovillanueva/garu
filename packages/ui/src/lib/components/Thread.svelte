@@ -5,7 +5,7 @@
    * into a single quiet line that opens on tap.
    */
   import { href } from "../router.svelte";
-  import { clock, dayLabel } from "../format";
+  import { clock, dayLabel, plainTimes } from "../format";
   import Mark from "./Mark.svelte";
   import { renderMarkdown } from "../md";
   import type { ChatMessage } from "../types";
@@ -57,7 +57,7 @@
             <button class="flex w-full items-start gap-2 text-left" onclick={() => (open[k] = !open[k])} aria-expanded={Boolean(open[k])}>
               <span class="min-w-0 flex-1">
                 <span class="block text-[12px] text-mute">{headline(runs)}</span>
-                {#if !open[k] && !allQuiet}<span class="mt-0.5 line-clamp-2 block text-[13px] text-fg-2">{oneLine(([...runs].reverse().find((r) => !quiet(r.text)) ?? latest).text)}</span>{/if}
+                {#if !open[k] && !allQuiet}<span class="mt-0.5 line-clamp-2 block text-[13px] text-fg-2">{plainTimes(oneLine(([...runs].reverse().find((r) => !quiet(r.text)) ?? latest).text))}</span>{/if}
               </span>
               <span class="mt-0.5 flex-none text-mute transition-transform" style="transform: rotate({open[k] ? 90 : 0}deg)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>
             </button>
@@ -65,8 +65,8 @@
               <div class="mt-2 space-y-2">
                 {#each runs as r (r.id)}
                   <div class="rounded-xl border border-dashed hairline px-3 py-2">
-                    <div class="mb-0.5 text-[11px] text-mute">{clock(r.ts)}{#if r.runId}<span class="mx-1">·</span><a class="hover:text-fg" href={href("run", agent, r.runId)}>see the run</a>{/if}</div>
-                    <div class="md space-y-2">{@html renderMarkdown(r.text)}</div>
+                    <div class="mb-0.5 text-[11px] text-mute">{clock(r.ts)}{#if r.runId}<span class="mx-1">·</span><a class="tap hover:text-fg" href={href("run", agent, r.runId)}>see the run</a>{/if}</div>
+                    <div class="md space-y-2">{@html renderMarkdown(plainTimes(r.text))}</div>
                   </div>
                 {/each}
               </div>
@@ -90,9 +90,9 @@
           <div class="min-w-0 max-w-[85%]">
             <div class="rounded-2xl rounded-tl-md px-4 py-2.5 text-[14px] leading-relaxed" class:panel={m.kind !== "error"}
                  style={m.kind === "error" ? "background: color-mix(in oklab, var(--color-bad) 10%, var(--color-panel)); border: 1px solid color-mix(in oklab, var(--color-bad) 35%, var(--color-line))" : ""}>
-              <div class="md space-y-2">{@html renderMarkdown(m.text)}</div>
+              <div class="md space-y-2">{@html renderMarkdown(plainTimes(m.text))}</div>
             </div>
-            <div class="mt-1 text-[11px] text-mute">{clock(m.ts)}{#if m.runId}<span class="mx-1">·</span><a class="hover:text-fg" href={href("run", agent, m.runId)}>see the run</a>{/if}</div>
+            <div class="mt-1 text-[11px] text-mute">{clock(m.ts)}{#if m.runId}<span class="mx-1">·</span><a class="tap hover:text-fg" href={href("run", agent, m.runId)}>see the run</a>{/if}</div>
           </div>
         </div>
       {/if}

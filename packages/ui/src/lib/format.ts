@@ -64,7 +64,7 @@ export function triggerLabel(t: string): string {
   if (t === "cron" || t.startsWith("cron:")) return "scheduled";
   if (t === "catch-up" || t.startsWith("catch-up:")) return "catch-up";
   if (t === "chat") return "message";
-  if (t === "manual") return "run now";
+  if (t === "manual" || t === "ui") return "run now";
   return t;
 }
 export function dayLabel(iso: string): string {
@@ -75,12 +75,15 @@ export function dayLabel(iso: string): string {
   if (same(d, y)) return "Yesterday";
   return d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
 }
+/** How long a run took, in words: "a few seconds", "under a minute", "3 min", "1 h 5 min". Never seconds. */
 export function duration(a: string, b: string | null): string {
   if (!b) return "running";
   const ms = new Date(b).getTime() - new Date(a).getTime();
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  return `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1000)}s`;
+  if (ms < 10_000) return "a few seconds";
+  if (ms < 60_000) return "under a minute";
+  const m = Math.round(ms / 60_000);
+  if (m < 60) return `${m} min`;
+  return m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${Math.floor(m / 60)} h`;
 }
 export function tokens(n: number): string {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
@@ -109,7 +112,7 @@ export function statusLine(a: { status: string; inFlight: { turn: number } | nul
     if (isApp) return "Needs setup on your computer";
     const parts = [];
     if (a.needs?.length) parts.push(`add ${a.needs.join(", ")} to .env`);
-    if (a.signIn?.length) parts.push(`sign in to ${a.signIn.join(", ")} with garu auth`);
+    if (a.signIn?.length) parts.push(`sign in to ${a.signIn.join(", ")} with npm run garu -- auth`);
     return `Needs setup — ${parts.join("; ")}`;
   }
   if (!a.configured) return "No Garufile found — history only";

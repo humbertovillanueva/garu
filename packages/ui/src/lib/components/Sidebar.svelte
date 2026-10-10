@@ -57,7 +57,7 @@
       </a>
     {/each}
     {#if live.loaded && live.agents.length === 0}
-      <div class="px-2 py-3 text-[12.5px] text-mute">No Garufiles found under this folder yet. <span class="mono">garu new</span> makes one.</div>
+      <div class="px-2 py-3 text-[12.5px] text-mute">No Garufiles found under this folder yet. <span class="mono">npm run garu -- new</span> makes one.</div>
     {/if}
   </nav>
 
@@ -81,7 +81,8 @@
     <span class="text-[15px] font-semibold tracking-tight">Garu</span>
   </a>
   <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute">
-    <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-ask)'}"></span>{live.connected ? "live" : "offline"}
+    <!-- "connecting" until the first connection or a drop: a fresh launch isn't offline -->
+    <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : live.disconnectedAt ? 'var(--color-ask)' : 'var(--color-mute)'}"></span>{live.connected ? "live" : live.disconnectedAt ? "offline" : "connecting"}
   </span>
   <a href={href("settings")} class="-my-2 -mr-3 grid h-11 w-11 place-items-center text-mute hover:text-fg" aria-label="Settings"><Icon name="settings" size={18} /></a>
 </header>

@@ -39,7 +39,8 @@ export function scopeFor(args: Record<string, unknown>): { key: string; value: u
 }
 
 export function describeGrant(g: Grant): string {
-  const scope = g.scope ? ` on ${g.scope.key}=${typeof g.scope.value === "string" ? g.scope.value : JSON.stringify(g.scope.value)}` : "";
+  const v = g.scope?.value;
+  const scope = g.scope ? ` on ${g.scope.key}=${typeof v === "string" ? v : Array.isArray(v) ? v.map(String).join(", ") : JSON.stringify(v)}` : "";
   return `${g.agent} → ${g.tool}${scope}`;
 }
 

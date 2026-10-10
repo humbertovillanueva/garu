@@ -47,7 +47,7 @@
 
   async function send() {
     const text = note.trim();
-    if (!a || !text) return;
+    if (!a || !text || starting) return;
     starting = true; error = null;
     try {
       await api.send(name, text);
@@ -173,8 +173,8 @@
           <div>It can't run until {a.needs.length ? `${a.needs.length === 1 ? "a key it needs is" : "keys it needs are"} added` : ""}{a.needs.length && a.signIn.length ? " and " : ""}{a.signIn.length ? `you sign in to ${a.signIn.join(", ")}` : ""}. Open Garu on that computer to finish.</div>
         {:else}
           <div class="font-medium text-fg">{a.name} can't run yet</div>
-          {#if a.needs.length}<div>Add <span class="mono text-fg">{a.needs.join(", ")}</span> to <span class="mono">.env</span>, then <span class="mono">garu service restart</span>.</div>{/if}
-          {#each a.signIn as srv}<div>Sign in to <span class="mono text-fg">{srv}</span> once: <span class="mono text-fg">garu auth {a.source} {srv}</span></div>{/each}
+          {#if a.needs.length}<div>Add <span class="mono text-fg">{a.needs.join(", ")}</span> to <span class="mono">.env</span>, then <span class="mono">npm run garu -- service restart</span>.</div>{/if}
+          {#each a.signIn as srv}<div>Sign in to <span class="mono text-fg">{srv}</span> once: <span class="mono text-fg [overflow-wrap:anywhere]">npm run garu -- auth {a.source} {srv}</span></div>{/each}
         {/if}
       </div>
     {:else if a.configured && pending.length === 0}
@@ -197,7 +197,7 @@
     <div>
       <div class="mb-2 flex items-center justify-between">
         <h2 class="text-[11px] uppercase tracking-wider text-mute">Runs</h2>
-        {#if (runs?.length ?? 0) > 5}<button class="text-[11.5px] text-mute hover:text-fg" onclick={() => (showAllRuns = !showAllRuns)}>{showAllRuns ? "show fewer" : `show all ${runs!.length}`}</button>{/if}
+        {#if (runs?.length ?? 0) > 5}<button class="tap text-[11.5px] text-mute hover:text-fg" onclick={() => (showAllRuns = !showAllRuns)}>{showAllRuns ? "show fewer" : `show all ${runs!.length}`}</button>{/if}
       </div>
       {#if runs === null}
         {#if loadError}<LoadError message={loadError} />{:else}<Skeleton rows={3} h={48} />{/if}
@@ -211,7 +211,7 @@
               <span class="text-[12.5px] text-fg-2">{humanTime(r.startedAt)}</span>
               <span class="text-[12px] text-mute">{triggerLabel(r.trigger)}</span>
               <span class="min-w-0 flex-1 truncate text-[13px] text-fg-2">{plainTimes(r.summary ?? "")}</span>
-              <span class="hidden text-[12px] text-mute sm:inline">{usd(r.costUsd, r.priced)} · {duration(r.startedAt, r.endedAt)}</span>
+              <span class="hidden text-[12px] text-mute sm:inline">{usd(r.costUsd, r.priced)}{r.endedAt ? ` · ${duration(r.startedAt, r.endedAt)}` : ""}</span>
             </a>
           {/each}
         </div>

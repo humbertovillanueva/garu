@@ -92,7 +92,7 @@
       <div class="mb-1 text-[15px] font-semibold">Welcome. Three steps to your first agent.</div>
       <p class="mb-4 text-[13.5px] text-fg-2">Garu runs agents that can only act through a policy you wrote. Nothing happens without a rule allowing it, or you approving it.</p>
       <ol class="grid gap-3 text-[13.5px] sm:grid-cols-3">
-        <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">1</div><div class="font-medium">Run <span class="mono">hello</span></div><div class="mt-0.5 text-fg-2">Open <a class="underline hover:text-fg" href={href("agent", "hello")}>hello</a> and press <span class="font-medium text-fg">Run job</span>. It reads a notes file and asks before writing a summary.</div></li>
+        <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">1</div><div class="font-medium">Run pip</div><div class="mt-0.5 text-fg-2">Open <a class="underline hover:text-fg" href={href("agent", "pip")}>pip</a> and press <span class="font-medium text-fg">Run now</span>. It reads a notes file and asks before writing a summary.</div></li>
         <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">2</div><div class="font-medium">Approve it</div><div class="mt-0.5 text-fg-2">The pause is the product. Approve once, approve for 24h, or decline with a note it reads.</div></li>
         <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">3</div><div class="font-medium">Make your own</div><div class="mt-0.5 text-fg-2"><span class="mono">npm run garu -- new</span> asks what it should do and writes a Garufile with a closed policy.</div></li>
       </ol>
@@ -107,7 +107,7 @@
           <a href={href("agent", a.name)} class="card-hover flex items-center gap-3 px-3 py-2.5 first:rounded-t-xl last:rounded-b-xl">
             <Mark name={a.name} size={26} status={a.status} />
             <span class="font-medium">{a.name}</span>
-            <span class="truncate text-[12.5px]" style="color: var(--color-ask)">{isApp ? "needs setup on your computer" : [...a.needs.map((v) => `add ${v} to .env`), ...a.signIn.map((s) => `garu auth ${a.source} ${s}`)].join(" · ")}</span>
+            <span class="min-w-0 text-[12.5px] [overflow-wrap:anywhere]" style="color: var(--color-ask)">{isApp ? "needs setup on your computer" : [...a.needs.map((v) => `add ${v} to .env`), ...a.signIn.map((s) => `npm run garu -- auth ${a.source} ${s}`)].join(" · ")}</span>
           </a>
         {/each}
       </div>
@@ -144,7 +144,7 @@
     {#if feed === null}
       {#if feedError}<LoadError message={feedError} />{:else}<Skeleton rows={4} h={52} />{/if}
     {:else if groups.length === 0}
-      <Empty title="Nothing has happened yet" hint={isApp ? "When an agent runs, what it did shows up here." : "Run one with garu run examples/pip/Garufile.yaml in your Garu folder."}>
+      <Empty title="Nothing has happened yet" hint={isApp ? "When an agent runs, what it did shows up here." : "Run one with npm run garu -- run examples/pip/Garufile.yaml in your Garu folder."}>
         {#if live.agents.length}<p class="text-[13px] text-fg-2">Or open an agent in Agents and press Run now.</p>{/if}
       </Empty>
     {:else}
@@ -165,7 +165,7 @@
                     {#if i.kind.startsWith("run.")}
                       <span style="color: {kindColor(i.kind)}">{statusLabel(i.kind.slice(4))}</span>
                     {:else if i.kind === "approval.decided"}
-                      <span class="text-fg-2">{d?.decision?.approved ? "approved" : "declined"}</span>
+                      <span class="text-fg-2">{d?.decision?.approved ? "approved" : /expired/.test(d?.decision?.by ?? "") ? "expired" : "declined"}</span>
                     {/if}
                     <span class="ml-auto flex-none text-[12px] text-mute" title={humanTime(i.ts)}>{n === 1 ? clock(i.ts) : `${clock(row.items.at(-1)!.ts)} – ${clock(i.ts)}`}</span>
                   </div>

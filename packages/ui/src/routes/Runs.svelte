@@ -95,7 +95,7 @@
                         <span class="text-fg-2">{clock(r.startedAt)}</span>
                         <span class="text-mute">{triggerLabel(r.trigger)}</span>
                         <span class="min-w-0 flex-1 truncate text-mute">{summary(r)}</span>
-                        <span class="hidden flex-none text-mute sm:inline">{duration(r.startedAt, r.endedAt)}</span>
+                        <span class="hidden flex-none text-mute sm:inline">{r.endedAt ? duration(r.startedAt, r.endedAt) : ""}</span>
                       </a>
                     {/each}
                   </div>

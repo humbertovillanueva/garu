@@ -15,7 +15,7 @@
   {#if !live.loaded}
     <Skeleton rows={3} h={84} />
   {:else if live.agents.length === 0}
-    <Empty title="No agents yet" hint={isApp ? "Agents are made on your computer. Open Garu there to make the first one." : "Make one with garu new in your Garu folder."} />
+    <Empty title="No agents yet" hint={isApp ? "Agents are made on your computer. Open Garu there to make the first one." : "Make one with npm run garu -- new in your Garu folder."} />
   {:else}
     <div class="grid gap-3 sm:grid-cols-2">
       {#each live.agents as a (a.name)}

@@ -122,7 +122,10 @@ export async function refreshNow(): Promise<void> {
   }
 }
 
+let refreshSeq = 0;
 export async function refreshCore(): Promise<void> {
+  // The newest refresh wins: an older answer that lands late can't bring back a card you just decided.
+  const mine = ++refreshSeq;
   let a: AgentsResponse, i: InboxResponse;
   try {
     [a, i] = await Promise.all([api.agents(), api.inbox()]);
@@ -130,6 +133,7 @@ export async function refreshCore(): Promise<void> {
     if (!live.loaded) live.loadError = errorText(e);
     throw e;
   }
+  if (mine !== refreshSeq) return;
   live.agents = a.agents;
   live.up = a.up;
   live.root = a.root;

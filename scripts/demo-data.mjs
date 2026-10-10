@@ -138,6 +138,7 @@ weekdayMornings(4, 7, 0).forEach((ago, i) => {
 const BEA_TOOLS = { offered: ["gmail.search_threads", "gmail.get_thread", "gmail.list_labels", "gmail.list_drafts", "gmail.label_thread", "gmail.create_draft"], hidden: [] };
 const draft = (to, subject, body, threadId, extra = {}) => ({ tool: "gmail.create_draft", args: { to: [to], subject, body, threadId }, action: "ask", rule: 5, reason: "a draft reply in your name", ms: 460, result: '{"saved":"in Drafts, not sent"}', ...extra });
 const JORDAN = draft("Jordan Lee <jordan@example.com>", "Re: Q4 plan", "Hi Jordan,\n\nThanks for sharing the Q4 plan. I'll send you my comments before our 1:1.\n\nHumberto", "18c2e7713b0c5a12");
+const SAM = draft("Sam Park <sam@example.com>", "Re: Hero image", "Hi Sam,\n\nThanks for checking. I'll get back to you about the hero image before the design review.\n\nHumberto", "18c2c9b04d1e7a55");
 const PRIYA = draft("Priya Nair <priya@example.com>", "Re: Lunch Monday?", "Hi Priya,\n\nMonday works. The Thai place on 3rd sounds good, see you at 12:30.\n\nHumberto", "18c2d1f65a2e9c40");
 const label = (name, n) => ({ tool: "gmail.label_thread", args: { threadIds: Array.from({ length: n }, () => hex() + hex()), labelIds: [`Label_${name}`] }, action: "allow", rule: 4, ms: 380, result: `{"added":["Garu/${name}"],"filed":${n}}` });
 const beaSteps = (counts, drafts) => [
@@ -153,19 +154,32 @@ const beaSteps = (counts, drafts) => [
   ...drafts.flatMap((d) => [{ turn: true, cost: 0.0006 }, d]),
   { turn: true, cost: 0.0004 },
 ];
+// Approved drafts also stay in the inbox as decided requests: that history is what Garu's
+// "stop asking?" suggestion learns from (three approvals of bea → gmail.create_draft).
+const inbox = new Inbox({ root: join(root, "inbox") });
+function approved(agent, runId, step, agoMinutes) {
+  const at = minutesAgo(agoMinutes);
+  const r = { id: hex().slice(0, 6), agent, runId, callId: crypto.randomUUID(), tool: step.tool, args: step.args, reason: step.reason,
+    createdAt: new Date(at.getTime() - 40_000).toISOString(), expiresAt: new Date(at.getTime() + 29 * 60_000).toISOString(),
+    decision: { approved: true, by: "Humberto (ui)", at: at.toISOString() } };
+  writeFileSync(join(inbox.root, `${r.id}.json`), JSON.stringify(r, null, 2));
+}
+
 // Earlier mornings, each draft approved.
 const [, ...earlier] = weekdayMornings(3, 7, 15);
 const BEA_DAYS = [
   { summary: "9 new: 1 needs a reply (draft ready), 2 receipts, 5 newsletters, 1 FYI\nPriya Nair: asks if Monday lunch still works.", counts: { Newsletters: 5, Receipts: 2, FYI: 1, "Needs reply": 1 }, drafts: [PRIYA] },
-  { summary: "12 new: 0 need a reply, 1 receipt, 9 newsletters, 2 FYI", counts: { Newsletters: 9, Receipts: 1, FYI: 2 }, drafts: [] },
+  { summary: "11 new: 1 needs a reply (draft ready), 1 receipt, 7 newsletters, 2 FYI\nSam Park: asks whether the hero image slows the page.", counts: { Newsletters: 7, Receipts: 1, FYI: 2, "Needs reply": 1 }, drafts: [SAM] },
 ];
 earlier.forEach((ago, i) => {
   const d = BEA_DAYS[i];
-  run("bea", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron:15 7 * * 1-5", ...BEA_TOOLS, endMinutesAgo: ago - 0.25, secs: 14, steps: beaSteps(d.counts, d.drafts), summary: d.summary });
+  const id = run("bea", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron:15 7 * * 1-5", ...BEA_TOOLS, endMinutesAgo: ago - 0.25, secs: 14, steps: beaSteps(d.counts, d.drafts), summary: d.summary });
+  for (const s of d.drafts) approved("bea", id, s, ago - 0.2);
 });
 // Right now: 18 new threads filed, Jordan's draft approved, paused on Lena's, waiting for you.
 const pausedRun = run("bea", { model: "gemini/gemini-3.5-flash-lite", trigger: "ui", ...BEA_TOOLS, endMinutesAgo: 0.5, secs: 12,
   steps: beaSteps({ Newsletters: 11, Receipts: 3, FYI: 2, "Needs reply": 2 }, [JORDAN, { ...draft(DRAFT.to[0], DRAFT.subject, DRAFT.body, DRAFT.threadId), pending: true }]) });
+approved("bea", pausedRun, JORDAN, 0.8);
 
 // Two pip runs on a local model: one approved write, one declined.
 const PIP_TOOLS = { offered: ["fs.read_text_file", "fs.list_directory", "fs.write_file"], hidden: ["fs.move_file", "fs.create_directory"] };
@@ -175,14 +189,15 @@ run("pip", { model: "ollama/qwen3:8b", trigger: "manual", ...PIP_TOOLS, endMinut
 run("pip", { model: "ollama/qwen3:8b", trigger: "manual", ...PIP_TOOLS, endMinutesAgo: 180, secs: 11, status: "ok", cost: 0,
   summary: "You declined the write, so I left the summary in this message instead.",
   steps: [{ turn: true, cost: 0 }, { tool: "fs.write_file", args: { path: "examples/pip/workspace/SUMMARY.md", content: "# Summary" }, action: "ask", rule: 2, approved: false, reason: "writing outside the notes folder" }, { turn: true, cost: 0 }] });
+// Tick runs on the hour, as its schedule does (so `garu ui --up` on this data has nothing to catch up).
+const sinceHour = new Date().getMinutes() + new Date().getSeconds() / 60;
 for (let h = 1; h <= 6; h++) {
-  run("tick", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron:0 * * * *", offered: ["fs.list_directory", "fs.write_file"], hidden: [], endMinutesAgo: h * 60, secs: 5, cost: 0.0016,
+  run("tick", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron:0 * * * *", offered: ["fs.list_directory", "fs.write_file"], hidden: [], endMinutesAgo: sinceHour + (h - 1) * 60 - 0.15, secs: 5, cost: 0.0016,
     summary: "Nothing new: 2 files.",
     steps: [{ turn: true, cost: 0.0003 }, { tool: "fs.list_directory", args: { path: "examples/tick/workspace" }, action: "allow", ms: 2, result: "[FILE] tick.log" }, { turn: true, cost: 0.0013 }, { tool: "fs.write_file", args: { path: "examples/tick/workspace/tick.log", content: "…" }, action: "allow", ms: 3 }] });
 }
 
 // The paused draft, waiting in the inbox.
-const inbox = new Inbox({ root: join(root, "inbox") });
 const req = {
   id: hex().slice(0, 6), agent: "bea", runId: pausedRun, callId: crypto.randomUUID(), tool: "gmail.create_draft",
   args: DRAFT, reason: "a draft reply in your name",

@@ -1,6 +1,6 @@
 <script lang="ts">
   /** What this control room is running on: keys present (never their values), sign-ins, schedules, links. */
-  import { api, live, loader } from "../lib/api.svelte";
+  import { api, live, loader, errorText } from "../lib/api.svelte";
   import { href } from "../lib/router.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import Skeleton from "../lib/components/Skeleton.svelte";
@@ -24,6 +24,7 @@
   // Pairing: a sign-in link for this same address, as a QR code. Shown only when asked, since it is a key.
   let pairOpen = $state(false);
   let pairSvg = $state<string | null>(null);
+  let pairError = $state<string | null>(null);
   let pairLink = $state<string | null>(null);
   let showToken = $state(false);
   let copied = $state(false);
@@ -46,20 +47,24 @@
     pairSvg = await QRCode.toString(pairLink, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#0a0c0f", light: "#f4f1ea" } });
   }
   async function openPair() {
-    pairOpen = true;
+    pairOpen = true; pairError = null;
     if (pairSvg) return;
-    const p = await api.pair();
-    pairToken = p.token; setOptions(p);
-    await render();
+    try {
+      const p = await api.pair();
+      pairToken = p.token; setOptions(p);
+      await render();
+    } catch (e) { pairError = `Couldn't make a pairing code: ${errorText(e)}`; pairOpen = false; }
   }
   async function choose(url: string) { chosen = url; await render(); }
   async function rotate() {
     if (!confirm("Make a new token? Every phone or computer signed in with the current one will have to scan again.")) return;
-    showToken = false;
-    const p = await api.rotateToken();
-    pairToken = p.token; setOptions(p);
-    await render();
-    rotated = true; setTimeout(() => (rotated = false), 4000);
+    showToken = false; pairError = null;
+    try {
+      const p = await api.rotateToken();
+      pairToken = p.token; setOptions(p);
+      await render();
+      rotated = true; setTimeout(() => (rotated = false), 4000);
+    } catch (e) { pairError = `Couldn't make a new token: ${errorText(e)}. The old one still works.`; }
   }
   const chosenIsLocal = $derived(/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])/.test(chosen));
   async function copyLink() {
@@ -127,6 +132,7 @@
           {#if !pairOpen}
             <p class="mb-3 text-[13.5px] text-fg-2">Install the Garu app on your phone and scan a code here to pair it.</p>
             <button class="btn" onclick={openPair}>Show pairing code</button>
+            {#if pairError}<p class="mt-2 text-[12.5px]" style="color: var(--color-bad)">{pairError}</p>{/if}
           {:else if !pairSvg}
             <Skeleton rows={1} h={180} />
           {:else}
@@ -152,7 +158,7 @@
                   <button class="btn" onclick={() => (showToken = !showToken)}>{showToken ? "Hide token" : "Show token"}</button>
                 </div>
                 {#if showToken}<div class="mono mt-2 break-all rounded-lg border hairline bg-bg px-2.5 py-2 text-[12px] select-all">{pairLink?.split("token=")[1]}</div>{/if}
-                <p class="mt-2 text-[12px] text-mute">Someone else saw it? <button class="underline hover:text-fg" onclick={rotate}>Make a new token</button>{#if rotated}<span class="ml-2" style="color: var(--color-ok)">done — other devices are signed out</span>{/if}. {#if s}It lives in <span class="mono">{shortRoot(s.login.tokenPath)}</span>.{/if}</p>
+                <p class="mt-2 text-[12px] text-mute">Someone else saw it? <button class="underline hover:text-fg" onclick={rotate}>Make a new token</button>{#if rotated}<span class="ml-2" style="color: var(--color-ok)">done — other devices are signed out</span>{/if}{#if pairError}<span class="ml-2" style="color: var(--color-bad)">{pairError}</span>{/if}. {#if s}It lives in <span class="mono">{shortRoot(s.login.tokenPath)}</span>.{/if}</p>
               </div>
             </div>
           {/if}
@@ -177,7 +183,7 @@
             <dt class="text-mute">Garu</dt><dd>version {s.version}</dd>
             <dt class="text-mute">{isApp ? "This app" : "This page"}</dt><dd class="text-[12.5px]">{buildText(build)}</dd>
             <dt class="text-mute">Deciding as</dt><dd>{s.user}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--as</span> to change</span>{/if}</dd>
-            <dt class="text-mute">Schedules</dt><dd>{s.up ? "running" : "off"}{#if !s.up && !isApp}<span class="text-mute">&nbsp;· <span class="mono">garu service install</span> runs them at login</span>{/if}</dd>
+            <dt class="text-mute">Schedules</dt><dd>{s.up ? "running" : "off"}{#if !s.up && !isApp}<span class="text-mute">&nbsp;· <span class="mono">npm run garu -- service install</span> runs them at login</span>{/if}</dd>
             <dt class="text-mute">Listening on</dt><dd class="mono">{s.host}:{s.port}</dd>
             <dt class="text-mute">Unanswered asks</dt><dd>denied after {s.askTimeoutMin} min</dd>
             <dt class="text-mute">Push</dt><dd>{s.notify ? "on (ntfy)" : "off"}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--notify</span></span>{/if}</dd>
@@ -209,9 +215,9 @@
         </div>
 
         <div class="panel p-5">
-          <div class="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute"><Icon name="globe" size={14} /> Remote tool servers</div>
+          <div class="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute"><Icon name="globe" size={14} /> Tool servers that sign in or connect</div>
           {#if s.remotes.length === 0}
-            <p class="text-[13px] text-mute">{#if isApp}None yet.{:else}None yet. A tool server can be a <span class="mono">url:</span> instead of a <span class="mono">command:</span>; servers that want a login use <span class="mono">auth: oauth</span> and <span class="mono">garu auth</span>.{/if}</p>
+            <p class="text-[13px] text-mute">{#if isApp}None yet.{:else}None yet. A tool server can be a <span class="mono">url:</span> instead of a <span class="mono">command:</span>; servers that want a login use <span class="mono">auth: oauth</span> and <span class="mono">npm run garu -- auth</span>.{/if}</p>
           {:else}
             <ul class="space-y-2.5 text-[13.5px]">
               {#each s.remotes as r (r.agent + r.server)}
@@ -221,8 +227,12 @@
                     <a href={href("agent", r.agent)} class="font-medium hover:underline">{r.agent}</a><span class="text-mute">→</span><span class="mono">{r.server}</span>
                     <span class="ml-auto text-[12px] text-mute">{r.auth === "oauth" ? (r.signedIn ? "signed in" : "not signed in") : isApp ? "key on your computer" : "headers from .env"}</span>
                   </div>
-                  <div class="mono ml-4 truncate text-[11.5px] text-mute" title={r.url}>{r.url}</div>
-                  {#if r.signedIn === false && !isApp}<div class="mono ml-4 mt-1 text-[12px]" style="color: var(--color-ask)">garu auth {r.source} {r.server}</div>{/if}
+                  {#if r.local}
+                    <div class="ml-4 text-[12px] text-mute">on this computer · signs in with {r.url.replace(/^https?:\/\//, "").replace(/\/$/, "")}</div>
+                  {:else}
+                    <div class="mono ml-4 text-[11.5px] text-mute [overflow-wrap:anywhere]">{r.url}</div>
+                  {/if}
+                  {#if r.signedIn === false && !isApp}<div class="mono ml-4 mt-1 text-[12px] [overflow-wrap:anywhere]" style="color: var(--color-ask)">npm run garu -- auth {r.source} {r.server}</div>{/if}
                 </li>
               {/each}
             </ul>

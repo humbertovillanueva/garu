@@ -54,7 +54,8 @@
 
   // The reconnect banner waits two seconds so a blink of the network doesn't flash it.
   let now = $state(Date.now());
-  $effect(() => { const t = setInterval(() => (now = Date.now()), 1000); return () => clearInterval(t); });
+  // Ticks only while disconnected (to time the banner), so a connected phone isn't woken every second.
+  $effect(() => { if (live.connected) return; now = Date.now(); const t = setInterval(() => (now = Date.now()), 1000); return () => clearInterval(t); });
   const offline = $derived(!live.connected && live.disconnectedAt > 0 && now - live.disconnectedAt > 2000);
   // Never reached it since opening: say so instead of showing skeletons forever. Settings and the help
   // pages still open, so a phone paired to a dead address can always forget it or ask for help.
@@ -69,7 +70,7 @@
 {:else if isApp && !paired()}
   <Pair />
 {:else if live.signIn}
-  {#if isApp}<Pair problem="The token it has is no longer accepted — someone may have made a new one. Pair again with a fresh code." />{:else}<SignIn />{/if}
+  {#if isApp}<Pair title="Pair this phone again" problem="The key it has is no longer accepted; someone may have made a new one. Pair again with a fresh code." />{:else}<SignIn />{/if}
 {:else}
 <div class="flex min-h-screen flex-col lg:flex-row">
   <Sidebar />
@@ -79,7 +80,7 @@
       <div class="offline" role="status">
         <span class="dot pulse" style="background: var(--color-ask)"></span>
         <span>Reconnecting to your {isApp ? "computer" : "control room"}…</span>
-        <button class="ml-auto underline" onclick={() => refreshNow()}>Try now</button>
+        <button class="tap ml-auto underline" onclick={() => refreshNow()}>Try now</button>
       </div>
     {/if}
     <div class="mx-auto max-w-5xl px-4 py-5 pb-24 sm:px-6 lg:px-10 lg:py-8 lg:pb-8">

@@ -35,7 +35,8 @@
     if (e.key === "Escape") { declining = false; note = ""; }
   }
   const scopeKey = $derived(["path", "url", "to", "recipient", "recipients", "channel", "command", "cmd", "query"].find((k) => a[k] !== undefined && a[k] !== null && (typeof a[k] !== "object" || Array.isArray(a[k]))));
-  const grantHint = $derived(scopeKey ? `Also allow ${req.tool} on this ${scopeKey} without asking, for 24 hours` : `Also allow ${req.tool} with any arguments without asking, for 24 hours`);
+  const SCOPE_WORD: Record<string, string> = { path: "file", url: "address", to: "recipient", recipient: "recipient", recipients: "recipient", channel: "channel", command: "command", cmd: "command", query: "search" };
+  const grantHint = $derived(scopeKey ? `Also allow ${req.tool} for this ${SCOPE_WORD[scopeKey] ?? scopeKey} without asking, for 24 hours` : `Also allow ${req.tool} with any arguments without asking, for 24 hours`);
 
   const tool = $derived(req.tool.split(".").slice(1).join(".") || req.tool);
   const a = $derived(req.args as Record<string, unknown>);
@@ -105,7 +106,7 @@
       </div>
       <div class="mt-0.5 text-[13px] text-fg-2">{req.reason}</div>
     </div>
-    <div class="mono flex w-full gap-3 text-[11px] text-mute sm:block sm:w-auto sm:text-right">
+    <div class="flex w-full gap-3 text-[11.5px] text-mute sm:block sm:w-auto sm:text-right">
       <div>asked {when(req.createdAt)}</div>
       <div>expires {until(req.expiresAt)}</div>
     </div>
@@ -115,28 +116,29 @@
     {#if shape === "email"}
       <div class="overflow-hidden rounded-lg border hairline bg-bg/60">
         <div class="grid grid-cols-[64px_1fr] gap-y-1 border-b hairline px-3 py-2 text-[13px]">
-          <span class="text-mute">To</span><span class="mono truncate">{(list("to") ?? list("recipients") ?? []).join(", ")}</span>
-          {#if list("cc")?.length}<span class="text-mute">Cc</span><span class="mono truncate">{list("cc")!.join(", ")}</span>{/if}
-          {#if str("subject")}<span class="text-mute">Subject</span><span class="font-medium">{str("subject")}</span>{/if}
+          <!-- Every address in full, one per line: who it goes to is what you're approving. -->
+          <span class="text-mute">To</span><span class="mono min-w-0 [overflow-wrap:anywhere]">{#each list("to") ?? list("recipients") ?? [] as x}<span class="block">{x}</span>{/each}</span>
+          {#if list("cc")?.length}<span class="text-mute">Cc</span><span class="mono min-w-0 [overflow-wrap:anywhere]">{#each list("cc")! as x}<span class="block">{x}</span>{/each}</span>{/if}
+          {#if str("subject")}<span class="text-mute">Subject</span><span class="min-w-0 font-medium [overflow-wrap:anywhere]">{str("subject")}</span>{/if}
         </div>
-        <pre class="max-h-56 overflow-auto whitespace-pre-wrap px-3 py-3 text-[13px] leading-relaxed text-fg-2">{str("body") ?? str("text") ?? str("message") ?? ""}</pre>
+        <pre class="max-h-56 overflow-auto whitespace-pre-wrap px-3 py-3 text-[13px] leading-relaxed text-fg-2 [overflow-wrap:anywhere]" style="font-family: inherit">{str("body") ?? str("text") ?? str("message") ?? ""}</pre>
       </div>
     {:else if shape === "file"}
       <div class="overflow-hidden rounded-lg border hairline bg-bg/60">
-        <div class="mono flex items-center gap-2 border-b hairline px-3 py-1.5 text-[11.5px] text-mute">
-          <span class="truncate" title={filePath}>{filePath}</span>
+        <div class="flex items-center gap-2 border-b hairline px-3 py-1.5 text-[11.5px] text-mute">
+          <span class="mono min-w-0 [overflow-wrap:anywhere]">{filePath}</span>
           <span class="ml-auto flex-none">{diffReady ? changeLabel : `${content.split("\n").length} lines · ${content.length} chars`}</span>
         </div>
         {#if diffReady}
           <pre class="mono max-h-64 overflow-auto px-0 py-2 text-[12.5px] leading-relaxed">{#each rows as r}<div class="diffline" data-t={r.t}>{#if r.t === "…"}<button class="w-full text-left text-mute" onclick={() => (wholeFile = true)}>⋯ {r.n} unchanged line{r.n === 1 ? "" : "s"}</button>{:else}<span class="sign">{r.t === "=" ? " " : r.t}</span>{r.s}{/if}</div>{/each}</pre>
-          {#if wholeFile && (diff?.unchanged ?? 0) > 0}<button class="mono border-t hairline px-3 py-1.5 text-[11px] text-mute hover:text-fg" onclick={() => (wholeFile = false)}>show only the change</button>{/if}
+          {#if wholeFile && (diff?.unchanged ?? 0) > 0}<button class="tap border-t hairline px-3 py-1.5 text-[11.5px] text-mute hover:text-fg" onclick={() => (wholeFile = false)}>show only the change</button>{/if}
         {:else}
           <pre class="mono max-h-56 overflow-auto whitespace-pre-wrap px-3 py-3 text-[12.5px] leading-relaxed text-fg-2">{content}</pre>
         {/if}
       </div>
     {:else if shape === "post"}
       <div class="overflow-hidden rounded-lg border hairline bg-bg/60">
-        <div class="mono flex flex-wrap items-center gap-x-3 border-b hairline px-3 py-1.5 text-[11.5px] text-mute">
+        <div class="flex flex-wrap items-center gap-x-3 border-b hairline px-3 py-1.5 text-[11.5px] text-mute">
           <span>{postTo ? `to ${postTo}` : "message"}</span>
           <span class="ml-auto flex-none">{postText.split("\n").length} lines · {postText.length} chars</span>
         </div>
@@ -159,7 +161,7 @@
       </div>
     {/if}
     {#if shape !== "generic"}
-      <button class="mono mt-2 text-[11px] text-mute hover:text-fg" onclick={() => (showRaw = !showRaw)}>{showRaw ? "hide" : "show"} raw arguments</button>
+      <button class="tap mt-2 text-[11.5px] text-mute hover:text-fg" onclick={() => (showRaw = !showRaw)}>{showRaw ? "hide" : "show"} raw arguments</button>
       {#if showRaw}<pre class="mono mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-md bg-bg/60 p-2 text-[11.5px] text-mute">{JSON.stringify(req.args, null, 2)}</pre>{/if}
     {/if}
   </div>
@@ -171,13 +173,13 @@
       <button class="btn btn-bad" disabled={busy} onclick={() => (declining = true)}>Decline</button>
     {/if}
     {#if error}<span class="text-[12.5px]" style="color: var(--color-bad)">{error}</span>{/if}
-    <a href={href("run", req.agent, req.runId)} class="mono ml-auto text-[11.5px] text-mute hover:text-fg">open run →</a>
+    <a href={href("run", req.agent, req.runId)} class="tap ml-auto text-[12px] text-mute hover:text-fg">open run →</a>
   </div>
   {#if declining}
     <!-- A decline can carry a reason. The agent reads it before its next step, so "wrong repo" fixes the run instead of just stopping one call. -->
     <div class="flex flex-wrap items-center gap-2 border-t hairline bg-bg/30 px-4 py-3">
       <!-- svelte-ignore a11y_autofocus -->
-      <input class="field min-w-0 flex-1" style="min-height: 36px; padding: 6px 10px" placeholder="Why? Optional — {req.agent} reads this before its next step. e.g. wrong repo, use humbertovillanueva/garu" bind:value={note} onkeydown={onNoteKey} autofocus />
+      <input class="field min-w-0 flex-1" style="min-height: 36px; padding: 6px 10px" aria-label="Why you're declining (optional)" placeholder="Why? Optional. {req.agent} reads this before its next step, e.g. shorter, and don't promise a date" bind:value={note} onkeydown={onNoteKey} autofocus />
       <button class="btn btn-bad" disabled={busy} onclick={() => decide(false)}>{note.trim() ? "Decline with note" : "Decline"}</button>
       <button class="btn" disabled={busy} onclick={() => { declining = false; note = ""; }}>Cancel</button>
     </div>

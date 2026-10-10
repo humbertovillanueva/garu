@@ -1,6 +1,6 @@
 <script lang="ts">
   /** A run's flight recorder as a timeline. Tool calls are grouped with their decision and result. */
-  import { clockExact, usd, tokens, statusLabel, decidedBy, expired } from "../format";
+  import { clockExact, usd, tokens, statusLabel, decidedBy, expired, plainTimes } from "../format";
   import Decision from "./Decision.svelte";
   import type { Envelope } from "../types";
 
@@ -44,19 +44,19 @@
           <span class="font-medium" title={e["inputTokens"] !== undefined ? `${tokens(e["inputTokens"] as number)} tokens in, ${tokens(e["outputTokens"] as number)} out` : undefined}>Turn {e["turn"]}</span>
           {#if e["totalCostUsd"] !== undefined}<span class="text-mute">{usd(e["totalCostUsd"] as number)} so far</span>{/if}
         </div>
-        {#if e["text"]}<p class="mt-1 max-w-3xl whitespace-pre-wrap text-[13.5px] leading-relaxed text-fg-2">{e["text"]}</p>{/if}
+        {#if e["text"]}<p class="mt-1 max-w-3xl whitespace-pre-wrap text-[13.5px] leading-relaxed text-fg-2">{plainTimes(String(e["text"]))}</p>{/if}
 
       {:else if row.kind === "call"}
         {@const req = e["request"] as { server: string; tool: string; args: Record<string, unknown> }}
         {@const { d, approval, waiting, result } = decisionOf(row)}
         <div class="panel overflow-hidden" style={waiting ? "border-color: color-mix(in oklab, var(--color-ask) 45%, var(--color-line))" : ""}>
-          <button class="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-left text-[13px]" onclick={() => (open[row.env.seq] = !open[row.env.seq])}>
+          <button class="tap flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-left text-[13px]" onclick={() => (open[row.env.seq] = !open[row.env.seq])}>
             <span class="mono text-mute">{clockExact(row.env.ts)}</span>
             <span class="mono font-medium">{req.server}.{req.tool}</span>
             {#if d}<Decision action={d.action} />{/if}
             {#if approval}<Decision action={approval.approved ? "allow" : "block"} label={approval.approved ? `approved by ${decidedBy(approval.by)}` : expired(approval.by) ? "expired, no answer" : `declined by ${decidedBy(approval.by)}`} />{/if}
             {#if approval?.note}<span class="text-[12.5px] italic text-fg-2">“{approval.note}”</span>{/if}
-            {#if waiting}<span class="mono pulse text-[11.5px]" style="color: var(--color-ask)">waiting for you</span>{/if}
+            {#if waiting}<span class="pulse text-[12px]" style="color: var(--color-ask)">waiting for you</span>{/if}
             {#if result}
               <span class="mono text-[12px]" style="color: {result.ok ? 'var(--color-mute)' : 'var(--color-bad)'}">{result.ok ? `ok · ${result.durationMs}ms` : `error · ${result.error ?? ''}`}</span>
             {:else if d && d.action === "block"}
@@ -77,7 +77,7 @@
           <span class="mono text-mute">{clockExact(row.env.ts)}</span>
           {#if e.type === "run.start"}<span class="text-mute">Run started{e["sandbox"] ? ", sandboxed" : ""}</span>
           {:else if e.type === "tools.offered"}<span class="text-mute">{(e["offered"] as string[]).length} tools offered{(e["hidden"] as string[]).length ? `, ${(e["hidden"] as string[]).length} more hidden because the policy always blocks them` : ""}</span>
-          {:else if e.type === "run.end"}<span class="font-medium">Run {statusLabel(e["status"] as string)}</span>{#if e["summary"]}<span class="text-fg-2">— {e["summary"]}</span>{/if}
+          {:else if e.type === "run.end"}<span class="font-medium">Run {statusLabel(e["status"] as string)}</span>{#if e["summary"]}<span class="text-fg-2">— {plainTimes(String(e["summary"]))}</span>{/if}
           {:else if e.type === "budget.exceeded"}<span style="color: var(--color-bad)">budget cap hit: {usd(e["costUsd"] as number)} ≥ {usd(e["maxCostUsd"] as number)} — {e["pendingToolCalls"]} call(s) not executed</span>
           {:else if e.type === "model.retry"}<span style="color: var(--color-ask)">model busy ({e["reason"]}) — retrying in {Math.round((e["waitMs"] as number) / 1000)}s, attempt {e["attempt"]} of {e["maxAttempts"]}</span>
           {:else if e.type === "tools.retry"}<span style="color: var(--color-ask)">tool server "{e["server"]}" didn't start in time — retrying in {Math.round((e["waitMs"] as number) / 1000)}s</span>

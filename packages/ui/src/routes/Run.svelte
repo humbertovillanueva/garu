@@ -27,7 +27,9 @@
   const a = $derived(agentByName(agent));
   const start = $derived(events?.find((e) => e.event.type === "run.start"));
   const end = $derived(events?.find((e) => e.event.type === "run.end"));
-  const status = $derived(end ? (end.event["status"] as string) : "running");
+  // No end recorded: running only if it's the agent's current run or one waiting on you; otherwise Garu stopped mid-run.
+  const live_ = $derived(a?.inFlight?.runId === runId || live.pending.some((p) => p.runId === runId));
+  const status = $derived(end ? (end.event["status"] as string) : live_ ? "running" : "interrupted");
   const cost = $derived.by(() => {
     if (end && end.event["costUsd"] !== undefined) return end.event["costUsd"] as number;
     const last = [...(events ?? [])].reverse().find((e) => e.event.type === "model.turn" && e.event["totalCostUsd"] !== undefined);
@@ -40,7 +42,7 @@
     if (t.startsWith("cron:")) return `Scheduled, ${cronLabel(t.slice(5))}`;
     if (t.startsWith("catch-up:")) return `Catch-up for ${cronLabel(t.slice(9))}`;
     if (t === "chat") return "From a message";
-    if (t === "manual") return "Started with Run now";
+    if (t === "manual" || t === "ui") return "Started with Run now";
     const w = triggerLabel(t);
     return w ? w[0]!.toUpperCase() + w.slice(1) : "";
   });

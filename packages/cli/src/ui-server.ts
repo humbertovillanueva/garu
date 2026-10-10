@@ -471,7 +471,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           if (isRemoteServer(t)) { scan(t.url); Object.values(t.headers).forEach(scan); } else { t.args.forEach(scan); Object.values(t.env).forEach(scan); }
         }
         // Remote servers, plus local ones that sign in (shown with who they sign in with).
-        const remotes = agents.flatMap((a) => a.garufile.tools.filter((t) => isRemoteServer(t) || t.auth === "oauth").map((t) => ({ agent: a.garufile.name, source: a.source, server: t.name, url: isRemoteServer(t) ? t.url : (t.oauth?.issuer ?? ""), auth: t.auth ?? "none", signedIn: t.auth === "oauth" ? signInFor(t, authRoot).signedIn() : null })));
+        const remotes = agents.flatMap((a) => a.garufile.tools.filter((t) => isRemoteServer(t) || t.auth === "oauth").map((t) => ({ agent: a.garufile.name, source: a.source, server: t.name, url: isRemoteServer(t) ? t.url : (t.oauth?.issuer ?? ""), local: !isRemoteServer(t), auth: t.auth ?? "none", signedIn: t.auth === "oauth" ? signInFor(t, authRoot).signedIn() : null })));
         return json(res, {
           version: "0.1.0",
           root: opts.root,

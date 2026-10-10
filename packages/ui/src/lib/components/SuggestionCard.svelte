@@ -38,7 +38,12 @@
         You've approved <a href={href("agent", s.agent)} class="font-semibold hover:underline">{s.agent}</a> → <span class="mono">{s.tool}</span>
         <span class="font-semibold">{s.approvals} times</span> and never declined it.
       </div>
-      <div class="mt-0.5 text-[13px] text-fg-2">Stop asking? This is the rule Garu would add, scoped to what you actually approved: <span class="text-fg">{s.summary}</span>.</div>
+      {#if s.rule.when}
+        <div class="mt-0.5 text-[13px] text-fg-2">Stop asking? This is the rule Garu would add, scoped to what you actually approved: <span class="text-fg">{s.summary}</span>.</div>
+      {:else}
+        <!-- Approvals that differ every time (drafts to different people) give a rule with no limits: say so plainly. -->
+        <div class="mt-0.5 text-[13px] text-fg-2">Stop asking? Your approvals had nothing in common to narrow it to, so this rule has no limits: <span style="color: var(--color-ask)">{s.agent} would use it every time, with anything, without you seeing it first.</span></div>
+      {/if}
     </div>
   </div>
   <pre class="mono mx-4 mt-3 overflow-auto rounded-lg border hairline bg-bg/60 px-3 py-2 text-[12px] text-fg-2">{yaml()}</pre>

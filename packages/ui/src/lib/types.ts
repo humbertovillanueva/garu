@@ -159,7 +159,7 @@ export interface Settings {
   port: number;
   providers: { gemini: boolean; anthropic: boolean; ollamaHost: boolean };
   env: { name: string; set: boolean }[];
-  remotes: { agent: string; source: string; server: string; url: string; auth: "none" | "oauth"; signedIn: boolean | null }[];
+  remotes: { agent: string; source: string; server: string; url: string; local?: boolean; auth: "none" | "oauth"; signedIn: boolean | null }[];
   notify: boolean;
   askTimeoutMin: number;
   /** required: even this computer signs in. direct: this request came from a browser on the same computer. */

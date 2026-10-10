@@ -9,7 +9,7 @@
   let what = $state("");
   let includeLog = $state(true);
   let lines = $state<string[] | null>(null);
-  let version = $state<string | null>(null);
+  let version = $state<string | null | undefined>(undefined); // undefined while still asking
   let copied = $state(false);
   let error = $state<string | null>(null);
   $effect(() => {
@@ -20,7 +20,7 @@
   const report = $derived.by(() => {
     const parts = [
       `## What happened\n\n${what.trim() || "(describe it here)"}`,
-      `## Where\n\n- ${isApp ? "Android app" : "Browser"}: ${build}\n- Garu: ${version ? `version ${version}` : "not reachable"}\n- Device: ${device}${isApp ? `\n- Paired with: ${server.base.replace(/^https?:\/\//, "").replace(/\.[^.]+\.ts\.net$/, ".….ts.net") || "—"}` : ""}`,
+      `## Where\n\n- ${isApp ? "Android app" : "Browser"}: ${build}\n- Garu: ${version === undefined ? "checking" : version ? `version ${version}` : "not reachable"}\n- Device: ${device}${isApp ? `\n- Paired with: ${server.base.replace(/^https?:\/\//, "").replace(/\.[^.]+\.ts\.net$/, ".….ts.net") || "—"}` : ""}`,
     ];
     if (includeLog && lines?.length) parts.push(`## Last lines of the service log\n\n\`\`\`\n${lines.slice(-40).join("\n")}\n\`\`\``);
     return parts.join("\n\n");

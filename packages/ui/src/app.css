@@ -76,6 +76,8 @@ body {
 .btn:disabled { opacity: .45; cursor: default; }
 /* On a touch screen every button is at least a fingertip tall (44px), Approve and Decline above all. */
 @media (pointer: coarse) { .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; } }
+/* Small text links ("open run", "see the run", "show all") get the same fingertip height on a touch screen. */
+@media (pointer: coarse) { .tap { min-height: 44px; display: inline-flex; align-items: center; } }
 .btn-primary { background: var(--color-accent); border-color: var(--color-accent); color: #141008; font-weight: 600; }
 .btn-primary:hover { background: color-mix(in oklab, var(--color-accent) 88%, white); border-color: transparent; }
 .btn-ok { border-color: color-mix(in oklab, var(--color-ok) 55%, transparent); color: var(--color-ok); }

@@ -7,7 +7,7 @@
 </script>
 
 <div class="min-w-[160px]">
-  <div class="mono flex justify-between text-[11px] text-mute">
+  <div class="flex justify-between text-[11.5px] text-mute tabular-nums">
     <span>{free ? "$0 · local/free" : usd(spent)}</span>
     {#if cap}<span>cap {usd(cap)}</span>{:else if !free}<span>no cap</span>{/if}
   </div>
