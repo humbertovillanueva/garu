@@ -8,6 +8,7 @@
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
   import type { FeedItem, ApprovalRequest } from "../lib/types";
+  import { isApp } from "../lib/server.svelte";
 
   let feed = $state<FeedItem[] | null>(null);
   $effect(() => { live.tick; api.feed(60).then((f) => (feed = f)); });
@@ -79,7 +80,7 @@
           <a href={href("agent", a.name)} class="card-hover flex items-center gap-3 px-3 py-2.5 first:rounded-t-xl last:rounded-b-xl">
             <Mark name={a.name} size={26} status={a.status} />
             <span class="font-medium">{a.name}</span>
-            <span class="mono truncate text-[12.5px]" style="color: var(--color-ask)">{[...a.needs.map((v) => `add ${v} to .env`), ...a.signIn.map((s) => `garu auth ${a.source} ${s}`)].join(" · ")}</span>
+            <span class="truncate text-[12.5px]" style="color: var(--color-ask)">{isApp ? "needs setup on your computer" : [...a.needs.map((v) => `add ${v} to .env`), ...a.signIn.map((s) => `garu auth ${a.source} ${s}`)].join(" · ")}</span>
           </a>
         {/each}
       </div>
@@ -122,7 +123,7 @@
     {:else}
       {#each groups as g (g.day)}
         <div class="mb-5">
-          <div class="mono mb-2 text-[11px] text-mute">{g.day}</div>
+          <div class="mb-2 text-[11px] text-mute">{g.day}</div>
           <div class="panel divide-y divide-line">
             {#each g.items as i (i.ts + i.kind + i.runId)}
               {@const d = i.detail as { turns?: number; costUsd?: number; toolCalls?: { allow: number; ask: number; block: number } } | ApprovalRequest | undefined}
@@ -133,19 +134,19 @@
                     <span class="font-medium">{i.agent}</span>
                     {#if i.kind.startsWith("run.")}
                       <span style="color: {kindColor(i.kind)}">{statusLabel(i.kind.slice(4))}</span>
-                      {#if d && "turns" in d}<span class="mono text-[11.5px] text-mute">{d.turns} turns · {usd(d.costUsd ?? 0)}{d.toolCalls?.block ? ` · ${d.toolCalls.block} blocked` : ""}</span>{/if}
+                      {#if d && "turns" in d && d.toolCalls?.block}<span class="text-[11.5px] text-mute">{d.toolCalls.block} blocked</span>{/if}
                     {:else if i.kind === "approval.decided"}
                       {@const r = d as ApprovalRequest}
                       <span class="text-fg-2">{r.decision?.approved ? "approved" : "declined"}</span>
                       <span class="mono text-[12px]">{i.text}</span>
-                      <span class="mono text-[11.5px] text-mute">by {r.decision?.by}</span>
+                      <span class="text-[11.5px] text-mute">by {r.decision?.by}</span>
                     {/if}
                   </div>
                   {#if i.kind.startsWith("run.") && i.text && i.text !== i.kind.slice(4)}
                     <div class="mt-0.5 line-clamp-2 text-[13px] text-fg-2">{i.text}</div>
                   {/if}
                 </div>
-                <span class="mono flex-none text-[11px] text-mute" title={i.ts}>{when(i.ts)}</span>
+                <span class="flex-none text-[11.5px] text-mute" title={i.ts}>{when(i.ts)}</span>
               </a>
             {/each}
           </div>

@@ -8,6 +8,6 @@
     <span class="h-3 w-3 rounded-full bg-accent"></span>
   </div>
   <div class="text-[15px] font-medium">{title}</div>
-  {#if hint}<div class="mono mt-2 text-[12.5px] text-mute">{hint}</div>{/if}
+  {#if hint}<div class="mt-2 text-[13px] text-mute">{hint}</div>{/if}
   {#if children}<div class="mt-4">{@render children()}</div>{/if}
 </div>

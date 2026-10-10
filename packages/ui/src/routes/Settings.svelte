@@ -67,7 +67,6 @@
 <section class="space-y-8">
   <div class="rise">
     <h1 class="text-[26px] font-semibold tracking-tight">Settings</h1>
-    <p class="mt-1 text-[14px] text-fg-2">Everything here is read from your machine. Garu has no account and no cloud; the control room is a view over the files in <span class="mono">{s ? shortRoot(s.root) : "…"}</span>.</p>
   </div>
 
   {#if error}

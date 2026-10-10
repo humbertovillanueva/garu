@@ -20,7 +20,7 @@
 
 <div class="space-y-5">
   {#each groups as g (g.day)}
-    <div class="mono text-center text-[11px] text-mute">{g.day}</div>
+    <div class="text-center text-[11px] text-mute">{g.day}</div>
     {#each g.items as m (m.id)}
       {#if m.role === "user"}
         <div class="rise flex justify-end">
@@ -28,7 +28,7 @@
             <div class="rounded-2xl rounded-br-md px-4 py-2.5 text-[14px] leading-relaxed" style="background: color-mix(in oklab, var(--color-accent) 16%, var(--color-panel-2)); border: 1px solid color-mix(in oklab, var(--color-accent) 30%, var(--color-line-2))">
               <div class="whitespace-pre-wrap">{m.text}</div>
             </div>
-            <div class="mono mt-1 text-right text-[11px] text-mute">{userName} · {clock(m.ts)}</div>
+            <div class="mt-1 text-right text-[11px] text-mute">{clock(m.ts)}</div>
           </div>
         </div>
       {:else if m.kind === "run"}
@@ -47,7 +47,7 @@
                  style={m.kind === "error" ? "background: color-mix(in oklab, var(--color-bad) 10%, var(--color-panel)); border: 1px solid color-mix(in oklab, var(--color-bad) 35%, var(--color-line))" : ""}>
               <div class="md space-y-2">{@html renderMarkdown(m.text)}</div>
             </div>
-            <div class="mono mt-1 text-[11px] text-mute">{clock(m.ts)}{#if m.runId} · <a class="hover:text-fg" href={href("run", agent, m.runId)}>open run →</a>{/if}</div>
+            <div class="mt-1 text-[11px] text-mute">{clock(m.ts)}{#if m.runId} · <a class="hover:text-fg" href={href("run", agent, m.runId)}>see the run</a>{/if}</div>
           </div>
         </div>
       {/if}

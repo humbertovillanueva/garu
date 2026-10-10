@@ -1,11 +1,10 @@
 <script lang="ts">
   import { api, live } from "../lib/api.svelte";
   import { href } from "../lib/router.svelte";
-  import { when } from "../lib/format";
+  import { when, until } from "../lib/format";
   import ReviewCard from "../lib/components/ReviewCard.svelte";
   import SuggestionCard from "../lib/components/SuggestionCard.svelte";
   import Mark from "../lib/components/Mark.svelte";
-  import { until } from "../lib/format";
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
   import type { ApprovalRequest } from "../lib/types";
@@ -18,18 +17,22 @@
     try { await api.batch(live.pending.map((p) => p.id), approve); live.tick++; } finally { busy = false; }
   }
   async function revoke(id: string) { await api.revokeGrant(id); live.tick++; }
+  // The empty state is what you see most of the time, so it says what happens next.
+  const nextUp = $derived.by(() => {
+    const soon = live.agents.filter((a) => a.nextRun && a.status === "scheduled").sort((a, b) => a.nextRun!.localeCompare(b.nextRun!))[0];
+    return soon ? `Next up: ${soon.name}, ${until(soon.nextRun)}.` : live.up ? "No schedules are set." : "Schedules aren't running right now.";
+  });
 </script>
 
 <section class="space-y-6">
   <div class="rise">
     <h1 class="text-[24px] font-semibold tracking-tight">Inbox</h1>
-    <p class="mt-1 text-[14px] text-fg-2">Actions paused on an <span class="mono">ask</span> rule. Nothing runs until you decide; if you don't, it's a no.</p>
   </div>
 
   {#if !live.loaded}
     <Skeleton rows={2} h={160} />
   {:else if live.pending.length === 0}
-    <Empty title="Nothing waiting for you" hint="your agents are either inside their policy, or idle" />
+    <Empty title="Nothing waiting for you" hint={nextUp} />
   {:else}
     {#if live.pending.length > 1}
       <div class="flex flex-wrap items-center gap-2 text-[13px]">
@@ -57,7 +60,7 @@
           <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-[13px]">
             <Mark name={g.agent} size={22} />
             <span class="mono text-fg-2">{g.label}</span>
-            <span class="mono text-[11.5px] text-mute">expires in {until(g.expiresAt)} · used {g.uses}×</span>
+            <span class="text-[12px] text-mute">until {until(g.expiresAt).replace(/^in /, "")} · used {g.uses}×</span>
             <button class="btn ml-auto py-1 text-[12px]" onclick={() => revoke(g.id)}>Revoke</button>
           </div>
         {/each}
@@ -77,7 +80,7 @@
             <span style="color: {r.decision?.approved ? 'var(--color-ok)' : 'var(--color-bad)'}">{r.decision?.approved ? "approved" : "declined"}</span>
             <span class="text-mute">by {r.decision?.by}</span>
             {#if r.decision?.note}<span class="italic text-fg-2">“{r.decision.note}”</span>{/if}
-            <span class="mono ml-auto text-[11px] text-mute">{when(r.decision?.at)}</span>
+            <span class="ml-auto text-[11.5px] text-mute">{when(r.decision?.at)}</span>
           </a>
         {/each}
       </div>

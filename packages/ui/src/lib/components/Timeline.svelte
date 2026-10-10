@@ -1,6 +1,6 @@
 <script lang="ts">
   /** A run's flight recorder as a timeline. Tool calls are grouped with their decision and result. */
-  import { clock, usd, tokens } from "../format";
+  import { clockExact, usd, tokens } from "../format";
   import Decision from "./Decision.svelte";
   import type { Envelope } from "../types";
 
@@ -40,7 +40,7 @@
 
       {#if row.kind === "turn"}
         <div class="flex flex-wrap items-baseline gap-x-3 text-[13px]">
-          <span class="mono text-mute">{clock(row.env.ts)}</span>
+          <span class="mono text-mute">{clockExact(row.env.ts)}</span>
           <span class="font-medium">turn {e["turn"]}</span>
           {#if e["inputTokens"] !== undefined}<span class="mono text-mute">{tokens(e["inputTokens"] as number)} in · {tokens(e["outputTokens"] as number)} out</span>{/if}
           {#if e["totalCostUsd"] !== undefined}<span class="mono text-mute">{usd(e["totalCostUsd"] as number)} so far</span>{/if}
@@ -52,7 +52,7 @@
         {@const { d, approval, waiting, result } = decisionOf(row)}
         <div class="panel overflow-hidden" style={waiting ? "border-color: color-mix(in oklab, var(--color-ask) 45%, var(--color-line))" : ""}>
           <button class="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-left text-[13px]" onclick={() => (open[row.env.seq] = !open[row.env.seq])}>
-            <span class="mono text-mute">{clock(row.env.ts)}</span>
+            <span class="mono text-mute">{clockExact(row.env.ts)}</span>
             <span class="mono font-medium">{req.server}.{req.tool}</span>
             {#if d}<Decision action={d.action} />{/if}
             {#if approval}<Decision action={approval.approved ? "allow" : "block"} label={approval.approved ? `approved · ${approval.by}` : `declined · ${approval.by}`} />{/if}
@@ -75,7 +75,7 @@
 
       {:else}
         <div class="flex flex-wrap items-baseline gap-x-3 text-[13px]">
-          <span class="mono text-mute">{clock(row.env.ts)}</span>
+          <span class="mono text-mute">{clockExact(row.env.ts)}</span>
           {#if e.type === "run.start"}<span class="text-mute">run started · {e["model"]}{e["sandbox"] ? " · sandboxed" : ""}</span>
           {:else if e.type === "tools.offered"}<span class="text-mute">{(e["offered"] as string[]).length} tools offered{(e["hidden"] as string[]).length ? `, ${(e["hidden"] as string[]).length} hidden (always blocked)` : ""}</span>
           {:else if e.type === "run.end"}<span class="font-medium">run {e["status"]}</span>{#if e["summary"]}<span class="text-fg-2">— {e["summary"]}</span>{/if}

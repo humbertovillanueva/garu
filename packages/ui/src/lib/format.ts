@@ -6,25 +6,57 @@ export function usd(n: number | null | undefined, priced = true): string {
   if (n < 1) return `$${n.toFixed(3)}`;
   return `$${n.toFixed(2)}`;
 }
+/* Times read the way a person says them: "3:42 PM", "Yesterday 3:42 PM", "Tue 3:42 PM", "Oct 8, 3:42 PM". Never seconds, never a Z. */
+const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+const daysBetween = (a: Date, b: Date) => Math.round((new Date(b.toDateString()).getTime() - new Date(a.toDateString()).getTime()) / 86_400_000);
+/** "3:42 PM" in the reader's locale, no seconds. */
+export function clock(iso: string | Date): string {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+/** "3:42:07 PM": only the run timeline needs seconds, where steps are seconds apart. */
+export function clockExact(iso: string | Date): string {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" });
+}
+/** Day + time, as short as the distance allows. */
+export function humanTime(iso: string | null | undefined, now = new Date()): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  const t = clock(d);
+  const days = daysBetween(d, now);
+  if (days === 0) return t;
+  if (days === 1) return `Yesterday ${t}`;
+  if (days === -1) return `Tomorrow ${t}`;
+  if (days > 1 && days < 7) return `${d.toLocaleDateString(undefined, { weekday: "short" })} ${t}`;
+  if (days < -1 && days > -7) return `${d.toLocaleDateString(undefined, { weekday: "short" })} ${t}`;
+  return `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}, ${t}`;
+}
+/** How long ago, in words; falls back to humanTime after a day. */
 export function when(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
   if (diff < 45_000) return "just now";
-  if (diff < 3_600_000) return `${Math.max(1, Math.floor(diff / 60_000))}m ago`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  if (diff < 3_600_000) return `${Math.max(1, Math.floor(diff / 60_000))} min ago`;
+  if (diff < 6 * 3_600_000) return `${Math.floor(diff / 3_600_000)} h ago`;
+  return humanTime(iso);
 }
+/** How long until, in words: "in 12 min", "in 2 h 10 min", or the day and time when it is further out. */
 export function until(iso: string | null | undefined): string {
   if (!iso) return "—";
   const diff = new Date(iso).getTime() - Date.now();
   if (diff <= 0) return "now";
-  if (diff < 60_000) return `${Math.ceil(diff / 1000)}s`;
-  if (diff < 3_600_000) return `${Math.ceil(diff / 60_000)}m`;
-  return `${Math.floor(diff / 3_600_000)}h ${Math.round((diff % 3_600_000) / 60_000)}m`;
+  if (diff < 60_000) return "in under a minute";
+  if (diff < 3_600_000) return `in ${Math.ceil(diff / 60_000)} min`;
+  if (diff < 12 * 3_600_000) return `in ${Math.floor(diff / 3_600_000)} h ${Math.round((diff % 3_600_000) / 60_000)} min`;
+  return humanTime(iso);
 }
-export function clock(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour12: false });
+/** A trigger string from the recorder, in words. */
+export function triggerLabel(t: string): string {
+  if (t.startsWith("cron:")) return "scheduled";
+  if (t.startsWith("catch-up:")) return "catch-up";
+  if (t === "chat") return "message";
+  if (t === "manual") return "run now";
+  return t;
 }
 export function dayLabel(iso: string): string {
   const d = new Date(iso); const today = new Date();
@@ -62,7 +94,7 @@ export function agentColor(name: string): string {
 export function statusLine(a: { status: string; inFlight: { turn: number } | null; pending: number; nextRun: string | null; lastRun: { status: string; startedAt: string } | null; cron: string | null; configured: boolean; needs?: string[]; signIn?: string[] }): string {
   if (a.status === "waiting") return a.pending === 1 ? "Waiting for you to approve one action" : `Waiting for you on ${a.pending} actions`;
   if (a.status === "working") return a.inFlight ? `Working — turn ${a.inFlight.turn}` : "Working";
-  if (a.status === "scheduled") return `Sleeping — next run in ${until(a.nextRun)}`;
+  if (a.status === "scheduled") return `Sleeping — next run ${until(a.nextRun)}`;
   if (a.status === "needs-setup") {
     const parts = [];
     if (a.needs?.length) parts.push(`add ${a.needs.join(", ")} to .env`);
@@ -71,7 +103,7 @@ export function statusLine(a: { status: string; inFlight: { turn: number } | nul
   }
   if (!a.configured) return "No Garufile found — history only";
   if (a.lastRun) return `Idle — last ran ${when(a.lastRun.startedAt)} (${statusLabel(a.lastRun.status)})`;
-  if (a.cron) return "Scheduled, but nothing is running the schedule — start `garu ui --up`";
+  if (a.cron) return "Has a schedule, but Garu isn't running schedules right now";
   return "Idle — hasn't run yet";
 }
 

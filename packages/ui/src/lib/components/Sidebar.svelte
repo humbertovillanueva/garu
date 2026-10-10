@@ -33,14 +33,14 @@
       <a href={href(item.n)} class="navitem" class:active={item.active()}>
         <span class="navicon"><Icon name={item.icon} size={17} /></span>
         <span>{item.label}</span>
-        {#if item.n === "inbox" && live.pending.length}<span class="mono ml-auto rounded-full px-1.5 text-[11px] font-semibold text-bg" style="background: var(--color-ask)">{live.pending.length}</span>{/if}
+        {#if item.n === "inbox" && live.pending.length}<span class="ml-auto rounded-full px-1.5 text-[11px] font-semibold text-bg" style="background: var(--color-ask)">{live.pending.length}</span>{/if}
       </a>
     {/each}
   </nav>
 
   <div class="mt-6 flex items-center justify-between px-5 text-[11px] uppercase tracking-wider text-mute">
     <a href={href("agents")} class="hover:text-fg">Agents</a>
-    <span class="mono">{live.agents.length}</span>
+    <span>{live.agents.length}</span>
   </div>
   <nav class="mt-1 flex-1 space-y-0.5 overflow-y-auto px-3 pb-3">
     {#each live.agents as a (a.name)}
@@ -93,7 +93,7 @@
     <a href={href(n)} class="tab" class:active aria-label={l}>
       <span class="relative">
         <Icon name={n} />
-        {#if n === "inbox" && live.pending.length}<span class="mono absolute -right-2.5 -top-1.5 rounded-full px-1.5 text-[10px] font-semibold leading-4 text-bg" style="background: var(--color-ask)">{live.pending.length}</span>{/if}
+        {#if n === "inbox" && live.pending.length}<span class="absolute -right-2.5 -top-1.5 rounded-full px-1.5 text-[10px] font-semibold leading-4 text-bg" style="background: var(--color-ask)">{live.pending.length}</span>{/if}
       </span>
       <span>{l}</span>
     </a>

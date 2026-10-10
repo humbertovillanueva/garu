@@ -36,6 +36,7 @@
   const maxDay = $derived(Math.max(1e-9, ...daysList.map((d) => (byDay.get(d) ?? []).reduce((s, r) => s + r.costUsd, 0))));
   const total = $derived((rows ?? []).reduce((s, r) => s + r.costUsd, 0));
   const totalRuns = $derived((rows ?? []).reduce((s, r) => s + r.runs, 0));
+  const dayWord = (d: string) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const colorFor = (agent: string) => (agentOrder.indexOf(agent) < 6 ? agentColor(agent) : "var(--color-s-other)");
 </script>
 
@@ -43,7 +44,6 @@
   <div class="rise flex flex-wrap items-end justify-between gap-3">
     <div>
       <h1 class="text-[24px] font-semibold tracking-tight">Cost</h1>
-      <p class="mt-1 text-[14px] text-fg-2">Estimated from real token counts at list price. Free tiers and local models bill $0; the estimate still shows what it would cost.</p>
     </div>
     <div class="flex items-center gap-1 text-[13px]">
       {#each [7, 14, 30] as d}
@@ -68,7 +68,7 @@
         {#each legend as a}
           <span class="inline-flex items-center gap-1.5"><span class="dot" style="background: {colorFor(a)}"></span><span class="text-fg-2">{a}</span></span>
         {/each}
-        {#if hover}<span class="mono ml-auto text-mute">{hover.day} · {hover.agent} · {usd(hover.cost)} · {hover.runs} run{hover.runs === 1 ? "" : "s"}</span>{/if}
+        {#if hover}<span class="ml-auto text-mute">{dayWord(hover.day)} · {hover.agent} · {usd(hover.cost)} · {hover.runs} run{hover.runs === 1 ? "" : "s"}</span>{/if}
       </div>
       <div class="flex h-44 items-end gap-[3px]" role="img" aria-label="Daily spend by agent">
         {#each daysList as day}
@@ -85,8 +85,8 @@
           </div>
         {/each}
       </div>
-      <div class="mono mt-2 flex justify-between text-[11px] text-mute">
-        <span>{daysList[0]}</span><span>{daysList.at(-1)}</span>
+      <div class="mt-2 flex justify-between text-[11px] text-mute">
+        <span>{dayWord(daysList[0]!)}</span><span>Today</span>
       </div>
     </div>
 
@@ -98,7 +98,7 @@
         <tbody>
           {#each rows.slice().reverse() as r (r.day + r.agent)}
             <tr class="border-b hairline last:border-0">
-              <td class="mono px-4 py-2 text-fg-2">{r.day}</td>
+              <td class="px-4 py-2 text-fg-2">{dayWord(r.day)}</td>
               <td class="px-3 py-2"><span class="flex items-center gap-2"><Mark name={r.agent} size={18} />{r.agent}</span></td>
               <td class="mono px-3 py-2 text-right">{r.runs}</td>
               <td class="mono px-3 py-2 text-right">{usd(r.costUsd)}</td>

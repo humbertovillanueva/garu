@@ -1,7 +1,7 @@
 <script lang="ts">
   import { api, live, agentByName } from "../lib/api.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, when, statusLine, statusLabel, until, duration, tokens, cronLabel } from "../lib/format";
+  import { usd, when, humanTime, statusLine, until, duration, cronLabel, triggerLabel } from "../lib/format";
   import Mark from "../lib/components/Mark.svelte";
   import Status from "../lib/components/Status.svelte";
   import Budget from "../lib/components/Budget.svelte";
@@ -157,8 +157,7 @@
         <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
           <span class="dot pulse" style="background: var(--color-ask)"></span>
           <span class="text-[14px] font-medium">{a.status === "waiting" ? "Paused for you" : "Working"}</span>
-          <span class="mono text-[12px] text-mute">{currentRunId}</span>
-          {#if a.inFlight}<span class="mono text-[12px] text-mute">turn {a.inFlight.turn}{a.maxTurns ? ` / ${a.maxTurns}` : ""}</span>{/if}
+          {#if a.inFlight}<span class="text-[12px] text-mute">turn {a.inFlight.turn}{a.maxTurns ? ` of ${a.maxTurns}` : ""}</span>{/if}
           <div class="ml-auto"><Budget spent={liveCost} cap={a.budget?.maxCostUsd ?? null} free={a.budget?.free ?? false} /></div>
         </div>
         <Timeline events={liveEvents} compact />
@@ -194,7 +193,7 @@
     <div>
       <div class="mb-2 flex items-center justify-between">
         <h2 class="text-[11px] uppercase tracking-wider text-mute">Runs</h2>
-        {#if (runs?.length ?? 0) > 5}<button class="mono text-[11px] text-mute hover:text-fg" onclick={() => (showAllRuns = !showAllRuns)}>{showAllRuns ? "show fewer" : `show all ${runs!.length}`}</button>{/if}
+        {#if (runs?.length ?? 0) > 5}<button class="text-[11.5px] text-mute hover:text-fg" onclick={() => (showAllRuns = !showAllRuns)}>{showAllRuns ? "show fewer" : `show all ${runs!.length}`}</button>{/if}
       </div>
       {#if runs === null}
         <Skeleton rows={3} h={48} />
@@ -205,10 +204,10 @@
           {#each (showAllRuns ? runs : runs.slice(0, 5)).filter((r) => r.runId !== currentRunId) as r (r.runId)}
             <a href={href("run", r.agent, r.runId)} class="card-hover flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2.5 first:rounded-t-xl last:rounded-b-xl">
               <Status status={r.status} />
-              <span class="mono text-[12.5px] text-fg-2" title={r.startedAt}>{when(r.startedAt)}</span>
-              <span class="mono text-[12px] text-mute">{r.trigger}</span>
+              <span class="text-[12.5px] text-fg-2" title={r.startedAt}>{humanTime(r.startedAt)}</span>
+              <span class="text-[12px] text-mute">{triggerLabel(r.trigger)}</span>
               <span class="min-w-0 flex-1 truncate text-[13px] text-fg-2">{r.summary ?? ""}</span>
-              <span class="mono text-[12px] text-mute">{r.turns}t · {tokens(r.inputTokens + r.outputTokens)} · {usd(r.costUsd, r.priced)} · {duration(r.startedAt, r.endedAt)}</span>
+              <span class="hidden text-[12px] text-mute sm:inline">{usd(r.costUsd, r.priced)} · {duration(r.startedAt, r.endedAt)}</span>
             </a>
           {/each}
         </div>

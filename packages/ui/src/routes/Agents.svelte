@@ -1,7 +1,7 @@
 <script lang="ts">
   import { live } from "../lib/api.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, statusLine } from "../lib/format";
+  import { statusLine } from "../lib/format";
   import Mark from "../lib/components/Mark.svelte";
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
@@ -10,12 +10,11 @@
 <section class="space-y-5">
   <div class="rise">
     <h1 class="text-[24px] font-semibold tracking-tight">Agents</h1>
-    <p class="mt-1 text-[14px] text-fg-2">Every Garufile under this folder, plus anything that has run from here.</p>
   </div>
   {#if !live.loaded}
     <Skeleton rows={3} h={84} />
   {:else if live.agents.length === 0}
-    <Empty title="No agents yet" hint="create a Garufile.yaml anywhere under this folder" />
+    <Empty title="No agents yet" hint="Make one on your computer with garu new." />
   {:else}
     <div class="grid gap-3 sm:grid-cols-2">
       {#each live.agents as a (a.name)}
@@ -24,7 +23,7 @@
           <div class="min-w-0 flex-1">
             <div class="flex items-baseline justify-between gap-2">
               <span class="truncate text-[15px] font-semibold">{a.name}</span>
-              <span class="mono text-[11.5px] text-mute">{a.runsToday} today · {usd(a.costTodayUsd)}</span>
+              <span class="text-[11.5px] text-mute">{a.runsToday ? `${a.runsToday} today` : ""}</span>
             </div>
             <div class="mt-0.5 truncate text-[13px] text-fg-2">{a.description || "—"}</div>
             <div class="mt-1 truncate text-[12.5px] text-mute">{statusLine(a)}</div>
