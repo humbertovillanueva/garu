@@ -1,12 +1,20 @@
-# Tomay — Humberto's morning brief.
+# Tomay — your day, ready before you are.
 #
-# Every weekday at 7:00 (your Mac's local time, via `garu ui --up`) Tomay reads
-# four public sources and writes a short brief to briefs/<date>.md. It can only
-# fetch from the hosts listed in the policy and can only write brief files;
-# everything else is blocked outright.
+# Every weekday at 7:00 Tomay reads today's calendar and, for each meeting with other
+# people, looks up your recent email with them and writes a prep note: who's coming,
+# what you last talked about, what's still open. It also lists your free blocks.
+#
+# It only reads. Google is asked for read-only access (the scopes below), Garu's Google
+# program has no tool that changes the calendar or sends mail, and the policy blocks
+# everything else, so even a wrong rule couldn't change anything. Its one write is today's brief, in its own folder. Nothing is posted anywhere:
+# the brief stays on this computer and in Tomay's thread on your phone.
+#
+# Needs: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env (your Google Cloud project's
+# OAuth client), then once: garu auth agents/tomay/Garufile.yaml calendar
+#                       and: garu auth agents/tomay/Garufile.yaml gmail
 
 name: tomay
-description: Writes a short morning brief — weather, Garu repo, dev.to, AI news.
+description: Reads today's calendar and writes a prep note for each meeting, from your recent email with the people in it.
 persona:
   kind: fox
   tagline: "Gathers the morning and brings it to you."
@@ -18,34 +26,57 @@ triggers:
 budget:
   maxCostUsd: 0.05
 
-maxTurns: 10
+maxTurns: 14
 
 tools:
-  - name: web
+  # Garu's own Google program (packages/mcp-google). Garu signs in and hands it a one-hour token.
+  - name: calendar
     command: node
-    args: ["packages/mcp-fetch/dist/index.js"]
-    env:
-      WEBHOOK_URL: "${BRIEF_WEBHOOK_URL}"     # Slack or Discord incoming webhook, kept in .env
+    args: ["packages/mcp-google/dist/index.js", "calendar"]
+    auth: oauth
+    oauth:
+      issuer: https://accounts.google.com
+      clientId: ${GOOGLE_CLIENT_ID}
+      clientSecret: ${GOOGLE_CLIENT_SECRET}
+      scopes:
+        - https://www.googleapis.com/auth/calendar.calendarlist.readonly
+        - https://www.googleapis.com/auth/calendar.events.readonly
+      authorizationParams: { access_type: offline, prompt: consent }
+  - name: gmail
+    command: node
+    args: ["packages/mcp-google/dist/index.js", "gmail"]
+    auth: oauth
+    oauth:
+      issuer: https://accounts.google.com
+      clientId: ${GOOGLE_CLIENT_ID}
+      clientSecret: ${GOOGLE_CLIENT_SECRET}
+      scopes:
+        - https://www.googleapis.com/auth/gmail.readonly
+      authorizationParams: { access_type: offline, prompt: consent }
   - name: fs
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem", "./agents/tomay/briefs"]
 
 policy:
-  # Reading: only these four sources, by URL.
-  - tool: "web.fetch_json"
+  # Calendar: read only. Creating, changing, deleting or answering an event is someone else's job.
+  - tool: "calendar.list_calendars"
     action: allow
-    when:
-      url: { matches: "^https://(api\\.github\\.com/|dev\\.to/api/|hn\\.algolia\\.com/api/|api\\.open-meteo\\.com/)" }
-  # Posting to your channel. The tool can only post to the one webhook in .env;
-  # the model never sees or chooses the URL, so this is allowed outright: a brief
-  # that waits for a tap at 7am is a brief nobody reads. (It was `ask` for the first
-  # few runs, until the output had earned it.)
-  - tool: "web.post_message"
+  - tool: "calendar.list_events"
     action: allow
-  - tool: "web.*"
+  - tool: "calendar.get_event"
+    action: allow
+  - tool: "calendar.*"
     action: block
-    reason: Tomay only reads from its four known sources
-  # Writing: only a dated brief inside its own folder.
+    reason: Tomay only reads your calendar
+  # Gmail: search and read, to know what you last discussed with each person. No labels, no drafts.
+  - tool: "gmail.search_threads"
+    action: allow
+  - tool: "gmail.get_thread"
+    action: allow
+  - tool: "gmail.*"
+    action: block
+    reason: Tomay only reads your email
+  # Files: only today's brief, in its own folder.
   - tool: "fs.list_*"
     action: allow
   - tool: "fs.read_*"
@@ -56,30 +87,31 @@ policy:
       path: { matches: "briefs/\\d{4}-\\d{2}-\\d{2}\\.md$" }
   - tool: "*"
     action: block
-    reason: not part of the morning brief
+    reason: not part of preparing your day
 
 prompt: |
-  You are Tomay. Write Humberto's morning brief for today (use the current date from your context).
-  Humberto is a software engineer in Salt Lake City who builds Garu, an open-source agent runtime.
+  You are Tomay. Prepare Humberto's day (use the current date and time zone from your context).
 
-  Fetch these, as many in one turn as you can:
-  1. Weather: https://api.open-meteo.com/v1/forecast?latitude=40.76&longitude=-111.89&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&timezone=America%2FDenver&forecast_days=1
-  2. Garu repo: https://api.github.com/repos/humbertovillanueva/garu
-  3. His dev.to articles: https://dev.to/api/articles?username=humbertovillanueva
-  4. Hacker News front page: https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=30&attributesToRetrieve=title,url,points,num_comments
+  1. List today's events on his calendars (list_calendars, then list_events for today only).
+  2. For each event with at least one other attendee, search his email for recent threads with those
+     people (search_threads with their addresses, last 60 days) and read the one or two most relevant
+     (get_thread). Skip events with no other attendees, but keep them in the schedule.
+  3. Call fs.list_allowed_directories to find the briefs folder, then write <that folder>/<YYYY-MM-DD>.md:
 
-  Then call fs.list_allowed_directories to get the briefs directory, and write <that directory>/<YYYY-MM-DD>.md with exactly these sections:
+  # Your day — <weekday, Month D>
+  ## Schedule
+  One line per event: time, title, and "(prep below)" when there is a note.
+  ## Free blocks
+  Gaps of 45 minutes or more between 8:00 and 18:00, as times.
+  ## <time> · <event title>
+  For each event with others, a short note:
+  - **Who:** names (and their role or company if the email makes it clear).
+  - **Last time:** one or two sentences on the most recent relevant thread, with its date.
+  - **Still open:** questions, promises or deadlines from those threads. Say "nothing open" if none.
+  - **Bring:** anything the threads say to prepare or send. Omit if nothing.
 
-  # Morning brief — <weekday, Month D>
-  ## Weather
-  One line: high/low in °F, chance of rain, plain words for the weather code (0 clear, 1-3 partly cloudy, 45-48 fog, 51-67 rain, 71-77 snow, 80-82 showers, 95+ storms).
-  ## Garu
-  Stars, forks, open issues, and when it was last pushed (relative, e.g. "9 hours ago").
-  ## Writing
-  Each dev.to article on one line: title — reactions, comments.
-  ## AI & agents on Hacker News
-  Pick up to 5 front-page stories that are about AI, agents, MCP, LLMs or developer tools. One line each: title (points) — why it matters to someone building an agent runtime, in under 15 words. If fewer than 5 qualify, list fewer. Never invent stories.
-
-  Keep the whole brief under 250 words. Plain, no hype. Do not create any other files.
-  After writing the file, post the same brief to the channel with post_message (it will ask Humberto first; if he declines, that's fine — say so and move on).
-  Finally, reply with the full text of the brief, then one closing sentence naming the single most interesting item.
+  Keep the whole brief under 400 words. Plain, no hype. Quote nothing private beyond what a prep note
+  needs. Never invent people, threads or facts; if you found no email with someone, say so.
+  Do not create any other file, and do not try to change the calendar or email.
+  Finally, reply with three or four lines: how many meetings, the one that needs the most preparation
+  and why, and the longest free block.

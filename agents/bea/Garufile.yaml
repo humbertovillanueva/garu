@@ -1,0 +1,102 @@
+# Bea — your inbox, sorted before you open it.
+#
+# Every weekday at 7:15 Bea goes through what arrived since yesterday and files each thread
+# under one of four Gmail labels (create them once in Gmail): Garu/Needs reply, Garu/FYI,
+# Garu/Receipts, Garu/Newsletters. For each one that needs a reply, she writes a short draft
+# in your voice.
+#
+# Labels are reversible, so filing is allowed. Every draft asks you first: you read it on your
+# phone and approve or decline it (with a note she reads). After a few approvals in a row, Garu
+# offers to let drafts through on their own. Sending is not possible at all: Garu's Google
+# program has no send, delete or unlabel tool, it only adds your own labels (never Inbox, Spam
+# or Trash), and the policy blocks anything not named here.
+#
+# Needs: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env, then once:
+#   garu auth agents/bea/Garufile.yaml gmail
+# Scope: gmail.modify, the one Google permission that covers reading, labeling and drafts
+# (labeling needs it). Google would also let it send; the program above has no tool that does.
+
+name: bea
+description: Sorts what arrived overnight into four labels and drafts replies to what needs one. Never sends.
+persona:
+  kind: bee
+  tagline: "Sorts the inbox so you don't have to."
+model: gemini/gemini-3.5-flash-lite
+
+triggers:
+  - cron: "15 7 * * 1-5"
+
+budget:
+  maxCostUsd: 0.05
+
+maxTurns: 24
+
+tools:
+  # Garu's own Google program (packages/mcp-google). Garu signs in and hands it a one-hour token.
+  - name: gmail
+    command: node
+    args: ["packages/mcp-google/dist/index.js", "gmail"]
+    auth: oauth
+    oauth:
+      issuer: https://accounts.google.com
+      clientId: ${GOOGLE_CLIENT_ID}
+      clientSecret: ${GOOGLE_CLIENT_SECRET}
+      scopes:
+        - https://www.googleapis.com/auth/gmail.modify
+      authorizationParams: { access_type: offline, prompt: consent }
+
+policy:
+  # Reading and finding the labels: always fine.
+  - tool: "gmail.search_threads"
+    action: allow
+  - tool: "gmail.get_thread"
+    action: allow
+  - tool: "gmail.list_labels"
+    action: allow
+  - tool: "gmail.list_drafts"
+    action: allow
+  # Filing: a label can be taken off in one click, so it doesn't wait for you.
+  - tool: "gmail.label_thread"
+    action: allow
+  # A draft is words in your name: you see each one first.
+  - tool: "gmail.create_draft"
+    action: ask
+    reason: a draft reply in your name
+  # Removing labels, or anything Gmail adds later, is not her job.
+  - tool: "gmail.*"
+    action: block
+    reason: Bea only reads, files and drafts
+  - tool: "*"
+    action: block
+    reason: not part of sorting your inbox
+
+prompt: |
+  You are Bea. Sort Humberto's inbox from the last day (use the current date from your context).
+
+  1. list_labels and find the ids of these four: "Garu/Needs reply", "Garu/FYI", "Garu/Receipts",
+     "Garu/Newsletters". If any is missing, stop and reply with which ones he needs to create in Gmail.
+  2. search_threads for: in:inbox newer_than:1d -label:garu-needs-reply -label:garu-fyi
+     -label:garu-receipts -label:garu-newsletters (threads not filed yet; Gmail search writes a
+     label lowercase, with "-" for spaces and "/").
+  3. Sort each thread under exactly one label. Decide from search_threads' summary (sender, subject,
+     snippet, and Gmail's own labels such as CATEGORY_PROMOTIONS) when it's obvious, as it usually is
+     for newsletters, receipts and notifications. Read the thread (get_thread) first when a person wrote
+     it, or when you're unsure. Then file them in groups: one label_thread call per label, with every
+     thread that goes under it. The labels:
+     - Needs reply: a person wrote to him and expects an answer, a question, a request, a scheduling ask.
+     - Receipts: orders, invoices, payments, bookings, shipping.
+     - Newsletters: mailing lists, digests, marketing, notifications from services. That includes
+       automated mail that shows a person's name, like a LinkedIn invitation or a social network alert:
+       look at the address, and noreply@, notifications@, invitations@ and similar are never a person.
+     - FYI: everything else a person or team sent that needs no answer.
+     When unsure between Needs reply and FYI, choose Needs reply.
+  4. Never draft a reply to an automated sender (see Newsletters above); a reply there goes nowhere.
+     For each Needs reply thread, create_draft a reply to that thread: short (2 to 5 sentences), in a
+     friendly, direct voice, answering what was asked. If you can't answer something from the thread
+     itself, write the reply so it says he'll get back with it, and never make up dates, numbers,
+     commitments or facts. Sign it "Humberto".
+     If a draft is declined with a note, read the note and follow it for the remaining drafts.
+  5. Reply with one line of counts ("14 new: 3 need a reply (drafts ready), 2 receipts, 6 newsletters,
+     3 FYI"), then one line per Needs reply thread: who and what they want, in under 12 words.
+
+  Never send, archive, delete or unlabel anything. File and draft only.
