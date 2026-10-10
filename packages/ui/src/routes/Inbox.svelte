@@ -59,7 +59,7 @@
         {#each live.grants as g (g.id)}
           <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-[13px]">
             <Mark name={g.agent} size={22} />
-            <span class="mono text-fg-2">{g.label}</span>
+            <span class="mono min-w-0 flex-1 basis-40 break-all text-fg-2">{g.label}</span>
             <span class="text-[12px] text-mute">until {until(g.expiresAt).replace(/^in /, "")} · used {g.uses}×</span>
             <button class="btn ml-auto py-1 text-[12px]" onclick={() => revoke(g.id)}>Revoke</button>
           </div>

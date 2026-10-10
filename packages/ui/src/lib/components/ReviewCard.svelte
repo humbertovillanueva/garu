@@ -46,6 +46,7 @@
   const content = $derived(str("content") ?? str("text") ?? "");
   const postText = $derived(str("text") ?? str("message") ?? str("content") ?? "");
   const postTo = $derived(str("channel") ?? str("room") ?? str("chat_id") ?? str("recipient"));
+  const object = $derived(shape === "file" ? fileName : shape === "email" ? "an email" : shape === "post" ? (postTo ? `a message to ${postTo}` : "a message") : "a command");
   const verb = $derived(shape === "email" ? "wants to send" : shape === "post" ? "wants to post" : shape === "file" ? "wants to write" : shape === "command" ? "wants to run" : "wants to call");
 
   // For a file write: what would actually change. Unchanged lines collapse to a little context; tap to see everything.
@@ -85,13 +86,18 @@
       <div class="flex flex-wrap items-baseline gap-x-2 text-[14px]">
         <a href={href("agent", req.agent)} class="font-semibold hover:underline">{req.agent}</a>
         <span class="text-fg-2">{verb}</span>
-        <span class="mono font-medium">{shape === "file" ? fileName : shape === "email" ? "an email" : tool}</span>
+        {#if shape === "generic"}
+          <span class="mono font-medium">{tool}</span>
+        {:else}
+          <span class="font-medium" class:mono={shape === "file"}>{object}</span>
+          <span class="mono rounded border hairline px-1.5 text-[11px] text-mute" title={req.tool}>{tool}</span>
+        {/if}
       </div>
       <div class="mt-0.5 text-[13px] text-fg-2">{req.reason}</div>
     </div>
     <div class="mono flex w-full gap-3 text-[11px] text-mute sm:block sm:w-auto sm:text-right">
       <div>asked {when(req.createdAt)}</div>
-      <div>expires in {until(req.expiresAt)}</div>
+      <div>expires {until(req.expiresAt)}</div>
     </div>
   </div>
 
@@ -120,7 +126,7 @@
       </div>
     {:else if shape === "post"}
       <div class="overflow-hidden rounded-lg border hairline bg-bg/60">
-        <div class="mono flex items-center gap-3 border-b hairline px-3 py-1.5 text-[11.5px] text-mute">
+        <div class="mono flex flex-wrap items-center gap-x-3 border-b hairline px-3 py-1.5 text-[11.5px] text-mute">
           <span>{postTo ? `to ${postTo}` : "message"}</span>
           <span class="ml-auto flex-none">{postText.split("\n").length} lines · {postText.length} chars</span>
         </div>
