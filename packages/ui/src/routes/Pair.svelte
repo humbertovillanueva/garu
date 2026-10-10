@@ -7,10 +7,10 @@
    */
   import { onDestroy } from "svelte";
   import { connectLive, live } from "../lib/api.svelte";
-  import { build, parsePairing, remember, server } from "../lib/server.svelte";
+  import { build, markIntroSeen, parsePairing, remember, server } from "../lib/server.svelte";
   import { haptic } from "../lib/native";
 
-  let { problem = null, embedded = false }: { problem?: string | null; embedded?: boolean } = $props();
+  let { problem = null, embedded = false, title = "Can't reach your control room" }: { problem?: string | null; embedded?: boolean; title?: string } = $props();
 
   let text = $state("");
   let busy = $state(false);
@@ -25,11 +25,13 @@
   async function connect(input: string) {
     const p = parsePairing(input);
     if (!p) { error = "That doesn't look like a Garu sign-in link. It should start with https:// and contain ?token=…"; return; }
+    // A code made for this computer itself can't be reached from a phone.
+    if (/^https?:\/\/(localhost|127\.|\[::1\])/.test(p.base)) { error = "This code points at the computer itself, which a phone can't reach. Garu has to be shared over Tailscale first; that needs setup on your computer (Settings → Your phone & other devices shows how)."; return; }
     busy = true; error = null;
     try {
       const res = await fetch(`${p.base}/api/agents`, { headers: { authorization: `Bearer ${p.token}` }, cache: "no-store" });
       if (res.status === 401) { error = "The control room answered, but the token is not right. Get a fresh code on your computer: Settings → Your phone & other devices."; return; }
-      if (!res.ok) { error = `The control room answered with HTTP ${res.status}.`; return; }
+      if (!res.ok) { error = "The control room had a problem answering. Try again in a moment."; return; }
       remember(p.base, p.token);
       live.signIn = false;
       connectLive(true);
@@ -83,11 +85,11 @@
     {#if embedded}
       <!-- the intro slide above carries the title and explanation -->
     {:else if server.base && problem}
-      <h1 class="text-[20px] font-semibold tracking-tight">Can't reach your control room</h1>
+      <h1 class="text-[20px] font-semibold tracking-tight">{title}</h1>
       <p class="mt-2 text-[13.5px] leading-relaxed text-fg-2">This phone is paired with <span class="mono">{server.base.replace(/^https?:\/\//, "")}</span>. {problem}</p>
     {:else}
       <h1 class="text-[20px] font-semibold tracking-tight">Connect to your control room</h1>
-      <p class="mt-2 text-[13.5px] leading-relaxed text-fg-2">Your agents run on your computer. Garu on this phone talks to them over your private network, so nothing goes through a cloud.</p>
+      <p class="mt-2 text-[13.5px] leading-relaxed text-fg-2">Your agents run on your computer. Garu on this phone talks straight to it over your private network (Tailscale); there's no Garu server in between.</p>
     {/if}
 
     {#if !embedded}
@@ -120,6 +122,12 @@
 
     {#if error}<p class="mt-3 text-[12.5px] leading-relaxed" style="color: var(--color-bad)">{error}</p>{/if}
     <p class="mt-4 text-[11.5px] leading-relaxed text-mute">The link carries a key that lets this phone approve actions as you. It is stored only on this phone.</p>
+    {#if !embedded && !problem}
+      <div class="mt-4 flex flex-wrap gap-x-4 text-[12.5px]">
+        <a class="inline-flex min-h-11 items-center text-fg underline decoration-mute underline-offset-2" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">Don't have Garu yet? ↗</a>
+        <button class="min-h-11 text-fg-2 underline decoration-mute underline-offset-2" onclick={() => { markIntroSeen(false); location.reload(); }}>See the introduction</button>
+      </div>
+    {/if}
     {#if !embedded}<p class="mt-3 text-[10.5px] text-mute">{buildText(build)}</p>{/if}
   </div>
 </div>

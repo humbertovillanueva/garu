@@ -25,6 +25,9 @@ export async function haptic(kind: "success" | "warning" | "light" = "light"): P
  * our own history instead of closing the app, and `onResume` fires when the app
  * comes back to the front (to reconnect and refresh).
  */
+/** Screens that handle Android's back gesture themselves (the intro steps back a slide). Return true when handled. */
+export const backHandlers: (() => boolean)[] = [];
+
 export async function setupNative(onResume: () => void): Promise<void> {
   if (!isApp) return;
   try {
@@ -35,6 +38,7 @@ export async function setupNative(onResume: () => void): Promise<void> {
   try {
     const { App } = await import("@capacitor/app");
     await App.addListener("backButton", ({ canGoBack }) => {
+      for (let k = backHandlers.length - 1; k >= 0; k--) if (backHandlers[k]!()) return;
       const atRoot = !location.hash || location.hash === "#/" || location.hash === "#/home";
       if (!atRoot && canGoBack) history.back();
       else void App.minimizeApp();
