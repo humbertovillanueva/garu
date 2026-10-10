@@ -115,9 +115,9 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 ## Status (2026-10-10)
 
 Built: kernel, CLI, control room, Android debug app, login service, catch-up, brand, Owner's Guide,
-launch video v6. Open: the "The website" link on the intro's pairing slide doesn't look like a link;
-the run timeline still shows seconds (allowed by a comment in `format.ts`, against the rule above:
-Humberto to decide).
+launch video v7, onboarding and UI audit fixes (2026-10-10). Open: the run timeline still shows
+seconds and "ok · 340ms" (allowed by a comment in `format.ts`, against the rule above: Humberto to
+decide). The phone app on the emulator needs a rebuild to get the new intro.
 
 Not launching yet. Order: understand → real app → Play closed test → launch → beyond. Still on the
 real-app list: crash screen, accessibility pass, theme setting, release signing (Humberto makes the
