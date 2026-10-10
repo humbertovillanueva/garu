@@ -1,17 +1,17 @@
-# Repo Watch — Every hour, check the Garu repo for new stars and issues.
+# Rook — Every Monday morning, check the Garu repo for new stars and issues.
 #
 # Made with `garu new`. The policy starts closed: only the tools named below,
 # writes ask first, everything else blocked. Edit freely; `garu validate` checks it.
 
 name: rook
-description: "Every hour, check the Garu repo for new stars and issues."
+description: "Every Monday morning, check the Garu repo for new stars and issues."
 persona:
   kind: owl
   tagline: "Watches the repo so you don't have to."
 model: gemini/gemini-3.5-flash-lite
 
 triggers:
-  - cron: "0 * * * *"        # every hour · runs while `garu ui --up` is on
+  - cron: "0 8 * * 1"        # Mondays at 8:00 local · hourly was noise while the repo is quiet
 
 budget:
   maxCostUsd: 0.05        # a run stops before it crosses this
@@ -58,7 +58,15 @@ policy:
     reason: posting to your channel
   - tool: "web.*"
     action: block
-  # Files: the server only sees ./agents/rook/workspace. Reads are fine; writes are reviewed.
+  # Files: the server only sees ./agents/rook/workspace. Reads are fine. Its own
+  # log.md is its diary, so writing there is allowed outright (it was `ask` for the
+  # first week; every ask was approved). Any other write is still reviewed.
+  - tool: "fs.write_file"
+    action: allow
+    when: { path: { matches: "(^|/)log\\.md$" } }
+  - tool: "fs.edit_file"
+    action: allow
+    when: { path: { matches: "(^|/)log\\.md$" } }
   - tool: "fs.list_*"
     action: allow
   - tool: "fs.read_*"
@@ -78,12 +86,12 @@ policy:
     reason: creating a folder
   - tool: "*"
     action: block
-    reason: not part of Repo Watch's job
+    reason: not part of Rook's job
 
 prompt: |
-  You are Repo Watch.
+  You are Rook.
 
-  Every hour, check the Garu repo for new stars and issues. Keep a dated log in your folder and tell me when something changed.
+  Every Monday morning, check the Garu repo for new stars and issues. Keep a dated log in your folder and tell me what changed since last week.
 
   The repo is humbertovillanueva/garu. Each run, in as few turns as possible:
   1. web.fetch_json https://api.github.com/repos/humbertovillanueva/garu → stargazers_count, forks_count, pushed_at.
@@ -91,7 +99,7 @@ prompt: |
   3. github.list_pull_requests with owner "humbertovillanueva", repo "garu", state "open" → the open PRs (number, title).
   4. Read log.md in your folder (fs.list_allowed_directories gives the folder; it may not exist yet).
   Then append one line to log.md: "<ISO time> — <stars> stars, <forks> forks, <N> open issues, <N> open PRs, pushed <pushed_at>".
-  Compare with the previous line. Post to the channel only when stars, forks, issues or PRs changed, naming new issues/PRs
+  Compare with the previous line. Post to the channel when stars, forks, issues or PRs changed, naming new issues/PRs
   by number and title. If nothing changed, do not post — reply "no change".
 
   You can read from api.github.com with the web tools; read this repo's issues, PRs and commits with the github tools; read files in your folder with the fs tools (writes are reviewed first); post a message to the channel with post_message (it is reviewed first).

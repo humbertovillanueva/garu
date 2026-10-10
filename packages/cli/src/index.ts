@@ -327,6 +327,27 @@ service
   });
 
 service
+  .command("restart")
+  .description("Restart the login service, e.g. after `npm run build` or a schedule change in a Garufile.")
+  .action(async () => {
+    const root = process.cwd();
+    let ok = false;
+    if (process.platform === "darwin") {
+      if (!existsSync(launchdPlistPath(root))) { stdout.write(`not installed for ${root}. \`garu service install\` sets it up.\n`); return; }
+      const uid = String(process.getuid?.() ?? 501);
+      ok = await quiet("launchctl", ["kickstart", "-k", `gui/${uid}/${launchdLabel(root)}`]);
+    } else if (process.platform === "linux") {
+      if (!existsSync(systemdUnitPath(root))) { stdout.write(`not installed for ${root}. \`garu service install\` sets it up.\n`); return; }
+      ok = await quiet("systemctl", ["--user", "restart", `${serviceName(root)}.service`]);
+    } else {
+      stderr.write(`garu service is for macOS and Linux today.\n`);
+      process.exit(1);
+    }
+    if (!ok) { stderr.write(`could not restart; try \`garu service uninstall\` then \`garu service install\`.\n`); process.exit(1); }
+    stdout.write(`✔ restarted. Garu is coming back up on the current build; \`garu service logs\` shows it.\n`);
+  });
+
+service
   .command("logs")
   .option("-n <lines>", "how many lines", "60")
   .description("Show the end of the service log.")
