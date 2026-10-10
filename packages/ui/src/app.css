@@ -98,7 +98,7 @@ textarea.field:focus, input.field:focus { border-color: color-mix(in oklab, var(
 .fact.wide { grid-column: span 2; }
 @media (max-width: 40rem) { .fact.wide { grid-column: span 1; } }
 .fact .k { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-mute); margin-bottom: 3px; }
-.fact .v { font-size: 13px; color: var(--color-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fact .v { font-size: 13px; color: var(--color-fg); overflow-wrap: anywhere; line-height: 1.35; }
 .policybar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--color-line); gap: 2px; }
 .policybar span { display: block; height: 100%; }
 

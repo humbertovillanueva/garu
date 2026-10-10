@@ -64,6 +64,8 @@ describe("RunStore", () => {
     w.record({ type: "run.start", agent: "waiting", model: "m", trigger: "manual" });
     w.record({ type: "approval.requested", callId: "c" });
     expect(summarizeRun(w.path, readRun(w.path), later)!.status).toBe("running");
+    // …but an ask expires within the hour, so a run still "waiting" hours later was killed mid-wait.
+    expect(summarizeRun(w.path, readRun(w.path), Date.now() + 3 * 60 * 60_000)!.status).toBe("interrupted");
   });
 
   it("skips corrupt logs instead of failing the listing", () => {

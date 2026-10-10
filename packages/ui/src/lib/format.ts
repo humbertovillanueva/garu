@@ -52,8 +52,8 @@ export function until(iso: string | null | undefined): string {
 }
 /** A trigger string from the recorder, in words. */
 export function triggerLabel(t: string): string {
-  if (t.startsWith("cron:")) return "scheduled";
-  if (t.startsWith("catch-up:")) return "catch-up";
+  if (t === "cron" || t.startsWith("cron:")) return "scheduled";
+  if (t === "catch-up" || t.startsWith("catch-up:")) return "catch-up";
   if (t === "chat") return "message";
   if (t === "manual") return "run now";
   return t;
@@ -80,7 +80,7 @@ export function truncate(s: string, n = 90): string {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
 export function statusLabel(s: string): string {
-  return ({ ok: "done", error: "error", running: "running", interrupted: "interrupted", blocked: "blocked", max_turns: "hit turn limit", budget_exceeded: "over budget", "run.ok": "done" } as Record<string, string>)[s] ?? s;
+  return ({ ok: "done", error: "error", running: "running", interrupted: "interrupted", blocked: "blocked", max_turns: "hit turn limit", budget_exceeded: "over budget", "run.ok": "done", "needs-setup": "needs setup", waiting: "waiting for you", working: "working", scheduled: "scheduled", idle: "idle" } as Record<string, string>)[s] ?? s;
 }
 
 /** Stable identity color per agent name. */
@@ -113,14 +113,14 @@ export function cronLabel(cron: string | null): string {
   const p = cron.trim().split(/\s+/);
   if (p.length !== 5) return cron;
   const [min, hour, dom, mon, dow] = p as [string, string, string, string, string];
-  const hhmm = (h: string, m: string) => `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
-  const dows: Record<string, string> = { "1-5": "weekdays", "0,6": "weekends", "6,0": "weekends", "*": "" };
+  const hhmm = (h: string, m: string) => { const d = new Date(2000, 0, 1, Number(h), Number(m)); return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }); };
+  const dows: Record<string, string> = { "1-5": "Weekdays", "0,6": "Weekends", "6,0": "Weekends", "*": "" };
   if (/^\*\/(\d+)$/.test(min) && hour === "*" && dom === "*" && mon === "*" && dow === "*") return `every ${min.slice(2)} min`;
   if (min === "0" && hour === "*" && dom === "*" && mon === "*" && dow === "*") return "every hour";
   if (/^\d+$/.test(min) && /^\*\/(\d+)$/.test(hour) && dom === "*" && mon === "*" && dow === "*") return `every ${hour.slice(2)} h`;
   if (/^\d+$/.test(min) && /^\d+$/.test(hour) && dom === "*" && mon === "*") {
-    const d = dows[dow] ?? (/^[0-6]$/.test(dow) ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][Number(dow)] : dow);
-    return `${d ? d + " " : "daily "}${hhmm(hour, min)}`.trim();
+    const d = dows[dow] ?? (/^[0-6]$/.test(dow) ? ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"][Number(dow)] : dow);
+    return `${d ? d + " " : "Daily "}${hhmm(hour, min)}`.trim();
   }
   return cron;
 }

@@ -39,6 +39,8 @@ export interface AgentSummary {
 
 /** A run with no run.end whose log hasn't been touched for this long was killed, not paused. */
 export const INTERRUPTED_AFTER_MS = 10 * 60_000;
+/** A run paused on an approval is quiet on purpose, but an ask expires within the hour; past this it was killed while waiting. */
+export const WAITING_INTERRUPTED_AFTER_MS = 2 * 60 * 60_000;
 
 export function summarizeRun(path: string, events: Envelope[], now = Date.now()): RunSummary | null {
   const start = events.find((e) => e.event.type === "run.start");
@@ -85,7 +87,7 @@ export function summarizeRun(path: string, events: Envelope[], now = Date.now())
     const last = events.at(-1)?.ts;
     // Waiting on an approval is legitimately quiet; anything else that's silent this long is dead.
     const waiting = events.some((e) => e.event.type === "approval.requested") && !events.some((e) => e.event.type === "approval.resolved");
-    if (last && !waiting && now - Date.parse(last) > INTERRUPTED_AFTER_MS) s.status = "interrupted";
+    if (last && now - Date.parse(last) > (waiting ? WAITING_INTERRUPTED_AFTER_MS : INTERRUPTED_AFTER_MS)) s.status = "interrupted";
   }
   return s;
 }

@@ -1,6 +1,6 @@
 <script lang="ts">
   /** Small stroke icons for navigation. One file, no icon library. */
-  let { name, size = 22 }: { name: "home" | "inbox" | "agents" | "runs" | "cost" | "settings" | "clock" | "shield" | "spark" | "key" | "globe" | "play"; size?: number } = $props();
+  let { name, size = 22 }: { name: "home" | "inbox" | "agents" | "runs" | "cost" | "settings" | "clock" | "shield" | "spark" | "key" | "globe" | "play" | "send" | "chevron"; size?: number } = $props();
 </script>
 
 <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -28,5 +28,9 @@
     <circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c2.6 2.6 3.8 5.4 3.8 8.5s-1.2 5.9-3.8 8.5c-2.6-2.6-3.8-5.4-3.8-8.5S9.4 6.1 12 3.5z" />
   {:else if name === "play"}
     <path d="M8 6.5v11l9-5.5z" />
+  {:else if name === "send"}
+    <path d="M5 12h13M12 5l7 7-7 7" />
+  {:else if name === "chevron"}
+    <path d="m9 6 6 6-6 6" />
   {/if}
 </svg>
