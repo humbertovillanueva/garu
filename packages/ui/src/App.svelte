@@ -18,6 +18,10 @@
   import { connectLive, live, refreshNow } from "./lib/api.svelte";
   import { setupNative } from "./lib/native";
   import { pullToRefresh } from "./lib/pull";
+  import { prefs } from "./lib/prefs.svelte";
+  import Help from "./routes/Help.svelte";
+  import About from "./routes/About.svelte";
+  import Report from "./routes/Report.svelte";
 
   // The app opens on a short splash every time; the first time (or when asked again from Settings) the intro follows.
   const introAtStart = isApp && !introSeen();
@@ -31,7 +35,7 @@
   /** In the app, opening it with a decision waiting lands on the inbox: open → read → approve. */
   let landed = false;
   function landOnPending() {
-    if (!isApp || !live.loaded) return;
+    if (!isApp || !live.loaded || !prefs.landOnInbox) return;
     if (live.pending.length && (route.name === "home" || !location.hash)) location.hash = href("inbox");
   }
   async function resume() { await refreshNow(); landOnPending(); }
@@ -90,6 +94,12 @@
           <Cost />
         {:else if route.name === "settings"}
           <Settings />
+        {:else if route.name === "help"}
+          <Help />
+        {:else if route.name === "about"}
+          <About />
+        {:else if route.name === "report"}
+          <Report />
         {:else}
           <Home />
         {/if}

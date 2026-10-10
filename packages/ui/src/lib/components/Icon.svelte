@@ -1,6 +1,6 @@
 <script lang="ts">
   /** Small stroke icons for navigation. One file, no icon library. */
-  let { name, size = 22 }: { name: "home" | "inbox" | "agents" | "runs" | "cost" | "settings" | "clock" | "shield" | "spark" | "key" | "globe" | "play" | "send" | "chevron"; size?: number } = $props();
+  let { name, size = 22 }: { name: "home" | "inbox" | "agents" | "runs" | "cost" | "settings" | "clock" | "shield" | "spark" | "key" | "globe" | "play" | "send" | "chevron" | "help" | "info" | "flag" | "phone" | "sliders"; size?: number } = $props();
 </script>
 
 <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -32,5 +32,15 @@
     <path d="M5 12h13M12 5l7 7-7 7" />
   {:else if name === "chevron"}
     <path d="m9 6 6 6-6 6" />
+  {:else if name === "help"}
+    <circle cx="12" cy="12" r="8.5" /><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5v.4" /><path d="M12 17h.01" />
+  {:else if name === "info"}
+    <circle cx="12" cy="12" r="8.5" /><path d="M12 11v5M12 8h.01" />
+  {:else if name === "flag"}
+    <path d="M6 20V4" /><path d="M6 4h11l-2.5 4 2.5 4H6" />
+  {:else if name === "phone"}
+    <rect x="7" y="3" width="10" height="18" rx="2" /><path d="M11 17.5h2" />
+  {:else if name === "sliders"}
+    <path d="M5 7h8M17 7h2M5 12h2M11 12h8M5 17h11M20 17h-1" /><circle cx="15" cy="7" r="2" /><circle cx="9" cy="12" r="2" /><circle cx="18" cy="17" r="2" />
   {/if}
 </svg>

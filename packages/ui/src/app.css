@@ -91,6 +91,12 @@ textarea.field:focus, input.field:focus { border-color: color-mix(in oklab, var(
 .navicon { display: grid; place-items: center; width: 18px; color: var(--color-mute); transition: color .12s ease; }
 .navitem:hover .navicon, .navitem.active .navicon { color: var(--color-fg); }
 
+/* A switch, for phone preferences */
+input.toggle { appearance: none; width: 42px; height: 24px; border-radius: 999px; background: var(--color-line-2); position: relative; flex: none; cursor: pointer; transition: background .15s ease; }
+input.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 999px; background: var(--color-fg-2); transition: transform .15s ease, background .15s ease; }
+input.toggle:checked { background: var(--color-ok); }
+input.toggle:checked::after { transform: translateX(18px); background: #fff; }
+
 /* Agent header facts */
 .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0; border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-panel); overflow: hidden; }
 .fact { padding: 10px 14px; border-right: 1px solid var(--color-line); min-width: 0; }

@@ -96,3 +96,13 @@ describe("the app's origin", () => {
     expect(isCrossSiteWrite(req({ "sec-fetch-site": "cross-site" }, "100.64.0.9", "POST"))).toBe(true);
   });
 });
+
+import { redactLogLine } from "./ui-server.js";
+describe("redactLogLine", () => {
+  it("keeps hosts and run ids, masks URL paths and anything key-shaped", () => {
+    expect(redactLogLine("POST https://hooks.slack.com/services/T000/B000/XXXXYYYYZZZZ failed")).toBe("POST https://hooks.slack.com/… failed");
+    expect(redactLogLine("token aNUBC4xzRckRCiuU8tWYtcwR8pQRAVPUAe5ZOM9Wo2U refused")).toBe("token … refused");
+    expect(redactLogLine("■ tomay: ok — 20261010-045324-4dbd6e18")).toBe("■ tomay: ok — 20261010-045324-4dbd6e18");
+    expect(redactLogLine("04:53:24 ↺ rook: missed 10:00:00 PM (cron 0 * * * *), catching up")).toBe("04:53:24 ↺ rook: missed 10:00:00 PM (cron 0 * * * *), catching up");
+  });
+});

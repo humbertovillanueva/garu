@@ -4,6 +4,7 @@
  * use, so the browser build never ships native code.
  */
 import { isApp } from "./server.svelte";
+import { prefs } from "./prefs.svelte";
 
 type Hap = typeof import("@capacitor/haptics");
 let haptics: Promise<Hap> | null = null;
@@ -11,7 +12,7 @@ const loadHaptics = () => (haptics ??= import("@capacitor/haptics"));
 
 /** A small physical confirmation. success = approve, warning = decline, light = a tap that did something. */
 export async function haptic(kind: "success" | "warning" | "light" = "light"): Promise<void> {
-  if (!isApp) return;
+  if (!isApp || !prefs.haptics) return;
   try {
     const { Haptics, ImpactStyle, NotificationType } = await loadHaptics();
     if (kind === "light") await Haptics.impact({ style: ImpactStyle.Light });

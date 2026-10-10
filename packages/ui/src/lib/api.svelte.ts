@@ -43,6 +43,7 @@ export const api = {
   startRun: (agent: string, note?: string) => post<{ started: boolean; runId: string | null }>(`/api/agents/${encodeURIComponent(agent)}/run`, { note }),
   chat: (agent: string) => get<ChatMessage[]>(`/api/agents/${encodeURIComponent(agent)}/chat`),
   settings: () => get<import("./types").Settings>("/api/settings"),
+  logs: (n = 200) => get<{ lines: string[]; path: string }>(`/api/logs?n=${n}`),
   pair: () => get<import("./types").Pair>("/api/pair"),
   rotateToken: () => post<import("./types").Pair>("/api/pair"),
   login: async (token: string) => { await post<{ ok: true }>("/api/login", { token }); live.signIn = false; connectLive(true); },

@@ -451,6 +451,15 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       }
       if (path === "/api/feed") return json(res, feed(store, inbox, Number(url.searchParams.get("limit") ?? 80)));
       if (path === "/api/cost") return json(res, store.costByDay(Number(url.searchParams.get("days") ?? 14)));
+      // The tail of the service log, for "Report a problem". Secrets never go in the log on purpose, but a
+      // webhook URL or a token could land there inside an error message, so anything key-shaped is masked.
+      if (path === "/api/logs") {
+        const n = Math.min(500, Math.max(1, Number(url.searchParams.get("n") ?? 200)));
+        const p = join(opts.root, ".garu", "ui.log");
+        if (!existsSync(p)) return json(res, { lines: [], path: p });
+        const lines = readFileSync(p, "utf8").split("\n").filter((l) => l.trim()).slice(-n).map(redactLogLine);
+        return json(res, { lines, path: p });
+      }
       if (path === "/api/settings") {
         // Only whether a key is set — never its value.
         const isSet = (k: string) => Boolean(process.env[k]);
@@ -506,6 +515,13 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
 }
 
 /** Notable moments across all agents, newest first: what happened while you were away. */
+/** Mask anything that could be a key: long opaque tokens, and the path/query of any URL (hosts stay). */
+export function redactLogLine(line: string): string {
+  return line
+    .replace(/https?:\/\/([^\s/?#]+)[^\s]*/g, (_m, host: string) => `https://${host}/…`)
+    .replace(/\b[A-Za-z0-9_-]{24,}\b/g, (m) => (/^\d{8}-\d{6}-[0-9a-f]{8}$/.test(m) ? m : "…"));
+}
+
 export function feed(store: RunStore, inbox: Inbox, limit: number) {
   type Item = { ts: string; kind: string; agent: string; runId: string; text: string; detail?: unknown };
   const items: Item[] = [];
