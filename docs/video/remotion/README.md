@@ -1,12 +1,12 @@
 # Garu launch video
 
-Remotion project for `docs/video/garu-v6-9x16.mp4` (1080×1920) and `garu-v6-16x9.mp4` (1920×1080, for the README).
+Remotion project for `docs/video/garu-v7-9x16.mp4` (1080×1920) and `garu-v7-16x9.mp4` (1920×1080, for the README). v6 told the same story with the old weather-brief Tomay.
 
 ```
 npm install
 npm run dev                                   # Remotion Studio: scrub frame by frame
-npx remotion render src/index.ts Garu-9x16 ../garu-v6-9x16.mp4 --crf=16
-npx remotion render src/index.ts Garu-16x9 ../garu-v6-16x9.mp4 --crf=16
+npx remotion render src/index.ts Garu-9x16 ../garu-v7-9x16.mp4 --crf=16
+npx remotion render src/index.ts Garu-16x9 ../garu-v7-16x9.mp4 --crf=16
 ```
 
 ## Design
@@ -20,15 +20,15 @@ Written for people who aren't developers first, with the real UI and a little re
 | Scene | Bars | What |
 |---|---|---|
 | Hook | 0–3 | "AI agents can work while you sleep." over a clock rolling to 7:00 AM; then "But would you trust one?" |
-| Meet | 3–7 | "Garu runs AI agents on your computer. On your schedule. By your rules." Tomay, Rook, Pip and Atlas, with what each does and when. |
-| Brief | 7–10 | "Wake up to your morning brief." |
-| Control | 10–14 | "It only touches what you allow." Tomay's policy in plain words; three attempts allowed, blocked, asked; the ask row grows into the approval card (no cut). |
-| Ask | 14–18 | "Nothing goes out without your OK." Tap Approve. "One tap. Then it's sent." |
-| Learn | 18–21 | "It learns what you trust." Three approvals, Garu's suggestion, Add to Garufile. |
+| Meet | 3–7 | "Garu runs AI agents on your computer. On your schedule. By your rules." Tomay, Bea, Rook and Atlas, with what each does and when. |
+| Brief | 7–10 | "Wake up to your day, ready." Tomay's brief: schedule, free blocks, prep notes. |
+| Control | 10–14 | "It only touches what you allow." Bea's policy in plain words; she files newsletters (allowed), can't send email (not possible: Garu gives her no send tool), wants to draft (asks); the ask row grows into the approval card (no cut). |
+| Ask | 14–18 | "Nothing goes out without your OK." Bea's draft to Lena; tap Approve. "One tap. Saved, not sent." |
+| Learn | 18–21 | "It learns what you trust." Three approved drafts, Garu's suggestion (`gmail.create_draft` → allow), Add to Garufile. |
 | Proof | 21–24 | Free and open source (Apache-2.0) · runs on your own computer (`npm run garu -- ui --up`) · Gemini, Claude, or fully local. |
-| Logo | 24–28 | Lands on the score's impact; tagline; "Free · Set up in five minutes"; `git clone`. |
+| Logo | 24–28 | Lands on the score's impact; tagline; "Free · Runs on your computer"; `git clone https://…`. |
 
-Data shown is Garu's: agent descriptions and schedules from the Garufiles, the brief from `scripts/demo-data.mjs`, the suggestion card and rule from `SuggestionCard.svelte` / `suggest.ts`, the startup lines `garu ui` prints, the models from the README. Tomay's post rule is shown as `ask` (as it first shipped), then the learned `allow` goes in above it, which is how the repo's Garufile got to `allow`.
+Garu's own facts are real: agent names, descriptions, schedules and rules from the Garufiles, tool names from `packages/mcp-google`, the suggestion card and the rule `suggest.ts` proposes for three drafts to different people (the whole tool), the startup lines `garu ui` prints, the models from the README. The meetings, people and emails are made up, the same ones `scripts/demo-data.mjs` seeds (example.com addresses). Bea's real Garufile keeps drafts on `ask`; the Learn scene shows what Garu offers after three approvals.
 
 `tools/score.py` synthesizes the score (150 bpm, arranged to the scenes) and the one-shots into `public/audio/`; no samples. Run it with a Python that has `numpy`: `python tools/score.py public/audio`.
 

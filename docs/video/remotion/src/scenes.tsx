@@ -113,9 +113,9 @@ export const Hook: React.FC = () => {
 
 // ================================================================= 2 · meet
 const AGENTS: { kind: Kind; name: string; what: string; when: string }[] = [
-  { kind: "fox", name: "Tomay", what: "Writes your morning brief: weather, your repo, the news.", when: "Weekdays · 7:00" },
+  { kind: "fox", name: "Tomay", what: "Reads your calendar and preps every meeting from your email.", when: "Weekdays · 7:00" },
+  { kind: "bee", name: "Bea", what: "Sorts your inbox and drafts the replies. Never sends.", when: "Weekdays · 7:15" },
   { kind: "owl", name: "Rook", what: "Checks your GitHub repo for new stars and issues.", when: "Mondays · 8:00" },
-  { kind: "cat", name: "Pip", what: "Reads your notes and tells you what's in them.", when: "When you ask" },
   { kind: "octopus", name: "Atlas", what: "Reads your backlog in Linear and says what's next.", when: "When you ask" },
 ];
 
@@ -162,11 +162,12 @@ export const Meet: React.FC = () => {
 };
 
 // ================================================================= 3 · the brief
+// Tomay's "Your day" format (agents/tomay/Garufile.yaml); the people and meetings are made up.
 const BRIEF = [
-  { k: "Weather", v: "High 71°F / Low 48°F, clear." },
-  { k: "Your repo", v: "3 stars, 1 fork, 0 open issues, pushed 2 hours ago." },
-  { k: "Your writing", v: "Make Document Pipelines Fail Loudly — 4 reactions, 1 comment." },
-  { k: "AI & agents on Hacker News", v: "Show HN: Durable Actors (212 pts)|Running agents inside Docker for dev workflows (96 pts)" },
+  { k: "Schedule", v: "10:00\u2003Design review with Lena and Sam|12:30\u2003Lunch with Priya|3:00\u2003Weekly 1:1 with Jordan|4:30\u2003Focus: write the launch post" },
+  { k: "Free blocks", v: "8:00–10:00 · 11:00–12:30 · 1:30–3:00 · 3:30–4:30" },
+  { k: "10:00 · Design review", v: "Last time: Lena sent the homepage draft.|Still open: the pricing copy she's waiting on." },
+  { k: "3:00 · 1:1 with Jordan", v: "Still open: your comments on the Q4 plan." },
 ];
 
 const Section: React.FC<{ at: number; u: number; k: string; v: string }> = ({ at, u, k, v }) => {
@@ -177,12 +178,16 @@ const Section: React.FC<{ at: number; u: number; k: string; v: string }> = ({ at
     <div style={{ marginTop: 12 * u, opacity: s, transform: `translateY(${(1 - s) * 14 * u}px)` }}>
       <div style={{ height: u * 0.6, background: C.line2, width: `${line * 100}%`, marginBottom: 10 * u }} />
       <div style={{ fontSize: 10.5 * u, letterSpacing: "0.08em", textTransform: "uppercase", color: C.mute, fontWeight: 500 }}>{k}</div>
-      {v.split("|").map((l, i) => (
-        <div key={i} style={{ marginTop: 3 * u, fontSize: 14.5 * u, color: C.fg, lineHeight: 1.4 }}>
-          {v.includes("|") ? <span style={{ color: C.mute }}>– </span> : null}
-          {l}
-        </div>
-      ))}
+      {v.split("|").map((l, i) => {
+        const [time, title] = l.includes("\u2003") ? l.split("\u2003") : [null, l];
+        return (
+          <div key={i} style={{ marginTop: 3 * u, fontSize: 14.5 * u, color: C.fg, lineHeight: 1.4 }}>
+            {v.includes("|") ? <span style={{ color: C.mute }}>– </span> : null}
+            {time ? <span style={{ display: "inline-block", minWidth: "3.3em", fontVariantNumeric: "tabular-nums" }}>{time}</span> : null}
+            {title}
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -194,7 +199,7 @@ export const Brief: React.FC = () => {
   const w = land ? 860 : 920;
   return (
     <Layout
-      head={<Headline text="Wake up to|your morning brief." at={6} size={useHeadSize()} accent={{ Wake: C.fg2, up: C.fg2, to: C.fg2 }} />}
+      head={<Headline text="Wake up to|your day, ready." at={6} size={useHeadSize()} accent={{ Wake: C.fg2, up: C.fg2, to: C.fg2 }} />}
       cam={[
         [0, 1, 0, 0],
         [S.brief.dur, 1.04, 0, 0],
@@ -205,11 +210,11 @@ export const Brief: React.FC = () => {
           <Avatar kind="fox" size={32 * u} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14 * u, fontWeight: 600 }}>Tomay</div>
-            <div style={{ fontSize: 12 * u, color: C.mute }}>Gathers the morning and brings it to you.</div>
+            <div style={{ fontSize: 11 * u, color: C.mute, whiteSpace: "nowrap" }}>Gathers the morning and brings it to you.</div>
           </div>
-          <Mono style={{ fontSize: 12 * u, color: C.mute }}>7:00 AM</Mono>
+          <span style={{ fontSize: 12 * u, color: C.mute, fontVariantNumeric: "tabular-nums" }}>7:00 AM</span>
         </div>
-        <div style={{ marginTop: 16 * u, fontSize: 19 * u, fontWeight: 600, letterSpacing: "-0.02em" }}>Morning brief — Saturday, October 10</div>
+        <div style={{ marginTop: 16 * u, fontSize: 19 * u, fontWeight: 600, letterSpacing: "-0.02em" }}>Your day — Monday, October 12</div>
         {BRIEF.map((b, i) => (
           <Section key={i} at={22 + i * 9} u={u} k={b.k} v={b.v} />
         ))}
@@ -218,19 +223,20 @@ export const Brief: React.FC = () => {
   );
 };
 
-// ================================================================= 4 · control: what Tomay may do, in plain words
-// Tomay's Garufile policy, said plainly (the post rule is `ask`, as it first shipped).
+// ================================================================= 4 · control: what Bea may do, in plain words
+// Bea's Garufile policy (agents/bea/Garufile.yaml), said plainly.
 const CAN: { d: Decision; text: string; chip: string }[] = [
-  { d: "allow", text: "Read the weather, GitHub, dev.to and Hacker News", chip: "allowed" },
-  { d: "allow", text: "Save the brief in its own folder", chip: "allowed" },
-  { d: "ask", text: "Post to your Slack", chip: "asks you first" },
+  { d: "allow", text: "Read your email", chip: "allowed" },
+  { d: "allow", text: "File it under your labels", chip: "allowed" },
+  { d: "ask", text: "Draft a reply in your name", chip: "asks you first" },
   { d: "block", text: "Anything else", chip: "blocked" },
 ];
-// Attempts from a run, in plain words; the tool and target underneath are the real ones.
-const TRIES: { at: number; say: string; tool: string; row: number }[] = [
-  { at: 34, say: "reads the weather", tool: "web.fetch_json  api.open-meteo.com", row: 0 },
-  { at: 70, say: "tries to move your files", tool: "fs.move_file  briefs/ → ~/Desktop", row: 3 },
-  { at: 106, say: "wants to post to your Slack", tool: "web.post_message  your channel", row: 2 },
+// Attempts in plain words; the tools underneath are the real ones. Garu's Gmail server has no
+// send tool at all, which is what the second line says.
+const TRIES: { at: number; say: string; tool: string; row: number; plain?: boolean; label?: string }[] = [
+  { at: 34, say: "files 11 newsletters", tool: "label_thread · Garu/Newsletters", row: 1 },
+  { at: 70, say: "can't send email", tool: "Garu gives her no send tool", row: 3, plain: true, label: "NOT POSSIBLE" },
+  { at: 106, say: "wants to draft a reply", tool: "create_draft · to Lena Ortiz", row: 2 },
 ];
 // geometry (control-room px) so the ask row can grow into the approval card exactly
 const G = { pill: 62, gap: 12, head: 46, row: 58, foot: 44 };
@@ -276,15 +282,19 @@ export const Control: React.FC = () => {
               const stamp = spring({ frame: lt - 10, fps, config: { damping: 11, mass: 0.5, stiffness: 240 } });
               return (
                 <Panel key={i} u={u} raised style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", gap: 11 * u, padding: `0 ${16 * u}px`, borderColor: lt >= 10 ? `color-mix(in oklab, ${C[d]} 55%, ${C.line2})` : C.line2, opacity: inn * (1 - leave), transform: `translateY(${(1 - inn) * -26 * u + leave * 30 * u}px)` }}>
-                  <Avatar kind="fox" size={28 * u} />
+                  <Avatar kind="bee" size={28 * u} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15 * u }}>
-                      <b style={{ fontWeight: 600 }}>Tomay</b> <span style={{ color: C.fg2 }}>{t.say}</span>
+                      <b style={{ fontWeight: 600 }}>Bea</b> <span style={{ color: C.fg2 }}>{t.say}</span>
                     </div>
-                    <Mono style={{ display: "block", fontSize: 11 * u, color: C.mute, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.tool}</Mono>
+                    {t.plain ? (
+                      <span style={{ display: "block", fontSize: 12 * u, color: C.mute, whiteSpace: "nowrap" }}>{t.tool}</span>
+                    ) : (
+                      <Mono style={{ display: "block", fontSize: 11 * u, color: C.mute, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.tool}</Mono>
+                    )}
                   </div>
                   <span style={{ opacity: lt >= 10 ? 1 : 0 }}>
-                    <Chip d={d} u={u} solid label={d === "allow" ? "ALLOWED" : d === "ask" ? "ASKS YOU" : "BLOCKED"} scale={stamp} />
+                    <Chip d={d} u={u} solid label={t.label ?? (d === "allow" ? "ALLOWED" : d === "ask" ? "ASKS YOU" : "BLOCKED")} scale={stamp} />
                   </span>
                 </Panel>
               );
@@ -292,8 +302,8 @@ export const Control: React.FC = () => {
           </div>
           <Panel u={u} raised style={{ overflow: "hidden" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 * u, height: G.head * u, padding: `0 ${16 * u}px`, borderBottom: `${u * 0.6}px solid ${C.line}` }}>
-              <Avatar kind="fox" size={22 * u} />
-              <span style={{ fontSize: 13.5 * u, fontWeight: 600 }}>What Tomay can do</span>
+              <Avatar kind="bee" size={22 * u} />
+              <span style={{ fontSize: 13.5 * u, fontWeight: 600 }}>What Bea can do</span>
             </div>
             {CAN.map((r, i) => {
               const t = cur === undefined ? null : TRIES[cur];
@@ -314,14 +324,15 @@ export const Control: React.FC = () => {
             })}
           </Panel>
           <div style={{ height: G.foot * u, display: "flex", alignItems: "center", gap: 8 * u, paddingLeft: 4 * u, fontSize: 12.5 * u, color: C.mute, fontFamily: inter }}>
-            Written as plain rules in <Mono style={{ color: C.fg2 }}>agents/tomay/Garufile.yaml</Mono>
+            Written as plain rules in <Mono style={{ color: C.fg2 }}>agents/bea/Garufile.yaml</Mono>
           </div>
         </div>
         {morphing ? (
           <div style={{ position: "absolute", left: 0, right: 0, top: (STACK / 2 + top) * u, height: h * u, borderRadius: 14 * u * m, overflow: "hidden", background: `color-mix(in oklab, rgba(217,178,76,0.14) ${(1 - m) * 100}%, ${C.panel2})`, boxShadow: `inset 0 0 0 ${u * 0.7}px color-mix(in oklab, ${C.ask} ${35 + 30 * (1 - m)}%, ${C.line2}), 0 ${30 * u * m}px ${70 * u * m}px -${24 * u}px rgba(0,0,0,.9)` }}>
-            <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: G.row * u, display: "flex", alignItems: "center", gap: 12 * u, padding: `0 ${16 * u}px`, opacity: 1 - lerp(f, MORPH.start, MORPH.start + 7, 0, 1) }}>
+            <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: G.row * u, display: "flex", alignItems: "center", gap: 12 * u, padding: `0 ${16 * u}px`, fontFamily: inter, opacity: 1 - lerp(f, MORPH.start + 4, MORPH.start + 14, 0, 1) }}>
+              <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4 * u, background: C.ask }} />
               <span style={{ width: 22 * u, height: 22 * u, borderRadius: 99, display: "grid", placeItems: "center", fontSize: 13 * u, fontWeight: 700, color: C.bg, background: C.ask }}>?</span>
-              <span style={{ flex: 1, fontSize: 15 * u, color: C.fg }}>Post to your Slack</span>
+              <span style={{ flex: 1, fontSize: 15 * u, color: C.fg }}>Draft a reply in your name</span>
               <Chip d="ask" u={u} label="asks you first" />
             </div>
             <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: CARD_H * u, opacity: lerp(f, MORPH.start + 6, MORPH.start + 20, 0, 1) }}>
@@ -344,12 +355,13 @@ const ReviewBody: React.FC<{ u: number; done?: number; tapAt?: number }> = ({ u,
     <div style={{ fontFamily: inter, color: C.fg, height: "100%", display: "flex", flexDirection: "column" }}>
       <div style={{ padding: `${18 * u}px ${18 * u}px 0` }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 11 * u }}>
-          <Avatar kind="fox" size={34 * u} ring={ok ? `rgba(67,201,121,${0.35 * done})` : "rgba(217,178,76,0.35)"} />
+          <Avatar kind="bee" size={34 * u} ring={ok ? `rgba(67,201,121,${0.35 * done})` : "rgba(217,178,76,0.35)"} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15 * u }}>
-              <b style={{ fontWeight: 600 }}>tomay</b> <span style={{ color: C.fg2 }}>wants to post</span> <b style={{ fontWeight: 600 }}>a message</b>
+              <b style={{ fontWeight: 600 }}>bea</b> <span style={{ color: C.fg2 }}>wants to draft</span> <b style={{ fontWeight: 600 }}>an email</b>{" "}
+              <Mono style={{ fontSize: 11 * u, color: C.mute, border: `${u * 0.6}px solid ${C.line2}`, borderRadius: 4 * u, padding: `0 ${5 * u}px` }}>create_draft</Mono>
             </div>
-            <div style={{ marginTop: 3 * u, fontSize: 12.5 * u, color: C.mute }}>posting the brief to your channel</div>
+            <div style={{ marginTop: 3 * u, fontSize: 12.5 * u, color: C.mute }}>a draft reply in your name</div>
           </div>
           <div style={{ position: "relative" }}>
             <div style={{ opacity: 1 - done }}>
@@ -362,19 +374,18 @@ const ReviewBody: React.FC<{ u: number; done?: number; tapAt?: number }> = ({ u,
         </div>
         <div style={{ marginTop: 14 * u, borderRadius: 9 * u, border: `${u * 0.6}px solid ${C.line}`, background: "rgba(10,12,15,0.6)", overflow: "hidden" }}>
           <div style={{ display: "flex", padding: `${6 * u}px ${12 * u}px`, borderBottom: `${u * 0.6}px solid ${C.line}`, fontFamily: mono, fontSize: 11.5 * u, color: C.mute }}>
-            <span>message</span>
-            <span style={{ marginLeft: "auto" }}>11 lines · 435 chars</span>
+            <span>To  Lena Ortiz</span>
+            <span style={{ marginLeft: "auto" }}>Re: Homepage draft</span>
           </div>
-          <div style={{ height: 76 * u, overflow: "hidden", padding: `${10 * u}px ${14 * u}px`, position: "relative" }}>
-            <div style={{ fontSize: 15 * u, fontWeight: 600, letterSpacing: "-0.01em" }}>Morning brief — Saturday, October 10</div>
-            <div style={{ marginTop: 6 * u, fontSize: 13.5 * u, color: C.fg2 }}>High 71°F / Low 48°F, clear. 3 stars, 1 fork…</div>
+          <div style={{ height: 104 * u, overflow: "hidden", padding: `${10 * u}px ${14 * u}px`, position: "relative" }}>
+            <div style={{ fontSize: 14.5 * u, color: C.fg, lineHeight: 1.45 }}>Hi Lena, thanks for sending the homepage draft, it reads well. I'll get back to you on the pricing copy before our review.</div>
             <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 24 * u, background: "linear-gradient(180deg, rgba(14,16,20,0), rgba(14,16,20,1))" }} />
           </div>
         </div>
       </div>
       <div style={{ marginTop: "auto", display: "flex", gap: 8 * u, padding: `${12 * u}px ${18 * u}px`, borderTop: `${u * 0.6}px solid ${C.line}`, background: "rgba(10,12,15,0.3)" }}>
         <div style={{ position: "relative" }}>
-          <Btn u={u} tone="ok" fill={done} scale={press}>
+          <Btn u={u} tone="ok" fill={Math.min(1, done)} scale={press}>
             {ok ? "✓ Approved" : "Approve"}
           </Btn>
           {tapAt !== undefined ? (
@@ -405,7 +416,7 @@ export const Ask: React.FC = () => {
   const logIn = useSnap(ASK.tap + 22);
   return (
     <Layout
-      head={<Swap a={<Headline text="Nothing goes out|without your OK." at={4} outAt={ASK.swap} size={hs} accent={{ OK: C.allow }} />} b={<Headline text="One tap.|Then it's sent." at={ASK.swap + 10} size={hs} accent={{ Then: C.fg2, "it's": C.fg2, sent: C.fg2 }} />} />}
+      head={<Swap a={<Headline text="Nothing goes out|without your OK." at={4} outAt={ASK.swap} size={hs} accent={{ OK: C.allow }} />} b={<Headline text="One tap.|Saved, not sent." at={ASK.swap + 10} size={hs} accent={{ Saved: C.fg2, not: C.fg2, sent: C.fg2 }} />} />}
       cam={[
         [0, 1, 0, 0],
         [ASK.tap - 24, 1.05, 0, land ? -20 : -70],
@@ -419,12 +430,12 @@ export const Ask: React.FC = () => {
           <ReviewBody u={u} done={done} tapAt={ASK.tap} />
         </div>
         <Panel u={u} style={{ position: "absolute", left: 0, right: 0, top: "100%", marginTop: 14 * u, opacity: logIn, transform: `translateY(${(1 - logIn) * 30 * u}px)`, display: "flex", alignItems: "center", gap: 11 * u, padding: `${12 * u}px ${14 * u}px` }}>
-          <Avatar kind="fox" size={26 * u} />
+          <Avatar kind="bee" size={26 * u} />
           <span style={{ fontSize: 14.5 * u }}>
-            <b style={{ fontWeight: 600 }}>Tomay</b> <span style={{ color: C.fg2 }}>posted your brief to Slack</span>
+            <b style={{ fontWeight: 600 }}>Bea</b> <span style={{ color: C.fg2 }}>saved it in Drafts</span>
           </span>
           <span style={{ marginLeft: "auto" }}>
-            <Chip d="allow" u={u} label="done" />
+            <Chip d="allow" u={u} label="not sent" />
           </span>
         </Panel>
       </div>
@@ -434,9 +445,9 @@ export const Ask: React.FC = () => {
 
 // ================================================================= 6 · it learns
 const HIST = [
-  { day: "Thu", at: 10 },
-  { day: "Fri", at: 16 },
-  { day: "Sat", at: 22 },
+  { day: "Wed", at: 10, to: "Priya" },
+  { day: "Thu", at: 16, to: "Jordan" },
+  { day: "Fri", at: 22, to: "Lena" },
 ];
 const LEARN = { card: 34, tap: 100 };
 export const LEARN_TAP = LEARN.tap;
@@ -450,7 +461,7 @@ export const Learn: React.FC = () => {
   const card = useSnap(LEARN.card, { damping: 20 });
   const added = spring({ frame: f - (LEARN.tap + 2), fps, config: { damping: 16, mass: 0.5, stiffness: 220 } });
   const yamlChars = Math.floor(lerp(f, LEARN.card + 10, LEARN.card + 34, 0, 60, Easing.linear));
-  const yaml = '- tool: "web.post_message"\n  action: allow';
+  const yaml = '- tool: "gmail.create_draft"\n  action: allow';
   const count = HIST.filter((h) => f >= h.at).length;
   return (
     <Layout
@@ -462,20 +473,20 @@ export const Learn: React.FC = () => {
       ]}
     >
       <div style={{ width: w }}>
-        <Panel u={u} style={{ overflow: "hidden", opacity: lerp(f, 0, 10, 0, 1) }}>
+        <Panel u={u} style={{ overflow: "hidden", opacity: lerp(f, 8, 16, 0, 1) }}>
           {HIST.map((h, i) => {
             if (f < h.at) return null;
             const s = spring({ frame: f - h.at, fps, config: { damping: 22, mass: 0.6, stiffness: 180 } });
             return (
               <div key={i} style={{ height: 44 * u, display: "flex", alignItems: "center", gap: 10 * u, padding: `0 ${14 * u}px`, borderTop: i ? `${u * 0.6}px solid ${C.line}` : undefined, opacity: s, transform: `translateY(${(1 - s) * 16 * u}px)` }}>
-                <Avatar kind="fox" size={22 * u} />
+                <Avatar kind="bee" size={22 * u} />
                 <span style={{ fontSize: 14 * u }}>
-                  <b style={{ fontWeight: 600 }}>Tomay</b> <span style={{ color: C.fg2 }}>posted your brief</span>
+                  <b style={{ fontWeight: 600 }}>Bea's</b> <span style={{ color: C.fg2 }}>draft to {h.to}</span>
                 </span>
                 <span style={{ marginLeft: "auto" }}>
                   <Chip d="allow" u={u} label="you approved" />
                 </span>
-                <Mono style={{ width: 34 * u, textAlign: "right", fontSize: 12 * u, color: C.mute }}>{h.day}</Mono>
+                <span style={{ width: 34 * u, textAlign: "right", fontSize: 12 * u, color: C.mute }}>{h.day}</span>
               </div>
             );
           })}
@@ -484,9 +495,9 @@ export const Learn: React.FC = () => {
         <div style={{ height: 16 * u }} />
         <Panel u={u} raised style={{ overflow: "hidden", borderColor: `color-mix(in oklab, ${C.allow} ${30 + 30 * added}%, ${C.line2})`, opacity: card, transform: `translateY(${(1 - card) * 70}px) scale(${0.97 + 0.03 * card})`, boxShadow: `0 ${30 * u}px ${70 * u}px -${24 * u}px rgba(0,0,0,.9), 0 0 ${100 * Math.max(0, 1 - (f - LEARN.tap) / 18) * (f >= LEARN.tap ? 1 : 0)}px rgba(67,201,121,0.4)` }}>
           <div style={{ display: "flex", gap: 11 * u, padding: `${16 * u}px ${16 * u}px 0` }}>
-            <Avatar kind="fox" size={30 * u} />
+            <Avatar kind="bee" size={30 * u} />
             <div style={{ flex: 1, fontSize: 14 * u, lineHeight: 1.45 }}>
-              You've approved <b style={{ fontWeight: 600 }}>tomay</b> → <Mono style={{ fontSize: 13 * u }}>web.post_message</Mono> <b style={{ fontWeight: 600 }}>3 times</b> and never declined it.
+              You've approved <span style={{ whiteSpace: "nowrap" }}><b style={{ fontWeight: 600 }}>bea</b> → <Mono style={{ fontSize: 13 * u }}>gmail.create_draft</Mono></span> <b style={{ fontWeight: 600, whiteSpace: "nowrap" }}>3 times</b> and never declined it.
               <div style={{ marginTop: 3 * u, fontSize: 13 * u, color: C.fg2 }}>Stop asking? This is the rule Garu would add.</div>
             </div>
           </div>
@@ -521,7 +532,7 @@ export const Learn: React.FC = () => {
                 <Btn u={u}>Not now</Btn>
               </>
             ) : (
-              <span style={{ fontSize: 14 * u, color: C.allow, opacity: added, transform: `translateY(${(1 - added) * 10}px)` }}>✓ From now on, Tomay posts your brief without asking.</span>
+              <span style={{ fontSize: 14 * u, color: C.allow, opacity: added, transform: `translateY(${(1 - added) * 10}px)` }}>✓ Drafts now save without asking. Never sent.</span>
             )}
           </div>
         </Panel>
@@ -583,14 +594,14 @@ export const Proof: React.FC = () => {
             ))}
             <Mono style={{ marginLeft: 8 * u, fontSize: 11.5 * u, color: C.mute }}>~/garu</Mono>
           </div>
-          <div style={{ padding: `${14 * u}px ${16 * u}px ${16 * u}px`, fontFamily: mono, fontSize: 14 * u, lineHeight: 1.75, color: C.fg2 }}>
+          <div style={{ padding: `${14 * u}px ${16 * u}px ${16 * u}px`, fontFamily: mono, fontSize: (land ? 14 : 12.5) * u, lineHeight: 1.75, color: C.fg2 }}>
             <div>
               <span style={{ color: C.allow }}>$</span> <span style={{ color: C.fg }}>{typed}</span>
             </div>
             <div style={{ opacity: l1 >= 20 ? 1 : 0 }}>
               <span style={{ color: C.fg }}>garu control room</span> → <span style={{ color: C.paper, textDecoration: "underline" }}>http://127.0.0.1:4000</span>
             </div>
-            <div style={{ opacity: l1 >= 24 ? 1 : 0 }}>running 3 cron schedule(s)</div>
+            <div style={{ opacity: l1 >= 24 ? 1 : 0 }}>running 4 cron schedule(s)</div>
           </div>
         </Panel>
       </ProofBeat>
@@ -660,9 +671,9 @@ export const Logo: React.FC = () => {
       </svg>
       <div style={{ marginTop: 32, fontFamily: inter, fontWeight: 700, fontSize: land ? 88 : 112, letterSpacing: "-0.045em", color: C.paper, opacity: word, transform: `translateY(${(1 - word) * 30}px)` }}>Garu</div>
       <div style={{ marginTop: 6, fontFamily: inter, fontWeight: 500, fontSize: land ? 38 : 46, letterSpacing: "-0.02em", color: C.fg2, opacity: tag, transform: `translateY(${(1 - tag) * 24}px)`, textAlign: "center", padding: "0 60px" }}>Always-on agents you can actually trust.</div>
-      <div style={{ marginTop: land ? 40 : 60, fontFamily: inter, fontWeight: 600, fontSize: land ? 30 : 36, color: C.paper, opacity: sub, transform: `translateY(${(1 - sub) * 20}px)` }}>Free · Set up in five minutes</div>
-      <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 16, padding: land ? "16px 28px" : "20px 32px", borderRadius: 18, background: C.panel2, boxShadow: `inset 0 0 0 2px ${C.line2}`, fontFamily: mono, fontSize: land ? 25 : 28, color: C.fg, opacity: cta, transform: `translateY(${(1 - cta) * 24}px)` }}>
-        <span style={{ color: C.allow }}>$</span> git clone github.com/humbertovillanueva/garu
+      <div style={{ marginTop: land ? 40 : 60, fontFamily: inter, fontWeight: 600, fontSize: land ? 30 : 36, color: C.paper, opacity: sub, transform: `translateY(${(1 - sub) * 20}px)` }}>Free · Runs on your computer</div>
+      <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 16, padding: land ? "16px 28px" : "20px 32px", borderRadius: 18, background: C.panel2, boxShadow: `inset 0 0 0 2px ${C.line2}`, fontFamily: mono, fontSize: land ? 24 : 23, color: C.fg, opacity: cta, transform: `translateY(${(1 - cta) * 24}px)` }}>
+        <span style={{ color: C.allow }}>$</span> git clone https://github.com/humbertovillanueva/garu
       </div>
     </AbsoluteFill>
   );

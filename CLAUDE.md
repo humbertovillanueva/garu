@@ -132,6 +132,6 @@ Plan, Google setup steps and what's next (onboarding, video): `docs/agents-plan.
 
 ## Launch video
 
-v6 is done (`docs/video/garu-v6-9x16.mp4`, `garu-v6-16x9.mp4`); to be redone around the new agents.
-Source, commands, scenes and the rules for the next cut: `docs/video/remotion/README.md`. Every
-name, schedule, rule and model on screen must be Garu's real data.
+v7 (`docs/video/garu-v7-9x16.mp4`, `garu-v7-16x9.mp4`, 2026-10-10) tells it with Tomay and Bea; v6
+had the old weather Tomay. Source, commands, scenes and rules: `docs/video/remotion/README.md`.
+Garu's own facts on screen are real; sample meetings and emails are made up (example.com).

@@ -22,7 +22,7 @@ export const useSnap = (at: number, cfg: { damping?: number; mass?: number; stif
 };
 
 // ---------------------------------------------------------------- agent faces (ported from Creature.svelte / Mark.svelte)
-const KIND_COLOR = { fox: "#d0663a", turtle: "#2a9d78", owl: "#4f8fd9", cat: "#9a6fd0", octopus: "#d05a8a" } as const;
+const KIND_COLOR = { fox: "#d0663a", turtle: "#2a9d78", owl: "#4f8fd9", bee: "#c9a227", cat: "#9a6fd0", octopus: "#d05a8a" } as const;
 export type Kind = keyof typeof KIND_COLOR;
 
 const Face: React.FC<{ kind: Kind }> = ({ kind }) => {
@@ -61,7 +61,21 @@ const Face: React.FC<{ kind: Kind }> = ({ kind }) => {
         <circle cx="40" cy="30" r="8.5" fill="#f4f1ea" />
         <circle cx="25.5" cy="31" r="3.6" fill="#0a0c0f" />
         <circle cx="38.5" cy="31" r="3.6" fill="#0a0c0f" />
-        <path d="M32 36.5 L29.5 41 L34.5 41 Z" fill="#f2a93b" stroke="none" />
+        <path d="M32 36.5 L29.5 41 L34.5 41 Z" fill="#f4f1ea" stroke="none" />
+      </g>
+    );
+  if (kind === "bee")
+    return (
+      <g {...g}>
+        <ellipse cx="26" cy="21" rx="10" ry="6" fill="#f4f1ea" opacity=".92" transform="rotate(-25 26 21)" />
+        <ellipse cx="40" cy="21" rx="10" ry="6" fill="#f4f1ea" opacity=".92" transform="rotate(25 40 21)" />
+        <ellipse cx="34" cy="38" rx="17" ry="12" fill="#f4f1ea" opacity=".35" />
+        <ellipse cx="34" cy="38" rx="17" ry="12" />
+        <path d="M27 27.5 v21 M35 26 v24 M43 29 v18" />
+        <circle cx="16" cy="37" r="7" fill="#f4f1ea" opacity=".9" />
+        <circle cx="14" cy="36" r="1.8" fill="#0a0c0f" stroke="none" />
+        <path d="M13 30 l-3 -6 M18 29 l1 -7" />
+        <path d="M51 40 l6 3" />
       </g>
     );
   if (kind === "octopus")
@@ -147,7 +161,7 @@ export const Headline: React.FC<{ text: string; at: number; outAt?: number; size
             const i = k++;
             const s = spring({ frame: f - at - i * 2.5, fps, config: { damping: 24, mass: 0.6, stiffness: 160 } });
             const o = outAt === undefined ? 0 : lerp(f, outAt + i * 1.2, outAt + 9 + i * 1.2, 0, 1, Easing.in(Easing.cubic));
-            const key = w.replace(/[.,]/g, "");
+            const key = w.replace(/[.,?!]/g, "");
             return (
               <span key={i} style={{ display: "inline-block", overflow: "hidden", paddingBottom: size * 0.12, marginBottom: -size * 0.12 }}>
                 <span style={{ display: "inline-block", transform: `translateY(${(1 - s) * 105 - o * 105}%)`, color: accent?.[key] ?? color }}>{w}</span>
