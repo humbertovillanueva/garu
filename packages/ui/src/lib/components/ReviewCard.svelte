@@ -4,7 +4,7 @@
    * One paused tool call, shown as the thing it is: an email looks like an email,
    * a file write shows the file, a command shows the command. Approve or Decline.
    */
-  import { api, live } from "../api.svelte";
+  import { api, live, refreshCore, errorText } from "../api.svelte";
   import { href } from "../router.svelte";
   import { until, when } from "../format";
   import Mark from "./Mark.svelte";
@@ -18,8 +18,17 @@
   let declining = $state(false);
   let note = $state("");
   async function decide(approve: boolean, forDuration?: string) {
+    if (busy) return; // a second tap, or Enter pressed twice in the note, decides nothing
     busy = true; error = null;
-    try { await api.decide(req.id, approve, forDuration, approve ? undefined : note.trim() || undefined); live.tick++; void haptic(approve ? "success" : "warning"); } catch (e) { error = String((e as Error).message ?? e); } finally { busy = false; }
+    try {
+      await api.decide(req.id, approve, forDuration, approve ? undefined : note.trim() || undefined);
+      void haptic(approve ? "success" : "warning");
+      // The card leaves now instead of when the live stream catches up, so it can't be tapped again.
+      // It stays busy until then: there is nothing left to decide on it.
+      live.pending = live.pending.filter((p) => p.id !== req.id);
+      live.tick++;
+      void refreshCore().catch(() => {});
+    } catch (e) { error = errorText(e); busy = false; }
   }
   function onNoteKey(e: KeyboardEvent) {
     if (e.key === "Enter") { e.preventDefault(); void decide(false); }

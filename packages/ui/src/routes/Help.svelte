@@ -29,7 +29,7 @@
       "Everything lives on your computer as plain files. There is no Garu account and no Garu server.",
     ] },
     { title: "When something looks wrong", body: [
-      "\"Schedules are off\": Garu is running without its schedules. On your computer, install the login service (garu service install) and they start at every login.",
+      "\"Schedules are off\": Garu is running without its schedules. On your computer, set Garu to start at login (Settings → Advanced there shows how) and they run from then on.",
       "\"Needs setup on your computer\": the agent references a key or a sign-in that isn't there yet. Finish it in the control room on that computer.",
       "\"Reconnecting…\": the phone can't reach your computer. Check that it's awake and that Tailscale is on, on both ends.",
       "A run shown as interrupted was killed before it finished, usually because Garu was stopped while it was waiting on you.",

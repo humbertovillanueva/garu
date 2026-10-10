@@ -36,6 +36,7 @@ import {
   FileOAuthProvider,
   lineDiff,
   diffStats,
+  localDay,
 } from "@garu/kernel";
 import { authenticate, clearSessionCookie, corsHeaders, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, rotateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
 import { SeenHosts, tailscaleAddresses, type Address } from "./ui-addresses.js";
@@ -195,8 +196,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
   const agentView = (a: DiscoveredAgent | undefined, name: string) => {
     const g = a?.garufile;
     const runs = store.runs(name);
-    const today = new Date().toISOString().slice(0, 10);
-    const todays = runs.filter((r) => r.startedAt.slice(0, 10) === today);
+    const today = localDay(new Date());
+    const todays = runs.filter((r) => localDay(r.startedAt) === today);
     const pending = inbox.pending().filter((p) => p.agent === name);
     const inFlight = live.get(name);
     const cron = g?.triggers.find((t) => t.cron)?.cron ?? null;

@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Recorder } from "./recorder.js";
-import { RunStore, summarizeRun } from "./store.js";
+import { RunStore, localDay, summarizeRun } from "./store.js";
 import { readRun } from "./recorder.js";
 
 function makeRun(root: string, agent: string, opts: { status?: "ok" | "error"; cost?: number; day?: string } = {}) {
@@ -89,10 +89,22 @@ describe("RunStore", () => {
     expect(sums[2]).toMatchObject({ runs: 0, lastRun: null, model: null });
 
     const byDay = store.costByDay();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDay(new Date());
     expect(byDay).toEqual([
       { day: today, agent: "a", costUsd: expect.closeTo(0.03, 6), runs: 2 },
       { day: today, agent: "b", costUsd: expect.closeTo(0.5, 6), runs: 1 },
     ]);
+  });
+
+  it("puts a run on the owner's calendar day, not UTC's", () => {
+    const tz = process.env["TZ"];
+    process.env["TZ"] = "America/Denver";
+    try {
+      // 01:30 UTC on the 11th is 7:30 PM on the 10th in Denver
+      expect(localDay("2026-10-11T01:30:00.000Z")).toBe("2026-10-10");
+      expect(localDay(new Date("2026-10-10T15:00:00.000Z"))).toBe("2026-10-10");
+    } finally {
+      if (tz === undefined) delete process.env["TZ"]; else process.env["TZ"] = tz;
+    }
   });
 });

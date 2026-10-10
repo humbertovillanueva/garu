@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { KIND_COLOR } from "../lib/colors";
   /**
    * First launch of the app: a short splash, then five screens that answer the
    * questions a stranger has, in order, ending on the pairing screen itself.
@@ -28,12 +29,12 @@
   };
 
   const kinds = [
-    { kind: "owl", name: "Owl", does: "watches things", color: "#4f8fd9" },
-    { kind: "fox", name: "Fox", does: "brings you news", color: "#d0663a" },
-    { kind: "turtle", name: "Turtle", does: "keeps a log", color: "#2a9d78" },
-    { kind: "bee", name: "Bee", does: "works in a box", color: "#c9a227" },
-    { kind: "cat", name: "Cat", does: "reads for you", color: "#9a6fd0" },
-    { kind: "octopus", name: "Octopus", does: "juggles tasks", color: "#d05a8a" },
+    { kind: "owl", name: "Owl", does: "watches things", color: KIND_COLOR.owl },
+    { kind: "fox", name: "Fox", does: "brings you news", color: KIND_COLOR.fox },
+    { kind: "turtle", name: "Turtle", does: "keeps a log", color: KIND_COLOR.turtle },
+    { kind: "bee", name: "Bee", does: "works in a box", color: KIND_COLOR.bee },
+    { kind: "cat", name: "Cat", does: "reads for you", color: KIND_COLOR.cat },
+    { kind: "octopus", name: "Octopus", does: "juggles tasks", color: KIND_COLOR.octopus },
   ] as const;
 </script>
 
@@ -46,7 +47,7 @@
   <div class="intro" role="region" aria-roledescription="carousel" aria-label="Introduction" ontouchstart={onStart} ontouchend={onEnd}>
     <div class="bar">
       <span></span>
-      {#if i < LAST}<button class="text-[13px] text-fg-2" onclick={skip}>Skip</button>{/if}
+      {#if i < LAST}<button class="-mr-3 min-h-11 px-3 text-[13px] text-fg-2" onclick={skip}>Skip</button>{/if}
     </div>
 
     <div class="slides" style="transform: translateX({-i * 100}%)">
@@ -76,7 +77,7 @@
         <h1>Every action passes through your policy.</h1>
         <p>Allow runs. Ask pauses and comes to your phone. Block never reaches the agent at all. If you don't answer, the answer is no.</p>
         <div class="card rc">
-          <div class="h"><span class="orb" style="background:#d0663a"><Creature kind="fox" size={22} /></span><span><b>tomay</b> wants to post <span class="mono">post_message</span></span></div>
+          <div class="h"><span class="orb" style="background:{KIND_COLOR.fox}"><Creature kind="fox" size={22} /></span><span><b>tomay</b> wants to post <b>a message</b> <span class="tag">post_message</span></span></div>
           <div class="body"># Morning brief — Thursday<br>High 71°F / Low 48°F, clear.<br>3 stars, 1 fork, pushed 2 hours ago…</div>
           <div class="btns"><span class="ok">Approve</span><span>For 24h</span><span class="no">Decline</span></div>
         </div>
@@ -102,9 +103,9 @@
         {/if}
         {#if !alreadyPaired}
         <ol class="steps">
-          <li><i>1</i><span>On your computer, open Garu → <b>Settings → Your phone</b>.</span></li>
-          <li><i>2</i><span>Press <b>Show sign-in code</b> and scan it here, or paste the link.</span></li>
-          <li><i>3</i><span>Don't have Garu yet? <code>npx garu new</code> makes your first agent in a minute; the website walks you through it.</span></li>
+          <li><i>1</i><span>On your computer, open Garu → <b>Settings → Your phone &amp; other devices</b>.</span></li>
+          <li><i>2</i><span>Press <b>Show pairing code</b> and scan it here, or paste the link.</span></li>
+          <li><i>3</i><span>Don't have Garu yet? <a href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">The website</a> walks you through setting it up on your computer.</span></li>
         </ol>
         <div class="w-full"><Pair embedded /></div>
         {/if}
@@ -150,7 +151,7 @@
   .steps { width: 100%; text-align: left; font-size: 13.5px; color: var(--color-fg-2); display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
   .steps li { display: flex; gap: 12px; align-items: flex-start; } .steps i { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--color-line-2); display: grid; place-items: center; font-style: normal; font-size: 11px; color: var(--color-fg); }
   .steps b { color: var(--color-fg); font-weight: 500; }
-  code { font-family: var(--font-mono, ui-monospace, monospace); background: var(--color-panel-2); border: 1px solid var(--color-line); border-radius: 6px; padding: 1px 6px; font-size: 12px; color: var(--color-fg); }
+  .tag { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; color: var(--color-mute); border: 1px solid var(--color-line); border-radius: 4px; padding: 0 5px; margin-left: 4px; white-space: nowrap; }
   .foot { padding: 8px 24px 28px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
   .dots { display: flex; gap: 6px; } .dots i { width: 6px; height: 6px; border-radius: 3px; background: var(--color-line-2); transition: all .25s; } .dots i.on { width: 18px; background: var(--color-fg); }
   .cta { width: 100%; padding: 14px; border-radius: 12px; background: var(--color-fg); color: var(--color-bg); font-weight: 600; font-size: 15px; }

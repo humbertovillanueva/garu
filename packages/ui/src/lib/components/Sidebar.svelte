@@ -83,7 +83,7 @@
   <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute">
     <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-ask)'}"></span>{live.connected ? "live" : "offline"}
   </span>
-  <a href={href("settings")} class="text-mute hover:text-fg" aria-label="Settings"><Icon name="settings" size={18} /></a>
+  <a href={href("settings")} class="-my-2 -mr-3 grid h-11 w-11 place-items-center text-mute hover:text-fg" aria-label="Settings"><Icon name="settings" size={18} /></a>
 </header>
 
 <!-- Phone: bottom tab bar, within thumb reach -->

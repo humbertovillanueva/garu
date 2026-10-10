@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { buildText } from "../lib/format";
   import Logo from "../lib/components/Logo.svelte";
   /**
    * The app's first screen: connect this phone to the control room on your computer.
@@ -27,14 +28,14 @@
     busy = true; error = null;
     try {
       const res = await fetch(`${p.base}/api/agents`, { headers: { authorization: `Bearer ${p.token}` }, cache: "no-store" });
-      if (res.status === 401) { error = "The control room answered, but the token is not right. Get a fresh code from Settings → Your phone."; return; }
+      if (res.status === 401) { error = "The control room answered, but the token is not right. Get a fresh code on your computer: Settings → Your phone & other devices."; return; }
       if (!res.ok) { error = `The control room answered with HTTP ${res.status}.`; return; }
       remember(p.base, p.token);
       live.signIn = false;
       connectLive(true);
       void haptic("success");
     } catch {
-      error = `Couldn't reach ${p.base.replace(/^https?:\/\//, "")}. Is Tailscale on for this phone, and is garu ui running on your computer?`;
+      error = `Couldn't reach ${p.base.replace(/^https?:\/\//, "")}. Is Tailscale on for this phone, and is Garu running on your computer?`;
     } finally {
       busy = false;
     }
@@ -59,7 +60,7 @@
       }, 250);
     } catch {
       scanning = false;
-      error = "The camera isn't available. Paste the link instead — on your computer, Settings → Your phone → Copy link.";
+      error = "The camera isn't available. Paste the link instead: on your computer, Settings → Your phone & other devices → Show pairing code → Copy link.";
     }
   }
   function stopScan() {
@@ -91,7 +92,7 @@
 
     {#if !embedded}
     <ol class="mt-4 space-y-1.5 text-[13px] text-fg-2">
-      <li><span class="text-mute">1.</span> On your computer, open Garu → <span class="font-medium text-fg">Settings → Your phone</span> → <em>Show sign-in code</em>.</li>
+      <li><span class="text-mute">1.</span> On your computer, open Garu → <span class="font-medium text-fg">Settings → Your phone &amp; other devices</span> → <em>Show pairing code</em>.</li>
       <li><span class="text-mute">2.</span> {canScan ? "Scan it here, or paste the link below." : "Press Copy link there and paste it below."}</li>
     </ol>
     {/if}
@@ -119,6 +120,6 @@
 
     {#if error}<p class="mt-3 text-[12.5px] leading-relaxed" style="color: var(--color-bad)">{error}</p>{/if}
     <p class="mt-4 text-[11.5px] leading-relaxed text-mute">The link carries a key that lets this phone approve actions as you. It is stored only on this phone.</p>
-    {#if !embedded}<p class="mono mt-3 text-[10.5px] text-mute">{build}</p>{/if}
+    {#if !embedded}<p class="mt-3 text-[10.5px] text-mute">{buildText(build)}</p>{/if}
   </div>
 </div>

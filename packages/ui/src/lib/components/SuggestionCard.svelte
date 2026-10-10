@@ -1,6 +1,6 @@
 <script lang="ts">
   /** "You've approved this N times. Make it a rule?" — with the exact rule shown before you say yes. */
-  import { api, live } from "../api.svelte";
+  import { api, live, errorText } from "../api.svelte";
   import { href } from "../router.svelte";
   import Mark from "./Mark.svelte";
   import type { Suggestion } from "../types";
@@ -17,13 +17,16 @@
     }
     return lines.join("\n");
   });
+  // Each stays busy after it succeeds: the card is finished and only waits to be taken away.
   async function apply() {
+    if (busy) return;
     busy = true; error = null;
-    try { const r = await api.applySuggestion(s.id); done = r.file; live.tick++; } catch (e) { error = (e as Error).message; } finally { busy = false; }
+    try { const r = await api.applySuggestion(s.id); done = r.file; live.tick++; } catch (e) { error = errorText(e); busy = false; }
   }
   async function dismiss() {
-    busy = true;
-    try { await api.dismissSuggestion(s.id); live.tick++; } catch (e) { error = (e as Error).message; } finally { busy = false; }
+    if (busy) return;
+    busy = true; error = null;
+    try { await api.dismissSuggestion(s.id); live.suggestions = live.suggestions.filter((x) => x.id !== s.id); live.tick++; } catch (e) { error = errorText(e); busy = false; }
   }
 </script>
 

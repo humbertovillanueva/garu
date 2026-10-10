@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { api, live } from "../lib/api.svelte";
-  import { usd, agentColor } from "../lib/format";
+  import { api, live, loader } from "../lib/api.svelte";
+  import LoadError from "../lib/components/LoadError.svelte";
+  import { usd, agentColor, localDay } from "../lib/format";
   import { KIND_COLOR } from "../lib/colors";
   import Mark from "../lib/components/Mark.svelte";
   import Skeleton from "../lib/components/Skeleton.svelte";
@@ -10,9 +11,11 @@
   let rows = $state<CostRow[] | null>(null);
   let days = $state(14);
   let hover = $state<{ day: string; agent: string; cost: number; runs: number } | null>(null);
+  let error = $state<string | null>(null);
+  const load = loader();
   $effect(() => {
     live.tick; days;
-    api.cost(days).then((r) => (rows = r));
+    load(api.cost(days), (r) => { rows = r; error = null; }, (m) => (error = m));
   });
 
   // Agents ordered by total spend so the four hues go to the ones that matter; the rest are "other".
@@ -26,7 +29,7 @@
   // One stacked bar per day over the window, including days with nothing.
   const daysList = $derived.by(() => {
     const out: string[] = [];
-    for (let i = days - 1; i >= 0; i--) out.push(new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10));
+    for (let i = days - 1; i >= 0; i--) out.push(localDay(new Date(Date.now() - i * 86_400_000)));
     return out;
   });
   const byDay = $derived.by(() => {
@@ -39,7 +42,8 @@
   const totalRuns = $derived((rows ?? []).reduce((s, r) => s + r.runs, 0));
   const dayWord = (d: string) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
   // The same color as the agent's avatar, so the legend needs no decoding.
-  const colorFor = (agent: string) => { const k = live.agents.find((a) => a.name === agent)?.persona?.kind; return k ? KIND_COLOR[k] : agentOrder.indexOf(agent) < 6 ? agentColor(agent) : "var(--color-s-other)"; };
+  // "other" is everyone past the first six, so it gets the neutral color rather than one an agent might wear.
+  const colorFor = (agent: string) => { if (agent === "other") return "var(--color-s-other)"; const k = live.agents.find((a) => a.name === agent)?.persona?.kind; return k ? KIND_COLOR[k] : agentOrder.indexOf(agent) < 6 ? agentColor(agent) : "var(--color-s-other)"; };
 </script>
 
 <section class="space-y-5">
@@ -49,13 +53,13 @@
     </div>
     <div class="flex items-center gap-1 text-[13px]">
       {#each [7, 14, 30] as d}
-        <button class="btn" class:opacity-50={days !== d} onclick={() => (days = d)}>{d}d</button>
+        <button class="btn" class:opacity-50={days !== d} aria-pressed={days === d} onclick={() => (days = d)}>{d}d</button>
       {/each}
     </div>
   </div>
 
   {#if rows === null}
-    <Skeleton rows={2} h={90} />
+    {#if error}<LoadError message={error} />{:else}<Skeleton rows={2} h={90} />{/if}
   {:else if rows.length === 0}
     <Empty title="No spend recorded in this window" />
   {:else}
@@ -77,7 +81,7 @@
         {#each daysList as day}
           {@const items = byDay.get(day) ?? []}
           {@const sum = items.reduce((s, r) => s + r.costUsd, 0)}
-          <div class="group flex h-full flex-1 flex-col justify-end" title="{day} · {usd(sum)}">
+          <div class="group flex h-full flex-1 flex-col justify-end" title="{dayWord(day)} · {usd(sum)}">
             {#each items.slice().sort((a, b) => agentOrder.indexOf(a.agent) - agentOrder.indexOf(b.agent)).reverse() as r}
               <div class="w-full"
                    style="height: {(r.costUsd / maxDay) * 100}%; min-height: {r.costUsd > 0 ? 3 : 0}px; background: {colorFor(r.agent)}; margin-top: 2px; border-radius: 4px 4px 0 0"

@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { api, live, agentByName } from "../lib/api.svelte";
+  import { api, live, agentByName, loader, HttpError } from "../lib/api.svelte";
+  import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, duration } from "../lib/format";
+  import { usd, duration, humanTime, cronLabel, triggerLabel } from "../lib/format";
   import Mark from "../lib/components/Mark.svelte";
   import Status from "../lib/components/Status.svelte";
   import Budget from "../lib/components/Budget.svelte";
@@ -13,7 +14,15 @@
   let { agent, runId }: { agent: string; runId: string } = $props();
   let events = $state<Envelope[] | null>(null);
   let missing = $state(false);
-  $effect(() => { live.tick; api.run(agent, runId).then((e) => (events = e)).catch(() => (missing = true)); });
+  let error = $state<string | null>(null);
+  const load = loader();
+  // Only a 404 means the run isn't there; being offline is a different message.
+  $effect(() => {
+    live.tick;
+    load(api.run(agent, runId), (e) => { events = e; missing = false; error = null; }, (m, e) => {
+      if (e instanceof HttpError && e.status === 404) missing = true; else error = m;
+    });
+  });
 
   const a = $derived(agentByName(agent));
   const start = $derived(events?.find((e) => e.event.type === "run.start"));
@@ -25,30 +34,42 @@
     return (last?.event["totalCostUsd"] as number | undefined) ?? 0;
   });
   const turns = $derived((events ?? []).filter((e) => e.event.type === "model.turn").length);
+  /** How the run started, in words: "Scheduled, Weekdays 7:00 AM", "Catch-up for Daily 9:00 AM", "From a message". */
+  const how = $derived.by(() => {
+    const t = String(start?.event["trigger"] ?? "");
+    if (t.startsWith("cron:")) return `Scheduled, ${cronLabel(t.slice(5))}`;
+    if (t.startsWith("catch-up:")) return `Catch-up for ${cronLabel(t.slice(9))}`;
+    if (t === "chat") return "From a message";
+    if (t === "manual") return "Started with Run now";
+    const w = triggerLabel(t);
+    return w ? w[0]!.toUpperCase() + w.slice(1) : "";
+  });
+  const sandbox = $derived(start?.event["sandbox"] as { network: string } | undefined);
 </script>
 
 <section class="space-y-5">
   <div class="rise flex flex-wrap items-center gap-3">
-    <Mark name={agent} size={40} status={status === "running" ? "working" : "idle"} />
+    <Mark name={agent} size={40} status={events && status === "running" ? "working" : "idle"} />
     <div class="min-w-0 flex-1">
-      <div class="text-[12.5px] text-mute"><a href={href("agent", agent)} class="hover:text-fg">{agent}</a> / <span class="mono">{runId}</span></div>
-      <div class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <Status {status} />
-        {#if start}
-          <span class="mono text-[12px] text-mute">{start.event["model"]}</span>
-          <span class="mono text-[12px] text-mute">trigger {start.event["trigger"]}</span>
-          {#if start.event["sandbox"]}<span class="chip mono text-[11px]">sandboxed · net {(start.event["sandbox"] as {network:string}).network}</span>{/if}
-          <span class="mono text-[12px] text-mute">{turns} turn{turns === 1 ? "" : "s"}{end ? ` · ${duration(start.ts, end.ts)}` : ""}</span>
-        {/if}
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <a href={href("agent", agent)} class="text-[20px] font-semibold tracking-tight hover:underline">{agent}</a>
+        {#if events}<Status {status} />{/if}
       </div>
+      {#if start}
+        <div class="mt-0.5 text-[13px] text-fg-2">{[how, humanTime(start.ts), end ? `took ${duration(start.ts, end.ts)}` : "", `${turns} turn${turns === 1 ? "" : "s"}`].filter(Boolean).join(" · ")}</div>
+        <div class="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-mute" title="run {runId}">
+          <span class="mono">{start.event["model"]}</span>
+          {#if sandbox}<span>· sandboxed, network {sandbox.network}</span>{/if}
+        </div>
+      {/if}
     </div>
-    <Budget spent={cost} cap={a?.budget?.maxCostUsd ?? null} free={a?.budget?.free ?? (end?.event["priced"] === false)} />
+    {#if events}<Budget spent={cost} cap={a?.budget?.maxCostUsd ?? null} free={a?.budget?.free ?? (end?.event["priced"] === false)} />{/if}
   </div>
 
   {#if missing}
     <Empty title="That run doesn't exist" />
   {:else if events === null}
-    <Skeleton rows={6} h={40} />
+    {#if error}<LoadError message={error} />{:else}<Skeleton rows={6} h={40} />{/if}
   {:else}
     <div class="panel p-4"><Timeline {events} /></div>
   {/if}

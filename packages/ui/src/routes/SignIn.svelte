@@ -23,10 +23,10 @@
     </div>
     <h1 class="text-[20px] font-semibold tracking-tight">Sign in to your control room</h1>
     <p class="mt-2 text-[13.5px] leading-relaxed text-fg-2">
-      Your agents run on the computer where <span class="mono">garu ui</span> is running. To use them from here, you need that computer's token.
+      Your agents run on the computer where Garu is running. To use them from here, you need that computer's token.
     </p>
     <ol class="mt-3 space-y-1.5 text-[13px] text-fg-2">
-      <li><span class="text-mute">Easiest:</span> on that computer, open <span class="font-medium text-fg">Settings → Your phone</span> and scan the code.</li>
+      <li><span class="text-mute">Easiest:</span> on that computer, open <span class="font-medium text-fg">Settings → Your phone &amp; other devices</span>, press <em>Show pairing code</em> and scan it.</li>
       <li><span class="text-mute">Or:</span> paste the token from <span class="mono">.garu/ui-token</span> in your Garu folder.</li>
     </ol>
     <label class="mt-5 block">

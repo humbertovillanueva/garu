@@ -1,3 +1,4 @@
+import { isApp } from "./server.svelte";
 export function usd(n: number | null | undefined, priced = true): string {
   if (!priced) return "unpriced";
   if (n === null || n === undefined) return "—";
@@ -46,9 +47,17 @@ export function until(iso: string | null | undefined): string {
   const diff = new Date(iso).getTime() - Date.now();
   if (diff <= 0) return "now";
   if (diff < 60_000) return "in under a minute";
-  if (diff < 3_600_000) return `in ${Math.ceil(diff / 60_000)} min`;
-  if (diff < 12 * 3_600_000) return `in ${Math.floor(diff / 3_600_000)} h ${Math.round((diff % 3_600_000) / 60_000)} min`;
-  return humanTime(iso);
+  if (diff >= 12 * 3_600_000) return humanTime(iso);
+  // Whole minutes first, then split: never "in 1 h 60 min" or "in 2 h 0 min".
+  const m = Math.ceil(diff / 60_000);
+  if (m < 60) return `in ${m} min`;
+  const h = Math.floor(m / 60), rest = m % 60;
+  return rest ? `in ${h} h ${rest} min` : `in ${h} h`;
+}
+/** The reader's calendar day of an instant, as YYYY-MM-DD (the control room buckets days the same way). */
+export function localDay(at: string | Date): string {
+  const d = new Date(at);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 /** A trigger string from the recorder, in words. */
 export function triggerLabel(t: string): string {
@@ -96,6 +105,8 @@ export function statusLine(a: { status: string; inFlight: { turn: number } | nul
   if (a.status === "working") return a.inFlight ? `Working — turn ${a.inFlight.turn}` : "Working";
   if (a.status === "scheduled") return `Sleeping — next run ${until(a.nextRun)}`;
   if (a.status === "needs-setup") {
+    // The fix happens on the computer; the phone says so instead of showing commands it can't run.
+    if (isApp) return "Needs setup on your computer";
     const parts = [];
     if (a.needs?.length) parts.push(`add ${a.needs.join(", ")} to .env`);
     if (a.signIn?.length) parts.push(`sign in to ${a.signIn.join(", ")} with garu auth`);
@@ -124,3 +135,24 @@ export function cronLabel(cron: string | null): string {
   }
   return cron;
 }
+
+/** The build stamp ("0.1.0 · 8eedb90 · 2026-10-10 20:30 UTC") as a reader wants it: "0.1.0, build 8eedb90, 2:30 PM". */
+export function buildText(stamp: string): string {
+  const [version, commit, built] = stamp.split(" · ");
+  const at = built ? humanTime(built.replace(" UTC", "Z").replace(" ", "T")) : "";
+  return [version, commit ? `build ${commit}` : "", at].filter(Boolean).join(", ");
+}
+
+/**
+ * Who decided an ask, the way the reader would say it. The recorder keeps the raw value
+ * ("Humberto (ui)", "grant g_… (humberto)", "inbox: expired"); only the words on screen change.
+ */
+export function decidedBy(by: string | undefined): string {
+  if (!by) return "";
+  if (/expired/.test(by)) return "nobody answered in time";
+  if (/vanished/.test(by)) return "the request went away";
+  if (/^grant\b/.test(by)) return "your 24-hour approval";
+  if (/\((ui|cli|phone|app)\)$/.test(by)) return "you";
+  return by;
+}
+export const expired = (by: string | undefined) => !!by && /expired/.test(by);

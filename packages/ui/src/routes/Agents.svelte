@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isApp } from "../lib/server.svelte";
   import { live } from "../lib/api.svelte";
   import { href } from "../lib/router.svelte";
   import { statusLine } from "../lib/format";
@@ -14,7 +15,7 @@
   {#if !live.loaded}
     <Skeleton rows={3} h={84} />
   {:else if live.agents.length === 0}
-    <Empty title="No agents yet" hint="Make one on your computer with garu new." />
+    <Empty title="No agents yet" hint={isApp ? "Agents are made on your computer. Open Garu there to make the first one." : "Make one with garu new in your Garu folder."} />
   {:else}
     <div class="grid gap-3 sm:grid-cols-2">
       {#each live.agents as a (a.name)}

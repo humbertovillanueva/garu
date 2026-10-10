@@ -1,6 +1,6 @@
 <script lang="ts">
   /** What this control room is running on: keys present (never their values), sign-ins, schedules, links. */
-  import { api, live } from "../lib/api.svelte";
+  import { api, live, loader } from "../lib/api.svelte";
   import { href } from "../lib/router.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import Skeleton from "../lib/components/Skeleton.svelte";
@@ -8,6 +8,7 @@
   import QRCode from "qrcode";
   import { build, forget, isApp, markIntroSeen, server } from "../lib/server.svelte";
   import { prefs, setPref } from "../lib/prefs.svelte";
+  import { buildText } from "../lib/format";
   import { haptic } from "../lib/native";
   function unpair() {
     if (!confirm("Forget this control room? You'll pair again by scanning a code on your computer.")) return;
@@ -16,7 +17,8 @@
 
   let s = $state<Settings | null>(null);
   let error = $state<string | null>(null);
-  $effect(() => { live.tick; api.settings().then((v) => (s = v)).catch((e) => (error = (e as Error).message)); });
+  const load = loader();
+  $effect(() => { live.tick; load(api.settings(), (v) => { s = v; error = null; }, (m) => (error = m)); });
   const shortRoot = (p: string) => p.replace(/^\/Users\/[^/]+/, "~").replace(/^\/home\/[^/]+/, "~");
 
   // Pairing: a sign-in link for this same address, as a QR code. Shown only when asked, since it is a key.
@@ -69,27 +71,24 @@
 <section class="space-y-6">
   <div class="rise"><h1 class="text-[26px] font-semibold tracking-tight">Settings</h1></div>
 
-  {#if error}
-    <div class="panel p-4 text-[13.5px]" style="color: var(--color-bad)">{error}</div>
-  {:else if !s}
-    <Skeleton rows={4} h={72} />
-  {:else}
+  <!-- This device, preferences and help render without the computer: a phone paired to an address that
+       no longer answers must still be able to forget it, read Help or report the problem. -->
     <!-- This device: how it reaches Garu -->
     <div>
       <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{isApp ? "This phone" : "This browser"}</h2>
       <div class="panel rise divide-y divide-line text-[14px]">
         {#if isApp}
           <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">Paired with</span><span class="min-w-0 flex-1 truncate text-right">{server.base.replace(/^https?:\/\//, "")}</span></div>
-        {:else if s.login.direct}
+        {:else if s?.login.direct}
           <div class="px-4 py-3 text-fg-2">On the same computer as Garu, so it's signed in automatically. Anything else needs the pairing code.</div>
-        {:else}
+        {:else if s}
           <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">Signed in</span><span class="flex-1 text-right">with the pairing token</span></div>
         {/if}
         <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">Connection</span><span class="flex flex-1 items-center justify-end gap-2"><span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-ask)'}"></span>{live.connected ? "live" : "reconnecting"}</span></div>
-        <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">Schedules</span><span class="flex flex-1 items-center justify-end gap-2"><span class="dot" style="background: {s.up ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{s.up ? "running" : "off"}</span></div>
+        <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">Schedules</span>{#if s}<span class="flex flex-1 items-center justify-end gap-2"><span class="dot" style="background: {s.up ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{s.up ? "running" : "off"}</span>{:else}<span class="flex-1 text-right text-mute">{error ? "can't check right now" : "checking…"}</span>{/if}</div>
         {#if isApp}
           <button class="card-hover w-full px-4 py-3 text-left" onclick={unpair}>Forget this computer<span class="block text-[12.5px] text-mute">You'll pair again by scanning a code there.</span></button>
-        {:else if !s.login.direct}
+        {:else if s && !s.login.direct}
           <button class="card-hover w-full px-4 py-3 text-left" onclick={() => api.logout()}>Sign out</button>
         {/if}
       </div>
@@ -143,7 +142,7 @@
               <div class="qr w-[180px] flex-none rounded-xl p-2" style="background:#f4f1ea">{@html pairSvg}</div>
               <div class="min-w-0 flex-1 text-[13px] text-fg-2">
                 {#if chosenIsLocal}
-                  <p style="color: var(--color-ask)">This code points at <span class="mono">{new URL(chosen).host}</span>, which a phone can't reach. Put the control room on your private network first: <span class="mono">tailscale serve --bg {s.port}</span> on this computer, then come back here and the code will point there by itself.</p>
+                  <p style="color: var(--color-ask)">This code points at <span class="mono">{new URL(chosen).host}</span>, which a phone can't reach. Put the control room on your private network first: <span class="mono">tailscale serve --bg {s?.port ?? 4000}</span> on this computer, then come back here and the code will point there by itself.</p>
                 {:else}
                   <p>Scan it with the Garu app, or with the phone's camera to open <span class="mono">{new URL(chosen).host}</span> signed in.</p>
                 {/if}
@@ -153,7 +152,7 @@
                   <button class="btn" onclick={() => (showToken = !showToken)}>{showToken ? "Hide token" : "Show token"}</button>
                 </div>
                 {#if showToken}<div class="mono mt-2 break-all rounded-lg border hairline bg-bg px-2.5 py-2 text-[12px] select-all">{pairLink?.split("token=")[1]}</div>{/if}
-                <p class="mt-2 text-[12px] text-mute">Someone else saw it? <button class="underline hover:text-fg" onclick={rotate}>Make a new token</button>{#if rotated}<span class="ml-2" style="color: var(--color-ok)">done — other devices are signed out</span>{/if}. It lives in <span class="mono">{shortRoot(s.login.tokenPath)}</span>.</p>
+                <p class="mt-2 text-[12px] text-mute">Someone else saw it? <button class="underline hover:text-fg" onclick={rotate}>Make a new token</button>{#if rotated}<span class="ml-2" style="color: var(--color-ok)">done — other devices are signed out</span>{/if}. {#if s}It lives in <span class="mono">{shortRoot(s.login.tokenPath)}</span>.{/if}</p>
               </div>
             </div>
           {/if}
@@ -162,6 +161,13 @@
     {/if}
 
     <!-- Advanced: the control room's own facts. Open on the desktop, folded on the phone. -->
+    {#if !s}
+      {#if error}
+        <div class="panel p-4 text-[13.5px] text-fg-2"><span style="color: var(--color-ask)">The details below need {isApp ? "your computer" : "the control room"}.</span> {error}</div>
+      {:else}
+        <Skeleton rows={2} h={72} />
+      {/if}
+    {:else}
     <details class="rise" open={!isApp}>
       <summary class="cursor-pointer text-[11px] uppercase tracking-wider text-mute">Advanced</summary>
       <div class="mt-2 grid gap-4 lg:grid-cols-2">
@@ -169,19 +175,19 @@
           <div class="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute"><Icon name="spark" size={14} /> The control room</div>
           <dl class="grid grid-cols-[120px_1fr] gap-y-2 text-[13.5px]">
             <dt class="text-mute">Garu</dt><dd>version {s.version}</dd>
-            <dt class="text-mute">{isApp ? "This app" : "This page"}</dt><dd class="text-[12.5px]">{build}</dd>
-            <dt class="text-mute">Deciding as</dt><dd>{s.user}{#if !isApp}<span class="text-mute"> · <span class="mono">--as</span> to change</span>{/if}</dd>
-            <dt class="text-mute">Schedules</dt><dd>{s.up ? "running" : "off"}{#if !s.up && !isApp}<span class="text-mute"> · <span class="mono">garu service install</span> runs them at login</span>{/if}</dd>
+            <dt class="text-mute">{isApp ? "This app" : "This page"}</dt><dd class="text-[12.5px]">{buildText(build)}</dd>
+            <dt class="text-mute">Deciding as</dt><dd>{s.user}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--as</span> to change</span>{/if}</dd>
+            <dt class="text-mute">Schedules</dt><dd>{s.up ? "running" : "off"}{#if !s.up && !isApp}<span class="text-mute">&nbsp;· <span class="mono">garu service install</span> runs them at login</span>{/if}</dd>
             <dt class="text-mute">Listening on</dt><dd class="mono">{s.host}:{s.port}</dd>
             <dt class="text-mute">Unanswered asks</dt><dd>denied after {s.askTimeoutMin} min</dd>
-            <dt class="text-mute">Push</dt><dd>{s.notify ? "on (ntfy)" : "off"}{#if !isApp}<span class="text-mute"> · <span class="mono">--notify</span></span>{/if}</dd>
+            <dt class="text-mute">Push</dt><dd>{s.notify ? "on (ntfy)" : "off"}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--notify</span></span>{/if}</dd>
             <dt class="text-mute">Folder</dt><dd class="mono break-all">{shortRoot(s.root)}</dd>
           </dl>
         </div>
 
         <div class="panel p-5">
           <div class="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute"><Icon name="key" size={14} /> Models</div>
-          <p class="mb-3 text-[13px] text-fg-2">Keys live in <span class="mono">.env</span> on the computer. Garu only reports whether each is set.</p>
+          <p class="mb-3 text-[13px] text-fg-2">{#if isApp}Keys stay on your computer. Garu only reports whether each is set.{:else}Keys live in <span class="mono">.env</span> on the computer. Garu only reports whether each is set.{/if}</p>
           <ul class="space-y-2 text-[13.5px]">
             <li class="flex items-center gap-2"><span class="dot" style="background: {s.providers.gemini ? 'var(--color-ok)' : 'var(--color-line-2)'}"></span><span class="mono">GEMINI_API_KEY</span><span class="text-mute">{s.providers.gemini ? "set" : "not set · free at aistudio.google.com"}</span></li>
             <li class="flex items-center gap-2"><span class="dot" style="background: {s.providers.anthropic ? 'var(--color-ok)' : 'var(--color-line-2)'}"></span><span class="mono">ANTHROPIC_API_KEY</span><span class="text-mute">{s.providers.anthropic ? "set" : "not set"}</span></li>
@@ -192,11 +198,11 @@
         <div class="panel p-5">
           <div class="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute"><Icon name="shield" size={14} /> Variables your agents reference</div>
           {#if s.env.length === 0}
-            <p class="text-[13px] text-mute">None. Agents reference secrets as <span class="mono">${"{VAR}"}</span> in their Garufile and Garu fills them from <span class="mono">.env</span> at run time.</p>
+            <p class="text-[13px] text-mute">{#if isApp}None.{:else}None. Agents reference secrets as <span class="mono">${"{VAR}"}</span> in their Garufile and Garu fills them from <span class="mono">.env</span> at run time.{/if}</p>
           {:else}
             <ul class="space-y-2 text-[13.5px]">
               {#each s.env as v (v.name)}
-                <li class="flex items-center gap-2"><span class="dot" style="background: {v.set ? 'var(--color-ok)' : 'var(--color-ask)'}"></span><span class="mono">{v.name}</span><span class="text-mute">{v.set ? "set" : "missing — add it to .env"}</span></li>
+                <li class="flex items-center gap-2"><span class="dot" style="background: {v.set ? 'var(--color-ok)' : 'var(--color-ask)'}"></span><span class="mono">{v.name}</span><span class="text-mute">{v.set ? "set" : isApp ? "missing, add it on your computer" : "missing, add it to .env"}</span></li>
               {/each}
             </ul>
           {/if}
@@ -205,7 +211,7 @@
         <div class="panel p-5">
           <div class="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute"><Icon name="globe" size={14} /> Remote tool servers</div>
           {#if s.remotes.length === 0}
-            <p class="text-[13px] text-mute">None yet. A tool server can be a <span class="mono">url:</span> instead of a <span class="mono">command:</span>; servers that want a login use <span class="mono">auth: oauth</span> and <span class="mono">garu auth</span>.</p>
+            <p class="text-[13px] text-mute">{#if isApp}None yet.{:else}None yet. A tool server can be a <span class="mono">url:</span> instead of a <span class="mono">command:</span>; servers that want a login use <span class="mono">auth: oauth</span> and <span class="mono">garu auth</span>.{/if}</p>
           {:else}
             <ul class="space-y-2.5 text-[13.5px]">
               {#each s.remotes as r (r.agent + r.server)}
@@ -213,7 +219,7 @@
                   <div class="flex items-center gap-2">
                     <span class="dot" style="background: {r.signedIn === false ? 'var(--color-ask)' : 'var(--color-ok)'}"></span>
                     <a href={href("agent", r.agent)} class="font-medium hover:underline">{r.agent}</a><span class="text-mute">→</span><span class="mono">{r.server}</span>
-                    <span class="ml-auto text-[12px] text-mute">{r.auth === "oauth" ? (r.signedIn ? "signed in" : "not signed in") : "headers from .env"}</span>
+                    <span class="ml-auto text-[12px] text-mute">{r.auth === "oauth" ? (r.signedIn ? "signed in" : "not signed in") : isApp ? "key on your computer" : "headers from .env"}</span>
                   </div>
                   <div class="mono ml-4 truncate text-[11.5px] text-mute" title={r.url}>{r.url}</div>
                   {#if r.signedIn === false && !isApp}<div class="mono ml-4 mt-1 text-[12px]" style="color: var(--color-ask)">garu auth {r.source} {r.server}</div>{/if}
@@ -224,7 +230,7 @@
         </div>
       </div>
     </details>
-  {/if}
+    {/if}
 </section>
 
 <style>

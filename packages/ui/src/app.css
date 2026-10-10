@@ -74,6 +74,8 @@ body {
 .btn { border-radius: 9px; padding: 7px 13px; font-size: 13px; font-weight: 500; border: 1px solid var(--color-line-2); background: var(--color-panel-2); color: var(--color-fg); transition: all .12s ease; cursor: pointer; }
 .btn:hover { border-color: var(--color-mute); background: var(--color-panel-3); }
 .btn:disabled { opacity: .45; cursor: default; }
+/* On a touch screen every button is at least a fingertip tall (44px), Approve and Decline above all. */
+@media (pointer: coarse) { .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; } }
 .btn-primary { background: var(--color-accent); border-color: var(--color-accent); color: #141008; font-weight: 600; }
 .btn-primary:hover { background: color-mix(in oklab, var(--color-accent) 88%, white); border-color: transparent; }
 .btn-ok { border-color: color-mix(in oklab, var(--color-ok) 55%, transparent); color: var(--color-ok); }

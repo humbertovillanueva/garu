@@ -1,6 +1,6 @@
 <script lang="ts">
   /** A run's flight recorder as a timeline. Tool calls are grouped with their decision and result. */
-  import { clockExact, usd, tokens } from "../format";
+  import { clockExact, usd, tokens, statusLabel, decidedBy, expired } from "../format";
   import Decision from "./Decision.svelte";
   import type { Envelope } from "../types";
 
@@ -41,9 +41,8 @@
       {#if row.kind === "turn"}
         <div class="flex flex-wrap items-baseline gap-x-3 text-[13px]">
           <span class="mono text-mute">{clockExact(row.env.ts)}</span>
-          <span class="font-medium">turn {e["turn"]}</span>
-          {#if e["inputTokens"] !== undefined}<span class="mono text-mute">{tokens(e["inputTokens"] as number)} in · {tokens(e["outputTokens"] as number)} out</span>{/if}
-          {#if e["totalCostUsd"] !== undefined}<span class="mono text-mute">{usd(e["totalCostUsd"] as number)} so far</span>{/if}
+          <span class="font-medium" title={e["inputTokens"] !== undefined ? `${tokens(e["inputTokens"] as number)} tokens in, ${tokens(e["outputTokens"] as number)} out` : undefined}>Turn {e["turn"]}</span>
+          {#if e["totalCostUsd"] !== undefined}<span class="text-mute">{usd(e["totalCostUsd"] as number)} so far</span>{/if}
         </div>
         {#if e["text"]}<p class="mt-1 max-w-3xl whitespace-pre-wrap text-[13.5px] leading-relaxed text-fg-2">{e["text"]}</p>{/if}
 
@@ -55,7 +54,7 @@
             <span class="mono text-mute">{clockExact(row.env.ts)}</span>
             <span class="mono font-medium">{req.server}.{req.tool}</span>
             {#if d}<Decision action={d.action} />{/if}
-            {#if approval}<Decision action={approval.approved ? "allow" : "block"} label={approval.approved ? `approved · ${approval.by}` : `declined · ${approval.by}`} />{/if}
+            {#if approval}<Decision action={approval.approved ? "allow" : "block"} label={approval.approved ? `approved by ${decidedBy(approval.by)}` : expired(approval.by) ? "expired, no answer" : `declined by ${decidedBy(approval.by)}`} />{/if}
             {#if approval?.note}<span class="text-[12.5px] italic text-fg-2">“{approval.note}”</span>{/if}
             {#if waiting}<span class="mono pulse text-[11.5px]" style="color: var(--color-ask)">waiting for you</span>{/if}
             {#if result}
@@ -76,9 +75,9 @@
       {:else}
         <div class="flex flex-wrap items-baseline gap-x-3 text-[13px]">
           <span class="mono text-mute">{clockExact(row.env.ts)}</span>
-          {#if e.type === "run.start"}<span class="text-mute">run started · {e["model"]}{e["sandbox"] ? " · sandboxed" : ""}</span>
-          {:else if e.type === "tools.offered"}<span class="text-mute">{(e["offered"] as string[]).length} tools offered{(e["hidden"] as string[]).length ? `, ${(e["hidden"] as string[]).length} hidden (always blocked)` : ""}</span>
-          {:else if e.type === "run.end"}<span class="font-medium">run {e["status"]}</span>{#if e["summary"]}<span class="text-fg-2">— {e["summary"]}</span>{/if}
+          {#if e.type === "run.start"}<span class="text-mute">Run started{e["sandbox"] ? ", sandboxed" : ""}</span>
+          {:else if e.type === "tools.offered"}<span class="text-mute">{(e["offered"] as string[]).length} tools offered{(e["hidden"] as string[]).length ? `, ${(e["hidden"] as string[]).length} more hidden because the policy always blocks them` : ""}</span>
+          {:else if e.type === "run.end"}<span class="font-medium">Run {statusLabel(e["status"] as string)}</span>{#if e["summary"]}<span class="text-fg-2">— {e["summary"]}</span>{/if}
           {:else if e.type === "budget.exceeded"}<span style="color: var(--color-bad)">budget cap hit: {usd(e["costUsd"] as number)} ≥ {usd(e["maxCostUsd"] as number)} — {e["pendingToolCalls"]} call(s) not executed</span>
           {:else if e.type === "model.retry"}<span style="color: var(--color-ask)">model busy ({e["reason"]}) — retrying in {Math.round((e["waitMs"] as number) / 1000)}s, attempt {e["attempt"]} of {e["maxAttempts"]}</span>
           {:else if e.type === "tools.retry"}<span style="color: var(--color-ask)">tool server "{e["server"]}" didn't start in time — retrying in {Math.round((e["waitMs"] as number) / 1000)}s</span>

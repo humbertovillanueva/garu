@@ -4,7 +4,8 @@
    * outcome takes one row ("tick × 5 · all done · 1:00 – 6:00 PM") that opens on tap, so a heartbeat
    * agent doesn't bury the runs that matter.
    */
-  import { api, live } from "../lib/api.svelte";
+  import { api, live, loader } from "../lib/api.svelte";
+  import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
   import { usd, clock, dayLabel, duration, statusLabel, triggerLabel } from "../lib/format";
   import Status from "../lib/components/Status.svelte";
@@ -14,7 +15,9 @@
   import type { RunSummary } from "../lib/types";
 
   let runs = $state<RunSummary[] | null>(null);
-  $effect(() => { live.tick; api.runs().then((r) => (runs = r)); });
+  let error = $state<string | null>(null);
+  const load = loader();
+  $effect(() => { live.tick; load(api.runs(), (r) => { runs = r; error = null; }, (m) => (error = m)); });
 
   type Row = { agent: string; status: string; runs: RunSummary[] };
   const days = $derived.by(() => {
@@ -42,7 +45,7 @@
     {#if runs?.length}<a href={href("cost")} class="text-[13px] text-mute hover:text-fg">{usd(total)} total · Cost</a>{/if}
   </div>
   {#if runs === null}
-    <Skeleton rows={6} h={44} />
+    {#if error}<LoadError message={error} />{:else}<Skeleton rows={6} h={44} />{/if}
   {:else if runs.length === 0}
     <Empty title="No runs yet" hint="Open an agent and press Run now." />
   {:else}

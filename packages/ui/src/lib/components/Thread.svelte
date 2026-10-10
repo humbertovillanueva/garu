@@ -65,7 +65,7 @@
               <div class="mt-2 space-y-2">
                 {#each runs as r (r.id)}
                   <div class="rounded-xl border border-dashed hairline px-3 py-2">
-                    <div class="mb-0.5 text-[11px] text-mute">{clock(r.ts)}{#if r.runId}<span> · </span><a class="hover:text-fg" href={href("run", agent, r.runId)}>see the run</a>{/if}</div>
+                    <div class="mb-0.5 text-[11px] text-mute">{clock(r.ts)}{#if r.runId}<span class="mx-1">·</span><a class="hover:text-fg" href={href("run", agent, r.runId)}>see the run</a>{/if}</div>
                     <div class="md space-y-2">{@html renderMarkdown(r.text)}</div>
                   </div>
                 {/each}
@@ -92,7 +92,7 @@
                  style={m.kind === "error" ? "background: color-mix(in oklab, var(--color-bad) 10%, var(--color-panel)); border: 1px solid color-mix(in oklab, var(--color-bad) 35%, var(--color-line))" : ""}>
               <div class="md space-y-2">{@html renderMarkdown(m.text)}</div>
             </div>
-            <div class="mt-1 text-[11px] text-mute">{clock(m.ts)}{#if m.runId}<span> · </span><a class="hover:text-fg" href={href("run", agent, m.runId)}>see the run</a>{/if}</div>
+            <div class="mt-1 text-[11px] text-mute">{clock(m.ts)}{#if m.runId}<span class="mx-1">·</span><a class="hover:text-fg" href={href("run", agent, m.runId)}>see the run</a>{/if}</div>
           </div>
         </div>
       {/if}

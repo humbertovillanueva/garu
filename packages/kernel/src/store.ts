@@ -92,6 +92,15 @@ export function summarizeRun(path: string, events: Envelope[], now = Date.now())
   return s;
 }
 
+/**
+ * The calendar day of an instant on this machine, as YYYY-MM-DD. Garu runs on the owner's computer, so
+ * "today" is the owner's day: a run at 7 PM in Denver is today's, not tomorrow's UTC date.
+ */
+export function localDay(at: Date | string): string {
+  const d = typeof at === "string" ? new Date(at) : at;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export class RunStore {
   constructor(readonly root: string) {}
 
@@ -133,10 +142,10 @@ export class RunStore {
   }
 
   agentSummaries(now = new Date()): AgentSummary[] {
-    const today = now.toISOString().slice(0, 10);
+    const today = localDay(now);
     return this.agents().map((name) => {
       const runs = this.runs(name);
-      const todays = runs.filter((r) => r.startedAt.slice(0, 10) === today);
+      const todays = runs.filter((r) => localDay(r.startedAt) === today);
       return {
         name,
         runs: runs.length,
@@ -148,12 +157,12 @@ export class RunStore {
     });
   }
 
-  /** Cost and run counts per UTC day per agent, for the last `days` days. */
+  /** Cost and run counts per local day per agent, for the last `days` days. */
   costByDay(days = 14, now = new Date()): { day: string; agent: string; costUsd: number; runs: number }[] {
-    const since = new Date(now.getTime() - days * 86_400_000).toISOString().slice(0, 10);
+    const since = localDay(new Date(now.getTime() - days * 86_400_000));
     const buckets = new Map<string, { day: string; agent: string; costUsd: number; runs: number }>();
     for (const r of this.allRuns()) {
-      const day = r.startedAt.slice(0, 10);
+      const day = localDay(r.startedAt);
       if (day < since) continue;
       const key = `${day}|${r.agent}`;
       const b = buckets.get(key) ?? { day, agent: r.agent, costUsd: 0, runs: 0 };

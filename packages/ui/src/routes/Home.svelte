@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { api, live } from "../lib/api.svelte";
+  import { api, live, loader } from "../lib/api.svelte";
+  import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, clock, dayLabel, statusLabel, statusLine, until, cronLabel } from "../lib/format";
+  import { usd, clock, dayLabel, statusLabel, statusLine, until, cronLabel, humanTime } from "../lib/format";
   import Mark from "../lib/components/Mark.svelte";
   import ReviewCard from "../lib/components/ReviewCard.svelte";
   import SuggestionCard from "../lib/components/SuggestionCard.svelte";
@@ -11,7 +12,9 @@
   import { isApp } from "../lib/server.svelte";
 
   let feed = $state<FeedItem[] | null>(null);
-  $effect(() => { live.tick; api.feed(60).then((f) => (feed = f)); });
+  let feedError = $state<string | null>(null);
+  const load = loader();
+  $effect(() => { live.tick; load(api.feed(60), (f) => { feed = f; feedError = null; }, (m) => (feedError = m)); });
 
   const hour = new Date().getHours();
   const greeting = hour < 5 ? "Still up" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -139,10 +142,10 @@
   <div>
     <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Activity</h2>
     {#if feed === null}
-      <Skeleton rows={4} h={52} />
+      {#if feedError}<LoadError message={feedError} />{:else}<Skeleton rows={4} h={52} />{/if}
     {:else if groups.length === 0}
-      <Empty title="Nothing has happened yet" hint="garu run examples/hello/Garufile.yaml">
-        {#if live.agents.length}<p class="text-[13px] text-fg-2">Or pick an agent on the left and press Run.</p>{/if}
+      <Empty title="Nothing has happened yet" hint={isApp ? "When an agent runs, what it did shows up here." : "Run one with garu run examples/pip/Garufile.yaml in your Garu folder."}>
+        {#if live.agents.length}<p class="text-[13px] text-fg-2">Or open an agent in Agents and press Run now.</p>{/if}
       </Empty>
     {:else}
       {#each groups as g (g.day)}
@@ -164,7 +167,7 @@
                     {:else if i.kind === "approval.decided"}
                       <span class="text-fg-2">{d?.decision?.approved ? "approved" : "declined"}</span>
                     {/if}
-                    <span class="ml-auto flex-none text-[12px] text-mute" title={i.ts}>{n === 1 ? clock(i.ts) : `${clock(row.items.at(-1)!.ts)} – ${clock(i.ts)}`}</span>
+                    <span class="ml-auto flex-none text-[12px] text-mute" title={humanTime(i.ts)}>{n === 1 ? clock(i.ts) : `${clock(row.items.at(-1)!.ts)} – ${clock(i.ts)}`}</span>
                   </div>
                   {#if i.kind === "approval.decided"}
                     <div class="truncate text-[12.5px] text-mute">{i.text}</div>

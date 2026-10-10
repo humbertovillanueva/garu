@@ -15,7 +15,7 @@
   import Intro from "./routes/Intro.svelte";
   import { isApp, paired, introSeen, markIntroSeen, server } from "./lib/server.svelte";
   import { route, startRouter, href } from "./lib/router.svelte";
-  import { connectLive, live, refreshNow } from "./lib/api.svelte";
+  import { connectLive, live, refreshNow, UNREACHABLE, UNREACHABLE_HINT } from "./lib/api.svelte";
   import { setupNative } from "./lib/native";
   import { pullToRefresh } from "./lib/pull";
   import { prefs } from "./lib/prefs.svelte";
@@ -55,7 +55,11 @@
   // The reconnect banner waits two seconds so a blink of the network doesn't flash it.
   let now = $state(Date.now());
   $effect(() => { const t = setInterval(() => (now = Date.now()), 1000); return () => clearInterval(t); });
-  const offline = $derived(live.loaded && !live.connected && live.disconnectedAt > 0 && now - live.disconnectedAt > 2000);
+  const offline = $derived(!live.connected && live.disconnectedAt > 0 && now - live.disconnectedAt > 2000);
+  // Never reached it since opening: say so instead of showing skeletons forever. Settings and the help
+  // pages still open, so a phone paired to a dead address can always forget it or ask for help.
+  const worksOffline = ["settings", "help", "about", "report"];
+  const unreachable = $derived(!live.loaded && !!live.loadError && !worksOffline.includes(route.name));
 </script>
 
 {#if showIntro}
@@ -80,7 +84,17 @@
     {/if}
     <div class="mx-auto max-w-5xl px-4 py-5 pb-24 sm:px-6 lg:px-10 lg:py-8 lg:pb-8">
       {#key route.name + "/" + route.parts.join("/")}
-        {#if route.name === "agent" && route.parts[0]}
+        {#if unreachable}
+          <section class="rise mx-auto max-w-md py-10 text-center">
+            <div class="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full border hairline"><span class="dot pulse" style="background: var(--color-ask)"></span></div>
+            <h1 class="text-[20px] font-semibold tracking-tight">Can't reach {isApp ? "your computer" : "the control room"}</h1>
+            <p class="mt-2 text-[14px] text-fg-2">{live.loadError === UNREACHABLE ? UNREACHABLE_HINT : live.loadError}</p>
+            <div class="mt-5 flex flex-wrap justify-center gap-2">
+              <button class="btn btn-primary" disabled={live.refreshing} onclick={() => refreshNow()}>{live.refreshing ? "Trying…" : "Try again"}</button>
+              <a class="btn" href={href("settings")}>Settings</a>
+            </div>
+          </section>
+        {:else if route.name === "agent" && route.parts[0]}
           <Agent name={route.parts[0]} />
         {:else if route.name === "agents"}
           <Agents />

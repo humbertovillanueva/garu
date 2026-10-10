@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { api, live } from "../lib/api.svelte";
+  import { api, live, loader, refreshCore, errorText } from "../lib/api.svelte";
   import { href } from "../lib/router.svelte";
-  import { when, until } from "../lib/format";
+  import { when, until, decidedBy, expired } from "../lib/format";
   import ReviewCard from "../lib/components/ReviewCard.svelte";
   import SuggestionCard from "../lib/components/SuggestionCard.svelte";
   import Mark from "../lib/components/Mark.svelte";
@@ -11,12 +11,32 @@
 
   let recent = $state<ApprovalRequest[] | null>(null);
   let busy = $state(false);
-  $effect(() => { live.tick; api.inbox().then((r) => (recent = r.recent.filter((x) => x.decision))); });
+  const load = loader();
+  // the history is secondary: if it doesn't come, the pending cards above still work
+  $effect(() => { live.tick; load(api.inbox(), (r) => (recent = r.recent.filter((x) => x.decision))); });
+  // What the last bulk action or revoke couldn't do, in a sentence.
+  let notice = $state<string | null>(null);
   async function batch(approve: boolean) {
-    busy = true;
-    try { await api.batch(live.pending.map((p) => p.id), approve); live.tick++; } finally { busy = false; }
+    if (busy) return;
+    busy = true; notice = null;
+    try {
+      const { results } = await api.batch(live.pending.map((p) => p.id), approve);
+      const done = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      const failed = results.length - done.size;
+      if (failed) notice = `${failed} of ${results.length} couldn't be ${approve ? "approved" : "declined"}. They may have expired or been decided elsewhere.`;
+      live.pending = live.pending.filter((p) => !done.has(p.id));
+      live.tick++;
+      void refreshCore().catch(() => {});
+    } catch (e) { notice = errorText(e); } finally { busy = false; }
   }
-  async function revoke(id: string) { await api.revokeGrant(id); live.tick++; }
+  let revoking = $state<string | null>(null);
+  async function revoke(id: string) {
+    if (revoking) return;
+    revoking = id; notice = null;
+    try { await api.revokeGrant(id); live.grants = live.grants.filter((g) => g.id !== id); live.tick++; }
+    catch (e) { notice = errorText(e); }
+    finally { revoking = null; }
+  }
   // The empty state is what you see most of the time, so it says what happens next.
   const nextUp = $derived.by(() => {
     const soon = live.agents.filter((a) => a.nextRun && a.status === "scheduled").sort((a, b) => a.nextRun!.localeCompare(b.nextRun!))[0];
@@ -45,6 +65,10 @@
     <div class="space-y-3">{#each live.pending as r (r.id)}<ReviewCard req={r} />{/each}</div>
   {/if}
 
+  {#if notice}
+    <div class="panel flex items-center gap-3 px-4 py-3 text-[13.5px] text-fg-2" role="status"><span class="dot flex-none" style="background: var(--color-ask)"></span>{notice}</div>
+  {/if}
+
   {#if live.suggestions.length}
     <div class="space-y-3">
       <h2 class="text-[11px] uppercase tracking-wider text-mute">Garu noticed</h2>
@@ -61,7 +85,7 @@
             <Mark name={g.agent} size={22} />
             <span class="mono min-w-0 flex-1 basis-40 break-all text-fg-2">{g.label}</span>
             <span class="text-[12px] text-mute">until {until(g.expiresAt).replace(/^in /, "")} · used {g.uses}×</span>
-            <button class="btn ml-auto py-1 text-[12px]" onclick={() => revoke(g.id)}>Revoke</button>
+            <button class="btn ml-auto py-1 text-[12px]" disabled={revoking === g.id} onclick={() => revoke(g.id)}>{revoking === g.id ? "Revoking…" : "Revoke"}</button>
           </div>
         {/each}
       </div>
@@ -77,8 +101,13 @@
             <Mark name={r.agent} size={22} />
             <span class="font-medium">{r.agent}</span>
             <span class="mono text-fg-2">{r.tool}</span>
-            <span style="color: {r.decision?.approved ? 'var(--color-ok)' : 'var(--color-bad)'}">{r.decision?.approved ? "approved" : "declined"}</span>
-            <span class="text-mute">by {r.decision?.by}</span>
+            {#if expired(r.decision?.by)}
+              <span style="color: var(--color-bad)">expired</span>
+              <span class="text-mute">nobody answered in time</span>
+            {:else}
+              <span style="color: {r.decision?.approved ? 'var(--color-ok)' : 'var(--color-bad)'}">{r.decision?.approved ? "approved" : "declined"}</span>
+              <span class="text-mute">by {decidedBy(r.decision?.by)}</span>
+            {/if}
             {#if r.decision?.note}<span class="italic text-fg-2">“{r.decision.note}”</span>{/if}
             <span class="ml-auto text-[11.5px] text-mute">{when(r.decision?.at)}</span>
           </a>

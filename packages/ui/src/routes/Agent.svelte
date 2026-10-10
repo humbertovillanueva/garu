@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { api, live, agentByName } from "../lib/api.svelte";
+  import { api, live, agentByName, loader } from "../lib/api.svelte";
+  import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
   import { usd, humanTime, statusLine, until, duration, cronLabel, triggerLabel } from "../lib/format";
   import Mark from "../lib/components/Mark.svelte";
@@ -29,16 +30,19 @@
   let bottom = $state<HTMLDivElement | null>(null);
   const hasKeyboard = typeof window === "undefined" || !window.matchMedia("(hover: none)").matches;
 
-  $effect(() => { live.tick; name; api.runs(name).then((r) => (runs = r)); });
+  let loadError = $state<string | null>(null);
+  const loadRuns = loader(), loadChat = loader();
+  $effect(() => { live.tick; name; loadRuns(api.runs(name), (r) => (runs = r), (m) => (loadError = m)); });
   $effect(() => {
     live.tick; name;
-    api.chat(name).then(async (m) => {
+    loadChat(api.chat(name), async (m) => {
+      loadError = null;
       const first = messages === null;
       const grew = (messages?.length ?? 0) !== m.length;
       messages = m;
       // A new message scrolls into view; opening the page does not, so the page lands on the agent's name.
       if (grew && !first) { await tick(); bottom?.scrollIntoView({ behavior: "smooth", block: "end" }); }
-    });
+    }, (m) => (loadError = m));
   });
 
   async function send() {
@@ -102,7 +106,7 @@
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
           <h1 class="text-[24px] font-semibold tracking-tight">{a.name}</h1>
-          <Status status={a.status === "scheduled" ? "idle" : a.status} />
+          <Status status={a.status === "scheduled" ? "sleeping" : a.status} />
         </div>
         {#if a.persona?.tagline}<p class="mt-0.5 text-[14px] italic text-fg-2">“{a.persona.tagline}”</p>{/if}
         {#if a.description}<p class="mt-1 text-[14px] text-fg-2">{a.description}</p>{/if}
@@ -115,9 +119,9 @@
       {@const total = (a.policy?.allow ?? 0) + (a.policy?.ask ?? 0) + (a.policy?.block ?? 0) || 1}
       {@const [provider, modelName] = (a.model ?? "").includes("/") ? (a.model as string).split("/", 2) as [string, string] : ["", a.model ?? ""]}
       <div class="rise facts">
-        <div class="fact"><div class="k">Runs</div><div class="v" title={a.cron ?? ""}>{a.cron ? cronLabel(a.cron) : "when asked"}{#if a.nextRun && live.up}<span class="text-mute"> · next {until(a.nextRun)}</span>{/if}</div></div>
-        <div class="fact"><div class="k">History</div><div class="v">{a.runs} run{a.runs === 1 ? "" : "s"}{#if a.runsToday}<span class="text-mute"> · {a.runsToday} today</span>{/if}</div></div>
-        <div class="fact"><div class="k">Model</div><div class="v" title={a.model ?? ""}>{modelName}{#if provider}<span class="text-mute"> · {provider}</span>{/if}</div></div>
+        <div class="fact"><div class="k">Runs</div><div class="v" title={a.cron ?? ""}>{a.cron ? cronLabel(a.cron) : "when asked"}{#if a.nextRun && live.up}<span class="text-mute">&nbsp;· next {until(a.nextRun)}</span>{/if}</div></div>
+        <div class="fact"><div class="k">History</div><div class="v">{a.runs} run{a.runs === 1 ? "" : "s"}{#if a.runsToday}<span class="text-mute">&nbsp;· {a.runsToday} today</span>{/if}</div></div>
+        <div class="fact"><div class="k">Model</div><div class="v" title={a.model ?? ""}>{modelName}{#if provider}<span class="text-mute">&nbsp;· {provider}</span>{/if}</div></div>
         <div class="fact"><div class="k">Tools</div><div class="v" title={a.tools.join(", ")}>{a.tools.length ? a.tools.join(" · ") : "none"}</div></div>
         <div class="fact">
           <div class="k">Policy</div>
@@ -130,13 +134,13 @@
             <span class="text-[11.5px] leading-tight text-mute">{a.policy?.allow} allow · {a.policy?.ask} ask · {a.policy?.block} block</span>
           </div>
         </div>
-        <div class="fact"><div class="k">Limits</div><div class="v">{a.budget?.maxCostUsd ? `${usd(a.budget.maxCostUsd)} per run` : a.budget?.free ? "free model" : "no cap"}<span class="text-mute"> · {a.sandbox ? `sandboxed, net ${a.sandbox.network}` : "no sandbox"}</span></div></div>
+        <div class="fact"><div class="k">Limits</div><div class="v">{a.budget?.maxCostUsd ? `${usd(a.budget.maxCostUsd)} per run` : a.budget?.free ? "free model" : "no cap"}<span class="text-mute">&nbsp;· {a.sandbox ? `sandboxed, net ${a.sandbox.network}` : "no sandbox"}</span></div></div>
       </div>
     {/if}
 
     <!-- Conversation -->
     {#if messages === null}
-      <Skeleton rows={2} h={56} />
+      {#if loadError}<LoadError message={loadError} />{:else}<Skeleton rows={2} h={56} />{/if}
     {:else if messages.length === 0 && !currentRunId}
       <div class="rise rounded-xl border border-dashed hairline px-4 py-6 text-center text-[13.5px] text-fg-2">
         {#if a.configured}Say hello to {a.name}, or tell it to run. Anything it does goes through its policy and shows up here.{:else}This agent has no Garufile here, so it can't be messaged — only its history is available.{/if}
@@ -166,7 +170,7 @@
       <div class="panel-raised rise space-y-2 p-4 text-[13.5px] text-fg-2" style="border-color: color-mix(in oklab, var(--color-ask) 35%, var(--color-line-2))">
         {#if isApp}
           <div class="font-medium text-fg">{a.name} needs setup on your computer</div>
-          <div>It can't run until {a.needs.length ? `${a.needs.join(" and ")} ${a.needs.length === 1 ? "is" : "are"} set in Garu's .env` : ""}{a.needs.length && a.signIn.length ? " and " : ""}{a.signIn.length ? `you sign in to ${a.signIn.join(", ")}` : ""}. Open the control room on that computer to finish.</div>
+          <div>It can't run until {a.needs.length ? `${a.needs.length === 1 ? "a key it needs is" : "keys it needs are"} added` : ""}{a.needs.length && a.signIn.length ? " and " : ""}{a.signIn.length ? `you sign in to ${a.signIn.join(", ")}` : ""}. Open Garu on that computer to finish.</div>
         {:else}
           <div class="font-medium text-fg">{a.name} can't run yet</div>
           {#if a.needs.length}<div>Add <span class="mono text-fg">{a.needs.join(", ")}</span> to <span class="mono">.env</span>, then <span class="mono">garu service restart</span>.</div>{/if}
@@ -196,7 +200,7 @@
         {#if (runs?.length ?? 0) > 5}<button class="text-[11.5px] text-mute hover:text-fg" onclick={() => (showAllRuns = !showAllRuns)}>{showAllRuns ? "show fewer" : `show all ${runs!.length}`}</button>{/if}
       </div>
       {#if runs === null}
-        <Skeleton rows={3} h={48} />
+        {#if loadError}<LoadError message={loadError} />{:else}<Skeleton rows={3} h={48} />{/if}
       {:else if runs.length === 0}
         <div class="text-[13px] text-mute">No runs yet.</div>
       {:else}
@@ -204,7 +208,7 @@
           {#each (showAllRuns ? runs : runs.slice(0, 5)).filter((r) => r.runId !== currentRunId) as r (r.runId)}
             <a href={href("run", r.agent, r.runId)} class="card-hover flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2.5 first:rounded-t-xl last:rounded-b-xl">
               <Status status={r.status} />
-              <span class="text-[12.5px] text-fg-2" title={r.startedAt}>{humanTime(r.startedAt)}</span>
+              <span class="text-[12.5px] text-fg-2">{humanTime(r.startedAt)}</span>
               <span class="text-[12px] text-mute">{triggerLabel(r.trigger)}</span>
               <span class="min-w-0 flex-1 truncate text-[13px] text-fg-2">{r.summary ?? ""}</span>
               <span class="hidden text-[12px] text-mute sm:inline">{usd(r.costUsd, r.priced)} · {duration(r.startedAt, r.endedAt)}</span>
