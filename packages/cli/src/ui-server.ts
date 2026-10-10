@@ -165,8 +165,16 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         const fresh = discover().agents.find((x) => x.garufile.name === a.garufile.name) ?? (a as DiscoveredAgent);
         return startRun(fresh, trigger);
       },
+      // A Mac that was asleep or off at fire time still gets its run, once, labelled catch-up.
+      catchUp: {
+        lastRunAt: (agent) => {
+          const r = store.runs(agent).find((x) => x.trigger.startsWith("cron:") || x.trigger.startsWith("catch-up:"));
+          return r ? new Date(r.startedAt) : null;
+        },
+      },
       onEvent: (e) => {
         if (e.type === "fire") opts.log(`▶ ${e.agent} (cron ${e.cron})`);
+        else if (e.type === "catch-up") opts.log(`↺ ${e.agent}: missed ${e.missedAt.toLocaleTimeString()} (cron ${e.cron}), catching up`);
         else if (e.type === "run.done") opts.log(`■ ${e.agent}: ${e.result.status} in ${e.result.turns} turn(s)`);
         else if (e.type === "run.failed") opts.log(`✖ ${e.agent}: ${e.error}`);
         else if (e.type === "skip.overlap") opts.log(`↷ ${e.agent}: still running, skipped`);
@@ -329,7 +337,13 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           const text = body.text?.trim();
           if (!text) return json(res, { error: "empty message" }, 400);
           const displayName = name.charAt(0).toUpperCase() + name.slice(1);
-          const input = chat.transcript(name, opts.userName, displayName, text);
+          const view = agentView(a, name);
+          const input = chat.transcript(name, opts.userName, displayName, text, 20, {
+            cron: view.cron,
+            schedulesOn: Boolean(opts.up),
+            nextRun: view.nextRun ? new Date(view.nextRun) : null,
+            runs: store.runs(name).slice(0, 6).map((r) => ({ startedAt: new Date(r.startedAt), trigger: r.trigger, status: r.status })),
+          });
           chat.append(name, { role: "user", kind: "chat", text });
           opts.log(`💬 ${name}: ${text.slice(0, 60)}`);
           void startRun(a, "chat", input).catch(() => {});

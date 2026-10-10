@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ChatStore } from "./chat.js";
+import { ChatStore, describeSelf } from "./chat.js";
 
 describe("ChatStore", () => {
   it("appends and reads messages per agent", () => {
@@ -36,5 +36,37 @@ describe("ChatStore", () => {
     const s = new ChatStore(mkdtempSync(join(tmpdir(), "chat-")));
     const t = s.transcript("tomay", "H", "T", "hey");
     expect(t.startsWith("H's new message:\nhey")).toBe(true);
+  });
+
+  it("puts Garu's own facts about the agent ahead of the conversation", () => {
+    const s = new ChatStore(mkdtempSync(join(tmpdir(), "chat-")));
+    const t = s.transcript("tomay", "H", "Tomay", "why no brief?", 20, {
+      cron: "0 7 * * 1-5", schedulesOn: true, nextRun: new Date("2026-10-12T13:00:00Z"), timeZone: "America/Denver", now: new Date("2026-10-09T22:30:00-06:00"),
+      runs: [{ startedAt: new Date("2026-10-08T17:28:00Z"), trigger: "manual", status: "ok" }, { startedAt: new Date("2026-10-08T13:00:00Z"), trigger: "cron:0 7 * * 1-5", status: "ok" }],
+    });
+    expect(t.indexOf("Facts about you")).toBe(0);
+    expect(t).toContain('cron "0 7 * * 1-5"');
+    expect(t).toContain("No scheduled run has happened today");
+    expect(t.indexOf("Facts about you")).toBeLessThan(t.indexOf("H's new message"));
+  });
+});
+
+describe("describeSelf", () => {
+  const tz = "America/Denver";
+  it("says the scheduler is off when it is", () => {
+    const d = describeSelf({ cron: "0 7 * * 1-5", schedulesOn: false, nextRun: null, runs: [], timeZone: tz });
+    expect(d).toContain("scheduler is OFF");
+    expect(d).toContain("Runs: none recorded yet.");
+  });
+  it("labels catch-up runs and today's scheduled run", () => {
+    const now = new Date("2026-10-09T15:30:00Z"); // 09:30 Denver
+    const d = describeSelf({ cron: "0 7 * * 1-5", schedulesOn: true, nextRun: new Date("2026-10-12T13:00:00Z"), timeZone: tz, now,
+      runs: [{ startedAt: new Date("2026-10-09T15:05:00Z"), trigger: "catch-up:0 7 * * 1-5", status: "ok" }] });
+    expect(d).toContain("catch-up (missed while Garu was off or asleep)");
+    expect(d).not.toContain("No scheduled run has happened today");
+    expect(d).toContain("Next scheduled run: Mon, Oct 12, 07:00");
+  });
+  it("on-demand agents get a one-liner", () => {
+    expect(describeSelf({ cron: null, schedulesOn: true, nextRun: null, runs: [], timeZone: tz })).toContain("Schedule: none; you run only when asked.");
   });
 });

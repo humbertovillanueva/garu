@@ -26,6 +26,7 @@ import {
   parseDuration,
   scopeFor,
   PolicyEngine,
+  RunStore,
   Scheduler,
   assertValidCron,
   formatEvent,
@@ -177,8 +178,15 @@ program
           },
         }).approver();
 
+    const upStore = new RunStore(opts.logRoot);
     const scheduler = new Scheduler({
       onEvent: printSchedulerEvent,
+      catchUp: {
+        lastRunAt: (agent) => {
+          const r = upStore.runs(agent).find((x) => x.trigger.startsWith("cron:") || x.trigger.startsWith("catch-up:"));
+          return r ? new Date(r.startedAt) : null;
+        },
+      },
       runner: (a, trigger) =>
         runAgent({
           garufile: a.garufile,
@@ -802,6 +810,9 @@ function printSchedulerEvent(e: SchedulerEvent): void {
       break;
     case "fire":
       stderr.write(`${t} ▶ ${e.agent} (cron ${e.cron})\n`);
+      break;
+    case "catch-up":
+      stderr.write(`${t} ↺ ${e.agent}: was due ${e.missedAt.toISOString().slice(11, 16)} UTC (cron ${e.cron}) while garu was not running; catching up\n`);
       break;
     case "skip.overlap":
       stderr.write(`${t} ↷ ${e.agent}: previous run still going, skipped this tick\n`);
