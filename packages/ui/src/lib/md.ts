@@ -14,12 +14,13 @@ function inline(s: string): string {
     .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a class="underline decoration-mute underline-offset-2 hover:text-fg" href="$2" target="_blank" rel="noopener noreferrer">$2</a>');
 }
 
-export function renderMarkdown(src: string): string {
+/** `breaks`: a single newline is a line break, for short summaries written one item per line. */
+export function renderMarkdown(src: string, { breaks = false } = {}): string {
   const lines = src.replace(/\r\n/g, "\n").split("\n");
   const out: string[] = [];
   let i = 0;
   const para: string[] = [];
-  const flushPara = () => { if (para.length) { out.push(`<p>${inline(para.join(" "))}</p>`); para.length = 0; } };
+  const flushPara = () => { if (para.length) { out.push(`<p>${para.map(inline).join(breaks ? "<br>" : " ")}</p>`); para.length = 0; } };
   while (i < lines.length) {
     const line = lines[i]!;
     if (/^```/.test(line)) {

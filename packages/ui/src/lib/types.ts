@@ -165,3 +165,9 @@ export interface Settings {
   /** required: even this computer signs in. direct: this request came from a browser on the same computer. */
   login: { required: boolean; direct: boolean; tokenPath: string };
 }
+
+/** /api/today: each agent's newest good result from the last seven days, and the week in numbers. */
+export interface TodayResponse {
+  results: { agent: string; runId: string; endedAt: string; summary: string | null; costUsd: number; priced: boolean; doc: { path: string; content: string } | null }[];
+  week: { runs: number; actions: number; asked: number; costUsd: number; priced: boolean };
+}

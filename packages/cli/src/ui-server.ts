@@ -452,6 +452,12 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       }
       if (path === "/api/feed") return json(res, feed(store, inbox, Number(url.searchParams.get("limit") ?? 80)));
       if (path === "/api/cost") return json(res, store.costByDay(Number(url.searchParams.get("days") ?? 14)));
+      if (path === "/api/today") {
+        // An agent that fires more than four times a day is a heartbeat: its results stay in the activity list.
+        const often = (cron: string) => { try { const next = new Cron(cron, { paused: true }).nextRuns(5); return next.length === 5 && next[4]!.getTime() - Date.now() < 86_400_000; } catch { return false; } };
+        const heartbeats = new Set(discover().agents.filter((a) => a.garufile.triggers.some((t) => t.cron && often(t.cron))).map((a) => a.garufile.name));
+        return json(res, store.today(new Date(), heartbeats));
+      }
       // The tail of the service log, for "Report a problem". Secrets never go in the log on purpose, but a
       // webhook URL or a token could land there inside an error message, so anything key-shaped is masked.
       if (path === "/api/logs") {

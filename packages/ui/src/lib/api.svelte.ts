@@ -1,4 +1,4 @@
-import type { Agent, AgentsResponse, ApprovalRequest, ChatMessage, CostRow, Envelope, FeedItem, InboxResponse, RunSummary } from "./types";
+import type { Agent, AgentsResponse, ApprovalRequest, ChatMessage, CostRow, Envelope, FeedItem, InboxResponse, RunSummary, TodayResponse } from "./types";
 import { isApp, server } from "./server.svelte";
 
 /** Every call goes to the control room this page is paired with (the serving host in a browser). */
@@ -71,6 +71,7 @@ export const api = {
   inbox: () => get<InboxResponse>("/api/inbox"),
   feed: (limit = 80) => get<FeedItem[]>(`/api/feed?limit=${limit}`),
   cost: (days = 14) => get<CostRow[]>(`/api/cost?days=${days}`),
+  today: () => get<TodayResponse>("/api/today"),
   decide: (id: string, approve: boolean, forDuration?: string, note?: string) => post<ApprovalRequest>(`/api/inbox/${id}/${approve ? "approve" : "deny"}`, { ...(forDuration ? { for: forDuration } : {}), ...(note ? { note } : {}) }),
   diff: (id: string) => get<import("./types").WriteDiff>(`/api/inbox/${id}/diff`),
   batch: (ids: string[], approve: boolean) => post<{ results: { id: string; ok: boolean }[] }>(`/api/inbox/batch`, { ids, approve }),

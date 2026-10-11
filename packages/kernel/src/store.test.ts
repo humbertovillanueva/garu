@@ -42,6 +42,30 @@ describe("RunStore", () => {
     expect(store.run("../etc", "x")).toBeNull();
   });
 
+  it("today: each agent's newest good result with the document it wrote, heartbeats skipped, a week in numbers", () => {
+    const root = mkdtempSync(join(tmpdir(), "store-"));
+    const brief = new Recorder({ root, agent: "tomay" });
+    brief.record({ type: "run.start", agent: "tomay", model: "gemini/x", trigger: "cron:0 7 * * 1-5" });
+    brief.record({ type: "tool.request", callId: "w", request: { server: "fs", tool: "write_file", args: { path: "agents/tomay/briefs/2026-10-12.md", content: "# Your day\n- 10:00 Design review" } } });
+    brief.record({ type: "policy.decision", callId: "w", decision: { action: "allow", ruleIndex: 9, matched: "fs.write_file", reason: "" } });
+    brief.record({ type: "tool.result", callId: "w", ok: true, durationMs: 4 });
+    brief.record({ type: "tool.request", callId: "x", request: { server: "fs", tool: "write_file", args: { path: "notes.md", content: "refused" } } });
+    brief.record({ type: "policy.decision", callId: "x", decision: { action: "block", ruleIndex: 10, matched: "*", reason: "" } });
+    brief.record({ type: "tool.result", callId: "x", ok: false, durationMs: 0, error: "blocked by policy" });
+    brief.record({ type: "run.end", status: "ok", costUsd: 0.003, priced: true, summary: "3 meetings today." });
+    makeRun(root, "bea");
+    makeRun(root, "bea", { status: "error" });
+    makeRun(root, "tick");
+    const { results, week } = new RunStore(root).today(new Date(), new Set(["tick"]));
+    expect(results.map((r) => r.agent).sort()).toEqual(["bea", "tomay"]);
+    const t = results.find((r) => r.agent === "tomay")!;
+    expect(t.summary).toBe("3 meetings today.");
+    expect(t.doc).toEqual({ path: "agents/tomay/briefs/2026-10-12.md", content: "# Your day\n- 10:00 Design review" });
+    expect(results.find((r) => r.agent === "bea")!.doc).toBeNull();
+    expect(week).toMatchObject({ runs: 4, actions: 4, asked: 0, priced: true });
+    expect(week.costUsd).toBeCloseTo(0.006);
+  });
+
   it("a run without run.end is 'running'", () => {
     const root = mkdtempSync(join(tmpdir(), "store-"));
     const r = new Recorder({ root, agent: "live" });

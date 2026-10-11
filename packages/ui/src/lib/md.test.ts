@@ -18,4 +18,7 @@ describe("renderMarkdown", () => {
     expect(html).toContain("<pre");
     expect(html).toContain("x &lt; y");
   });
+  it("keeps single line breaks when asked", () => {
+    expect(renderMarkdown("9 new\nPriya: <lunch?>", { breaks: true })).toBe("<p>9 new<br>Priya: &lt;lunch?&gt;</p>");
+  });
 });

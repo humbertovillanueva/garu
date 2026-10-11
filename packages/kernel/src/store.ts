@@ -28,6 +28,26 @@ export interface RunSummary {
   path: string;
 }
 
+/** One agent's newest result, for Home: what it did, and the document it wrote if it wrote one. */
+export interface TodayResult {
+  agent: string;
+  runId: string;
+  endedAt: string;
+  summary: string | null;
+  costUsd: number;
+  priced: boolean;
+  /** The markdown file the run wrote (a brief, a summary), cut at 4,000 characters. */
+  doc: { path: string; content: string } | null;
+}
+/** The last seven days in four numbers: runs, actions taken without asking, times it asked you, money. */
+export interface WeekStats {
+  runs: number;
+  actions: number;
+  asked: number;
+  costUsd: number;
+  priced: boolean;
+}
+
 export interface AgentSummary {
   name: string;
   runs: number;
@@ -155,6 +175,47 @@ export class RunStore {
         model: runs[0]?.model ?? null,
       };
     });
+  }
+
+  /**
+   * What the agents did lately: each agent's newest good result from the last seven days, newest
+   * first (a week, so Friday's brief is still there on Monday morning), and the week in four numbers. `skip` names agents that run so often (a heartbeat)
+   * that their results belong in the activity list instead.
+   */
+  today(now = new Date(), skip: ReadonlySet<string> = new Set()): { results: TodayResult[]; week: WeekStats } {
+    const weekAgo = now.getTime() - 7 * 86_400_000;
+    const results: TodayResult[] = [];
+    const week: WeekStats = { runs: 0, actions: 0, asked: 0, costUsd: 0, priced: true };
+    for (const agent of this.agents()) {
+      const runs = this.runs(agent);
+      for (const r of runs) {
+        if (Date.parse(r.startedAt) < weekAgo) continue;
+        week.runs++;
+        week.actions += r.toolCalls.allow;
+        week.asked += r.toolCalls.ask;
+        week.costUsd += r.costUsd;
+        if (!r.priced) week.priced = false;
+      }
+      if (skip.has(agent)) continue;
+      const last = runs.find((r) => Date.parse(r.startedAt) >= weekAgo && r.endedAt && r.status === "ok" && r.summary);
+      if (!last) continue;
+      results.push({ agent, runId: last.runId, endedAt: last.endedAt!, summary: last.summary, costUsd: last.costUsd, priced: last.priced, doc: this.documentOf(agent, last.runId) });
+    }
+    results.sort((a, b) => b.endedAt.localeCompare(a.endedAt));
+    return { results, week };
+  }
+
+  /** The markdown file a run wrote, when the write went through; the last one wins. */
+  private documentOf(agent: string, runId: string): TodayResult["doc"] {
+    const events = this.run(agent, runId) ?? [];
+    const ok = new Set(events.flatMap((e) => (e.event.type === "tool.result" && e.event.ok ? [e.event.callId] : [])));
+    let doc: TodayResult["doc"] = null;
+    for (const e of events) {
+      if (e.event.type !== "tool.request" || e.event.request.tool !== "write_file" || !ok.has(e.event.callId)) continue;
+      const { path, content } = e.event.request.args as { path?: unknown; content?: unknown };
+      if (typeof path === "string" && /\.md$/i.test(path) && typeof content === "string") doc = { path, content: content.slice(0, 4000) };
+    }
+    return doc;
   }
 
   /** Cost and run counts per local day per agent, for the last `days` days. */

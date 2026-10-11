@@ -8,28 +8,33 @@
   import SuggestionCard from "../lib/components/SuggestionCard.svelte";
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
-  import type { FeedItem, ApprovalRequest } from "../lib/types";
+  import type { FeedItem, ApprovalRequest, TodayResponse } from "../lib/types";
   import { isApp } from "../lib/server.svelte";
+  import { renderMarkdown } from "../lib/md";
 
   let feed = $state<FeedItem[] | null>(null);
   let feedError = $state<string | null>(null);
+  // What the agents produced lately (a brief, a sorted inbox) and the week in numbers.
+  let today = $state<TodayResponse | null>(null);
   const load = loader();
+  const loadToday = loader();
   $effect(() => { live.tick; load(api.feed(60), (f) => { feed = f; feedError = null; }, (m) => (feedError = m)); });
+  $effect(() => { live.tick; loadToday(api.today(), (t) => (today = t), () => {}); });
 
   const hour = new Date().getHours();
   const greeting = hour < 5 ? "Still up" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const runsToday = $derived(live.agents.reduce((s, a) => s + a.runsToday, 0));
   const spendToday = $derived(live.agents.reduce((s, a) => s + a.costTodayUsd, 0));
   const working = $derived(live.agents.filter((a) => a.status === "working"));
-  const active = $derived(live.agents.filter((a) => a.status !== "idle" && a.status !== "needs-setup" || a.pending > 0));
   const needsSetup = $derived(live.agents.filter((a) => a.status === "needs-setup"));
   const totalRuns = $derived(live.agents.reduce((s, a) => s + a.runs, 0));
   const scheduled = $derived(live.agents.filter((a) => a.cron && a.status !== "needs-setup").length);
   // First week: show the way in until there's real history.
   const firstRun = $derived(live.loaded && totalRuns < 3);
 
-  // What fires next, across every scheduled agent.
-  const nextUp = $derived.by(() => live.agents.filter((a) => a.nextRun && a.status === "scheduled").sort((a, b) => a.nextRun!.localeCompare(b.nextRun!))[0] ?? null);
+  // What fires next, across every scheduled agent, soonest first; one waiting on you still has its next run.
+  const comingUp = $derived(live.agents.filter((a) => a.nextRun && a.status !== "needs-setup" && !a.needs.length && !a.signIn.length).sort((a, b) => a.nextRun!.localeCompare(b.nextRun!)).slice(0, 6));
+  const week = $derived(today?.week ?? null);
 
   // Feed minus pending approvals (they get their own cards up top), grouped by day. An agent that
   // finished several runs in a row with the same outcome takes one line, so a heartbeat doesn't bury the day.
@@ -72,18 +77,7 @@
           <span class="dot" style="background: var(--color-ask)"></span>
           <div class="min-w-0"><div class="font-medium">Schedules are off</div><div class="text-[12.5px] text-fg-2">{isApp ? "Garu on your computer is running, but not its schedules. Start it there with the login service." : "Start Garu with --up, or install the login service, and the schedules below will fire."}</div></div>
         </div>
-      {:else if nextUp}
-        <a href={href("agent", nextUp.name)} class="panel card-hover flex items-center gap-3 px-4 py-3 text-[13.5px]">
-          <Mark name={nextUp.name} size={28} status={nextUp.status} />
-          <div class="min-w-0 flex-1"><div><span class="text-mute">Next up:</span> <span class="font-medium">{nextUp.name}</span>, {until(nextUp.nextRun)}</div><div class="truncate text-[12.5px] text-mute">{nextUp.description || cronLabel(nextUp.cron)}</div></div>
-        </a>
       {/if}
-      <div class="flex flex-wrap gap-x-3 gap-y-1 px-1 text-[12.5px] text-mute">
-        <span>{live.agents.length} agent{live.agents.length === 1 ? "" : "s"}</span><span>·</span>
-        <span>{scheduled} on a schedule</span><span>·</span>
-        <span>{runsToday} run{runsToday === 1 ? "" : "s"} today</span>
-        {#if spendToday}<span>·</span><span>{usd(spendToday)} today</span>{/if}
-      </div>
     </div>
   {/if}
 
@@ -122,11 +116,42 @@
     </div>
   {/if}
 
-  {#if active.length}
+  {#if today?.results.length}
+    <div>
+      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Latest from your agents</h2>
+      <div class="grid gap-3 md:grid-cols-2">
+        {#each today.results.slice(0, 4) as r (r.agent + r.runId)}
+          {@const waiting = live.pending.filter((p) => p.agent === r.agent).length}
+          <div class="panel-raised rise flex min-w-0 flex-col p-4">
+            <div class="flex items-center gap-3">
+              <Mark name={r.agent} size={30} />
+              <div class="min-w-0 flex-1">
+                <div class="text-[14px] font-medium">{r.agent}</div>
+                <div class="text-[12px] text-mute">{humanTime(r.endedAt)}</div>
+              </div>
+            </div>
+            {#if r.summary}<div class="md result mt-3 space-y-1 text-[13.5px] text-fg-2">{@html renderMarkdown(plainTimes(r.summary), { breaks: true })}</div>{/if}
+            {#if r.doc}
+              <!-- The document it wrote (Tomay's brief), the top of it; the rest is one tap away. -->
+              <div class="doc relative mt-3 overflow-hidden rounded-lg border hairline bg-bg/60 px-3 py-2">
+                <div class="md space-y-1 text-[13px]">{@html renderMarkdown(plainTimes(r.doc.content))}</div>
+              </div>
+            {/if}
+            <div class="mt-auto flex flex-wrap gap-x-4 pt-3 text-[12.5px]">
+              <a class="tap text-fg-2 underline decoration-mute underline-offset-2 hover:text-fg" href={href("run", r.agent, r.runId)}>{r.doc ? "Read it all" : "See the run"}</a>
+              {#if waiting}<a class="tap underline decoration-mute underline-offset-2" style="color: var(--color-ask)" href={href("inbox")}>{waiting} waiting for you</a>{/if}
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
+  {#if working.length}
     <div>
       <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Right now</h2>
       <div class="grid gap-2 sm:grid-cols-2">
-        {#each active as a (a.name)}
+        {#each working as a (a.name)}
           <a href={href("agent", a.name)} class="panel card-hover rise flex items-center gap-3 px-3 py-2.5">
             <Mark name={a.name} size={30} status={a.status} />
             <div class="min-w-0">
@@ -134,6 +159,34 @@
               <div class="truncate text-[12.5px] text-fg-2">{statusLine(a)}</div>
             </div>
           </a>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
+  {#if live.up && comingUp.length}
+    <div>
+      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Coming up</h2>
+      <div class="flex flex-wrap gap-2">
+        {#each comingUp as a (a.name)}
+          <a href={href("agent", a.name)} class="chip card-hover tap gap-2 py-1 pl-1 pr-3" title={a.description || cronLabel(a.cron)}>
+            <Mark name={a.name} size={20} />
+            <span class="text-fg">{a.name}</span><span>{until(a.nextRun)}</span>
+          </a>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
+  {#if week && week.runs}
+    <div>
+      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">This week</h2>
+      <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {#each [["Runs", String(week.runs)], ["Done without asking", String(week.actions)], ["Asked you", String(week.asked)], ["Spent", usd(week.costUsd, week.priced)]] as [label, value] (label)}
+          <div class="panel px-3 py-2.5">
+            <div class="text-[12px] text-mute">{label}</div>
+            <div class="mt-0.5 text-[20px] font-semibold tracking-tight tabular-nums">{value}</div>
+          </div>
         {/each}
       </div>
     </div>
@@ -183,3 +236,10 @@
     {/if}
   </div>
 </section>
+
+<style>
+  /* A result reads at a glance: a few lines of summary, the top of its document, the rest one tap away. */
+  .result { max-height: 7.5rem; overflow: hidden; }
+  .doc { max-height: 13rem; }
+  .doc::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2.5rem; background: linear-gradient(transparent, var(--color-panel)); pointer-events: none; }
+</style>

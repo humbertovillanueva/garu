@@ -20,7 +20,9 @@ mkdirSync(runs, { recursive: true });
 const minutesAgo = (m) => new Date(Date.now() - m * 60_000);
 const stamp = (d) => d.toISOString().replace(/[-:T]/g, "").slice(0, 15).replace(/^(\d{8})(\d{6}).*/, "$1-$2");
 const hex = () => Math.random().toString(16).slice(2, 10);
-const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+// The newest brief is from the last weekday whose 7:00 has passed (Friday's, on a weekend).
+const briefDay = new Date(Date.now() - weekdayMornings(1, 7, 0)[0] * 60_000);
+const today = briefDay.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 /** How many minutes ago hh:mm was on the last `n` weekdays where it has already passed, newest first. */
 function weekdayMornings(n, h, m) {
   const now = new Date();
@@ -104,7 +106,7 @@ const TOMAY_TOOLS = {
   offered: ["calendar.list_calendars", "calendar.list_events", "calendar.get_event", "gmail.search_threads", "gmail.get_thread", "fs.list_allowed_directories", "fs.list_directory", "fs.read_text_file", "fs.write_file"],
   hidden: ["gmail.list_labels", "gmail.list_drafts", "gmail.label_thread", "gmail.create_draft", "fs.edit_file", "fs.move_file", "fs.create_directory"],
 };
-const day = new Date().toISOString().slice(0, 10);
+const day = briefDay.toLocaleDateString("en-CA"); // YYYY-MM-DD, local
 const tomaySteps = [
   { turn: true, cost: 0.0002 },
   { tool: "calendar.list_calendars", args: {}, action: "allow", rule: 0, ms: 230, result: '[{"id":"primary","name":"Humberto","primary":true}]' },
