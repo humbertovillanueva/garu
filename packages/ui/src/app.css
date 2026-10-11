@@ -144,3 +144,9 @@ html.app .phonebar { background: var(--color-bg) !important; backdrop-filter: no
 @media (min-width: 1024px) { .offline { top: 0; } }
 ::selection { background: color-mix(in oklab, var(--color-accent) 35%, transparent); }
 * { scrollbar-width: thin; scrollbar-color: var(--color-line-2) transparent; }
+/* An iPhone zooms into any text box under 16px when it's tapped, and stays zoomed after.
+   Only iOS WebKit knows -webkit-touch-callout. A floor, so it wins over every size class
+   (.field, .mono and the text-[…] utilities all set smaller ones). */
+@supports (-webkit-touch-callout: none) {
+  input, textarea, select { font-size: max(16px, 1em) !important; }
+}

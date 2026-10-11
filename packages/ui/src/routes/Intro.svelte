@@ -8,7 +8,7 @@
   import Logo from "../lib/components/Logo.svelte";
   import Creature from "../lib/components/Creature.svelte";
   import Pair from "./Pair.svelte";
-  import { backHandlers, haptic } from "../lib/native";
+  import { backHandlers, canScan, haptic } from "../lib/native";
 
   let { onDone, splash = true, alreadyPaired = false }: { onDone: () => void; splash?: boolean; alreadyPaired?: boolean } = $props();
 
@@ -124,7 +124,7 @@
           <p>Your agents live on the computer running Garu. Pair this phone once and it talks straight to that computer over your private network; there's no Garu server in between.</p>
           <ol class="steps">
             <li><i>1</i><span>On your computer, open Garu → <b>Settings → Your phone &amp; other devices</b>.</span></li>
-            <li><i>2</i><span>Press <b>Show pairing code</b>, then scan it below, or copy the link there and paste it below.</span></li>
+            <li><i>2</i><span>Press <b>Show pairing code</b>, then {canScan ? "scan it below, or copy the link there and paste it below" : "press Copy link there and paste it below"}.</span></li>
             <li><i>3</i><span>Both need <b>Tailscale</b> (free), signed in to the same account.</span></li>
             <li><i>4</i><span>Don't have Garu yet? <a class="link" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">The website ↗</a> walks you through setting it up on your computer.</span></li>
           </ol>

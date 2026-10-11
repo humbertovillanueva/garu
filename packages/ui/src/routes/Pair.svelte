@@ -8,7 +8,7 @@
   import { onDestroy } from "svelte";
   import { connectLive, live } from "../lib/api.svelte";
   import { build, markIntroSeen, parsePairing, remember, server } from "../lib/server.svelte";
-  import { haptic } from "../lib/native";
+  import { canScan, haptic } from "../lib/native";
 
   let { problem = null, embedded = false, title = "Can't reach your control room" }: { problem?: string | null; embedded?: boolean; title?: string } = $props();
 
@@ -20,7 +20,8 @@
   let video = $state<HTMLVideoElement | null>(null);
   let stream: MediaStream | null = null;
   let timer: ReturnType<typeof setInterval> | undefined;
-  const canScan = typeof window !== "undefined" && "BarcodeDetector" in window && Boolean(navigator.mediaDevices?.getUserMedia);
+  // Once the link is in, its key is shown as dots (screenshots and screen recordings stay clean) and the address under it.
+  const parsed = $derived(parsePairing(text));
 
   async function connect(input: string) {
     const p = parsePairing(input);
@@ -114,8 +115,9 @@
       <form onsubmit={(e) => { e.preventDefault(); void connect(text); }}>
         <label class="block">
           <span class="text-[11px] uppercase tracking-wider text-mute">Sign-in link</span>
-          <input class="mono mt-1.5 w-full rounded-lg border hairline bg-bg px-3 py-2.5 text-[12.5px] outline-none focus:border-accent/60" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://your-mac.tail…ts.net/?token=…" bind:value={text} />
+          <input class="mono mt-1.5 w-full rounded-lg border hairline bg-bg px-3 py-2.5 text-[12.5px] outline-none focus:border-accent/60" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://your-mac.tail…ts.net/?token=…" style={parsed ? "-webkit-text-security: disc" : undefined} bind:value={text} />
         </label>
+        {#if parsed}<p class="mt-1.5 text-[11.5px] text-mute">A link to <span class="mono [overflow-wrap:anywhere]">{parsed.base.replace(/^https?:\/\//, "")}</span>. Its key stays hidden.</p>{/if}
         <button class="btn mt-3 w-full" class:btn-primary={!canScan} type="submit" disabled={busy || !text.trim()}>{busy ? "Connecting…" : "Connect"}</button>
       </form>
     {/if}

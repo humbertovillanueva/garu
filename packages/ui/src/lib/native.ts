@@ -6,6 +6,9 @@
 import { isApp } from "./server.svelte";
 import { prefs } from "./prefs.svelte";
 
+/** Whether this webview can scan a QR code itself: Android's can (BarcodeDetector), an iPhone's can't. */
+export const canScan = typeof window !== "undefined" && "BarcodeDetector" in window && Boolean(navigator.mediaDevices?.getUserMedia);
+
 type Hap = typeof import("@capacitor/haptics");
 let haptics: Promise<Hap> | null = null;
 const loadHaptics = () => (haptics ??= import("@capacitor/haptics"));
