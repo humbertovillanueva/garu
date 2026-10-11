@@ -134,6 +134,17 @@ describe("tools", () => {
     expect(unraw(msg.raw)).toContain("In-Reply-To: <abc@mail>");
   });
 
+  it("labels every tool: reads only read, filing and drafting change something, nothing is destructive", () => {
+    const all = { ...calendarTools(fakeGoogle({}).call), ...gmailTools(fakeGoogle({}).call) };
+    expect(Object.keys(all)).toHaveLength(9);
+    for (const [name, def] of Object.entries(all)) {
+      expect(def.annotations, name).toBeDefined();
+      expect(def.annotations!.destructiveHint, name).toBe(false);
+      expect(def.annotations!.openWorldHint, name).toBe(false);
+      expect(def.annotations!.readOnlyHint, name).toBe(!["label_thread", "create_draft"].includes(name));
+    }
+  });
+
   it("has no tool that sends, deletes or changes the calendar", () => {
     const names = [...Object.keys(gmailTools(fakeGoogle({}).call)), ...Object.keys(calendarTools(fakeGoogle({}).call))];
     expect(names.filter((n) => /send|delete|trash|remove|update|create_event|modify/.test(n))).toEqual([]);

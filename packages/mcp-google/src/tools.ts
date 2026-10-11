@@ -4,6 +4,7 @@
  * calendar-write tool, so no policy mistake can reach one.
  */
 import { z } from "zod";
+import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import {
   CALENDAR,
   GMAIL,
@@ -23,11 +24,43 @@ import {
 export interface ToolDef {
   description: string;
   inputSchema: z.ZodRawShape;
+  /** What the tool may do, as MCP annotations, for clients that show it. Filled from ANNOTATIONS below. */
+  annotations?: ToolAnnotations;
   run: (args: never) => Promise<unknown>;
 }
 
 function tool<S extends z.ZodRawShape>(description: string, inputSchema: S, run: (args: z.infer<z.ZodObject<S>>) => Promise<unknown>): ToolDef {
   return { description, inputSchema, run: run as (args: never) => Promise<unknown> };
+}
+
+/**
+ * What each tool may do, said the way MCP clients read it (and the way Google labels its own
+ * Gmail and Calendar servers): the reads only read; filing and drafting change something but
+ * remove nothing; everything stays inside your own Google account, not the open web.
+ */
+const READ: ToolAnnotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+export const ANNOTATIONS: Record<string, ToolAnnotations> = {
+  list_calendars: { title: "List calendars", ...READ },
+  list_events: { title: "List events", ...READ },
+  get_event: { title: "Get an event", ...READ },
+  search_threads: { title: "Search mail", ...READ },
+  get_thread: { title: "Read a thread", ...READ },
+  list_labels: { title: "List labels", ...READ },
+  list_drafts: { title: "List drafts", ...READ },
+  // Adds your own labels and never removes one; adding the same label again changes nothing.
+  label_thread: { title: "File threads under labels", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  // Saves a draft, never sends; each call saves another draft.
+  create_draft: { title: "Save a draft reply", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+};
+
+/** Every tool carries its annotations; a tool without an entry is a mistake, so it fails loudly. */
+function labelled(tools: Record<string, ToolDef>): Record<string, ToolDef> {
+  for (const [name, def] of Object.entries(tools)) {
+    const a = ANNOTATIONS[name];
+    if (!a) throw new Error(`tool "${name}" has no annotations`);
+    def.annotations = a;
+  }
+  return tools;
 }
 
 const q = (params: Record<string, string | number | boolean | undefined>) => {
@@ -38,7 +71,7 @@ const q = (params: Record<string, string | number | boolean | undefined>) => {
 const instant = z.string().refine((s) => !Number.isNaN(Date.parse(s)), "an RFC 3339 date-time with offset, e.g. 2026-10-12T00:00:00-06:00");
 
 export function calendarTools(call: Call): Record<string, ToolDef> {
-  return {
+  return labelled({
     list_calendars: tool("List the calendars you can see: your own and the ones shared with you. Returns each one's id, name and time zone.", {}, async () => {
       const r = await call<{ items?: { id: string; summary?: string; summaryOverride?: string; primary?: boolean; timeZone?: string; accessRole?: string; hidden?: boolean }[] }>(
         `${CALENDAR}/users/me/calendarList?${q({ minAccessRole: "reader", maxResults: 250 })}`,
@@ -74,13 +107,13 @@ export function calendarTools(call: Call): Record<string, ToolDef> {
       { calendarId: z.string().default("primary"), eventId: z.string().min(1) },
       async ({ calendarId, eventId }) => eventView(await call<CalendarEvent>(`${CALENDAR}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`), 4000),
     ),
-  };
+  });
 }
 
 export function gmailTools(call: Call): Record<string, ToolDef> {
   const labels = async () => (await call<{ labels?: GmailLabel[] }>(`${GMAIL}/labels`)).labels ?? [];
 
-  return {
+  return labelled({
     search_threads: tool(
       "Search your mail with Gmail search syntax (from:, to:, newer_than:2d, in:inbox, -label:x, …). Returns each thread's id, subject, last sender, date, labels and a snippet.",
       { query: z.string().min(1), maxResults: z.number().int().min(1).max(50).default(20) },
@@ -157,5 +190,5 @@ export function gmailTools(call: Call): Record<string, ToolDef> {
         return { draftId: d.id, threadId: d.message?.threadId ?? threadId ?? "", to, ...(cc?.length ? { cc } : {}), subject, saved: "in Drafts, not sent" };
       },
     ),
-  };
+  });
 }

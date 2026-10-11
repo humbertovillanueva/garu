@@ -26,7 +26,7 @@ const tools = mode === "calendar" ? calendarTools(call) : gmailTools(call);
 const server = new McpServer({ name: `garu-mcp-google-${mode}`, version: "0.1.0" });
 
 for (const [name, def] of Object.entries(tools)) {
-  server.registerTool(name, { description: def.description, inputSchema: def.inputSchema }, async (args: unknown) => {
+  server.registerTool(name, { description: def.description, inputSchema: def.inputSchema, ...(def.annotations ? { annotations: def.annotations } : {}) }, async (args: unknown) => {
     try {
       const result = await def.run(args as never);
       return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
