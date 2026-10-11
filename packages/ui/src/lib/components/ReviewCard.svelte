@@ -42,6 +42,8 @@
   const a = $derived(req.args as Record<string, unknown>);
   const str = (k: string) => (typeof a[k] === "string" ? (a[k] as string) : undefined);
   const list = (k: string) => (Array.isArray(a[k]) ? (a[k] as unknown[]).map(String) : typeof a[k] === "string" ? [a[k] as string] : undefined);
+  // "Lena Ortiz <lena@example.com>" → the name as words, the address under it.
+  const person = (x: string) => { const m = /^\s*"?([^"<]*?)"?\s*<([^<>\s]+)>\s*$/.exec(x); return m && m[1] ? { name: m[1], addr: m[2]! } : { name: "", addr: x }; };
 
   type Shape = "email" | "post" | "file" | "command" | "generic";
   const shape = $derived.by((): Shape => {
@@ -117,8 +119,9 @@
       <div class="overflow-hidden rounded-lg border hairline bg-bg/60">
         <div class="grid grid-cols-[64px_1fr] gap-y-1 border-b hairline px-3 py-2 text-[13px]">
           <!-- Every address in full, one per line: who it goes to is what you're approving. -->
-          <span class="text-mute">To</span><span class="mono min-w-0 [overflow-wrap:anywhere]">{#each list("to") ?? list("recipients") ?? [] as x}<span class="block">{x}</span>{/each}</span>
-          {#if list("cc")?.length}<span class="text-mute">Cc</span><span class="mono min-w-0 [overflow-wrap:anywhere]">{#each list("cc")! as x}<span class="block">{x}</span>{/each}</span>{/if}
+          {#snippet people(xs: string[])}<span class="min-w-0 space-y-1 [overflow-wrap:anywhere]">{#each xs.map(person) as p}<span class="block">{#if p.name}<span class="block">{p.name}</span>{/if}<span class="mono block {p.name ? 'text-[12px] text-mute' : ''}">{p.addr}</span></span>{/each}</span>{/snippet}
+          <span class="text-mute">To</span>{@render people(list("to") ?? list("recipients") ?? [])}
+          {#if list("cc")?.length}<span class="text-mute">Cc</span>{@render people(list("cc")!)}{/if}
           {#if str("subject")}<span class="text-mute">Subject</span><span class="min-w-0 font-medium [overflow-wrap:anywhere]">{str("subject")}</span>{/if}
         </div>
         <pre class="max-h-56 overflow-auto whitespace-pre-wrap px-3 py-3 text-[13px] leading-relaxed text-fg-2 [overflow-wrap:anywhere]" style="font-family: inherit">{str("body") ?? str("text") ?? str("message") ?? ""}</pre>
