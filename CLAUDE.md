@@ -33,13 +33,13 @@ packages/kernel     Garufile schema (zod) · policy engine · flight recorder ·
                     scheduler (with catch-up) · inbox · grants · suggestions · chat · store · sandbox
 packages/cli        the `garu` command; ui-server.ts (control room API), ui-auth.ts, service.ts
 packages/ui         control room, Svelte 5 runes + Tailwind v4 + Vite; also the phone PWA
-packages/app        Capacitor 8 Android wrapper of the UI (appId io.github.humbertovillanueva.garu)
+packages/app        Capacitor 8 wrapper of the UI: android/ and ios/ (appId io.github.humbertovillanueva.garu)
 packages/mcp-fetch  tiny MCP server: fetch_json / fetch_text (GET only) + post_message to a webhook
 packages/mcp-google Gmail + Calendar MCP server (read, label, draft; no send); Garu signs in for it
 agents/             real agents: tomay (fox, your day from calendar + email), bea (bee, sorts the inbox,
                     drafts replies), rook (owl, weekly repo check), atlas (octopus, Linear)
 examples/           pip, nook (Ollama), tick (hourly heartbeat), vault (sandboxed)
-docs/               why.md, google.md (Google setup), phone.md, android.md, privacy.html, brand/, launch/, video/
+docs/               why.md, google.md (Google setup), phone.md, android.md, ios.md, privacy.html, brand/, launch/, video/
 docs/video/remotion the launch video's source (Remotion 4, React); see "Launch video" below
 ```
 
@@ -51,7 +51,7 @@ npm run typecheck && npm test         # tsc -b, vitest (205 tests); run before e
 npx svelte-check --workspace packages/ui
 npm run garu -- <cmd>                 # the CLI from the repo (no global install yet)
 npm run garu -- service install|status|logs|restart|uninstall   # Garu as a login service (launchd)
-GARU_APP=1 npm run build:app -w @garu/ui && (cd packages/app && npx cap sync android)   # app bundle
+npm run sync -w @garu/app             # the phone UI, built and copied into android/ and ios/
 ```
 
 Phone app on the emulator (no more dragging APKs): boot `~/Library/Android/sdk/emulator/emulator
@@ -68,6 +68,17 @@ Debug builds are signed with `~/.android/debug.keystore` (made 2026-10-10). Keep
 with another key won't install over the old one, and replacing means uninstalling, which wipes the
 pairing. To try UI changes without touching the running Garu: `npm run dev -w @garu/ui -- --port 5173`
 (proxies /api to :4000); add `GARU_APP=1` and `--port 5174` for the phone build in a browser.
+
+iPhone app in the Simulator (Xcode 27, `docs/ios.md`): `npm run open:ios -w @garu/app` and press Run,
+or headless (`booted` = the simulator that's open):
+
+```
+(cd packages/app/ios/App && xcodebuild -project App.xcodeproj -scheme App -destination 'platform=iOS Simulator,name=iPhone 18 Pro Max' -derivedDataPath /tmp/garu-ios build -quiet)
+xcrun simctl install booted /tmp/garu-ios/Build/Products/Debug-iphonesimulator/App.app && xcrun simctl launch booted io.github.humbertovillanueva.garu
+```
+
+To pair it without showing the token, pipe the link into the simulator's clipboard (`xcrun simctl
+pbcopy booted`) and paste it in the app; empty the clipboard after.
 
 Garu on Humberto's Mac runs as the login service: after a build or a Garufile schedule change,
 `npm run build && npm run garu -- service restart`. Control room: http://localhost:4000. Phone pairs
@@ -114,7 +125,7 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 
 ## Status (2026-10-10)
 
-Built: kernel, CLI, control room, Android debug app, login service, catch-up, brand, Owner's Guide,
+Built: kernel, CLI, control room, Android debug app, iPhone app in the Simulator (2026-10-11), login service, catch-up, brand, Owner's Guide,
 launch video v7, onboarding and UI audit fixes (2026-10-10). Open: the run timeline still shows
 seconds and "ok · 340ms" (allowed by a comment in `format.ts`, against the rule above: Humberto to
 decide).
@@ -122,8 +133,8 @@ decide).
 Not launching yet. Order: understand → real app → Play closed test → launch → beyond. Still on the
 real-app list: crash screen, accessibility pass, theme setting, release signing (Humberto makes the
 keystore), support path, Why Garu page + fresh screenshots, privacy review. Then marketing (posts;
-the video is done). Roadmap after that: push via a relay, hosted Garu, `garu install` registry, iOS,
-two-way Slack.
+the video is done). Roadmap after that: push via a relay, hosted Garu, `garu install` registry, iPhone
+on a real device and TestFlight, two-way Slack.
 
 ## Agents rework (in progress)
 

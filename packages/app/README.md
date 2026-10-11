@@ -6,4 +6,5 @@ launch it asks you to pair: scan the code from **Settings → Your phone** on th
 computer running Garu, and from then on the app talks to that computer over your
 private network (Tailscale) with the control room's token.
 
-See [`docs/android.md`](../../docs/android.md) for building and running it.
+See [`docs/android.md`](../../docs/android.md) and [`docs/ios.md`](../../docs/ios.md) for building and
+running it on each. On an iPhone there's no scanner: you paste the sign-in link instead.

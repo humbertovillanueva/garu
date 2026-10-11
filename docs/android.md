@@ -25,7 +25,7 @@ drawer as Garu. Pair it by pasting the sign-in link (emulators have no real came
 ## Build and run
 
 ```sh
-npm run sync -w @garu/app       # builds the UI for the app and syncs it into android/
+npm run sync -w @garu/app       # builds the UI for the app and syncs it into android/ (and ios/)
 npm run open -w @garu/app       # opens the project in Android Studio
 ```
 
@@ -59,8 +59,7 @@ Changed the UI? Run `npm run sync -w @garu/app` again and press Run again.
   holds Firebase credentials. The app shows what is waiting when you open it; for a
   push today, run the control room with `--notify https://ntfy.sh/<topic>` and the
   ntfy app. A Garu relay for proper push is on the roadmap.
-- **iOS.** Same Capacitor project can target iOS with Xcode and an Apple developer
-  account; not set up yet.
+- **iOS.** Set up, and runs in the iOS Simulator: see [ios.md](ios.md).
 - **Play Store listing.** Needs a developer account, a privacy policy page, store
   graphics and the closed-testing period Google requires for new accounts.
 
