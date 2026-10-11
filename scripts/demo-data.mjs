@@ -183,11 +183,20 @@ const pausedRun = run("bea", { model: "gemini/gemini-3.5-flash-lite", trigger: "
   steps: beaSteps({ Newsletters: 11, Receipts: 3, FYI: 2, "Needs reply": 2 }, [JORDAN, { ...draft(DRAFT.to[0], DRAFT.subject, DRAFT.body, DRAFT.threadId), pending: true }]) });
 approved("bea", pausedRun, JORDAN, 0.8);
 
-// Two pip runs on a local model: one approved write, one declined.
+// Two pip runs on a local model: one approved write, one declined. The summary is of the real examples/pip/workspace/notes.md.
+const PIP_SUMMARY = `# Summary — week 41
+## Shipped
+- The new login flow, on Tuesday. Two bug reports so far, both about the password-reset email.
+## Decisions
+- The staging database moves to the new region on the 20th.
+## Open questions
+- Keep the legacy CSV export? Nobody has used it since July.
+## People
+- Maria is out Thursday and Friday.`;
 const PIP_TOOLS = { offered: ["fs.read_text_file", "fs.list_directory", "fs.write_file"], hidden: ["fs.move_file", "fs.create_directory"] };
 run("pip", { model: "ollama/qwen3:8b", trigger: "manual", ...PIP_TOOLS, endMinutesAgo: 95, secs: 14, cost: 0,
-  summary: "Summarised the three notes in the workspace into SUMMARY.md.",
-  steps: [{ turn: true, cost: 0 }, { tool: "fs.read_text_file", args: { path: "examples/pip/workspace/notes.md" }, action: "allow", ms: 3, result: "..." }, { turn: true, cost: 0 }, { tool: "fs.write_file", args: { path: "examples/pip/workspace/SUMMARY.md", content: "# Summary\n\n- …" }, action: "ask", rule: 2, reason: "writing outside the notes folder" }, { turn: true, cost: 0 }] });
+  summary: "Summarised this week's team notes into SUMMARY.md: one decision, one open question, and Maria is out Thursday and Friday.",
+  steps: [{ turn: true, cost: 0 }, { tool: "fs.read_text_file", args: { path: "examples/pip/workspace/notes.md" }, action: "allow", ms: 3, result: "..." }, { turn: true, cost: 0 }, { tool: "fs.write_file", args: { path: "examples/pip/workspace/SUMMARY.md", content: PIP_SUMMARY }, action: "ask", rule: 2, reason: "writing outside the notes folder" }, { turn: true, cost: 0 }] });
 run("pip", { model: "ollama/qwen3:8b", trigger: "manual", ...PIP_TOOLS, endMinutesAgo: 180, secs: 11, status: "ok", cost: 0,
   summary: "You declined the write, so I left the summary in this message instead.",
   steps: [{ turn: true, cost: 0 }, { tool: "fs.write_file", args: { path: "examples/pip/workspace/SUMMARY.md", content: "# Summary" }, action: "ask", rule: 2, approved: false, reason: "writing outside the notes folder" }, { turn: true, cost: 0 }] });

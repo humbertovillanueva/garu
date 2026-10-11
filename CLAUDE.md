@@ -47,7 +47,7 @@ docs/video/remotion the launch video's source (Remotion 4, React); see "Launch v
 
 ```
 npm install && npm run build          # all workspaces
-npm run typecheck && npm test         # tsc -b, vitest (162 tests); run before every commit
+npm run typecheck && npm test         # tsc -b, vitest (205 tests); run before every commit
 npx svelte-check --workspace packages/ui
 npm run garu -- <cmd>                 # the CLI from the repo (no global install yet)
 npm run garu -- service install|status|logs|restart|uninstall   # Garu as a login service (launchd)
@@ -117,7 +117,7 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 Built: kernel, CLI, control room, Android debug app, login service, catch-up, brand, Owner's Guide,
 launch video v7, onboarding and UI audit fixes (2026-10-10). Open: the run timeline still shows
 seconds and "ok · 340ms" (allowed by a comment in `format.ts`, against the rule above: Humberto to
-decide). The phone app on the emulator needs a rebuild to get the new intro.
+decide).
 
 Not launching yet. Order: understand → real app → Play closed test → launch → beyond. Still on the
 real-app list: crash screen, accessibility pass, theme setting, release signing (Humberto makes the
