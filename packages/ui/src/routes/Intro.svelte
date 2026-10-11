@@ -80,9 +80,9 @@
           <span class="k">runs</span> weekdays at 7:15 AM<br>
           <span class="k">can reach</span> your Gmail<br>
           <span class="k">rules</span><br>
-          <span class="rule">read and file mail <span class="allow">→ allow</span></span><br>
-          <span class="rule">draft a reply <span class="ask">→ ask</span></span><br>
-          <span class="rule">anything else <span class="block">→ block</span></span>
+          <span class="rule">read and file mail <span class="r-allow">→ allow</span></span><br>
+          <span class="rule">draft a reply <span class="r-ask">→ ask</span></span><br>
+          <span class="rule">anything else <span class="r-block">→ block</span></span>
         </div>
       </section>
 
@@ -166,7 +166,8 @@
   .yaml { padding: 12px 16px 14px; font-size: 13px; line-height: 1.75; color: var(--color-fg-2); } .yaml b { color: var(--color-fg); font-weight: 600; } .yaml .k { color: var(--color-mute); }
   .yaml .file { font-size: 11px; color: var(--color-mute); margin-bottom: 6px; overflow-wrap: anywhere; }
   .yaml .rule { padding-left: 14px; display: inline-block; }
-  .allow { color: var(--color-ok); } .ask { color: var(--color-ask); } .block { color: var(--color-bad); }
+  /* not .block: Tailwind's .block utility would put "→ block" on its own line */
+  .r-allow { color: var(--color-ok); } .r-ask { color: var(--color-ask); } .r-block { color: var(--color-bad); }
   .rc { border-color: color-mix(in oklab, var(--color-ask) 40%, var(--color-line)); }
   .rc .h { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; font-size: 13.5px; line-height: 1.4; } .rc .h b { font-weight: 600; }
   .rc .why { display: block; margin-top: 2px; font-size: 12px; color: var(--color-mute); }
