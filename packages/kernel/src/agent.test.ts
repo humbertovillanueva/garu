@@ -53,7 +53,11 @@ describe("runAgent", () => {
     });
 
     expect(res.status).toBe("ok");
-    expect(provider.calls[0]?.system).toContain("Current time: 2026-10-07T05:00:00.000Z");
+    // the day, date and time in the machine's own zone, spelled out, with UTC for exact timestamps
+    const at = new Date("2026-10-07T05:00:00.000Z");
+    const weekday = at.toLocaleDateString("en-US", { weekday: "long" });
+    expect(provider.calls[0]?.system).toMatch(new RegExp(`Current time: ${weekday}, October \\d+, 2026`));
+    expect(provider.calls[0]?.system).toContain(`local date ${at.toLocaleDateString("en-CA")}; UTC 2026-10-07T05:00:00.000Z`);
     expect(provider.calls[0]?.system).toContain("Trigger: manual");
     expect(provider.calls[0]?.system).toContain("Your standing instructions:\ndo the thing");
     expect(provider.calls[0]?.messages[0]?.content).toEqual([{ type: "text", text: "Carry out your standing instructions now." }]);

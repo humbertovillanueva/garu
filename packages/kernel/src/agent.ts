@@ -102,11 +102,15 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     const messages: ModelMessage[] = [{ role: "user", content: [{ type: "text", text: userText }] }];
     const now = (opts.now ?? (() => new Date()))();
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // Spelled out in local time: given only a UTC timestamp, models get the weekday wrong, and after
+    // 6 PM in Denver the UTC date is already tomorrow's.
+    const local = now.toLocaleString("en-US", { timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
+    const localDate = now.toLocaleDateString("en-CA", { timeZone: tz });
     const system = [
       SYSTEM_PREAMBLE,
       `Agent: ${g.name}${g.description ? ` — ${g.description}` : ""}`,
       `Trigger: ${trigger}`,
-      `Current time: ${now.toISOString()} (${tz}). Use this for any timestamp; never guess the date.`,
+      `Current time: ${local}, ${tz} (local date ${localDate}; UTC ${now.toISOString()}). Use this for any date, day of the week or timestamp; never work them out or guess.`,
       `Your standing instructions:\n${g.prompt.trim()}`,
       `The user message that follows is what this run is about. If it asks a question, answer it. If it asks for work, do it. If it only says to carry out your standing instructions, do exactly that. Never do work the message asked you not to do.`,
     ].join("\n\n");
