@@ -110,10 +110,11 @@ export type HttpServerSpec = z.infer<typeof HttpServerSpec>;
 export const McpServerSpec = z.union([StdioServerSpec, HttpServerSpec]);
 
 /** The agent's face and one-line character. Purely presentational; the policy is what it can do. */
-export const PERSONA_KINDS = ["owl", "fox", "turtle", "bee", "cat", "octopus"] as const;
+export const PERSONA_KINDS = ["owl", "fox", "turtle", "bee", "cat", "octopus", "rabbit", "bear", "frog", "penguin", "raccoon", "whale"] as const;
 export const Persona = z
   .object({
-    /** owl: watcher · fox: messenger · turtle: keeper · bee: worker · cat: reader · octopus: planner */
+    /** owl: watcher · fox: messenger · turtle: keeper · bee: worker · cat: reader · octopus: planner ·
+     *  rabbit: runner · bear: guardian · frog: connector · penguin: organizer · raccoon: tinkerer · whale: deep reader */
     kind: z.enum(PERSONA_KINDS),
     tagline: z.string().max(80).optional(),
   })

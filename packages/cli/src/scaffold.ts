@@ -13,6 +13,12 @@ export const KINDS = {
   bee: { label: "a worker — does one small job over and over", names: ["buzz", "dot", "hum"] },
   cat: { label: "a reader — curious, answers questions about what it finds", names: ["pip", "mochi", "nook"] },
   octopus: { label: "a planner — many tools, juggles tasks", names: ["atlas", "otto", "inky"] },
+  rabbit: { label: "a runner — quick checks and small errands, often", names: ["hop", "clover", "juno"] },
+  bear: { label: "a guardian — watches over backups and safety", names: ["bruno", "kodi", "ursa"] },
+  frog: { label: "a connector — hops between your apps", names: ["lily", "kero", "jumper"] },
+  penguin: { label: "an organizer — sorts and tidies things into place", names: ["pebble", "waddle", "ice"] },
+  raccoon: { label: "a tinkerer — works in a locked box, safe to experiment", names: ["ringo", "dash", "bandit"] },
+  whale: { label: "a deep reader — takes long documents slowly and well", names: ["deep", "marina", "jonah"] },
 } as const;
 export type Kind = keyof typeof KINDS;
 

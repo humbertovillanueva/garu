@@ -512,7 +512,7 @@ program
   .argument("[name]", "agent name (lowercase, digits, hyphens)")
   .description("Create a new agent: a few questions, then a Garufile with a closed policy")
   .option("--task <text>", "what the agent does, in one or two sentences")
-  .option("--kind <kind>", "its face: owl | fox | turtle | bee | cat | octopus")
+  .option("--kind <kind>", "its face: owl | fox | turtle | bee | cat | octopus | rabbit | bear | frog | penguin | raccoon | whale")
   .option("--tagline <text>", "one line of character shown under its name")
   .option("--when <schedule>", "manual | weekday-morning | hourly | daily | a cron expression")
   .option("--model <provider/model>", "e.g. gemini/gemini-3.5-flash-lite, ollama/qwen3:8b")
