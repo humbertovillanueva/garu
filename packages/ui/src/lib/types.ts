@@ -149,6 +149,8 @@ export interface WriteDiff {
   unchanged?: number;
   outside?: boolean;
   tooBig?: boolean;
+  /** The file holds secrets (.env, .garu): the card shows no contents. */
+  secret?: boolean;
   error?: string;
 }
 

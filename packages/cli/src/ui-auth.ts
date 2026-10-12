@@ -47,7 +47,15 @@ export function isDirectLoopback(req: RequestLike): boolean {
   if (!(addr === "127.0.0.1" || addr === "::1" || addr === "::ffff:127.0.0.1")) return false;
   if (FORWARDED.some((h) => h in req.headers)) return false;
   const host = (req.headers.host ?? "").replace(/:\d+$/, "").replace(/^\[|\]$/g, "");
-  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  if (!(host === "localhost" || host === "127.0.0.1" || host === "::1")) return false;
+  // A page from another origin on this machine (a dev server, a notebook, a docs preview) is not you:
+  // its requests carry an Origin that isn't ours, or a Sec-Fetch-Site other than same-origin.
+  const own = (req.headers.host ?? "").toLowerCase();
+  const origin = req.headers.origin;
+  if (typeof origin === "string" && origin.toLowerCase() !== `http://${own}` && origin.toLowerCase() !== `https://${own}`) return false;
+  const site = req.headers["sec-fetch-site"];
+  if (typeof site === "string" && site !== "same-origin" && site !== "none") return false;
+  return true;
 }
 
 export function parseCookies(header: string | undefined): Record<string, string> {
@@ -66,7 +74,10 @@ export function presentedToken(req: RequestLike, url: URL): string | null {
   if (auth?.startsWith("Bearer ")) return auth.slice(7).trim();
   const cookie = parseCookies(req.headers.cookie)[SESSION_COOKIE];
   if (cookie) return cookie;
-  return url.searchParams.get("token");
+  // In the URL only where it has to be: the sign-in link (a page) and the live stream, which can't
+  // send headers. Nowhere else, so the token stays out of proxy and history logs.
+  const q = url.searchParams.get("token");
+  return q && (url.pathname === "/api/events" || !url.pathname.startsWith("/api/")) ? q : null;
 }
 
 export function tokensMatch(a: string, b: string): boolean {

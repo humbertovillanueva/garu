@@ -8,8 +8,8 @@
  * see them".
  */
 import { createServer, type ServerResponse } from "node:http";
-import { existsSync, readFileSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
-import { extname, join, normalize, resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
+import { extname, join, normalize, relative, resolve } from "node:path";
 import { Cron } from "croner";
 import {
   ChatStore,
@@ -257,7 +257,6 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
     const path = url.pathname;
     try {
-      seen.note(req.headers);
       // --- the Garu app calls from its own origin ---
       for (const [k, v] of Object.entries(corsHeaders(req))) res.setHeader(k, v);
       if (req.method === "OPTIONS") { res.writeHead(204); return void res.end(); }
@@ -271,6 +270,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           return void res.end("That sign-in link is not valid for this control room. Open Settings → Your phone on the computer running garu to get a fresh one.\n");
         }
         url.searchParams.delete("token");
+        seen.note(req.headers);
         res.writeHead(302, { location: url.pathname + url.search, "set-cookie": sessionCookie(token, isHttps(req)), "cache-control": "no-store" });
         return void res.end();
       }
@@ -287,6 +287,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       if (path.startsWith("/api/")) {
         const who = authenticate(req, url, token, requireLogin);
         if (who !== "ok") return json(res, { error: who === "bad" ? "wrong token" : "sign in", signIn: true }, 401);
+        seen.note(req.headers); // an address that reached us with the right token is one a phone can use
       }
       if (path === "/api/pair" && req.method === "POST") {
         // A new key. Whoever asked stays signed in (fresh cookie); every other device is out.
@@ -361,6 +362,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
 
       if (path === "/api/runs") {
         const agent = url.searchParams.get("agent");
+        if (agent !== null && !/^[A-Za-z0-9._-]+$/.test(agent)) return json(res, { error: "bad agent name" }, 400);
         return json(res, agent ? store.runs(agent) : store.allRuns().slice(0, 200));
       }
       const m = /^\/api\/runs\/([^/]+)\/([^/]+)$/.exec(path);
@@ -388,6 +390,12 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         if (!target || next === null) return json(res, { error: "not a file write" }, 400);
         const abs = resolve(opts.root, target);
         if (!abs.startsWith(opts.root + "/") && abs !== opts.root) return json(res, { outside: true });
+        // Secrets never go on a review card, not even as "the file this would replace".
+        const rel = relative(opts.root, abs);
+        if (/^\.env(\.|$)/.test(rel) || rel === ".garu" || rel.startsWith(".garu/")) return json(res, { secret: true });
+        let real = abs;
+        try { real = realpathSync(abs); } catch { /* a new file */ }
+        if (!real.startsWith(opts.root + "/")) return json(res, { outside: true });
         let before = "";
         let isNew = true;
         if (existsSync(abs) && !statSync(abs).isDirectory()) {
@@ -501,7 +509,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       if (path.startsWith("/api/")) return json(res, { error: "not found" }, 404);
       return serveStatic(res, opts.staticDir, path);
     } catch (e) {
-      return json(res, { error: (e as Error).message }, 500);
+      return json(res, { error: (e as Error).message }, (e as { status?: number }).status ?? 500);
     }
   });
 
@@ -557,13 +565,23 @@ export function feed(store: RunStore, inbox: Inbox, limit: number) {
   return items.sort((x, y) => y.ts.localeCompare(x.ts)).slice(0, limit);
 }
 
-async function readBody(req: import("node:http").IncomingMessage): Promise<unknown> {
+const MAX_BODY_BYTES = 1_048_576;
+
+/** The JSON object a request carries, or {}: never more than 1 MB, never anything but an object. */
+async function readBody(req: import("node:http").IncomingMessage): Promise<Record<string, unknown>> {
   const chunks: Buffer[] = [];
-  for await (const c of req) chunks.push(c as Buffer);
+  let size = 0;
+  for await (const c of req) {
+    size += (c as Buffer).length;
+    // Stop reading and answer 413; Node closes the connection after a response to an unread body.
+    if (size > MAX_BODY_BYTES) throw Object.assign(new Error("request body too large"), { status: 413 });
+    chunks.push(c as Buffer);
+  }
   const text = Buffer.concat(chunks).toString("utf8");
   if (!text) return {};
   try {
-    return JSON.parse(text);
+    const v: unknown = JSON.parse(text);
+    return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
   } catch {
     return {};
   }

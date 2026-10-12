@@ -44,6 +44,21 @@ describe("control room auth", () => {
     expect(authenticate(lan(), url(`/?token=nope`), TOKEN)).toBe("bad");
   });
 
+  it("does not trust a page from another origin on this computer", () => {
+    expect(isDirectLoopback(req({ origin: "http://localhost:5173" }))).toBe(false);
+    expect(isDirectLoopback(req({ origin: "null" }))).toBe(false);
+    expect(isDirectLoopback(req({ origin: "http://localhost:4000" }))).toBe(true);
+    expect(isDirectLoopback(req({ "sec-fetch-site": "same-site" }))).toBe(false);
+    expect(isDirectLoopback(req({ "sec-fetch-site": "same-origin" }))).toBe(true);
+    expect(authenticate(req({ origin: "http://localhost:5173" }), url("/api/pair"), TOKEN)).toBe("none");
+  });
+
+  it("the link token works only for the sign-in link and the live stream", () => {
+    const lan = (h: Record<string, string> = {}) => req(h, "192.168.1.20");
+    expect(authenticate(lan(), url(`/api/events?token=${TOKEN}`), TOKEN)).toBe("ok");
+    expect(authenticate(lan(), url(`/api/agents?token=${TOKEN}`), TOKEN)).toBe("bad");
+  });
+
   it("can require login even on this computer", () => {
     expect(authenticate(req(), url(), TOKEN, true)).toBe("none");
   });
