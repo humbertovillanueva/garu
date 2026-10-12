@@ -211,6 +211,23 @@ prompt: say hi
     expect(end).toMatchObject({ type: "run.end", status: "ok", priced: false });
   });
 
+  it("a start-up error shows the Garufile's ${VAR}, never its value", async () => {
+    process.env["GARU_TEST_SECRET"] = "hunter2-not-for-logs";
+    const leaky = parseGarufile(`
+name: leaky
+model: fake/any
+prompt: p
+tools:
+  - name: nope
+    command: definitely-not-a-command-garu
+    args: ["--token", "\${GARU_TEST_SECRET}"]
+`);
+    const res = await runAgent({ garufile: leaky, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider: new FakeProvider([]), approver: async () => ({ approved: false, by: "test" }) });
+    expect(res.status).toBe("error");
+    expect(res.output).toContain("${GARU_TEST_SECRET}");
+    expect(res.output).not.toContain("hunter2");
+  });
+
   it("a tool server that won't start is a recorded error, not a crash", async () => {
     const bad = parseGarufile(`
 name: bad

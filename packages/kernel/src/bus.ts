@@ -79,7 +79,10 @@ export class ToolBus {
   async connect(rawSpecs: readonly McpServerSpec[]): Promise<void> {
     const specs = rawSpecs.map((s) => expandSpec(s, process.env));
     const authRoot = this.opts.authRoot ?? resolve(process.cwd(), ".garu", "auth");
-    for (const spec of specs) {
+    for (const [i, spec] of specs.entries()) {
+      // Messages show the Garufile as written: a ${VAR} in an arg or URL is a secret, and it would land in the recorder.
+      const shown = rawSpecs[i]!;
+      const shownWhere = isRemoteServer(shown) ? shown.url : `${shown.command} ${shown.args.join(" ")}`;
       if (isRemoteServer(spec)) {
         // Don't wait for a 401: some servers (Google's) list their tools without a sign-in and refuse
         // only the calls, so the run would start and then fail on every tool.
@@ -94,8 +97,8 @@ export class ToolBus {
           const msg = (e as Error).message;
           const unauthorized = e instanceof UnauthorizedError || /\b401\b|unauthori[sz]ed/i.test(msg);
           if (unauthorized && spec.auth === "oauth") throw new NeedsSignInError(spec.name, spec.url);
-          if (unauthorized) throw new Error(`tool server "${spec.name}" at ${spec.url} rejected the credentials (401). Check the headers in its Garufile entry and the ${"$"}{VAR} values in .env, or set auth: oauth and run garu auth.`);
-          throw new Error(`tool server "${spec.name}" at ${spec.url} did not answer: ${msg || (e as Error).name || "connection failed"}`);
+          if (unauthorized) throw new Error(`tool server "${spec.name}" at ${shownWhere} rejected the credentials (401). Check the headers in its Garufile entry and the ${"$"}{VAR} values in .env, or set auth: oauth and run garu auth.`);
+          throw new Error(`tool server "${spec.name}" at ${shownWhere} did not answer: ${msg || (e as Error).name || "connection failed"}`);
         }
         this.servers.set(spec.name, { spec, client, transport });
         continue;
@@ -140,7 +143,7 @@ export class ToolBus {
           }
           const hint = wrapped ? explainDockerError(raw, sb!.image) : raw;
           throw new Error(
-            `tool server "${spec.name}" failed to start${wrapped ? " in sandbox" : ""} (${spec.command} ${spec.args.join(" ")}): ${hint}`,
+            `tool server "${spec.name}" failed to start${wrapped ? " in sandbox" : ""} (${shownWhere}): ${hint}`,
           );
         }
       }
