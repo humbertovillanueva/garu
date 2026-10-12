@@ -66,14 +66,32 @@ describe("PolicyEngine.decide", () => {
     expect(engine.decide({ server: "fs", tool: "read_file", args: { path: "/etc/passwd" } }).action).toBe("ask");
   });
 
-  it("a rule can look at the first entry of a list, like a reply's first recipient", () => {
+  it("a rule on a list sees every entry: a reply's recipients, not just the first", () => {
     const e = new PolicyEngine([
-      { tool: "gmail.create_draft", action: "block", when: { "to.0": { matches: "(^|[.\\-_+@<])(no-?reply|notifications?)([.\\-_+@>]|$)", ignoreCase: true } }, reason: "no one reads it" },
+      { tool: "gmail.create_draft", action: "block", when: { to: { matches: "(^|[.\\-_+@<])(no-?reply|notifications?)([.\\-_+@>]|$)", ignoreCase: true } }, reason: "no one reads it" },
       { tool: "gmail.create_draft", action: "ask" },
     ]);
-    expect(e.decide({ server: "gmail", tool: "create_draft", args: { to: ["Bank <alerts@notification.bank.com>"] } }).action).toBe("block");
-    expect(e.decide({ server: "gmail", tool: "create_draft", args: { to: ["NoReply@bank.com"] } }).action).toBe("block");
-    expect(e.decide({ server: "gmail", tool: "create_draft", args: { to: ["Ana <ana@x.com>"] } }).action).toBe("ask");
+    const draft = (to: unknown) => e.decide({ server: "gmail", tool: "create_draft", args: { to } }).action;
+    expect(draft(["Bank <alerts@notification.bank.com>"])).toBe("block");
+    expect(draft(["NoReply@bank.com"])).toBe("block");
+    expect(draft(["Ana <ana@x.com>", "noreply@bank.com"])).toBe("block");
+    expect(draft("noreply@bank.com")).toBe("block");
+    expect(draft(["Ana <ana@x.com>"])).toBe("ask");
+    expect(draft([])).toBe("ask");
+  });
+
+  it("a path can't slip past a prefix rule with ..", () => {
+    const read = (path: string) => engine.decide({ server: "fs", tool: "read_file", args: { path } }).action;
+    expect(read("/home/me/./notes.md")).toBe("allow");
+    expect(read("/home/me/a/../b")).toBe("allow");
+    expect(read("/home/me/../root/.ssh/id")).toBe("ask");
+  });
+
+  it("flags a rule no request can reach: after a catch-all, or behind an unconditional rule for its tool", () => {
+    expect(new PolicyEngine([{ tool: "gmail.create_draft", action: "allow" }, { tool: "gmail.create_draft", action: "ask" }, { tool: "gmail.*", action: "block" }]).unreachableRules()).toEqual([1]);
+    expect(new PolicyEngine([{ tool: "gmail.create_draft", action: "block", when: { to: { matches: "x" } } }, { tool: "gmail.create_draft", action: "ask" }]).unreachableRules()).toEqual([]);
+    expect(new PolicyEngine([{ tool: "*", action: "ask" }, { tool: "fs.read", action: "allow" }]).unreachableRules()).toEqual([1]);
+    expect(engine.unreachableRules()).toEqual([]);
   });
 
   it("never silently allows when nothing matches", () => {

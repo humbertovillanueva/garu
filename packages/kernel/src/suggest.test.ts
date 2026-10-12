@@ -69,6 +69,26 @@ policy:
     expect(g.policy[1]).toEqual({ tool: "fs.write_file", action: "allow", when: { path: { eq: "/w/heartbeat.log" } } });
     expect(g.policy[2]).toMatchObject({ tool: "fs.write_file", action: "ask" });
   });
+  it("goes below a conditional block for the same tool, and above the ask", () => {
+    const p = join(mkdtempSync(join(tmpdir(), "gf-")), "Garufile.yaml");
+    writeFileSync(p, `name: bea
+model: fake/x
+prompt: p
+policy:
+  - tool: "gmail.create_draft"
+    when: { to: { matches: "noreply", ignoreCase: true } }
+    action: block
+    reason: no one reads it
+  - tool: "gmail.create_draft"
+    action: ask
+  - tool: "*"
+    action: block
+`);
+    expect(addPolicyRule(p, { tool: "gmail.create_draft", action: "allow" }, "learned").inserted).toBe(1);
+    const g = parseGarufile(readFileSync(p, "utf8"));
+    expect(g.policy.map((r) => r.action)).toEqual(["block", "allow", "ask", "block"]);
+    expect(g.policy[0]!.when).toBeDefined();
+  });
   it("appends when nothing could match, and refuses to corrupt the file", () => {
     const p = join(mkdtempSync(join(tmpdir(), "gf-")), "Garufile.yaml");
     writeFileSync(p, "name: a\nmodel: fake/x\nprompt: p\npolicy:\n  - tool: \"gmail.*\"\n    action: ask\n");

@@ -6,6 +6,7 @@
  * the first rule whose tool glob AND argument predicates match wins.
  * If nothing matches, the answer is `ask` — never silently allow.
  */
+import { posix } from "node:path";
 import { minimatch } from "minimatch";
 import type { ArgPredicate, PolicyAction, PolicyRule } from "./garufile.js";
 
@@ -49,15 +50,29 @@ export function getPath(obj: unknown, path: string): unknown {
   return cur;
 }
 
+/**
+ * What a pattern sees. `a/../b` means `b`, so a prefix rule can't be slipped past with dots, and a
+ * URL's path is resolved the same way. A value without dot segments passes through untouched.
+ */
+export function normalizeForMatch(v: string): string {
+  if (!/(^|\/)\.\.?(\/|$)/.test(v)) return v;
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(v)) {
+    try { return new URL(v).href; } catch { return v; }
+  }
+  return posix.normalize(v);
+}
+
 export function predicateHolds(value: unknown, p: ArgPredicate): boolean {
   if (p.exists !== undefined && (value !== undefined) !== p.exists) return false;
   if (p.eq !== undefined && !deepEqual(value, p.eq)) return false;
   if (p.neq !== undefined && deepEqual(value, p.neq)) return false;
   if (p.in !== undefined && !p.in.some((x) => deepEqual(x, value))) return false;
   if (p.matches !== undefined) {
-    if (typeof value !== "string") return false;
     // A flag, not a pattern feature: "(?i:…)" inside the pattern needs Node 23+, and Garu runs on 22.
-    if (!new RegExp(p.matches, p.ignoreCase ? "i" : "").test(value)) return false;
+    const re = new RegExp(p.matches, p.ignoreCase ? "i" : "");
+    // A list (recipients, paths) is matched entry by entry: a rule on `to` sees every address, not just the first.
+    const values = Array.isArray(value) ? value : [value];
+    if (!values.some((v) => typeof v === "string" && re.test(normalizeForMatch(v)))) return false;
   }
   const num = typeof value === "number" ? value : undefined;
   if (p.gt !== undefined && !(num !== undefined && num > p.gt)) return false;
@@ -121,15 +136,13 @@ export class PolicyEngine {
     return DEFAULT_DECISION.action;
   }
 
-  /** Static lint: rules after a catch-all are unreachable. */
+  /** Static lint: a rule no request can reach, because an earlier rule with no conditions already covers its tool. */
   unreachableRules(): number[] {
     const out: number[] = [];
     for (let i = 0; i < this.rules.length; i++) {
       const r = this.rules[i]!;
-      if (r.tool === "*" && !r.when) {
-        for (let j = i + 1; j < this.rules.length; j++) out.push(j);
-        break;
-      }
+      const shadowed = this.rules.slice(0, i).some((e) => !e.when && (e.tool === "*" || e.tool === r.tool || (!r.tool.includes("*") && minimatch(r.tool, e.tool, { nocase: false }))));
+      if (shadowed) out.push(i);
     }
     return out;
   }

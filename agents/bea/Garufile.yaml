@@ -59,7 +59,7 @@ policy:
     action: allow
   # A reply to an address no one reads goes nowhere, whatever the model decided.
   - tool: "gmail.create_draft"
-    when: { "to.0": { matches: "(^|[.\\-_+@<])(no-?reply|do-?not-?reply|donotreply|notifications?|notify|alerts?|mailer-daemon|newsletters?|digest|updates?|news|marketing)([.\\-_+@>]|$)", ignoreCase: true } }
+    when: { to: { matches: "(^|[.\\-_+@<])(no-?reply|do-?not-?reply|donotreply|notifications?|notify|alerts?|mailer-daemon|newsletters?|digest|updates?|news|marketing)([.\\-_+@>]|$)", ignoreCase: true } }
     action: block
     reason: a reply to an automated sender goes nowhere
   # A draft is words in your name: you see each one first.

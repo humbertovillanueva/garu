@@ -107,7 +107,8 @@ export function describeRule(r: PolicyRule): string {
 
 /**
  * Insert a policy rule into a Garufile on disk, before the first existing rule
- * that could match the same tool (first match wins, so ours must come first).
+ * that could match the same tool (first match wins, so ours must come first),
+ * but below any conditional block for it: a block the person wrote keeps winning.
  * Comments and formatting elsewhere are preserved. Validates the result and
  * leaves the file untouched if it would not parse.
  */
@@ -120,12 +121,16 @@ export function addPolicyRule(garufilePath: string, rule: PolicyRule, comment?: 
     doc.set("policy", policy);
   }
   const seq = policy as YAMLSeq;
-  // Find the first rule whose glob could match our tool.
+  // Find the first rule whose glob could match our tool, skipping conditional blocks: they stay above.
   let at = seq.items.length;
   for (let i = 0; i < seq.items.length; i++) {
     const item = seq.items[i];
-    const glob = isMap(item) ? (item.get("tool") as string | undefined) : undefined;
-    if (glob && globCouldMatch(glob, rule.tool)) { at = i; break; }
+    if (!isMap(item)) continue;
+    const glob = item.get("tool") as string | undefined;
+    if (!glob || !globCouldMatch(glob, rule.tool)) continue;
+    if (item.get("action") === "block" && item.has("when")) continue;
+    at = i;
+    break;
   }
   const node = doc.createNode(rule);
   if (comment) node.commentBefore = ` ${comment}`;
