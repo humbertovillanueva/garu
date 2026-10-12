@@ -15,10 +15,10 @@ The browser on the computer running Garu is trusted automatically. Any other dev
 
    Tailscale prints an address like `https://your-mac.tail1234.ts.net`. It carries a real HTTPS certificate and only your devices can resolve it.
 
-3. On the computer, in the control room you already have open (localhost is fine), go to **Settings → Your phone** and press *Show sign-in code*. Garu asks Tailscale for the address it is serving and points the code there.
+3. On the computer, in the control room you already have open (localhost is fine), go to **Settings → Your phone & other devices** and press *Show pairing code*. Garu asks Tailscale for the address it is serving and points the code there.
 4. Scan the code with your phone's camera. It opens the control room already signed in.
 
-The code is a link that carries the token, which is why it should be scanned by you and nobody else. If you'd rather type, the sign-in screen on the phone accepts the token pasted from `.garu/ui-token`. A phone stays signed in for a year; *Sign out* is on the same Settings panel. If the token ever leaks, stop Garu, delete `.garu/ui-token`, start it again, and every device has to sign in afresh.
+The code is a link that carries the token, which is why it should be scanned by you and nobody else. If you'd rather not scan (an iPhone, or an emulator with no camera), press *Copy link* there and paste it into the phone's sign-in screen. A phone stays signed in for a year; *Sign out* is on the same Settings panel. If the token ever leaks, stop Garu, delete `.garu/ui-token`, start it again, and every device has to sign in afresh.
 
 `--bg` keeps it serving after you close the terminal; `tailscale serve off` stops it. The control room itself keeps listening on `127.0.0.1:4000`, so nothing on your local network can reach it directly.
 

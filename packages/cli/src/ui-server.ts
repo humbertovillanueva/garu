@@ -112,7 +112,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     onRequest: async (r) => {
       opts.log(`approval needed: ${formatRequest(r)}`);
       ping();
-      if (opts.notify) await notify(opts.notify, r);
+      if (opts.notify) await notify(opts.notify, r, (await addresses())[0]?.url);
     },
   });
   const approver = withGrants(inbox.approver(), grants);
@@ -267,7 +267,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         // A sign-in link (the QR code, or the one printed at start): set the cookie, then show the clean URL.
         if (!tokensMatch(linkToken, token)) {
           res.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
-          return void res.end("That sign-in link is not valid for this control room. Open Settings → Your phone on the computer running garu to get a fresh one.\n");
+          return void res.end("That sign-in link is not valid for this control room. Open Settings → Your phone & other devices on the computer running garu and press Show pairing code to get a fresh one.\n");
         }
         url.searchParams.delete("token");
         seen.note(req.headers);
@@ -587,13 +587,22 @@ async function readBody(req: import("node:http").IncomingMessage): Promise<Recor
   }
 }
 
-/** Push an approval request to a URL. Plain text so ntfy.sh (free push to your phone) shows it as-is. */
-async function notify(url: string, r: ApprovalRequest): Promise<void> {
-  const body = `${r.agent} wants ${r.tool}\n${JSON.stringify(r.args).slice(0, 300)}\nreason: ${r.reason}\n\ngaru approve ${r.id}\ngaru deny ${r.id}`;
+/**
+ * Push an approval request to a URL. Plain text so ntfy.sh (free push to your phone) shows it as-is;
+ * with a control-room address, a tap opens the Inbox there (ntfy's Click header).
+ */
+async function notify(url: string, r: ApprovalRequest, link?: string): Promise<void> {
+  const body = `${r.agent} wants ${r.tool}\n${JSON.stringify(r.args).slice(0, 300)}\nreason: ${r.reason}\n\n${link ? "Tap to review." : `garu approve ${r.id} · garu deny ${r.id}`}`;
   try {
     await fetch(url, {
       method: "POST",
-      headers: { "content-type": "text/plain", Title: `Garu: approval needed (${r.agent})`, Priority: "high", Tags: "lock" },
+      headers: {
+        "content-type": "text/plain",
+        Title: `Garu: approval needed (${r.agent})`,
+        Priority: "high",
+        Tags: "lock",
+        ...(link ? { Click: `${link.replace(/\/$/, "")}/#/inbox` } : {}),
+      },
       body,
     });
   } catch {
