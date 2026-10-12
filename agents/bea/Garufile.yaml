@@ -17,7 +17,8 @@
 # (labeling needs it). Google would also let it send; the program above has no tool that does.
 
 name: bea
-description: Sorts what arrived overnight into four labels and drafts replies to what needs one. Never sends.
+description: Sorts what arrived overnight into four labels and drafts replies to
+  what needs one. Never sends.
 persona:
   kind: bee
   tagline: "Sorts the inbox so you don't have to."
@@ -35,7 +36,7 @@ tools:
   # Garu's own Google program (packages/mcp-google). Garu signs in and hands it a one-hour token.
   - name: gmail
     command: node
-    args: ["packages/mcp-google/dist/index.js", "gmail"]
+    args: [ "packages/mcp-google/dist/index.js", "gmail" ]
     auth: oauth
     oauth:
       issuer: https://accounts.google.com
@@ -57,6 +58,14 @@ policy:
     action: allow
   # Filing: a label can be taken off in one click, so it doesn't wait for you.
   - tool: "gmail.label_thread"
+    action: allow
+  # A reply to an address no one reads goes nowhere, whatever the model decided.
+  - tool: "gmail.create_draft"
+    when: { "to.0": { matches: "(?i:(^|[.\\-_+@<])(no-?reply|do-?not-?reply|donotreply|notifications?|notify|alerts?|mailer-daemon|newsletters?|digest|updates?|news|marketing)([.\\-_+@>]|$))" } }
+    action: block
+    reason: a reply to an automated sender goes nowhere
+  # learned: approved 3× by humbertovillanueva (ui), 2026-10-12
+  - tool: gmail.create_draft
     action: allow
   # A draft is words in your name: you see each one first.
   - tool: "gmail.create_draft"
@@ -88,10 +97,14 @@ prompt: |
      - Newsletters: mailing lists, digests, marketing, notifications from services. That includes
        automated mail that shows a person's name, like a LinkedIn invitation or a social network alert:
        look at the address, and noreply@, notifications@, invitations@ and similar are never a person.
-     - FYI: everything else a person or team sent that needs no answer.
+       search_threads marks such mail with "automated" and says why; that is never Needs reply.
+     - FYI: everything else a person or team sent that needs no answer. Also alerts from a bank, a
+       card or an account (a balance, a limit, a payment due, a sign-in): you read those, you don't
+       answer them.
      When unsure between Needs reply and FYI, choose Needs reply.
-  4. Never draft a reply to an automated sender (see Newsletters above); a reply there goes nowhere.
-     For each Needs reply thread, create_draft a reply to that thread: short (2 to 5 sentences), in a
+  4. Never draft a reply to an automated sender (see Newsletters above): a reply there goes nowhere,
+     and Garu blocks the draft. If a draft is blocked or refused, file that thread under FYI or
+     Newsletters instead and move on. For each Needs reply thread, create_draft a reply to that thread: short (2 to 5 sentences), in a
      friendly, direct voice, answering what was asked. If you can't answer something from the thread
      itself, write the reply so it says he'll get back with it, and never make up dates, numbers,
      commitments or facts. Sign it "Humberto".
