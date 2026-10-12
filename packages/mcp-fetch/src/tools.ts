@@ -6,6 +6,8 @@
  * deliberately no allowlist here: that belongs in the agent's Garufile policy, where
  * `when: { url: { matches: "^https://api\\.github\\.com/" } }` decides what may be fetched.
  */
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import { z } from "zod";
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { toSlackMrkdwn } from "./format.js";
@@ -13,6 +15,21 @@ import { toSlackMrkdwn } from "./format.js";
 export const MAX_CHARS_DEFAULT = 20_000;
 const MAX_CHARS_HARD = 200_000;
 const TIMEOUT_MS = 20_000;
+const MAX_REDIRECTS = 5;
+
+/** This machine, the LAN, link-local, Tailscale's range: places a model-chosen URL must never reach. */
+export function isPrivateAddress(ip: string): boolean {
+  const v4 = ip.startsWith("::ffff:") ? ip.slice(7) : ip;
+  if (isIP(v4) === 4) {
+    const [a, b] = v4.split(".").map(Number) as [number, number];
+    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
+  }
+  const low = ip.toLowerCase();
+  return low === "::" || low === "::1" || /^f[cd]/.test(low) || /^fe[89ab]/.test(low);
+}
+const PRIVATE_NAMES = /^(localhost|.*\.localhost|.*\.local|.*\.internal|.*\.home\.arpa)$/i;
+const isHomeHost = (hostname: string) => { const h = hostname.replace(/^\[|\]$/g, ""); return PRIVATE_NAMES.test(h) || (isIP(h) !== 0 && isPrivateAddress(h)); };
+const defaultLookup = async (host: string): Promise<string[]> => (await lookup(host, { all: true })).map((a) => a.address);
 
 export interface ToolResult {
   [key: string]: unknown;
@@ -64,23 +81,49 @@ export function htmlToText(html: string): string {
 /** Both read tools only ever GET, and reach whatever the policy lets them: the open web. */
 const READS: ToolAnnotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 
-export function fetchTools(opts: { fetchFn?: typeof fetch; webhookUrl?: string | undefined } = {}): Record<string, ToolDef> {
+export interface FetchToolsOptions {
+  fetchFn?: typeof fetch;
+  webhookUrl?: string | undefined;
+  /** DNS, injectable for tests: the addresses a host name resolves to. */
+  lookupFn?: (host: string) => Promise<string[]>;
+}
+
+export function fetchTools(opts: FetchToolsOptions = {}): Record<string, ToolDef> {
   const fetchFn = opts.fetchFn ?? fetch;
+  const lookupFn = opts.lookupFn ?? defaultLookup;
+
+  /** Only the open web: not this machine (where the control room answers), not the LAN, whatever name a host hides behind. */
+  async function assertPublic(u: URL): Promise<void> {
+    if (u.protocol !== "https:" && u.protocol !== "http:") throw new Error(`only http(s) URLs are allowed, got ${u.protocol}`);
+    const host = u.hostname.replace(/^\[|\]$/g, "");
+    if (PRIVATE_NAMES.test(host)) throw new Error(`${u.hostname} is this machine or a private network; fetch reaches only the open web`);
+    const addrs = isIP(host) ? [host] : await lookupFn(host);
+    if (addrs.some(isPrivateAddress)) throw new Error(`${u.hostname} points at this machine or a private network; fetch reaches only the open web`);
+  }
 
   async function get(url: string, accept: string): Promise<{ status: number; body: string; contentType: string }> {
-    const u = new URL(url);
-    if (u.protocol !== "https:" && u.protocol !== "http:") throw new Error(`only http(s) URLs are allowed, got ${u.protocol}`);
+    let u = new URL(url);
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
     try {
-      const res = await fetchFn(u, {
-        method: "GET",
-        redirect: "follow",
-        signal: ctrl.signal,
-        headers: { accept, "user-agent": "garu-mcp-fetch/0.1 (+https://github.com/humbertovillanueva/garu)" },
-      });
-      const body = await res.text();
-      return { status: res.status, body, contentType: res.headers.get("content-type") ?? "" };
+      for (let hop = 0; ; hop++) {
+        await assertPublic(u);
+        const res = await fetchFn(u, {
+          method: "GET",
+          // Followed by hand so every hop gets the same check: a public host must not be able to bounce us inside.
+          redirect: "manual",
+          signal: ctrl.signal,
+          headers: { accept, "user-agent": "garu-mcp-fetch/0.1 (+https://github.com/humbertovillanueva/garu)" },
+        });
+        const location = res.headers.get("location");
+        if ([301, 302, 303, 307, 308].includes(res.status) && location) {
+          if (hop >= MAX_REDIRECTS) throw new Error(`${url}: too many redirects`);
+          u = new URL(location, u);
+          continue;
+        }
+        const body = await res.text();
+        return { status: res.status, body, contentType: res.headers.get("content-type") ?? "" };
+      }
     } finally {
       clearTimeout(timer);
     }
@@ -88,7 +131,7 @@ export function fetchTools(opts: { fetchFn?: typeof fetch; webhookUrl?: string |
 
   const tools: Record<string, ToolDef> = {
     fetch_json: tool(
-      "GET a URL that returns JSON. Returns the parsed JSON (clipped if large). Use for APIs.",
+      "GET a URL that returns JSON. Returns the parsed JSON (clipped if large). Use for APIs. Reaches only the open web, never this machine or a private network.",
       { url: z.string().url(), maxChars: z.number().int().positive().optional() },
       { title: "Fetch JSON", ...READS },
       async ({ url, maxChars }) => {
@@ -105,7 +148,7 @@ export function fetchTools(opts: { fetchFn?: typeof fetch; webhookUrl?: string |
     ),
 
     fetch_text: tool(
-      "GET a URL and return its readable text (HTML is stripped to text). Use for web pages and articles.",
+      "GET a URL and return its readable text (HTML is stripped to text). Use for web pages and articles. Reaches only the open web, never this machine or a private network.",
       { url: z.string().url(), maxChars: z.number().int().positive().optional() },
       { title: "Fetch a page as text", ...READS },
       async ({ url, maxChars }) => {
@@ -119,6 +162,12 @@ export function fetchTools(opts: { fetchFn?: typeof fetch; webhookUrl?: string |
   // post_message exists only when this server was started with WEBHOOK_URL: one channel, chosen by you.
   const hook = opts.webhookUrl;
   if (hook) {
+    const h = new URL(hook);
+    // The webhook URL is itself a secret (whoever has it can post to your channel): it travels encrypted,
+    // unless it never leaves your own network.
+    if (h.protocol !== "https:" && !(h.protocol === "http:" && isHomeHost(h.hostname))) {
+      throw new Error(`WEBHOOK_URL must be https://; http:// is fine only on your own network (e.g. http://192.168.1.20:8080/...)`);
+    }
     tools["post_message"] = tool(
       "Post a text message to the configured channel (a Slack or Discord webhook set up by the user). Markdown-lite is fine. Keep it under 1900 characters.",
       { text: z.string().min(1).max(1900) },
