@@ -13,6 +13,7 @@
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
   import type { RunSummary } from "../lib/types";
+  import { t } from "../lib/i18n.svelte";
 
   let runs = $state<RunSummary[] | null>(null);
   let error = $state<string | null>(null);
@@ -41,19 +42,19 @@
 
 <section class="space-y-5">
   <div class="rise flex items-baseline justify-between">
-    <h1 class="text-[24px] font-semibold tracking-tight">Runs</h1>
-    {#if runs?.length}<a href={href("cost")} class="text-[13px] text-mute hover:text-fg">{usd(total)} total · Cost</a>{/if}
+    <h1 class="text-[24px] font-semibold tracking-tight">{t("Runs")}</h1>
+    {#if runs?.length}<a href={href("cost")} class="text-[13px] text-mute hover:text-fg">{t("{total} total · Cost", { total: usd(total) })}</a>{/if}
   </div>
   {#if runs === null}
     {#if error}<LoadError message={error} />{:else}<Skeleton rows={6} h={44} />{/if}
   {:else if runs.length === 0}
-    <Empty title="No runs yet" hint="Open an agent and press Run now." />
+    <Empty title={t("No runs yet")} hint={t("Open an agent and press Run now.")} />
   {:else}
     {#each days as d (d.day)}
       <div>
         <div class="mb-2 flex items-baseline justify-between text-[11px] text-mute">
           <span class="uppercase tracking-wider">{d.day}</span>
-          <span>{d.count} run{d.count === 1 ? "" : "s"}{d.cost ? ` · ${usd(d.cost)}` : ""}</span>
+          <span>{d.count === 1 ? t("1 run") : t("{n} runs", { n: d.count })}{d.cost ? ` · ${usd(d.cost)}` : ""}</span>
         </div>
         <div class="panel divide-y divide-line">
           {#each d.rows as row (key(row))}
@@ -80,11 +81,11 @@
                   <div class="min-w-0 flex-1">
                     <div class="flex items-baseline gap-2 text-[13.5px]">
                       <span class="font-medium">{first.agent}</span>
-                      <span class="text-mute"><span aria-hidden="true">×</span><span class="sr-only">times</span> {n}</span>
+                      <span class="text-mute"><span aria-hidden="true">×</span><span class="sr-only">{t("times")}</span> {n}</span>
                       <Status status={row.status} />
                       <span class="ml-auto flex-none text-[12px] text-mute">{clock(last.startedAt)} – {clock(first.startedAt)}</span>
                     </div>
-                    <div class="truncate text-[12.5px] text-mute">{n} runs, all {statusLabel(row.status)}{summary(first) ? ` · latest: ${summary(first)}` : ""}</div>
+                    <div class="truncate text-[12.5px] text-mute">{t("{n} runs, all {status}", { n, status: statusLabel(row.status) })}{summary(first) ? ` · ${t("latest: {summary}", { summary: summary(first) })}` : ""}</div>
                   </div>
                   <span class="flex-none text-mute transition-transform" style="transform: rotate({open[k] ? 90 : 0}deg)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>
                 </button>

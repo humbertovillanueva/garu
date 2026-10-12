@@ -2,6 +2,7 @@
   /** A run's flight recorder as a timeline. Tool calls are grouped with their decision and result. */
   import { clockExact, usd, tokens, statusLabel, decidedBy, expired, plainTimes } from "../format";
   import Decision from "./Decision.svelte";
+  import { t } from "../i18n.svelte";
   import type { Envelope } from "../types";
 
   let { events, compact = false }: { events: Envelope[]; compact?: boolean } = $props();
@@ -41,8 +42,8 @@
       {#if row.kind === "turn"}
         <div class="flex flex-wrap items-baseline gap-x-3 text-[13px]">
           <span class="mono text-mute">{clockExact(row.env.ts)}</span>
-          <span class="font-medium" title={e["inputTokens"] !== undefined ? `${tokens(e["inputTokens"] as number)} tokens in, ${tokens(e["outputTokens"] as number)} out` : undefined}>Turn {e["turn"]}</span>
-          {#if e["totalCostUsd"] !== undefined}<span class="text-mute">{usd(e["totalCostUsd"] as number)} so far</span>{/if}
+          <span class="font-medium" title={e["inputTokens"] !== undefined ? t("{input} tokens in, {output} out", { input: tokens(e["inputTokens"] as number), output: tokens(e["outputTokens"] as number) }) : undefined}>{t("Turn {n}", { n: e["turn"] as number })}</span>
+          {#if e["totalCostUsd"] !== undefined}<span class="text-mute">{t("{cost} so far", { cost: usd(e["totalCostUsd"] as number) })}</span>{/if}
         </div>
         {#if e["text"]}<p class="mt-1 max-w-3xl whitespace-pre-wrap text-[13.5px] leading-relaxed text-fg-2">{plainTimes(String(e["text"]))}</p>{/if}
 
@@ -54,20 +55,20 @@
             <span class="mono text-mute">{clockExact(row.env.ts)}</span>
             <span class="mono font-medium">{req.server}.{req.tool}</span>
             {#if d}<Decision action={d.action} />{/if}
-            {#if approval}<Decision action={approval.approved ? "allow" : "block"} label={approval.approved ? (/^grant\b/.test(approval.by) ? "allowed by your 24h approval" : `approved by ${decidedBy(approval.by)}`) : expired(approval.by) ? "expired, no answer" : `declined by ${decidedBy(approval.by)}`} />{/if}
+            {#if approval}<Decision action={approval.approved ? "allow" : "block"} label={approval.approved ? (/^grant\b/.test(approval.by) ? t("allowed by your 24h approval") : t("approved by {who}", { who: decidedBy(approval.by) })) : expired(approval.by) ? t("expired, no answer") : t("declined by {who}", { who: decidedBy(approval.by) })} />{/if}
             {#if approval?.note}<span class="text-[12.5px] italic text-fg-2">“{approval.note}”</span>{/if}
-            {#if waiting}<span class="pulse text-[12px]" style="color: var(--color-ask)">waiting for you</span>{/if}
+            {#if waiting}<span class="pulse text-[12px]" style="color: var(--color-ask)">{t("waiting for you")}</span>{/if}
             {#if result}
-              <span class="mono text-[12px]" style="color: {result.ok ? 'var(--color-mute)' : 'var(--color-bad)'}">{result.ok ? `ok · ${result.durationMs}ms` : `error · ${result.error ?? ''}`}</span>
+              <span class="mono text-[12px]" style="color: {result.ok ? 'var(--color-mute)' : 'var(--color-bad)'}">{result.ok ? t("ok · {ms}ms", { ms: result.durationMs }) : t("error · {error}", { error: result.error ?? "" })}</span>
             {:else if d && d.action === "block"}
-              <span class="mono text-[12px] text-mute">never executed</span>
+              <span class="mono text-[12px] text-mute">{t("never executed")}</span>
             {/if}
             <span class="ml-auto text-mute" aria-hidden="true">{open[row.env.seq] ? "−" : "+"}</span>
           </button>
           {#if open[row.env.seq]}
             <div class="grid gap-3 border-t hairline bg-bg/40 p-3 text-[12px] md:grid-cols-2">
-              <div><div class="mb-1 text-[11px] uppercase tracking-wider text-mute">arguments</div><pre class="mono max-h-64 overflow-auto whitespace-pre-wrap break-all text-fg-2">{pretty(req.args)}</pre></div>
-              <div><div class="mb-1 text-[11px] uppercase tracking-wider text-mute">{result ? "result" : "policy"}</div><pre class="mono max-h-64 overflow-auto whitespace-pre-wrap break-all text-fg-2">{result ? pretty(result.result ?? result.error) : d?.reason}</pre></div>
+              <div><div class="mb-1 text-[11px] uppercase tracking-wider text-mute">{t("arguments")}</div><pre class="mono max-h-64 overflow-auto whitespace-pre-wrap break-all text-fg-2">{pretty(req.args)}</pre></div>
+              <div><div class="mb-1 text-[11px] uppercase tracking-wider text-mute">{result ? t("result") : t("policy")}</div><pre class="mono max-h-64 overflow-auto whitespace-pre-wrap break-all text-fg-2">{result ? pretty(result.result ?? result.error) : d?.reason}</pre></div>
             </div>
           {/if}
         </div>
@@ -75,12 +76,12 @@
       {:else}
         <div class="flex flex-wrap items-baseline gap-x-3 text-[13px]">
           <span class="mono text-mute">{clockExact(row.env.ts)}</span>
-          {#if e.type === "run.start"}<span class="text-mute">Run started{e["sandbox"] ? ", sandboxed" : ""}</span>
-          {:else if e.type === "tools.offered"}<span class="text-mute">{(e["offered"] as string[]).length} tools offered{(e["hidden"] as string[]).length ? `, ${(e["hidden"] as string[]).length} more hidden because the policy always blocks them` : ""}</span>
-          {:else if e.type === "run.end"}<span class="font-medium">Run {statusLabel(e["status"] as string)}</span>{#if e["summary"]}<span class="text-fg-2">— {plainTimes(String(e["summary"]))}</span>{/if}
-          {:else if e.type === "budget.exceeded"}<span style="color: var(--color-bad)">budget cap hit: {usd(e["costUsd"] as number)} reached the cap of {usd(e["maxCostUsd"] as number)} — {e["pendingToolCalls"]} call(s) not executed</span>
-          {:else if e.type === "model.retry"}<span style="color: var(--color-ask)">model busy ({e["reason"]}) — retrying in {Math.round((e["waitMs"] as number) / 1000)}s, attempt {e["attempt"]} of {e["maxAttempts"]}</span>
-          {:else if e.type === "tools.retry"}<span style="color: var(--color-ask)">tool server "{e["server"]}" didn't start in time — retrying in {Math.round((e["waitMs"] as number) / 1000)}s</span>
+          {#if e.type === "run.start"}<span class="text-mute">{e["sandbox"] ? t("Run started, sandboxed") : t("Run started")}</span>
+          {:else if e.type === "tools.offered"}{@const offered = (e["offered"] as string[]).length}{@const hidden = (e["hidden"] as string[]).length}<span class="text-mute">{offered === 1 ? t("1 tool offered") : t("{n} tools offered", { n: offered })}{hidden ? `, ${hidden === 1 ? t("1 more hidden because the policy always blocks it") : t("{n} more hidden because the policy always blocks them", { n: hidden })}` : ""}</span>
+          {:else if e.type === "run.end"}<span class="font-medium">{t("Run {status}", { status: statusLabel(e["status"] as string) })}</span>{#if e["summary"]}<span class="text-fg-2">— {plainTimes(String(e["summary"]))}</span>{/if}
+          {:else if e.type === "budget.exceeded"}<span style="color: var(--color-bad)">{t("budget cap hit: {cost} reached the cap of {cap} — {n} call(s) not executed", { cost: usd(e["costUsd"] as number), cap: usd(e["maxCostUsd"] as number), n: e["pendingToolCalls"] as number })}</span>
+          {:else if e.type === "model.retry"}<span style="color: var(--color-ask)">{t("model busy ({reason}) — retrying in {s}s, attempt {attempt} of {max}", { reason: String(e["reason"]), s: Math.round((e["waitMs"] as number) / 1000), attempt: e["attempt"] as number, max: e["maxAttempts"] as number })}</span>
+          {:else if e.type === "tools.retry"}<span style="color: var(--color-ask)">{t("tool server \"{server}\" didn't start in time — retrying in {s}s", { server: String(e["server"]), s: Math.round((e["waitMs"] as number) / 1000) })}</span>
           {:else if e.type === "error"}<span style="color: var(--color-bad)">{e["message"]}</span>
           {:else}<span class="mono text-mute">{e.type}</span>{/if}
         </div>

@@ -11,6 +11,7 @@
   import type { FeedItem, ApprovalRequest, TodayResponse } from "../lib/types";
   import { isApp } from "../lib/server.svelte";
   import { renderMarkdown } from "../lib/md";
+  import { t } from "../lib/i18n.svelte";
 
   let feed = $state<FeedItem[] | null>(null);
   let feedError = $state<string | null>(null);
@@ -19,12 +20,12 @@
   const load = loader();
   const loadToday = loader();
   $effect(() => { live.tick; load(api.feed(60), (f) => { feed = f; feedError = null; }, (m) => (feedError = m)); });
-  $effect(() => { live.tick; loadToday(api.today(), (t) => (today = t), () => {}); });
+  $effect(() => { live.tick; loadToday(api.today(), (r) => (today = r), () => {}); });
 
   // Follows the clock: a page left open overnight says good morning in the morning.
   let now = $state(new Date());
-  $effect(() => { const t = setInterval(() => (now = new Date()), 60_000); return () => clearInterval(t); });
-  const greeting = $derived.by(() => { const hour = now.getHours(); return hour < 5 ? "Still up" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"; });
+  $effect(() => { const timer = setInterval(() => (now = new Date()), 60_000); return () => clearInterval(timer); });
+  const greeting = $derived.by(() => { const hour = now.getHours(); return hour < 5 ? t("Still up") : hour < 12 ? t("Good morning") : hour < 18 ? t("Good afternoon") : t("Good evening"); });
   const runsToday = $derived(live.agents.reduce((s, a) => s + a.runsToday, 0));
   const spendToday = $derived(live.agents.reduce((s, a) => s + a.costTodayUsd, 0));
   const working = $derived(live.agents.filter((a) => a.status === "working"));
@@ -55,7 +56,7 @@
     }
     return out;
   });
-  const oneLine = (t: string) => plainTimes(t).replace(/[#*_`>]/g, "").replace(/\s+/g, " ").trim();
+  const oneLine = (s: string) => plainTimes(s).replace(/[#*_`>]/g, "").replace(/\s+/g, " ").trim();
   const kindColor = (k: string) => k === "run.ok" ? "var(--color-ok)" : k.startsWith("run.") ? "var(--color-bad)" : "var(--color-mute)";
 </script>
 
@@ -63,12 +64,12 @@
   <div class="rise">
     <h1 class="text-[26px] font-semibold tracking-tight">{greeting}.</h1>
     <p class="mt-1 text-[14px] text-fg-2" aria-live="polite">
-      {#if !live.loaded}Loading your agents…
-      {:else if live.pending.length}<span class="font-medium text-fg">{live.pending.length} decision{live.pending.length === 1 ? "" : "s"}</span> waiting for you.
-      {:else if working.length}{working.map((a) => a.name).join(", ")} {working.length === 1 ? "is" : "are"} working right now.
-      {:else if runsToday}{runsToday} run{runsToday === 1 ? "" : "s"} today from {live.agents.filter((a) => a.runsToday).length} of your {live.agents.length} agents, {usd(spendToday)} estimated. Nothing needs you.
-      {:else if !live.up && scheduled}Nothing has run today, and nothing will: schedules are off.
-      {:else}Quiet so far today. Nothing needs you.{/if}
+      {#if !live.loaded}{t("Loading your agents…")}
+      {:else if live.pending.length}<span class="font-medium text-fg">{live.pending.length === 1 ? t("1 decision") : t("{n} decisions", { n: live.pending.length })}</span> {t("waiting for you.")}
+      {:else if working.length}{working.length === 1 ? t("{names} is working right now.", { names: working[0]!.name }) : t("{names} are working right now.", { names: working.map((a) => a.name).join(", ") })}
+      {:else if runsToday}{runsToday === 1 ? t("1 run today from {active} of your {total} agents, {cost} estimated. Nothing needs you.", { active: live.agents.filter((a) => a.runsToday).length, total: live.agents.length, cost: usd(spendToday) }) : t("{n} runs today from {active} of your {total} agents, {cost} estimated. Nothing needs you.", { n: runsToday, active: live.agents.filter((a) => a.runsToday).length, total: live.agents.length, cost: usd(spendToday) })}
+      {:else if !live.up && scheduled}{t("Nothing has run today, and nothing will: schedules are off.")}
+      {:else}{t("Quiet so far today. Nothing needs you.")}{/if}
     </p>
   </div>
 
@@ -77,7 +78,7 @@
       {#if !live.up}
         <div class="panel flex items-center gap-3 px-4 py-3 text-[13.5px]" style="border-color: color-mix(in oklab, var(--color-ask) 35%, var(--color-line))">
           <span class="dot" style="background: var(--color-ask)"></span>
-          <div class="min-w-0"><div class="font-medium">Schedules are off</div><div class="text-[12.5px] text-fg-2">{isApp ? "Garu on your computer is running, but not its schedules. Start it there with the login service." : "Start Garu with --up, or install the login service, and the schedules below will fire."}</div></div>
+          <div class="min-w-0"><div class="font-medium">{t("Schedules are off")}</div><div class="text-[12.5px] text-fg-2">{isApp ? t("Garu on your computer is running, but not its schedules. Start it there with the login service.") : t("Start Garu with --up, or install the login service, and the schedules below will fire.")}</div></div>
         </div>
       {/if}
     </div>
@@ -85,25 +86,25 @@
 
   {#if firstRun && !isApp}
     <div class="panel-raised rise p-5">
-      <div class="mb-1 text-[15px] font-semibold">Welcome. Three steps to your first agent.</div>
-      <p class="mb-4 text-[13.5px] text-fg-2">Garu runs agents that can only act through a policy you wrote. Nothing happens without a rule allowing it, or you approving it.</p>
+      <div class="mb-1 text-[15px] font-semibold">{t("Welcome. Three steps to your first agent.")}</div>
+      <p class="mb-4 text-[13.5px] text-fg-2">{t("Garu runs agents that can only act through a policy you wrote. Nothing happens without a rule allowing it, or you approving it.")}</p>
       <ol class="grid gap-3 text-[13.5px] sm:grid-cols-3">
-        <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">1</div><div class="font-medium">Run pip</div><div class="mt-0.5 text-fg-2">Open <a class="underline hover:text-fg" href={href("agent", "pip")}>pip</a> and press <span class="font-medium text-fg">Run now</span>. It reads a notes file and asks before writing a summary.</div></li>
-        <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">2</div><div class="font-medium">Approve it</div><div class="mt-0.5 text-fg-2">The pause is the product. Approve once, approve for 24h, or decline with a note it reads.</div></li>
-        <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">3</div><div class="font-medium">Make your own</div><div class="mt-0.5 text-fg-2"><span class="mono">npm run garu -- new</span> asks what it should do and writes a Garufile with a closed policy.</div></li>
+        <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">1</div><div class="font-medium">{t("Run pip")}</div><div class="mt-0.5 text-fg-2">{t("Open")} <a class="underline hover:text-fg" href={href("agent", "pip")}>pip</a> {t("and press")} <span class="font-medium text-fg">{t("Run now")}</span>. {t("It reads a notes file and asks before writing a summary.")}</div></li>
+        <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">2</div><div class="font-medium">{t("Approve it")}</div><div class="mt-0.5 text-fg-2">{t("The pause is the product. Approve once, approve for 24h, or decline with a note it reads.")}</div></li>
+        <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">3</div><div class="font-medium">{t("Make your own")}</div><div class="mt-0.5 text-fg-2"><span class="mono">npm run garu -- new</span> {t("asks what it should do and writes a Garufile with a closed policy.")}</div></li>
       </ol>
     </div>
   {/if}
 
   {#if needsSetup.length}
     <div>
-      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Needs setup</h2>
+      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Needs setup")}</h2>
       <div class="panel divide-y divide-line">
         {#each needsSetup as a (a.name)}
           <a href={href("agent", a.name)} class="card-hover flex items-center gap-3 px-3 py-2.5 first:rounded-t-xl last:rounded-b-xl">
             <Mark name={a.name} size={26} status={a.status} />
             <span class="font-medium">{a.name}</span>
-            <span class="min-w-0 text-[12.5px] [overflow-wrap:anywhere]" style="color: var(--color-ask)">{isApp ? "needs setup on your computer" : [...a.needs.map((v) => `add ${v} to .env`), ...a.signIn.map((s) => `npm run garu -- auth ${a.source} ${s}`)].join(" · ")}</span>
+            <span class="min-w-0 text-[12.5px] [overflow-wrap:anywhere]" style="color: var(--color-ask)">{isApp ? t("needs setup on your computer") : [...a.needs.map((v) => t("add {name} to .env", { name: v })), ...a.signIn.map((s) => `npm run garu -- auth ${a.source} ${s}`)].join(" · ")}</span>
           </a>
         {/each}
       </div>
@@ -112,7 +113,7 @@
 
   {#if live.pending.length || live.suggestions.length}
     <div class="space-y-3">
-      <h2 class="text-[11px] uppercase tracking-wider text-mute">Needs you</h2>
+      <h2 class="text-[11px] uppercase tracking-wider text-mute">{t("Needs you")}</h2>
       {#each live.pending as r (r.id)}<ReviewCard req={r} />{/each}
       {#each live.suggestions.slice(0, 2) as s (s.id)}<SuggestionCard {s} />{/each}
     </div>
@@ -120,7 +121,7 @@
 
   {#if today?.results.length}
     <div>
-      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Latest from your agents</h2>
+      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Latest from your agents")}</h2>
       <div class="grid gap-3 md:grid-cols-2">
         {#each today.results.slice(0, 4) as r (r.agent + r.runId)}
           {@const waiting = live.pending.filter((p) => p.agent === r.agent).length}
@@ -140,8 +141,8 @@
               </div>
             {/if}
             <div class="mt-auto flex flex-wrap gap-x-4 pt-3 text-[12.5px]">
-              <a class="tap text-fg-2 underline decoration-mute underline-offset-2 hover:text-fg" href={href("run", r.agent, r.runId)}>{r.doc ? "Read it all" : "See the run"}</a>
-              {#if waiting}<a class="tap underline decoration-mute underline-offset-2" style="color: var(--color-ask)" href={href("inbox")}>{waiting} waiting for you</a>{/if}
+              <a class="tap text-fg-2 underline decoration-mute underline-offset-2 hover:text-fg" href={href("run", r.agent, r.runId)}>{r.doc ? t("Read it all") : t("See the run")}</a>
+              {#if waiting}<a class="tap underline decoration-mute underline-offset-2" style="color: var(--color-ask)" href={href("inbox")}>{waiting === 1 ? t("1 waiting for you") : t("{n} waiting for you", { n: waiting })}</a>{/if}
             </div>
           </div>
         {/each}
@@ -151,7 +152,7 @@
 
   {#if working.length}
     <div>
-      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Right now</h2>
+      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Right now")}</h2>
       <div class="grid gap-2 sm:grid-cols-2">
         {#each working as a (a.name)}
           <a href={href("agent", a.name)} class="panel card-hover rise flex items-center gap-3 px-3 py-2.5">
@@ -168,7 +169,7 @@
 
   {#if live.up && comingUp.length}
     <div>
-      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Coming up</h2>
+      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Coming up")}</h2>
       <div class="flex flex-wrap gap-2">
         {#each comingUp as a (a.name)}
           <a href={href("agent", a.name)} class="chip card-hover tap gap-2 py-1 pl-1 pr-3" title={a.description || cronLabel(a.cron)}>
@@ -182,9 +183,9 @@
 
   {#if week && week.runs}
     <div>
-      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">This week</h2>
+      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("This week")}</h2>
       <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {#each [["Runs", String(week.runs)], ["Done without asking", String(week.actions)], ["Asked you", String(week.asked)], ["Spent", usd(week.costUsd, week.priced)]] as [label, value] (label)}
+        {#each [[t("Runs"), String(week.runs)], [t("Done without asking"), String(week.actions)], [t("Asked you"), String(week.asked)], [t("Spent"), usd(week.costUsd, week.priced)]] as [label, value] (label)}
           <div class="panel px-3 py-2.5">
             <div class="text-[12px] text-mute">{label}</div>
             <div class="mt-0.5 text-[20px] font-semibold tracking-tight tabular-nums">{value}</div>
@@ -195,12 +196,12 @@
   {/if}
 
   <div>
-    <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Activity</h2>
+    <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Activity")}</h2>
     {#if feed === null}
       {#if feedError}<LoadError message={feedError} />{:else}<Skeleton rows={4} h={52} />{/if}
     {:else if groups.length === 0}
-      <Empty title="Nothing has happened yet" hint={isApp ? "When an agent runs, what it did shows up here." : "Run one with npm run garu -- run examples/pip/Garufile.yaml in your Garu folder."}>
-        {#if live.agents.length}<p class="text-[13px] text-fg-2">Or open an agent in Agents and press Run now.</p>{/if}
+      <Empty title={t("Nothing has happened yet")} hint={isApp ? t("When an agent runs, what it did shows up here.") : t("Run one with npm run garu -- run examples/pip/Garufile.yaml in your Garu folder.")}>
+        {#if live.agents.length}<p class="text-[13px] text-fg-2">{t("Or open an agent in Agents and press Run now.")}</p>{/if}
       </Empty>
     {:else}
       {#each groups as g (g.day)}
@@ -216,11 +217,11 @@
                 <div class="min-w-0 flex-1">
                   <div class="flex items-baseline gap-2 text-[13.5px]">
                     <span class="font-medium">{i.agent}</span>
-                    {#if n > 1}<span class="text-mute"><span aria-hidden="true">×</span><span class="sr-only">times</span> {n}</span>{/if}
+                    {#if n > 1}<span class="text-mute"><span aria-hidden="true">×</span><span class="sr-only">{t("times")}</span> {n}</span>{/if}
                     {#if i.kind.startsWith("run.")}
                       <span style="color: {kindColor(i.kind)}">{statusLabel(i.kind.slice(4))}</span>
                     {:else if i.kind === "approval.decided"}
-                      <span class="text-fg-2">{d?.decision?.approved ? "approved" : /expired/.test(d?.decision?.by ?? "") ? "expired" : "declined"}</span>
+                      <span class="text-fg-2">{d?.decision?.approved ? t("approved") : /expired/.test(d?.decision?.by ?? "") ? t("expired") : t("declined")}</span>
                     {/if}
                     <span class="ml-auto flex-none text-[12px] text-mute" title={humanTime(i.ts)}>{n === 1 ? clock(i.ts) : `${clock(row.items.at(-1)!.ts)} – ${clock(i.ts)}`}</span>
                   </div>

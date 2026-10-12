@@ -7,8 +7,10 @@ export interface Prefs {
   landOnInbox: boolean;
   /** Dark, light, or whatever the device is set to. */
   theme: "auto" | "dark" | "light";
+  /** English, Spanish, or whatever the device speaks. */
+  language: "auto" | "en" | "es";
 }
-const defaults: Prefs = { haptics: true, landOnInbox: true, theme: "auto" };
+const defaults: Prefs = { haptics: true, landOnInbox: true, theme: "auto", language: "auto" };
 function load(): Prefs {
   try {
     const raw = localStorage.getItem(KEY);

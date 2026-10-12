@@ -3,20 +3,22 @@
   import { route, href } from "../router.svelte";
   import { live } from "../api.svelte";
   import { isApp } from "../server.svelte";
-  import { statusLine } from "../format";
+  import { until } from "../format";
+  import { t } from "../i18n.svelte";
   import Mark from "./Mark.svelte";
   import Icon from "./Icon.svelte";
 
   const isActive = (name: string, part?: string) => route.name === name && (part === undefined || route.parts[0] === part);
   const shortRoot = $derived(live.root.replace(/^\/Users\/[^/]+/, "~").replace(/^\/home\/[^/]+/, "~"));
-  const nav = [
-    { n: "home", label: "Home", icon: "home" as const, active: () => isActive("home") },
-    { n: "inbox", label: "Inbox", icon: "inbox" as const, active: () => isActive("inbox") },
-    { n: "runs", label: "Runs", icon: "runs" as const, active: () => isActive("runs") || route.name === "run" },
-    { n: "cost", label: "Cost", icon: "cost" as const, active: () => isActive("cost") },
-  ];
+  const nav = $derived([
+    { n: "home", label: t("Home"), icon: "home" as const, active: () => isActive("home") },
+    { n: "inbox", label: t("Inbox"), icon: "inbox" as const, active: () => isActive("inbox") },
+    { n: "runs", label: t("Runs"), icon: "runs" as const, active: () => isActive("runs") || route.name === "run" },
+    { n: "cost", label: t("Cost"), icon: "cost" as const, active: () => isActive("cost") },
+  ]);
+  const tabs = $derived([["home", t("Home")], ["inbox", t("Inbox")], ["agents", t("Agents")], ["runs", t("Runs")]] as const);
   const short = (a: { status: string; needs: string[]; signIn: string[]; cron: string | null; nextRun: string | null; inFlight: { turn: number } | null; pending: number; lastRun: { status: string; startedAt: string } | null; configured: boolean }) =>
-    a.status === "needs-setup" ? "needs setup" : a.status === "waiting" ? "waiting for you" : a.status === "working" ? "working" : a.status === "scheduled" ? statusLine(a).replace("Sleeping — ", "") : "";
+    a.status === "needs-setup" ? t("needs setup") : a.status === "waiting" ? t("waiting for you") : a.status === "working" ? t("working") : a.status === "scheduled" ? t("next run {when}", { when: until(a.nextRun) }) : "";
 </script>
 
 <!-- Desktop sidebar -->
@@ -25,25 +27,25 @@
     <Logo size={26} />
     <span class="text-[16px] font-semibold tracking-tight">Garu</span>
     <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute" role="status">
-      <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{live.connected ? "live" : "reconnecting"}
+      <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{live.connected ? t("live") : t("reconnecting")}
     </span>
   </a>
 
-  <nav aria-label="Main" class="space-y-0.5 px-3">
+  <nav aria-label={t("Main")} class="space-y-0.5 px-3">
     {#each nav as item}
       <a href={href(item.n)} class="navitem" class:active={item.active()}>
         <span class="navicon"><Icon name={item.icon} size={17} /></span>
         <span>{item.label}</span>
-        {#if item.n === "inbox" && live.pending.length}<span class="ml-auto rounded-full px-1.5 text-[11px] font-semibold text-bg" style="background: var(--color-ask)">{live.pending.length}<span class="sr-only"> waiting</span></span>{/if}
+        {#if item.n === "inbox" && live.pending.length}<span class="ml-auto rounded-full px-1.5 text-[11px] font-semibold text-bg" style="background: var(--color-ask)">{live.pending.length}<span class="sr-only"> {t("waiting")}</span></span>{/if}
       </a>
     {/each}
   </nav>
 
   <div class="mt-6 flex items-center justify-between px-5 text-[11px] uppercase tracking-wider text-mute">
-    <a href={href("agents")} class="hover:text-fg">Agents</a>
+    <a href={href("agents")} class="hover:text-fg">{t("Agents")}</a>
     <span>{live.agents.length}</span>
   </div>
-  <nav aria-label="Agents" class="mt-1 flex-1 space-y-0.5 overflow-y-auto px-3 pb-3">
+  <nav aria-label={t("Agents")} class="mt-1 flex-1 space-y-0.5 overflow-y-auto px-3 pb-3">
     {#each live.agents as a (a.name)}
       {@const sub = short(a)}
       <a href={href("agent", a.name)} class="navitem agent" class:active={isActive("agent", a.name)}>
@@ -58,18 +60,18 @@
       </a>
     {/each}
     {#if live.loaded && live.agents.length === 0}
-      <div class="px-2 py-3 text-[12.5px] text-mute">No Garufiles found under this folder yet. {#if isApp}Make one on your computer.{:else}<span class="mono">npm run garu -- new</span> makes one.{/if}</div>
+      <div class="px-2 py-3 text-[12.5px] text-mute">{t("No Garufiles found under this folder yet.")} {#if isApp}{t("Make one on your computer.")}{:else}<span class="mono">npm run garu -- new</span> {t("makes one.")}{/if}</div>
     {/if}
   </nav>
 
   <div class="border-t hairline px-3 py-2">
     <a href={href("settings")} class="navitem" class:active={isActive("settings")}>
       <span class="navicon"><Icon name="settings" size={17} /></span>
-      <span>Settings</span>
+      <span>{t("Settings")}</span>
     </a>
     <div class="flex items-center gap-2 px-2.5 pb-1 pt-2 text-[11px] text-mute">
       <span class="dot" style="background: {live.up ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>
-      <span class="truncate">{live.up ? "schedules running" : "schedules off"}</span>
+      <span class="truncate">{live.up ? t("schedules running") : t("schedules off")}</span>
       <span class="mono ml-auto truncate" title={live.root}>{shortRoot || "…"}</span>
     </div>
   </div>
@@ -83,19 +85,19 @@
   </a>
   <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute" role="status">
     <!-- "connecting" until the first connection or a drop: a fresh launch isn't offline -->
-    <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : live.disconnectedAt ? 'var(--color-ask)' : 'var(--color-mute)'}"></span>{live.connected ? "live" : live.disconnectedAt ? "offline" : "connecting"}
+    <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : live.disconnectedAt ? 'var(--color-ask)' : 'var(--color-mute)'}"></span>{live.connected ? t("live") : live.disconnectedAt ? t("offline") : t("connecting")}
   </span>
-  <a href={href("settings")} class="-my-2 -mr-3 grid h-11 w-11 place-items-center text-mute hover:text-fg" aria-label="Settings"><Icon name="settings" size={18} /></a>
+  <a href={href("settings")} class="-my-2 -mr-3 grid h-11 w-11 place-items-center text-mute hover:text-fg" aria-label={t("Settings")}><Icon name="settings" size={18} /></a>
 </header>
 
 <!-- Phone: bottom tab bar, within thumb reach -->
-<nav aria-label="Main" class="phonebar fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t hairline bg-bg/95 backdrop-blur lg:hidden" style="padding-bottom: env(safe-area-inset-bottom)">
-  {#each [["home", "Home"], ["inbox", "Inbox"], ["agents", "Agents"], ["runs", "Runs"]] as const as [n, l]}
+<nav aria-label={t("Main")} class="phonebar fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t hairline bg-bg/95 backdrop-blur lg:hidden" style="padding-bottom: env(safe-area-inset-bottom)">
+  {#each tabs as [n, l]}
     {@const active = route.name === n || (n === "agents" && route.name === "agent") || (n === "runs" && (route.name === "run" || route.name === "cost"))}
     <a href={href(n)} class="tab" class:active aria-current={active ? "page" : undefined}>
       <span class="relative">
         <Icon name={n} />
-        {#if n === "inbox" && live.pending.length}<span class="absolute -right-2.5 -top-1.5 rounded-full px-1.5 text-[11px] font-semibold leading-4 text-bg" style="background: var(--color-ask)">{live.pending.length}<span class="sr-only"> waiting</span></span>{/if}
+        {#if n === "inbox" && live.pending.length}<span class="absolute -right-2.5 -top-1.5 rounded-full px-1.5 text-[11px] font-semibold leading-4 text-bg" style="background: var(--color-ask)">{live.pending.length}<span class="sr-only"> {t("waiting")}</span></span>{/if}
       </span>
       <span>{l}</span>
     </a>

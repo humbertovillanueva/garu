@@ -8,6 +8,7 @@
   import { clock, dayLabel, plainTimes } from "../format";
   import Mark from "./Mark.svelte";
   import { renderMarkdown } from "../md";
+  import { t } from "../i18n.svelte";
   import type { ChatMessage } from "../types";
 
   let { agent, messages }: { agent: string; messages: ChatMessage[] } = $props();
@@ -30,15 +31,15 @@
   let open = $state<Record<string, boolean>>({});
   const key = (runs: ChatMessage[]) => runs[0]!.id;
   /** "no change", "nothing changed", "ok" and the like: the run had nothing to say. */
-  const quiet = (t: string) => /^\W*(no change|nothing (changed|new|to report)|ok|done)\W*$/i.test(t.trim());
-  const oneLine = (t: string) => t.replace(/[#*_`>]/g, "").replace(/\s+/g, " ").trim();
+  const quiet = (s: string) => /^\W*(no change|nothing (changed|new|to report)|ok|done)\W*$/i.test(s.trim());
+  const oneLine = (s: string) => s.replace(/[#*_`>]/g, "").replace(/\s+/g, " ").trim();
   function headline(runs: ChatMessage[]): string {
     const n = runs.length;
     const allQuiet = runs.every((r) => quiet(r.text));
     const span = n === 1 ? clock(runs[0]!.ts) : `${clock(runs[0]!.ts)} – ${clock(runs.at(-1)!.ts)}`;
-    if (allQuiet) return `${n === 1 ? "Ran" : `Ran ${n} times`}, nothing changed · ${span}`;
-    if (n === 1) return `Ran · ${span}`;
-    return `Ran ${n} times · ${span}`;
+    if (allQuiet) return n === 1 ? t("Ran, nothing changed · {span}", { span }) : t("Ran {n} times, nothing changed · {span}", { n, span });
+    if (n === 1) return t("Ran · {span}", { span });
+    return t("Ran {n} times · {span}", { n, span });
   }
 </script>
 
@@ -65,7 +66,7 @@
               <div class="mt-2 space-y-2">
                 {#each runs as r (r.id)}
                   <div class="rounded-xl border border-dashed hairline px-3 py-2">
-                    <div class="mb-0.5 text-[11px] text-mute">{clock(r.ts)}{#if r.runId}<span class="mx-1">·</span><a class="tap hover:text-fg" href={href("run", agent, r.runId)}>see the run</a>{/if}</div>
+                    <div class="mb-0.5 text-[11px] text-mute">{clock(r.ts)}{#if r.runId}<span class="mx-1">·</span><a class="tap hover:text-fg" href={href("run", agent, r.runId)}>{t("see the run")}</a>{/if}</div>
                     <div class="md space-y-2">{@html renderMarkdown(plainTimes(r.text))}</div>
                   </div>
                 {/each}
@@ -92,7 +93,7 @@
                  style={m.kind === "error" ? "background: color-mix(in oklab, var(--color-bad) 10%, var(--color-panel)); border: 1px solid color-mix(in oklab, var(--color-bad) 35%, var(--color-line))" : ""}>
               <div class="md space-y-2">{@html renderMarkdown(plainTimes(m.text))}</div>
             </div>
-            <div class="mt-1 text-[11px] text-mute">{clock(m.ts)}{#if m.runId}<span class="mx-1">·</span><a class="tap hover:text-fg" href={href("run", agent, m.runId)}>see the run</a>{/if}</div>
+            <div class="mt-1 text-[11px] text-mute">{clock(m.ts)}{#if m.runId}<span class="mx-1">·</span><a class="tap hover:text-fg" href={href("run", agent, m.runId)}>{t("see the run")}</a>{/if}</div>
           </div>
         </div>
       {/if}

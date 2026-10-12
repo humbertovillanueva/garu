@@ -16,6 +16,7 @@
   import { tick } from "svelte";
   import { isApp } from "../lib/server.svelte";
   import Icon from "../lib/components/Icon.svelte";
+  import { t } from "../lib/i18n.svelte";
 
   let { name }: { name: string } = $props();
   const a = $derived(agentByName(name));
@@ -31,6 +32,14 @@
   let bottom = $state<HTMLDivElement | null>(null);
   const hasKeyboard = typeof window === "undefined" || !window.matchMedia("(hover: none)").matches;
   const modKey = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘" : "Ctrl";
+  // What the phone says an unset-up agent is waiting on: one whole sentence per shape (a key, keys, sign-ins, or both).
+  const setupLine = $derived.by(() => {
+    if (!a) return "";
+    const services = a.signIn.join(", ");
+    if (a.needs.length && a.signIn.length) return a.needs.length === 1 ? t("It can't run until a key it needs is added and you sign in to {services}. Open Garu on that computer to finish.", { services }) : t("It can't run until keys it needs are added and you sign in to {services}. Open Garu on that computer to finish.", { services });
+    if (a.needs.length) return a.needs.length === 1 ? t("It can't run until a key it needs is added. Open Garu on that computer to finish.") : t("It can't run until keys it needs are added. Open Garu on that computer to finish.");
+    return t("It can't run until you sign in to {services}. Open Garu on that computer to finish.", { services });
+  });
   // The message box grows with its text and shrinks back when it's cleared after a send.
   let box = $state<HTMLTextAreaElement | null>(null);
   $effect(() => { note; if (!box) return; box.style.height = "auto"; box.style.height = note ? `${Math.min(box.scrollHeight, 160)}px` : ""; });
@@ -103,7 +112,7 @@
 {#if !live.loaded}
   <Skeleton rows={3} h={80} />
 {:else if !a}
-  <Empty title="No agent called “{name}”" />
+  <Empty title={t("No agent called “{name}”", { name })} />
 {:else}
   <section class="space-y-6">
     <!-- Header: the character -->
@@ -116,7 +125,7 @@
         </div>
         {#if a.persona?.tagline}<p class="mt-0.5 text-[14px] italic text-fg-2">“{a.persona.tagline}”</p>{/if}
         {#if a.description}<p class="mt-1 text-[14px] text-fg-2">{a.description}</p>{/if}
-        <p class="mt-1 text-[13px] text-mute">{a.status === "needs-setup" ? (isApp ? "Needs setup on your computer" : statusLine(a)) : statusLine(a)}</p>
+        <p class="mt-1 text-[13px] text-mute">{a.status === "needs-setup" ? (isApp ? t("Needs setup on your computer") : statusLine(a)) : statusLine(a)}</p>
       </div>
     </div>
 
@@ -124,23 +133,24 @@
     {#if a.configured}
       {@const total = (a.policy?.allow ?? 0) + (a.policy?.ask ?? 0) + (a.policy?.block ?? 0) || 1}
       {@const [provider, modelName] = (a.model ?? "").includes("/") ? (a.model as string).split("/", 2) as [string, string] : ["", a.model ?? ""]}
+      {@const policyText = t("{allow} allow · {ask} ask · {block} block", { allow: a.policy?.allow ?? "", ask: a.policy?.ask ?? "", block: a.policy?.block ?? "" })}
       <div class="rise facts">
-        <div class="fact"><div class="k">Runs</div><div class="v" title={a.cron ?? ""}>{a.cron ? cronLabel(a.cron) : "when asked"}{#if a.nextRun && live.up}<span class="text-mute">&nbsp;· next {until(a.nextRun)}</span>{/if}</div></div>
-        <div class="fact"><div class="k">History</div><div class="v">{a.runs} run{a.runs === 1 ? "" : "s"}{#if a.runsToday}<span class="text-mute">&nbsp;· {a.runsToday} today</span>{/if}</div></div>
-        <div class="fact"><div class="k">Model</div><div class="v" title={a.model ?? ""}>{modelName}{#if provider}<span class="text-mute">&nbsp;· {provider}</span>{/if}</div></div>
-        <div class="fact"><div class="k">Tools</div><div class="v" title={a.tools.join(", ")}>{a.tools.length ? a.tools.join(" · ") : "none"}</div></div>
+        <div class="fact"><div class="k">{t("Runs")}</div><div class="v" title={a.cron ?? ""}>{a.cron ? cronLabel(a.cron) : t("when asked")}{#if a.nextRun && live.up}<span class="text-mute">&nbsp;· {t("next {until}", { until: until(a.nextRun) })}</span>{/if}</div></div>
+        <div class="fact"><div class="k">{t("History")}</div><div class="v">{a.runs === 1 ? t("1 run") : t("{n} runs", { n: a.runs })}{#if a.runsToday}<span class="text-mute">&nbsp;· {t("{n} today", { n: a.runsToday })}</span>{/if}</div></div>
+        <div class="fact"><div class="k">{t("Model")}</div><div class="v" title={a.model ?? ""}>{modelName}{#if provider}<span class="text-mute">&nbsp;· {provider}</span>{/if}</div></div>
+        <div class="fact"><div class="k">{t("Tools")}</div><div class="v" title={a.tools.join(", ")}>{a.tools.length ? a.tools.join(" · ") : t("none")}</div></div>
         <div class="fact">
-          <div class="k">Policy</div>
+          <div class="k">{t("Policy")}</div>
           <div class="v flex items-center gap-2">
-            <span class="policybar w-16 flex-none" title="{a.policy?.allow} allow · {a.policy?.ask} ask · {a.policy?.block} block">
+            <span class="policybar w-16 flex-none" title={policyText}>
               <span style="width: {((a.policy?.allow ?? 0) / total) * 100}%; background: var(--color-ok)"></span>
               <span style="width: {((a.policy?.ask ?? 0) / total) * 100}%; background: var(--color-ask)"></span>
               <span style="width: {((a.policy?.block ?? 0) / total) * 100}%; background: var(--color-bad)"></span>
             </span>
-            <span class="text-[11.5px] leading-tight text-mute">{a.policy?.allow} allow · {a.policy?.ask} ask · {a.policy?.block} block</span>
+            <span class="text-[11.5px] leading-tight text-mute">{policyText}</span>
           </div>
         </div>
-        <div class="fact"><div class="k">Limits</div><div class="v">{a.budget?.maxCostUsd ? `${usd(a.budget.maxCostUsd)} per run` : a.budget?.free ? "free model" : "no cap"}<span class="text-mute">&nbsp;· {a.sandbox ? `sandboxed, net ${a.sandbox.network}` : "no sandbox"}</span></div></div>
+        <div class="fact"><div class="k">{t("Limits")}</div><div class="v">{a.budget?.maxCostUsd ? t("{cost} per run", { cost: usd(a.budget.maxCostUsd) }) : a.budget?.free ? t("free model") : t("no cap")}<span class="text-mute">&nbsp;· {a.sandbox ? t("sandboxed, net {network}", { network: a.sandbox.network }) : t("no sandbox")}</span></div></div>
       </div>
     {/if}
 
@@ -149,7 +159,7 @@
       {#if loadError}<LoadError message={loadError} />{:else}<Skeleton rows={2} h={56} />{/if}
     {:else if messages.length === 0 && !currentRunId}
       <div class="rise rounded-xl border border-dashed hairline px-4 py-6 text-center text-[13.5px] text-fg-2">
-        {#if a.configured}Say hello to {a.name}, or tell it to run. Anything it does goes through its policy and shows up here.{:else}This agent has no Garufile here, so it can't be messaged — only its history is available.{/if}
+        {#if a.configured}{t("Say hello to {name}, or tell it to run. Anything it does goes through its policy and shows up here.", { name: a.name })}{:else}{t("This agent has no Garufile here, so it can't be messaged — only its history is available.")}{/if}
       </div>
     {:else}
       <Thread agent={a.name} messages={messages ?? []} />
@@ -160,8 +170,8 @@
       <div class="panel-raised rise p-4" style="border-color: color-mix(in oklab, var(--color-ask) 30%, var(--color-line-2))">
         <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
           <span class="dot pulse" style="background: var(--color-ask)"></span>
-          <span class="text-[14px] font-medium" role="status">{a.status === "waiting" ? "Paused for you" : "Working"}</span>
-          {#if a.inFlight}<span class="text-[12px] text-mute">turn {a.inFlight.turn}{a.maxTurns ? ` of ${a.maxTurns}` : ""}</span>{/if}
+          <span class="text-[14px] font-medium" role="status">{a.status === "waiting" ? t("Paused for you") : t("Working")}</span>
+          {#if a.inFlight}<span class="text-[12px] text-mute">{a.maxTurns ? t("turn {turn} of {max}", { turn: a.inFlight.turn, max: a.maxTurns }) : t("turn {turn}", { turn: a.inFlight.turn })}</span>{/if}
           <div class="ml-auto"><Budget spent={liveCost} cap={a.budget?.maxCostUsd ?? null} free={a.budget?.free ?? false} /></div>
         </div>
         <Timeline events={liveEvents} compact />
@@ -175,23 +185,23 @@
     {#if a.configured && pending.length === 0 && a.status === "needs-setup"}
       <div class="panel-raised rise space-y-2 p-4 text-[13.5px] text-fg-2" style="border-color: color-mix(in oklab, var(--color-ask) 35%, var(--color-line-2))">
         {#if isApp}
-          <div class="font-medium text-fg">{a.name} needs setup on your computer</div>
-          <div>It can't run until {a.needs.length ? `${a.needs.length === 1 ? "a key it needs is" : "keys it needs are"} added` : ""}{a.needs.length && a.signIn.length ? " and " : ""}{a.signIn.length ? `you sign in to ${a.signIn.join(", ")}` : ""}. Open Garu on that computer to finish.</div>
+          <div class="font-medium text-fg">{t("{name} needs setup on your computer", { name: a.name })}</div>
+          <div>{setupLine}</div>
         {:else}
-          <div class="font-medium text-fg">{a.name} can't run yet</div>
-          {#if a.needs.length}<div>Add <span class="mono text-fg">{a.needs.join(", ")}</span> to <span class="mono">.env</span>, then <span class="mono">npm run garu -- service restart</span>.</div>{/if}
-          {#each a.signIn as srv}<div>Sign in to <span class="mono text-fg">{srv}</span> once: <span class="mono text-fg [overflow-wrap:anywhere]">npm run garu -- auth {a.source} {srv}</span></div>{/each}
+          <div class="font-medium text-fg">{t("{name} can't run yet", { name: a.name })}</div>
+          {#if a.needs.length}<div>{t("Add")} <span class="mono text-fg">{a.needs.join(", ")}</span> {t("to")} <span class="mono">.env</span>, {t("then")} <span class="mono">npm run garu -- service restart</span>.</div>{/if}
+          {#each a.signIn as srv}<div>{t("Sign in to")} <span class="mono text-fg">{srv}</span> {t("once:")} <span class="mono text-fg [overflow-wrap:anywhere]">npm run garu -- auth {a.source} {srv}</span></div>{/each}
         {/if}
       </div>
     {:else if a.configured && pending.length === 0}
       {@const busy = a.status === "working" || a.status === "waiting"}
       <div class="panel-raised rise sticky p-2" style="bottom: calc(0.75rem + var(--tabbar))">
         <div class="flex items-end gap-2">
-          <textarea class="field min-h-[42px] flex-1 resize-none" rows="1" placeholder={busy ? (a.status === "working" ? `${a.name} is working…` : "Waiting for your decision above") : hasKeyboard ? `Message ${a.name}  (${modKey}↵)` : `Message ${a.name}`} aria-label="Message {a.name}" bind:value={note} bind:this={box} onkeydown={onKey} disabled={busy}></textarea>
-          <button class="btn btn-primary grid h-11 w-11 flex-none place-items-center rounded-full p-0" disabled={starting || !note.trim() || busy} onclick={send} aria-label="Send"><Icon name="send" size={18} /></button>
+          <textarea class="field min-h-[42px] flex-1 resize-none" rows="1" placeholder={busy ? (a.status === "working" ? t("{name} is working…", { name: a.name }) : t("Waiting for your decision above")) : hasKeyboard ? t("Message {name}  ({key}↵)", { name: a.name, key: modKey }) : t("Message {name}", { name: a.name })} aria-label={t("Message {name}", { name: a.name })} bind:value={note} bind:this={box} onkeydown={onKey} disabled={busy}></textarea>
+          <button class="btn btn-primary grid h-11 w-11 flex-none place-items-center rounded-full p-0" disabled={starting || !note.trim() || busy} onclick={send} aria-label={t("Send")}><Icon name="send" size={18} /></button>
         </div>
         <div class="mt-1.5 flex items-center gap-2 px-1">
-          <button class="btn py-1 text-[12.5px]" disabled={starting || busy} onclick={run} title="Run the agent's standing job now; a message above goes along as a note"><span class="inline-flex items-center gap-1"><Icon name="play" size={13} /> Run now</span></button>
+          <button class="btn py-1 text-[12.5px]" disabled={starting || busy} onclick={run} title={t("Run the agent's standing job now; a message above goes along as a note")}><span class="inline-flex items-center gap-1"><Icon name="play" size={13} /> {t("Run now")}</span></button>
           {#if error}<span class="text-[12.5px]" role="alert" style="color: var(--color-bad)">{error}</span>{/if}
         </div>
       </div>
@@ -201,13 +211,13 @@
     <!-- History -->
     <div>
       <div class="mb-2 flex items-center justify-between">
-        <h2 class="text-[11px] uppercase tracking-wider text-mute">Runs</h2>
-        {#if (runs?.length ?? 0) > 5}<button class="tap text-[11.5px] text-mute hover:text-fg" onclick={() => (showAllRuns = !showAllRuns)}>{showAllRuns ? "show fewer" : `show all ${runs!.length}`}</button>{/if}
+        <h2 class="text-[11px] uppercase tracking-wider text-mute">{t("Runs")}</h2>
+        {#if (runs?.length ?? 0) > 5}<button class="tap text-[11.5px] text-mute hover:text-fg" onclick={() => (showAllRuns = !showAllRuns)}>{showAllRuns ? t("show fewer") : t("show all {n}", { n: runs!.length })}</button>{/if}
       </div>
       {#if runs === null}
         {#if loadError}<LoadError message={loadError} />{:else}<Skeleton rows={3} h={48} />{/if}
       {:else if runs.length === 0}
-        <div class="text-[13px] text-mute">No runs yet.</div>
+        <div class="text-[13px] text-mute">{t("No runs yet.")}</div>
       {:else}
         <div class="panel divide-y divide-line">
           {#each (showAllRuns ? runs : runs.slice(0, 5)).filter((r) => r.runId !== currentRunId) as r (r.runId)}

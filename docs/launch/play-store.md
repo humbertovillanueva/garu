@@ -67,6 +67,59 @@ app is a companion to software you run yourself; it is not a cloud service.
 >
 > Source, docs and guides: github.com/humbertovillanueva/garu
 
+## Store listing text, Spanish (es-419 / es-ES)
+
+The app follows the phone's language (English or Spanish) and Settings can pin one.
+
+**Short description (80 chars max):**
+
+> Tus agentes siempre activos, en tu bolsillo. Aprueba, mira y habla con ellos.
+
+**Full description:**
+
+> Garu ejecuta agentes de IA las veinticuatro horas en tu propia computadora, y
+> cada acción que hacen pasa por una política que tú escribiste: permitir,
+> preguntar o bloquear. Esta app es la sala de control para tu teléfono.
+>
+> Cuando un agente quiere hacer algo que tu política marca como "preguntar"
+> (publicar un mensaje, crear un borrador, escribir un archivo), se detiene y la
+> solicitud aparece aquí como una tarjeta que puedes leer y aprobar o rechazar,
+> con una nota que el agente verá. Mira una ejecución en vivo, turno por turno.
+> Conversa con un agente. Ve cuánto costó cada ejecución, hasta la fracción de
+> centavo.
+>
+> CÓMO FUNCIONA
+>
+> Garu es de código abierto (Apache-2.0) y corre en tu laptop o servidor con
+> cualquier modelo, incluidos los gratuitos y los locales. La app se empareja
+> con él escaneando un código y después habla directamente con esa computadora
+> por tu red privada (por ejemplo, Tailscale). No hay nube de Garu, ni cuenta,
+> ni se recopila nada: lo único que la app guarda es la dirección y la clave de
+> tu propia sala de control.
+>
+> QUÉ NECESITAS
+>
+> • Garu instalado en una computadora. El sitio web explica cómo empezar en
+>   cinco minutos.
+> • Una conexión privada entre esa computadora y tu teléfono. El plan gratuito
+>   de Tailscale funciona bien y es el que usa la guía.
+>
+> POR QUÉ GARU
+>
+> Un agente que trabaja toda la noche con acceso a tus archivos y cuentas
+> debería poder responder tres preguntas: qué puede tocar exactamente, quién lo
+> decidió y dónde está el registro. El motor de políticas de Garu está entre el
+> modelo y cada herramienta, así que el modelo no puede convencerlo de nada. Cada
+> ejecución queda grabada y se puede repasar paso a paso. Cada ejecución tiene un
+> tope de gasto. Las aprobaciones le enseñan a la política con el tiempo, así que
+> "preguntar" se vuelve cada vez menos frecuente a medida que tus agentes se
+> ganan tu confianza.
+>
+> Todos los demás están construyendo el agente. Garu es lo que te permite
+> confiar en ejecutarlo.
+>
+> Código, documentación y guías: github.com/humbertovillanueva/garu
+
 ## Graphics (ready in `docs/launch/play/`)
 
 - App icon: `icon-512.png` (512×512, opaque).

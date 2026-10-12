@@ -10,6 +10,7 @@
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
   import type { Envelope } from "../lib/types";
+  import { t } from "../lib/i18n.svelte";
 
   let { agent, runId }: { agent: string; runId: string } = $props();
   let events = $state<Envelope[] | null>(null);
@@ -38,12 +39,12 @@
   const turns = $derived((events ?? []).filter((e) => e.event.type === "model.turn").length);
   /** How the run started, in words: "Scheduled, Weekdays 7:00 AM", "Catch-up for Daily 9:00 AM", "From a message". */
   const how = $derived.by(() => {
-    const t = String(start?.event["trigger"] ?? "");
-    if (t.startsWith("cron:")) return `Scheduled, ${cronLabel(t.slice(5))}`;
-    if (t.startsWith("catch-up:")) return `Catch-up for ${cronLabel(t.slice(9))}`;
-    if (t === "chat") return "From a message";
-    if (t === "manual" || t === "ui") return "Started with Run now";
-    const w = triggerLabel(t);
+    const trigger = String(start?.event["trigger"] ?? "");
+    if (trigger.startsWith("cron:")) return t("Scheduled, {schedule}", { schedule: cronLabel(trigger.slice(5)) });
+    if (trigger.startsWith("catch-up:")) return t("Catch-up for {schedule}", { schedule: cronLabel(trigger.slice(9)) });
+    if (trigger === "chat") return t("From a message");
+    if (trigger === "manual" || trigger === "ui") return t("Started with Run now");
+    const w = triggerLabel(trigger);
     return w ? w[0]!.toUpperCase() + w.slice(1) : "";
   });
   const sandbox = $derived(start?.event["sandbox"] as { network: string } | undefined);
@@ -58,10 +59,10 @@
         {#if events}<Status {status} />{/if}
       </div>
       {#if start}
-        <div class="mt-0.5 text-[13px] text-fg-2">{[how, humanTime(start.ts), end ? `took ${duration(start.ts, end.ts)}` : "", `${turns} turn${turns === 1 ? "" : "s"}`].filter(Boolean).join(" · ")}</div>
-        <div class="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-mute" title="run {runId}">
+        <div class="mt-0.5 text-[13px] text-fg-2">{[how, humanTime(start.ts), end ? t("took {duration}", { duration: duration(start.ts, end.ts) }) : "", turns === 1 ? t("1 turn") : t("{n} turns", { n: turns })].filter(Boolean).join(" · ")}</div>
+        <div class="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-mute" title={t("run {id}", { id: runId })}>
           <span class="mono">{start.event["model"]}</span>
-          {#if sandbox}<span>· sandboxed, network {sandbox.network}</span>{/if}
+          {#if sandbox}<span>· {t("sandboxed, network {network}", { network: sandbox.network })}</span>{/if}
         </div>
       {/if}
     </div>
@@ -69,7 +70,7 @@
   </div>
 
   {#if missing}
-    <Empty title="That run doesn't exist" />
+    <Empty title={t("That run doesn't exist")} />
   {:else if events === null}
     {#if error}<LoadError message={error} />{:else}<Skeleton rows={6} h={40} />{/if}
   {:else}

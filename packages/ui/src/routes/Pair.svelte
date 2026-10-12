@@ -9,10 +9,11 @@
   import { connectLive, live } from "../lib/api.svelte";
   import { build, markIntroSeen, parsePairing, remember, server } from "../lib/server.svelte";
   import { canScan, haptic } from "../lib/native";
+  import { t } from "../lib/i18n.svelte";
 
   /** The button that had focus goes away when the scanner opens; Cancel takes it. */
   const takeFocus = (n: HTMLElement) => { n.focus(); };
-  let { problem = null, embedded = false, title = "Can't reach your control room" }: { problem?: string | null; embedded?: boolean; title?: string } = $props();
+  let { problem = null, embedded = false, title }: { problem?: string | null; embedded?: boolean; title?: string } = $props();
 
   let text = $state("");
   let busy = $state(false);
@@ -27,20 +28,20 @@
 
   async function connect(input: string) {
     const p = parsePairing(input);
-    if (!p) { error = "That doesn't look like a Garu sign-in link. It should start with https:// and contain ?token=…"; return; }
+    if (!p) { error = t("That doesn't look like a Garu sign-in link. It should start with https:// and contain ?token=…"); return; }
     // A code made for this computer itself can't be reached from a phone.
-    if (/^https?:\/\/(localhost|127\.|\[::1\])/.test(p.base)) { error = "This code points at the computer itself, which a phone can't reach. Garu has to be shared over Tailscale first; that needs setup on your computer (Settings → Your phone & other devices shows how)."; return; }
+    if (/^https?:\/\/(localhost|127\.|\[::1\])/.test(p.base)) { error = t("This code points at the computer itself, which a phone can't reach. Garu has to be shared over Tailscale first; that needs setup on your computer (Settings → Your phone & other devices shows how)."); return; }
     busy = true; error = null;
     try {
       const res = await fetch(`${p.base}/api/agents`, { headers: { authorization: `Bearer ${p.token}` }, cache: "no-store", signal: AbortSignal.timeout(10_000) });
-      if (res.status === 401) { error = "The control room answered, but the token is not right. Get a fresh code on your computer: Settings → Your phone & other devices."; return; }
-      if (!res.ok) { error = "The control room had a problem answering. Try again in a moment."; return; }
+      if (res.status === 401) { error = t("The control room answered, but the token is not right. Get a fresh code on your computer: Settings → Your phone & other devices."); return; }
+      if (!res.ok) { error = t("The control room had a problem answering. Try again in a moment."); return; }
       remember(p.base, p.token);
       live.signIn = false;
       connectLive(true);
       void haptic("success");
     } catch {
-      error = `Couldn't reach ${p.base.replace(/^https?:\/\//, "")}. Is Tailscale on for this phone, and is Garu running on your computer?`;
+      error = t("Couldn't reach {host}. Is Tailscale on for this phone, and is Garu running on your computer?", { host: p.base.replace(/^https?:\/\//, "") });
     } finally {
       busy = false;
     }
@@ -65,12 +66,12 @@
       }, 250);
     } catch {
       scanning = false;
-      error = "The camera isn't available. Paste the link instead: on your computer, Settings → Your phone & other devices → Show pairing code → Copy link.";
+      error = t("The camera isn't available. Paste the link instead: on your computer, Settings → Your phone & other devices → Show pairing code → Copy link.");
     }
   }
   function stopScan() {
     clearInterval(timer); timer = undefined;
-    stream?.getTracks().forEach((t) => t.stop()); stream = null;
+    stream?.getTracks().forEach((track) => track.stop()); stream = null;
     scanning = false;
   }
   onDestroy(stopScan);
@@ -88,48 +89,48 @@
     {#if embedded}
       <!-- the intro slide above carries the title and explanation -->
     {:else if server.base && problem}
-      <h1 class="text-[20px] font-semibold tracking-tight">{title}</h1>
-      <p class="mt-2 text-[13.5px] leading-relaxed text-fg-2">This phone is paired with <span class="mono">{server.base.replace(/^https?:\/\//, "")}</span>. {problem}</p>
+      <h1 class="text-[20px] font-semibold tracking-tight">{title ?? t("Can't reach your control room")}</h1>
+      <p class="mt-2 text-[13.5px] leading-relaxed text-fg-2">{t("This phone is paired with")} <span class="mono">{server.base.replace(/^https?:\/\//, "")}</span>. {problem}</p>
     {:else}
-      <h1 class="text-[20px] font-semibold tracking-tight">Connect to your control room</h1>
-      <p class="mt-2 text-[13.5px] leading-relaxed text-fg-2">Your agents run on your computer. Garu on this phone talks straight to it over your private network (Tailscale); there's no Garu server in between.</p>
+      <h1 class="text-[20px] font-semibold tracking-tight">{t("Connect to your control room")}</h1>
+      <p class="mt-2 text-[13.5px] leading-relaxed text-fg-2">{t("Your agents run on your computer. Garu on this phone talks straight to it over your private network (Tailscale); there's no Garu server in between.")}</p>
     {/if}
 
     {#if !embedded}
     <ol class="mt-4 space-y-1.5 text-[13px] text-fg-2">
-      <li><span class="text-mute">1.</span> On your computer, open Garu → <span class="font-medium text-fg">Settings → Your phone &amp; other devices</span> → <em>Show pairing code</em>.</li>
-      <li><span class="text-mute">2.</span> {canScan ? "Scan it here, or paste the link below." : "Press Copy link there and paste it below."}</li>
+      <li><span class="text-mute">1.</span> {t("On your computer, open Garu")} → <span class="font-medium text-fg">{t("Settings → Your phone & other devices")}</span> → <em>{t("Show pairing code")}</em>.</li>
+      <li><span class="text-mute">2.</span> {canScan ? t("Scan it here, or paste the link below.") : t("Press Copy link there and paste it below.")}</li>
     </ol>
     {/if}
 
     {#if scanning}
-      <div class="relative mt-4 overflow-hidden rounded-xl border hairline bg-black" style="aspect-ratio: 1 / 1" role="img" aria-label="Camera: point it at the pairing code">
+      <div class="relative mt-4 overflow-hidden rounded-xl border hairline bg-black" style="aspect-ratio: 1 / 1" role="img" aria-label={t("Camera: point it at the pairing code")}>
         <!-- svelte-ignore a11y_media_has_caption -->
         <video bind:this={video} class="h-full w-full object-cover" playsinline muted></video>
         <div class="pointer-events-none absolute inset-6 rounded-lg border-2 border-accent/70"></div>
       </div>
-      <button class="btn mt-3 w-full" onclick={stopScan} use:takeFocus>Cancel</button>
+      <button class="btn mt-3 w-full" onclick={stopScan} use:takeFocus>{t("Cancel")}</button>
     {:else}
       {#if canScan}
-        <button class="btn btn-primary mt-5 w-full" onclick={startScan} disabled={busy}>Scan the code</button>
-        <div class="my-3 flex items-center gap-3 text-[11px] uppercase tracking-wider text-mute"><span class="h-px flex-1 bg-line"></span>or<span class="h-px flex-1 bg-line"></span></div>
+        <button class="btn btn-primary mt-5 w-full" onclick={startScan} disabled={busy}>{t("Scan the code")}</button>
+        <div class="my-3 flex items-center gap-3 text-[11px] uppercase tracking-wider text-mute"><span class="h-px flex-1 bg-line"></span>{t("or")}<span class="h-px flex-1 bg-line"></span></div>
       {/if}
       <form onsubmit={(e) => { e.preventDefault(); void connect(text); }}>
         <label class="block">
-          <span class="text-[11px] uppercase tracking-wider text-mute">Sign-in link</span>
+          <span class="text-[11px] uppercase tracking-wider text-mute">{t("Sign-in link")}</span>
           <input class="mono mt-1.5 w-full rounded-lg border field-border bg-bg px-3 py-2.5 text-[12.5px] outline-none focus:border-accent/60" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://your-mac.tail…ts.net/?token=…" style={parsed ? "-webkit-text-security: disc" : undefined} bind:value={text} />
         </label>
-        {#if parsed}<p class="mt-1.5 text-[11.5px] text-mute">A link to <span class="mono [overflow-wrap:anywhere]">{parsed.base.replace(/^https?:\/\//, "")}</span>. Its key stays hidden.</p>{/if}
-        <button class="btn mt-3 w-full" class:btn-primary={!canScan} type="submit" disabled={busy || !text.trim()}>{busy ? "Connecting…" : "Connect"}</button>
+        {#if parsed}<p class="mt-1.5 text-[11.5px] text-mute">{t("A link to")} <span class="mono [overflow-wrap:anywhere]">{parsed.base.replace(/^https?:\/\//, "")}</span>. {t("Its key stays hidden.")}</p>{/if}
+        <button class="btn mt-3 w-full" class:btn-primary={!canScan} type="submit" disabled={busy || !text.trim()}>{busy ? t("Connecting…") : t("Connect")}</button>
       </form>
     {/if}
 
     {#if error}<p class="mt-3 text-[12.5px] leading-relaxed" role="alert" style="color: var(--color-bad)">{error}</p>{/if}
-    <p class="mt-4 text-[11.5px] leading-relaxed text-mute">The link carries a key that lets this phone approve actions as you. It is stored only on this phone.</p>
+    <p class="mt-4 text-[11.5px] leading-relaxed text-mute">{t("The link carries a key that lets this phone approve actions as you. It is stored only on this phone.")}</p>
     {#if !embedded && !problem}
       <div class="mt-4 flex flex-wrap gap-x-4 text-[12.5px]">
-        <a class="inline-flex min-h-11 items-center text-fg underline decoration-mute underline-offset-2" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">Don't have Garu yet? <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
-        <button class="min-h-11 text-fg-2 underline decoration-mute underline-offset-2" onclick={() => { markIntroSeen(false); location.reload(); }}>See the introduction</button>
+        <a class="inline-flex min-h-11 items-center text-fg underline decoration-mute underline-offset-2" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">{t("Don't have Garu yet?")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a>
+        <button class="min-h-11 text-fg-2 underline decoration-mute underline-offset-2" onclick={() => { markIntroSeen(false); location.reload(); }}>{t("See the introduction")}</button>
       </div>
     {/if}
     {#if !embedded}<p class="mt-3 text-[11.5px] text-mute">{buildText(build)}</p>{/if}

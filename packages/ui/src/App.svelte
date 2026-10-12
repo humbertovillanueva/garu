@@ -15,7 +15,7 @@
   import Intro from "./routes/Intro.svelte";
   import { isApp, paired, introSeen, markIntroSeen, server } from "./lib/server.svelte";
   import { route, startRouter, href } from "./lib/router.svelte";
-  import { connectLive, live, refreshNow, UNREACHABLE, UNREACHABLE_HINT } from "./lib/api.svelte";
+  import { connectLive, live, refreshNow, unreachable as unreachableText, unreachableHint } from "./lib/api.svelte";
   import { setupNative } from "./lib/native";
   import { pullToRefresh } from "./lib/pull";
   import { prefs } from "./lib/prefs.svelte";
@@ -25,6 +25,7 @@
   import Crash from "./lib/components/Crash.svelte";
   import { applyTheme } from "./lib/theme.svelte";
   import { announcer } from "./lib/a11y.svelte";
+  import { t, locale } from "./lib/i18n.svelte";
 
   // The app opens on a short splash every time; the first time (or when asked again from Settings) the intro follows.
   const introAtStart = isApp && !introSeen();
@@ -45,6 +46,8 @@
 
   // Dark or light, now and whenever the preference or the device changes.
   $effect(() => { applyTheme(); });
+  // The page's language, for screen readers and the browser's own UI (spell-check, translate prompts).
+  $effect(() => { document.documentElement.lang = locale(); });
 
   onMount(() => {
     if (isApp) document.documentElement.classList.add("app");
@@ -56,7 +59,7 @@
   });
   $effect(() => { if (live.loaded && !landed) { landed = true; landOnPending(); } });
   // The title names the page and what needs you, like a mail client; a screen reader hears it on every navigation.
-  const PAGE: Record<string, string> = { home: "Garu", inbox: "Inbox", agents: "Agents", agent: "Agent", runs: "Runs", run: "Run", cost: "Cost", settings: "Settings", help: "Help", about: "About", report: "Report a problem" };
+  const PAGE: Record<string, string> = $derived({ home: "Garu", inbox: t("Inbox"), agents: t("Agents"), agent: t("Agent"), runs: t("Runs"), run: t("Run"), cost: t("Cost"), settings: t("Settings"), help: t("Help"), about: t("About"), report: t("Report a problem") });
   $effect(() => {
     const page = route.name === "agent" && route.parts[0] ? route.parts[0] : PAGE[route.name] ?? "Garu";
     document.title = `${live.pending.length ? `(${live.pending.length}) ` : ""}${page === "Garu" ? "Garu" : `${page} · Garu`}`;
@@ -106,18 +109,18 @@
 {:else if isApp && !paired()}
   <Pair />
 {:else if live.signIn}
-  {#if isApp}<Pair title="Pair this phone again" problem="The key it has is no longer accepted; someone may have made a new one. Pair again with a fresh code." />{:else}<SignIn />{/if}
+  {#if isApp}<Pair title={t("Pair this phone again")} problem={t("The key it has is no longer accepted; someone may have made a new one. Pair again with a fresh code.")} />{:else}<SignIn />{/if}
 {:else}
 <div class="flex min-h-screen flex-col lg:flex-row">
   <Sidebar />
   <main class="pull min-w-0 flex-1 outline-none" tabindex="-1" bind:this={mainEl} use:pullToRefresh={refreshNow}>
     <div class="sr-only" role="status" aria-live="polite">{announcer.text}</div>
-    <div class="pull-hint" aria-hidden="true"><span class="dot" class:pulse={live.refreshing}></span>{live.refreshing ? "Refreshing…" : "Pull to refresh"}</div>
+    <div class="pull-hint" aria-hidden="true"><span class="dot" class:pulse={live.refreshing}></span>{live.refreshing ? t("Refreshing…") : t("Pull to refresh")}</div>
     {#if offline}
       <div class="offline" role="status">
         <span class="dot pulse" style="background: var(--color-ask)"></span>
-        <span>Reconnecting to your {isApp ? "computer" : "control room"}…</span>
-        <button class="tap ml-auto underline" onclick={() => refreshNow()}>Try now</button>
+        <span>{isApp ? t("Reconnecting to your computer…") : t("Reconnecting to your control room…")}</span>
+        <button class="tap ml-auto underline" onclick={() => refreshNow()}>{t("Try now")}</button>
       </div>
     {/if}
     <div class="mx-auto max-w-5xl px-4 py-5 pb-24 sm:px-6 lg:px-10 lg:py-8 lg:pb-8">
@@ -129,11 +132,11 @@
         {#if unreachable}
           <section class="rise mx-auto max-w-md py-10 text-center">
             <div class="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full border hairline"><span class="dot pulse" style="background: var(--color-ask)"></span></div>
-            <h1 class="text-[20px] font-semibold tracking-tight">Can't reach {isApp ? "your computer" : "the control room"}</h1>
-            <p class="mt-2 text-[14px] text-fg-2">{live.loadError === UNREACHABLE ? UNREACHABLE_HINT : live.loadError}</p>
+            <h1 class="text-[20px] font-semibold tracking-tight">{isApp ? t("Can't reach your computer") : t("Can't reach the control room")}</h1>
+            <p class="mt-2 text-[14px] text-fg-2">{live.loadError === unreachableText() ? unreachableHint() : live.loadError}</p>
             <div class="mt-5 flex flex-wrap justify-center gap-2">
-              <button class="btn btn-primary" disabled={live.refreshing} onclick={() => refreshNow()}>{live.refreshing ? "Trying…" : "Try again"}</button>
-              <a class="btn" href={href("settings")}>Settings</a>
+              <button class="btn btn-primary" disabled={live.refreshing} onclick={() => refreshNow()}>{live.refreshing ? t("Trying…") : t("Try again")}</button>
+              <a class="btn" href={href("settings")}>{t("Settings")}</a>
             </div>
           </section>
         {:else if route.name === "agent" && route.parts[0]}

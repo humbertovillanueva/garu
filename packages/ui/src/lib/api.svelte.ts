@@ -1,5 +1,6 @@
 import type { Agent, AgentsResponse, ApprovalRequest, ChatMessage, CostRow, Envelope, FeedItem, InboxResponse, RunSummary, TodayResponse } from "./types";
 import { isApp, server } from "./server.svelte";
+import { t } from "./i18n.svelte";
 
 /** Every call goes to the control room this page is paired with (the serving host in a browser). */
 const url = (path: string) => server.base + path;
@@ -13,11 +14,9 @@ function unauthorized(): void {
   source?.close();
   source = undefined;
 }
-/** What a reader sees when the computer can't be reached: where to look, not what the network said. */
-export const UNREACHABLE_HINT = isApp
-  ? "Check that it's awake and that Tailscale is on, on both ends."
-  : "Check that Garu is still running on this computer.";
-export const UNREACHABLE = `Can't reach ${isApp ? "your computer" : "the control room"}. ${UNREACHABLE_HINT}`;
+/** What a reader sees when the computer can't be reached: where to look, not what the network said. Functions, so they speak the current language. */
+export const unreachableHint = (): string => (isApp ? t("Check that it's awake and that Tailscale is on, on both ends.") : t("Check that Garu is still running on this computer."));
+export const unreachable = (): string => `${isApp ? t("Can't reach your computer.") : t("Can't reach the control room.")} ${unreachableHint()}`;
 /** A request that reached Garu and got an error back. `status` lets a view tell "not found" from "broken". */
 export class HttpError extends Error {
   constructor(message: string, readonly status: number) { super(message); }
@@ -29,20 +28,20 @@ async function request(path: string, init: RequestInit): Promise<Response> {
     return await fetch(url(path), { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) });
   } catch {
     // fetch only throws for the network (offline, refused, timed out); HTTP errors come back as responses
-    throw new Error(UNREACHABLE);
+    throw new Error(unreachable());
   }
 }
 async function get<T>(path: string): Promise<T> {
   const res = await request(path, { cache: "no-store", headers: auth() });
   if (res.status === 401) { unauthorized(); throw new HttpError("sign in", 401); }
-  if (!res.ok) throw new HttpError(res.status === 404 ? "Not found." : `Garu couldn't answer that (error ${res.status}).`, res.status);
+  if (!res.ok) throw new HttpError(res.status === 404 ? t("Not found.") : t("Garu couldn't answer that (error {status}).", { status: res.status }), res.status);
   return (await res.json()) as T;
 }
 async function post<T>(path: string, body?: unknown): Promise<T> {
   const res = await request(path, { method: "POST", headers: { "content-type": "application/json", ...auth() }, body: body ? JSON.stringify(body) : undefined });
   if (res.status === 401) { unauthorized(); throw new HttpError("sign in", 401); }
   const json = (await res.json().catch(() => ({}))) as T & { error?: string };
-  if (!res.ok) throw new HttpError(json.error ?? `Garu couldn't do that (error ${res.status}).`, res.status);
+  if (!res.ok) throw new HttpError(json.error ?? t("Garu couldn't do that (error {status}).", { status: res.status }), res.status);
   return json;
 }
 

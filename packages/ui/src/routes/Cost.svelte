@@ -7,6 +7,7 @@
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
   import type { CostRow } from "../lib/types";
+  import { t, dateLocale } from "../lib/i18n.svelte";
 
   let rows = $state<CostRow[] | null>(null);
   let days = $state(14);
@@ -40,7 +41,7 @@
   const maxDay = $derived(Math.max(1e-9, ...daysList.map((d) => (byDay.get(d) ?? []).reduce((s, r) => s + r.costUsd, 0))));
   const total = $derived((rows ?? []).reduce((s, r) => s + r.costUsd, 0));
   const totalRuns = $derived((rows ?? []).reduce((s, r) => s + r.runs, 0));
-  const dayWord = (d: string) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const dayWord = (d: string) => new Date(d + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric" });
   // The same color as the agent's avatar, so the legend needs no decoding; "other" (everyone past the
   // first six) and a faceless agent are grey, never a color a creature wears.
   const colorFor = (agent: string) => { const k = agent === "other" ? undefined : live.agents.find((a) => a.name === agent)?.persona?.kind; return k ? KIND_COLOR[k] : NO_FACE_COLOR; };
@@ -49,11 +50,11 @@
 <section class="space-y-5">
   <div class="rise flex flex-wrap items-end justify-between gap-3">
     <div>
-      <h1 class="text-[24px] font-semibold tracking-tight">Cost</h1>
+      <h1 class="text-[24px] font-semibold tracking-tight">{t("Cost")}</h1>
     </div>
     <div class="flex items-center gap-1 text-[13px]">
       {#each [7, 14, 30] as d}
-        <button class="btn" class:opacity-50={days !== d} aria-pressed={days === d} onclick={() => (days = d)}>{d}d</button>
+        <button class="btn" class:opacity-50={days !== d} aria-pressed={days === d} onclick={() => (days = d)}>{t("{n}d", { n: d })}</button>
       {/each}
     </div>
   </div>
@@ -61,23 +62,23 @@
   {#if rows === null}
     {#if error}<LoadError message={error} />{:else}<Skeleton rows={2} h={90} />{/if}
   {:else if rows.length === 0}
-    <Empty title="No spend recorded in this window" />
+    <Empty title={t("No spend recorded in this window")} />
   {:else}
     <div class="panel rise grid grid-cols-1 divide-y divide-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-      <div class="px-4 py-3"><div class="text-[11px] uppercase tracking-wider text-mute">Total</div><div class="mt-0.5 text-[20px] font-semibold tabular-nums">{usd(total)}</div></div>
-      <div class="px-4 py-3"><div class="text-[11px] uppercase tracking-wider text-mute">Runs</div><div class="mt-0.5 text-[20px] font-semibold tabular-nums">{totalRuns}</div></div>
-      <div class="px-4 py-3"><div class="text-[11px] uppercase tracking-wider text-mute">Per run</div><div class="mt-0.5 text-[20px] font-semibold tabular-nums">{usd(totalRuns ? total / totalRuns : 0)}</div></div>
+      <div class="px-4 py-3"><div class="text-[11px] uppercase tracking-wider text-mute">{t("Total")}</div><div class="mt-0.5 text-[20px] font-semibold tabular-nums">{usd(total)}</div></div>
+      <div class="px-4 py-3"><div class="text-[11px] uppercase tracking-wider text-mute">{t("Runs")}</div><div class="mt-0.5 text-[20px] font-semibold tabular-nums">{totalRuns}</div></div>
+      <div class="px-4 py-3"><div class="text-[11px] uppercase tracking-wider text-mute">{t("Per run")}</div><div class="mt-0.5 text-[20px] font-semibold tabular-nums">{usd(totalRuns ? total / totalRuns : 0)}</div></div>
     </div>
-    <p class="text-[12.5px] text-mute">Estimated from real token counts at list price. Free tiers and local models bill $0; the estimate still shows what it would cost.</p>
+    <p class="text-[12.5px] text-mute">{t("Estimated from real token counts at list price. Free tiers and local models bill $0; the estimate still shows what it would cost.")}</p>
 
     <div class="panel p-4">
       <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
         {#each legend as a}
-          <span class="inline-flex items-center gap-1.5"><span class="dot" style="background: {colorFor(a)}"></span><span class="text-fg-2">{a}</span></span>
+          <span class="inline-flex items-center gap-1.5"><span class="dot" style="background: {colorFor(a)}"></span><span class="text-fg-2">{a === "other" ? t("other") : a}</span></span>
         {/each}
-        {#if hover}<span class="ml-auto text-mute">{dayWord(hover.day)} · {hover.agent} · {usd(hover.cost)} · {hover.runs} run{hover.runs === 1 ? "" : "s"}</span>{/if}
+        {#if hover}<span class="ml-auto text-mute">{dayWord(hover.day)} · {hover.agent} · {usd(hover.cost)} · {hover.runs === 1 ? t("1 run") : t("{n} runs", { n: hover.runs })}</span>{/if}
       </div>
-      <div class="flex h-44 items-end gap-[3px]" role="img" aria-label="Daily spend by agent">
+      <div class="flex h-44 items-end gap-[3px]" role="img" aria-label={t("Daily spend by agent")}>
         {#each daysList as day}
           {@const items = byDay.get(day) ?? []}
           {@const sum = items.reduce((s, r) => s + r.costUsd, 0)}
@@ -93,14 +94,14 @@
         {/each}
       </div>
       <div class="mt-2 flex justify-between text-[11px] text-mute">
-        <span>{dayWord(daysList[0]!)}</span><span>Today</span>
+        <span>{dayWord(daysList[0]!)}</span><span>{t("Today")}</span>
       </div>
     </div>
 
     <div class="panel overflow-hidden">
       <table class="w-full text-[13px]">
         <thead class="text-left text-[11px] uppercase tracking-wide text-mute">
-          <tr class="border-b hairline"><th scope="col" class="px-4 py-2.5 font-medium">Day</th><th scope="col" class="px-3 py-2.5 font-medium">Agent</th><th scope="col" class="px-3 py-2.5 text-right font-medium">Runs</th><th scope="col" class="px-3 py-2.5 text-right font-medium">Cost</th></tr>
+          <tr class="border-b hairline"><th scope="col" class="px-4 py-2.5 font-medium">{t("Day")}</th><th scope="col" class="px-3 py-2.5 font-medium">{t("Agent")}</th><th scope="col" class="px-3 py-2.5 text-right font-medium">{t("Runs")}</th><th scope="col" class="px-3 py-2.5 text-right font-medium">{t("Cost")}</th></tr>
         </thead>
         <tbody>
           {#each rows.slice().reverse() as r (r.day + r.agent)}

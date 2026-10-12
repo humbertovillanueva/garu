@@ -10,8 +10,9 @@
   import { prefs, setPref } from "../lib/prefs.svelte";
   import { buildText } from "../lib/format";
   import { haptic } from "../lib/native";
+  import { t } from "../lib/i18n.svelte";
   function unpair() {
-    if (!confirm("Forget this control room? You'll pair again by scanning a code on your computer.")) return;
+    if (!confirm(t("Forget this control room? You'll pair again by scanning a code on your computer."))) return;
     forget(); location.reload();
   }
 
@@ -37,7 +38,7 @@
   function setOptions(p: import("../lib/types").Pair) {
     const here = `${location.origin}/`;
     const list = p.addresses.map((a) => ({ url: a.url, label: a.via === "tailscale" ? "Tailscale" : new URL(a.url).host }));
-    if (!list.some((o) => o.url === here)) list.push({ url: here, label: isLocalhost ? "this computer only" : "this address" });
+    if (!list.some((o) => o.url === here)) list.push({ url: here, label: isLocalhost ? t("this computer only") : t("this address") });
     options = list;
     if (!options.some((o) => o.url === chosen)) chosen = options[0]!.url;
   }
@@ -53,18 +54,18 @@
       const p = await api.pair();
       pairToken = p.token; setOptions(p);
       await render();
-    } catch (e) { pairError = `Couldn't make a pairing code: ${errorText(e)}`; pairOpen = false; }
+    } catch (e) { pairError = t("Couldn't make a pairing code: {error}", { error: errorText(e) }); pairOpen = false; }
   }
   async function choose(url: string) { chosen = url; await render(); }
   async function rotate() {
-    if (!confirm("Make a new token? Every phone or computer signed in with the current one will have to scan again.")) return;
+    if (!confirm(t("Make a new token? Every phone or computer signed in with the current one will have to scan again."))) return;
     showToken = false; pairError = null;
     try {
       const p = await api.rotateToken();
       pairToken = p.token; setOptions(p);
       await render();
       rotated = true; setTimeout(() => (rotated = false), 4000);
-    } catch (e) { pairError = `Couldn't make a new token: ${errorText(e)}. The old one still works.`; }
+    } catch (e) { pairError = t("Couldn't make a new token: {error}. The old one still works.", { error: errorText(e) }); }
   }
   const chosenIsLocal = $derived(/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])/.test(chosen));
   async function copyLink() {
@@ -74,104 +75,115 @@
 </script>
 
 <section class="space-y-6">
-  <div class="rise"><h1 class="text-[26px] font-semibold tracking-tight">Settings</h1></div>
+  <div class="rise"><h1 class="text-[26px] font-semibold tracking-tight">{t("Settings")}</h1></div>
 
   <!-- This device, preferences and help render without the computer: a phone paired to an address that
        no longer answers must still be able to forget it, read Help or report the problem. -->
     <!-- This device: how it reaches Garu -->
     <div>
-      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{isApp ? "This phone" : "This browser"}</h2>
+      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{isApp ? t("This phone") : t("This browser")}</h2>
       <div class="panel rise divide-y divide-line text-[14px]">
         {#if isApp}
-          <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">Paired with</span><span class="min-w-0 flex-1 truncate text-right">{server.base.replace(/^https?:\/\//, "")}</span></div>
+          <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">{t("Paired with")}</span><span class="min-w-0 flex-1 truncate text-right">{server.base.replace(/^https?:\/\//, "")}</span></div>
         {:else if s?.login.direct}
-          <div class="px-4 py-3 text-fg-2">On the same computer as Garu, so it's signed in automatically. Anything else needs the pairing code.</div>
+          <div class="px-4 py-3 text-fg-2">{t("On the same computer as Garu, so it's signed in automatically. Anything else needs the pairing code.")}</div>
         {:else if s}
-          <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">Signed in</span><span class="flex-1 text-right">with the pairing token</span></div>
+          <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">{t("Signed in")}</span><span class="flex-1 text-right">{t("with the pairing token")}</span></div>
         {/if}
-        <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">Connection</span><span class="flex flex-1 items-center justify-end gap-2"><span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-ask)'}"></span>{live.connected ? "live" : "reconnecting"}</span></div>
-        <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">Schedules</span>{#if s}<span class="flex flex-1 items-center justify-end gap-2"><span class="dot" style="background: {s.up ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{s.up ? "running" : "off"}</span>{:else}<span class="flex-1 text-right text-mute">{error ? "can't check right now" : "checking…"}</span>{/if}</div>
+        <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">{t("Connection")}</span><span class="flex flex-1 items-center justify-end gap-2"><span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-ask)'}"></span>{live.connected ? t("live") : t("reconnecting")}</span></div>
+        <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">{t("Schedules")}</span>{#if s}<span class="flex flex-1 items-center justify-end gap-2"><span class="dot" style="background: {s.up ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{s.up ? t("running") : t("off")}</span>{:else}<span class="flex-1 text-right text-mute">{error ? t("can't check right now") : t("checking…")}</span>{/if}</div>
         {#if isApp}
-          <button class="card-hover w-full px-4 py-3 text-left" onclick={unpair}>Forget this computer<span class="block text-[12.5px] text-mute">You'll pair again by scanning a code there.</span></button>
+          <button class="card-hover w-full px-4 py-3 text-left" onclick={unpair}>{t("Forget this computer")}<span class="block text-[12.5px] text-mute">{t("You'll pair again by scanning a code there.")}</span></button>
         {:else if s && !s.login.direct}
-          <button class="card-hover w-full px-4 py-3 text-left" onclick={() => api.logout()}>Sign out</button>
+          <button class="card-hover w-full px-4 py-3 text-left" onclick={() => api.logout()}>{t("Sign out")}</button>
         {/if}
       </div>
     </div>
 
     <div>
-      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Appearance</h2>
-      <div class="panel rise flex flex-wrap items-center gap-3 px-4 py-3 text-[14px]">
-        <span class="flex-1">Theme</span>
-        <div class="flex gap-1" role="radiogroup" aria-label="Theme">
-          {#each [["auto", isApp ? "Phone" : "System"], ["dark", "Dark"], ["light", "Light"]] as const as [value, label] (value)}
-            <button class="btn py-1 text-[12.5px]" class:opacity-50={prefs.theme !== value} role="radio" aria-checked={prefs.theme === value} onclick={() => setPref("theme", value)}>{label}</button>
-          {/each}
+      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Appearance")}</h2>
+      <div class="panel rise divide-y divide-line text-[14px]">
+        <div class="flex flex-wrap items-center gap-3 px-4 py-3">
+          <span class="flex-1">{t("Theme")}</span>
+          <div class="flex gap-1" role="radiogroup" aria-label={t("Theme")}>
+            {#each [["auto", isApp ? t("Phone") : t("System")], ["dark", t("Dark")], ["light", t("Light")]] as const as [value, label] (value)}
+              <button class="btn py-1 text-[12.5px]" class:opacity-50={prefs.theme !== value} role="radio" aria-checked={prefs.theme === value} onclick={() => setPref("theme", value)}>{label}</button>
+            {/each}
+          </div>
+        </div>
+        <!-- Language names stay in their own language, so a reader can always find theirs. -->
+        <div class="flex flex-wrap items-center gap-3 px-4 py-3">
+          <span class="flex-1">{t("Language")}</span>
+          <div class="flex gap-1" role="radiogroup" aria-label={t("Language")}>
+            {#each [["auto", isApp ? t("Phone") : t("System")], ["en", "English"], ["es", "Español"]] as const as [value, label] (value)}
+              <button class="btn py-1 text-[12.5px]" class:opacity-50={prefs.language !== value} role="radio" aria-checked={prefs.language === value} onclick={() => setPref("language", value)}>{label}</button>
+            {/each}
+          </div>
         </div>
       </div>
     </div>
 
     {#if isApp}
       <div>
-        <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Preferences</h2>
+        <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Preferences")}</h2>
         <div class="panel rise divide-y divide-line text-[14px]">
           <label class="flex items-center gap-3 px-4 py-3">
-            <span class="flex-1">Vibrate on approve, decline and send</span>
+            <span class="flex-1">{t("Vibrate on approve, decline and send")}</span>
             <input type="checkbox" class="toggle" checked={prefs.haptics} onchange={(e) => { setPref("haptics", e.currentTarget.checked); void haptic("light"); }} />
           </label>
           <label class="flex items-center gap-3 px-4 py-3">
-            <span class="flex-1">Open on the inbox when something is waiting</span>
+            <span class="flex-1">{t("Open on the inbox when something is waiting")}</span>
             <input type="checkbox" class="toggle" checked={prefs.landOnInbox} onchange={(e) => setPref("landOnInbox", e.currentTarget.checked)} />
           </label>
-          <button class="card-hover w-full px-4 py-3 text-left" onclick={() => { markIntroSeen(false); location.hash = ""; location.reload(); }}>Show the introduction again</button>
+          <button class="card-hover w-full px-4 py-3 text-left" onclick={() => { markIntroSeen(false); location.hash = ""; location.reload(); }}>{t("Show the introduction again")}</button>
         </div>
       </div>
     {/if}
 
     <div>
       <div class="panel rise divide-y divide-line text-[14px]">
-        <a class="card-hover flex items-center gap-3 px-4 py-3" href={href("help")}><span class="text-mute"><Icon name="help" size={18} /></span><span class="flex-1">Help</span><span class="text-mute"><Icon name="chevron" size={16} /></span></a>
-        <a class="card-hover flex items-center gap-3 px-4 py-3" href={href("about")}><span class="text-mute"><Icon name="info" size={18} /></span><span class="flex-1">About Garu</span><span class="text-mute"><Icon name="chevron" size={16} /></span></a>
-        <a class="card-hover flex items-center gap-3 px-4 py-3" href={href("report")}><span class="text-mute"><Icon name="flag" size={18} /></span><span class="flex-1">Report a problem</span><span class="text-mute"><Icon name="chevron" size={16} /></span></a>
+        <a class="card-hover flex items-center gap-3 px-4 py-3" href={href("help")}><span class="text-mute"><Icon name="help" size={18} /></span><span class="flex-1">{t("Help")}</span><span class="text-mute"><Icon name="chevron" size={16} /></span></a>
+        <a class="card-hover flex items-center gap-3 px-4 py-3" href={href("about")}><span class="text-mute"><Icon name="info" size={18} /></span><span class="flex-1">{t("About Garu")}</span><span class="text-mute"><Icon name="chevron" size={16} /></span></a>
+        <a class="card-hover flex items-center gap-3 px-4 py-3" href={href("report")}><span class="text-mute"><Icon name="flag" size={18} /></span><span class="flex-1">{t("Report a problem")}</span><span class="text-mute"><Icon name="chevron" size={16} /></span></a>
       </div>
     </div>
 
     {#if !isApp}
       <!-- Pairing a phone happens from the computer -->
       <div>
-        <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Your phone &amp; other devices</h2>
+        <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Your phone & other devices")}</h2>
         <div class="panel rise p-5">
           {#if !pairOpen}
-            <p class="mb-3 text-[13.5px] text-fg-2">Install the Garu app on your phone and scan a code here to pair it.</p>
-            <button class="btn" onclick={openPair}>Show pairing code</button>
+            <p class="mb-3 text-[13.5px] text-fg-2">{t("Install the Garu app on your phone and scan a code here to pair it.")}</p>
+            <button class="btn" onclick={openPair}>{t("Show pairing code")}</button>
             {#if pairError}<p class="mt-2 text-[12.5px]" role="alert" style="color: var(--color-bad)">{pairError}</p>{/if}
           {:else if !pairSvg}
             <Skeleton rows={1} h={180} />
           {:else}
             {#if options.length > 1}
               <div class="mb-3 flex flex-wrap items-center gap-1.5 text-[12px]">
-                <span class="text-mute">Code points to</span>
+                <span class="text-mute">{t("Code points to")}</span>
                 {#each options as o (o.url)}
                   <button class="rounded-full border px-2.5 py-0.5 transition-colors" class:border-accent={chosen === o.url} class:text-fg={chosen === o.url} class:hairline={chosen !== o.url} class:text-mute={chosen !== o.url} aria-pressed={chosen === o.url} onclick={() => choose(o.url)} title={o.url}>{o.label}</button>
                 {/each}
               </div>
             {/if}
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-              <div class="qr w-[180px] flex-none rounded-xl p-2" style="background:#f4f1ea" role="img" aria-label="Pairing code">{@html pairSvg}</div>
+              <div class="qr w-[180px] flex-none rounded-xl p-2" style="background:#f4f1ea" role="img" aria-label={t("Pairing code")}>{@html pairSvg}</div>
               <div class="min-w-0 flex-1 text-[13px] text-fg-2">
                 {#if chosenIsLocal}
-                  <p style="color: var(--color-ask)">This code points at <span class="mono">{new URL(chosen).host}</span>, which a phone can't reach. Put the control room on your private network first: <span class="mono">tailscale serve --bg {s?.port ?? 4000}</span> on this computer, then come back here and the code will point there by itself.</p>
+                  <p style="color: var(--color-ask)">{t("This code points at")} <span class="mono">{new URL(chosen).host}</span>, {t("which a phone can't reach. Put the control room on your private network first:")} <span class="mono">tailscale serve --bg {s?.port ?? 4000}</span> {t("on this computer, then come back here and the code will point there by itself.")}</p>
                 {:else}
-                  <p>Scan it with the Garu app, or with the phone's camera to open <span class="mono">{new URL(chosen).host}</span> signed in.</p>
+                  <p>{t("Scan it with the Garu app, or with the phone's camera to open")} <span class="mono">{new URL(chosen).host}</span> {t("signed in.")}</p>
                 {/if}
-                <p class="mt-2 text-[12px] text-mute">This code is a key. Anyone who scans it can approve actions as you.</p>
+                <p class="mt-2 text-[12px] text-mute">{t("This code is a key. Anyone who scans it can approve actions as you.")}</p>
                 <div class="mt-3 flex flex-wrap gap-2">
-                  <button class="btn" onclick={copyLink}>{copied ? "Copied" : "Copy link"}</button>
-                  <span class="sr-only" role="status">{copied ? "Link copied to the clipboard" : ""}</span>
-                  <button class="btn" onclick={() => (showToken = !showToken)}>{showToken ? "Hide token" : "Show token"}</button>
+                  <button class="btn" onclick={copyLink}>{copied ? t("Copied") : t("Copy link")}</button>
+                  <span class="sr-only" role="status">{copied ? t("Link copied to the clipboard") : ""}</span>
+                  <button class="btn" onclick={() => (showToken = !showToken)}>{showToken ? t("Hide token") : t("Show token")}</button>
                 </div>
                 {#if showToken}<div class="mono mt-2 break-all rounded-lg border hairline bg-bg px-2.5 py-2 text-[12px] select-all">{pairLink?.split("token=")[1]}</div>{/if}
-                <p class="mt-2 text-[12px] text-mute">Someone else saw it? <button class="underline hover:text-fg" onclick={rotate}>Make a new token</button>{#if rotated}<span class="ml-2" style="color: var(--color-ok)">done — other devices are signed out</span>{/if}{#if pairError}<span class="ml-2" style="color: var(--color-bad)">{pairError}</span>{/if}. {#if s}It lives in <span class="mono">{shortRoot(s.login.tokenPath)}</span>.{/if}</p>
+                <p class="mt-2 text-[12px] text-mute">{t("Someone else saw it?")} <button class="underline hover:text-fg" onclick={rotate}>{t("Make a new token")}</button>{#if rotated}<span class="ml-2" style="color: var(--color-ok)">{t("done — other devices are signed out")}</span>{/if}{#if pairError}<span class="ml-2" style="color: var(--color-bad)">{pairError}</span>{/if}. {#if s}{t("It lives in")} <span class="mono">{shortRoot(s.login.tokenPath)}</span>.{/if}</p>
               </div>
             </div>
           {/if}
@@ -182,55 +194,55 @@
     <!-- Advanced: the control room's own facts. Open on the desktop, folded on the phone. -->
     {#if !s}
       {#if error}
-        <div class="panel p-4 text-[13.5px] text-fg-2"><span style="color: var(--color-ask)">The details below need {isApp ? "your computer" : "the control room"}.</span> {error}</div>
+        <div class="panel p-4 text-[13.5px] text-fg-2"><span style="color: var(--color-ask)">{isApp ? t("The details below need your computer.") : t("The details below need the control room.")}</span> {error}</div>
       {:else}
         <Skeleton rows={2} h={72} />
       {/if}
     {:else}
     <details class="rise" open={!isApp}>
-      <summary class="cursor-pointer text-[11px] uppercase tracking-wider text-mute">Advanced</summary>
+      <summary class="cursor-pointer text-[11px] uppercase tracking-wider text-mute">{t("Advanced")}</summary>
       <div class="mt-2 grid gap-4 lg:grid-cols-2">
         <div class="panel p-5">
-          <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="spark" size={14} /> The control room</h3>
+          <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="spark" size={14} /> {t("The control room")}</h3>
           <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[13.5px] [&>dd]:min-w-0 [&>dd]:[overflow-wrap:anywhere]">
-            <dt class="text-mute">Garu</dt><dd>version {s.version}</dd>
-            <dt class="text-mute">{isApp ? "This app" : "This page"}</dt><dd class="text-[12.5px]">{buildText(build)}</dd>
-            <dt class="text-mute">Deciding as</dt><dd>{s.user}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--as</span> to change</span>{/if}</dd>
-            <dt class="text-mute">Schedules</dt><dd>{s.up ? "running" : "off"}{#if !s.up && !isApp}<span class="text-mute">&nbsp;· <span class="mono">npm run garu -- service install</span> runs them at login</span>{/if}</dd>
-            <dt class="text-mute">Listening on</dt><dd class="mono">{s.host}:{s.port}</dd>
-            <dt class="text-mute">Unanswered asks</dt><dd>denied after {s.askTimeoutMin} min</dd>
-            <dt class="text-mute">Push</dt><dd>{s.notify ? "on (ntfy)" : "off"}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--notify</span></span>{/if}</dd>
-            <dt class="text-mute">Folder</dt><dd class="mono break-all">{shortRoot(s.root)}</dd>
+            <dt class="text-mute">Garu</dt><dd>{t("version {version}", { version: s.version })}</dd>
+            <dt class="text-mute">{isApp ? t("This app") : t("This page")}</dt><dd class="text-[12.5px]">{buildText(build)}</dd>
+            <dt class="text-mute">{t("Deciding as")}</dt><dd>{s.user}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--as</span> {t("to change")}</span>{/if}</dd>
+            <dt class="text-mute">{t("Schedules")}</dt><dd>{s.up ? t("running") : t("off")}{#if !s.up && !isApp}<span class="text-mute">&nbsp;· <span class="mono">npm run garu -- service install</span> {t("runs them at login")}</span>{/if}</dd>
+            <dt class="text-mute">{t("Listening on")}</dt><dd class="mono">{s.host}:{s.port}</dd>
+            <dt class="text-mute">{t("Unanswered asks")}</dt><dd>{t("denied after {min} min", { min: s.askTimeoutMin })}</dd>
+            <dt class="text-mute">{t("Push")}</dt><dd>{s.notify ? t("on (ntfy)") : t("off")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--notify</span></span>{/if}</dd>
+            <dt class="text-mute">{t("Folder")}</dt><dd class="mono break-all">{shortRoot(s.root)}</dd>
           </dl>
         </div>
 
         <div class="panel p-5">
-          <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="key" size={14} /> Models</h3>
-          <p class="mb-3 text-[13px] text-fg-2">{#if isApp}Keys stay on your computer. Garu only reports whether each is set.{:else}Keys live in <span class="mono">.env</span> on the computer. Garu only reports whether each is set.{/if}</p>
+          <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="key" size={14} /> {t("Models")}</h3>
+          <p class="mb-3 text-[13px] text-fg-2">{#if isApp}{t("Keys stay on your computer. Garu only reports whether each is set.")}{:else}{t("Keys live in")} <span class="mono">.env</span> {t("on the computer. Garu only reports whether each is set.")}{/if}</p>
           <ul class="space-y-2 text-[13.5px]">
-            <li class="flex items-center gap-2"><span class="dot" style="background: {s.providers.gemini ? 'var(--color-ok)' : 'var(--color-line-2)'}"></span><span class="mono">GEMINI_API_KEY</span><span class="text-mute">{s.providers.gemini ? "set" : "not set · free at aistudio.google.com"}</span></li>
-            <li class="flex items-center gap-2"><span class="dot" style="background: {s.providers.anthropic ? 'var(--color-ok)' : 'var(--color-line-2)'}"></span><span class="mono">ANTHROPIC_API_KEY</span><span class="text-mute">{s.providers.anthropic ? "set" : "not set"}</span></li>
-            <li class="flex items-center gap-2"><span class="dot" style="background: var(--color-ok)"></span><span class="mono">ollama/*</span><span class="text-mute">{s.providers.ollamaHost ? "custom OLLAMA_HOST" : "localhost:11434 · $0, needs Ollama running"}</span></li>
+            <li class="flex items-center gap-2"><span class="dot" style="background: {s.providers.gemini ? 'var(--color-ok)' : 'var(--color-line-2)'}"></span><span class="mono">GEMINI_API_KEY</span><span class="text-mute">{s.providers.gemini ? t("set") : t("not set · free at aistudio.google.com")}</span></li>
+            <li class="flex items-center gap-2"><span class="dot" style="background: {s.providers.anthropic ? 'var(--color-ok)' : 'var(--color-line-2)'}"></span><span class="mono">ANTHROPIC_API_KEY</span><span class="text-mute">{s.providers.anthropic ? t("set") : t("not set")}</span></li>
+            <li class="flex items-center gap-2"><span class="dot" style="background: var(--color-ok)"></span><span class="mono">ollama/*</span><span class="text-mute">{s.providers.ollamaHost ? t("custom OLLAMA_HOST") : t("localhost:11434 · $0, needs Ollama running")}</span></li>
           </ul>
         </div>
 
         <div class="panel p-5">
-          <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="shield" size={14} /> Variables your agents reference</h3>
+          <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="shield" size={14} /> {t("Variables your agents reference")}</h3>
           {#if s.env.length === 0}
-            <p class="text-[13px] text-mute">{#if isApp}None.{:else}None. Agents reference secrets as <span class="mono">${"{VAR}"}</span> in their Garufile and Garu fills them from <span class="mono">.env</span> at run time.{/if}</p>
+            <p class="text-[13px] text-mute">{#if isApp}{t("None.")}{:else}{t("None. Agents reference secrets as")} <span class="mono">${"{VAR}"}</span> {t("in their Garufile and Garu fills them from")} <span class="mono">.env</span> {t("at run time.")}{/if}</p>
           {:else}
             <ul class="space-y-2 text-[13.5px]">
               {#each s.env as v (v.name)}
-                <li class="flex items-center gap-2"><span class="dot" style="background: {v.set ? 'var(--color-ok)' : 'var(--color-ask)'}"></span><span class="mono">{v.name}</span><span class="text-mute">{v.set ? "set" : isApp ? "missing, add it on your computer" : "missing, add it to .env"}</span></li>
+                <li class="flex items-center gap-2"><span class="dot" style="background: {v.set ? 'var(--color-ok)' : 'var(--color-ask)'}"></span><span class="mono">{v.name}</span><span class="text-mute">{v.set ? t("set") : isApp ? t("missing, add it on your computer") : t("missing, add it to .env")}</span></li>
               {/each}
             </ul>
           {/if}
         </div>
 
         <div class="panel p-5">
-          <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="globe" size={14} /> Tool servers that sign in or connect</h3>
+          <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="globe" size={14} /> {t("Tool servers that sign in or connect")}</h3>
           {#if s.remotes.length === 0}
-            <p class="text-[13px] text-mute">{#if isApp}None yet.{:else}None yet. A tool server can be a <span class="mono">url:</span> instead of a <span class="mono">command:</span>; servers that want a login use <span class="mono">auth: oauth</span> and <span class="mono">npm run garu -- auth</span>.{/if}</p>
+            <p class="text-[13px] text-mute">{#if isApp}{t("None yet.")}{:else}{t("None yet. A tool server can be a")} <span class="mono">url:</span> {t("instead of a")} <span class="mono">command:</span>; {t("servers that want a login use")} <span class="mono">auth: oauth</span> {t("and")} <span class="mono">npm run garu -- auth</span>.{/if}</p>
           {:else}
             <ul class="space-y-2.5 text-[13.5px]">
               {#each s.remotes as r (r.agent + r.server)}
@@ -238,10 +250,10 @@
                   <div class="flex items-center gap-2">
                     <span class="dot" style="background: {r.signedIn === false ? 'var(--color-ask)' : 'var(--color-ok)'}"></span>
                     <a href={href("agent", r.agent)} class="font-medium hover:underline">{r.agent}</a><span class="text-mute" aria-hidden="true">→</span><span class="mono">{r.server}</span>
-                    <span class="ml-auto text-[12px] text-mute">{r.auth === "oauth" ? (r.signedIn ? "signed in" : "not signed in") : isApp ? "key on your computer" : "headers from .env"}</span>
+                    <span class="ml-auto text-[12px] text-mute">{r.auth === "oauth" ? (r.signedIn ? t("signed in") : t("not signed in")) : isApp ? t("key on your computer") : t("headers from .env")}</span>
                   </div>
                   {#if r.local}
-                    <div class="ml-4 text-[12px] text-mute">on this computer · signs in with {r.url.replace(/^https?:\/\//, "").replace(/\/$/, "")}</div>
+                    <div class="ml-4 text-[12px] text-mute">{t("on this computer · signs in with {host}", { host: r.url.replace(/^https?:\/\//, "").replace(/\/$/, "") })}</div>
                   {:else}
                     <div class="mono ml-4 text-[11.5px] text-mute [overflow-wrap:anywhere]">{r.url}</div>
                   {/if}

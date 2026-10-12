@@ -6,6 +6,7 @@
    */
   import { api } from "../lib/api.svelte";
   import { build, isApp, server } from "../lib/server.svelte";
+  import { t } from "../lib/i18n.svelte";
   let what = $state("");
   let includeLog = $state(true);
   let lines = $state<string[] | null>(null);
@@ -32,29 +33,29 @@
   const linkHasLog = $derived(Boolean(logPart) && encodeURIComponent(report).length <= ISSUE_LINK_MAX);
   const issueUrl = $derived(`https://github.com/humbertovillanueva/garu/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(linkHasLog || !logPart ? report : `${summary}\n\n## Last lines of the service log\n\n(too long for a link: paste the copied report here)`)}`);
   async function copy() {
-    try { await navigator.clipboard.writeText(report); copied = true; setTimeout(() => (copied = false), 1500); } catch { error = "Couldn't copy; select the text below instead."; }
+    try { await navigator.clipboard.writeText(report); copied = true; setTimeout(() => (copied = false), 1500); } catch { error = t("Couldn't copy; select the text below instead."); }
   }
 </script>
 
 <section class="mx-auto max-w-2xl space-y-5">
   <div class="rise">
-    <h1 class="text-[24px] font-semibold tracking-tight">Report a problem</h1>
-    <p class="mt-1 text-[13.5px] text-fg-2">Say what happened. The report opens as a draft issue on GitHub for you to review before posting; nothing is sent from here.</p>
+    <h1 class="text-[24px] font-semibold tracking-tight">{t("Report a problem")}</h1>
+    <p class="mt-1 text-[13.5px] text-fg-2">{t("Say what happened. The report opens as a draft issue on GitHub for you to review before posting; nothing is sent from here.")}</p>
   </div>
-  <textarea class="field" rows="5" aria-label="What happened" placeholder="What did you expect, and what happened instead?" bind:value={what}></textarea>
+  <textarea class="field" rows="5" aria-label={t("What happened")} placeholder={t("What did you expect, and what happened instead?")} bind:value={what}></textarea>
   <label class="flex min-h-11 items-center gap-3 text-[14px]">
     <input type="checkbox" class="h-4 w-4 accent-[var(--color-accent)]" bind:checked={includeLog} />
-    <span>Include the last lines of Garu's log <span class="text-mute">(addresses and keys are masked)</span></span>
+    <span>{t("Include the last lines of Garu's log")} <span class="text-mute">{t("(addresses and keys are masked)")}</span></span>
   </label>
   <div class="flex flex-wrap gap-2">
-    <a class="btn btn-primary" href={issueUrl} target="_blank" rel="noreferrer">Open as a GitHub issue <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
-    <button class="btn" onclick={copy}>{copied ? "Copied" : "Copy the report"}</button>
-    <span class="sr-only" role="status">{copied ? "Copied to the clipboard" : ""}</span>
+    <a class="btn btn-primary" href={issueUrl} target="_blank" rel="noreferrer">{t("Open as a GitHub issue")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a>
+    <button class="btn" onclick={copy}>{copied ? t("Copied") : t("Copy the report")}</button>
+    <span class="sr-only" role="status">{copied ? t("Copied to the clipboard") : ""}</span>
     {#if error}<span class="self-center text-[12.5px]" role="alert" style="color: var(--color-bad)">{error}</span>{/if}
   </div>
-  {#if logPart && !linkHasLog}<p class="text-[12.5px] text-mute">The log is too long for the GitHub link: press Copy the report and paste it into the issue.</p>{/if}
+  {#if logPart && !linkHasLog}<p class="text-[12.5px] text-mute">{t("The log is too long for the GitHub link: press Copy the report and paste it into the issue.")}</p>{/if}
   <details class="panel rise">
-    <summary class="cursor-pointer px-4 py-3 text-[13.5px] text-fg-2">What the report contains</summary>
+    <summary class="cursor-pointer px-4 py-3 text-[13.5px] text-fg-2">{t("What the report contains")}</summary>
     <pre class="mono max-h-80 overflow-auto whitespace-pre-wrap break-words border-t hairline px-4 py-3 text-[12px] text-fg-2 select-all">{report}</pre>
   </details>
 </section>

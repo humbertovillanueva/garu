@@ -9,6 +9,7 @@
   import Creature from "../lib/components/Creature.svelte";
   import Pair from "./Pair.svelte";
   import { backHandlers, canScan, haptic } from "../lib/native";
+  import { t } from "../lib/i18n.svelte";
 
   let { onDone, splash = true, alreadyPaired = false }: { onDone: () => void; splash?: boolean; alreadyPaired?: boolean } = $props();
 
@@ -16,7 +17,7 @@
   let phase = $state<"splash" | "slides">(splash ? "splash" : "slides");
   let i = $state(0);
   const LAST = 4;
-  $effect(() => { if (phase === "splash") { const t = setTimeout(() => (phase = "slides"), 1700); return () => clearTimeout(t); } });
+  $effect(() => { if (phase === "splash") { const id = setTimeout(() => (phase = "slides"), 1700); return () => clearTimeout(id); } });
 
   function next() { if (i < LAST) { i++; void haptic("light"); } }
   function back() { if (i > 0) i--; }
@@ -44,10 +45,10 @@
     if (dx < 0 && i < LAST) i++; else if (dx > 0 && i > 0) i--;
   };
 
-  const agents = [
-    { kind: "fox", name: "Tomay", when: "Weekdays · 7:00 AM", does: "Reads your calendar and your email, and writes a prep note for each meeting. It only reads." },
-    { kind: "bee", name: "Bea", when: "Weekdays · 7:15 AM", does: "Sorts new mail into four labels and drafts the replies for you to approve. She can't send." },
-  ] as const;
+  const agents = $derived([
+    { kind: "fox", name: "Tomay", when: t("Weekdays · 7:00 AM"), does: t("Reads your calendar and your email, and writes a prep note for each meeting. It only reads.") },
+    { kind: "bee", name: "Bea", when: t("Weekdays · 7:15 AM"), does: t("Sorts new mail into four labels and drafts the replies for you to approve. She can't send.") },
+  ] as const);
 </script>
 
 {#if phase === "splash"}
@@ -56,52 +57,52 @@
     <div class="word" aria-hidden="true">Garu</div>
   </div>
 {:else}
-  <div class="intro" role="region" aria-roledescription="carousel" aria-label="Introduction" ontouchstart={onStart} ontouchend={onEnd}>
+  <div class="intro" role="region" aria-roledescription="carousel" aria-label={t("Introduction")} ontouchstart={onStart} ontouchend={onEnd}>
     <div class="bar">
-      {#if i > 0}<button class="-ml-3 min-h-11 px-3 text-[13px] text-fg-2" onclick={back}>Back</button>{:else}<span></span>{/if}
-      {#if i < LAST}<button class="-mr-3 min-h-11 px-3 text-[13px] text-fg-2" onclick={skip}>Skip</button>{/if}
+      {#if i > 0}<button class="-ml-3 min-h-11 px-3 text-[13px] text-fg-2" onclick={back}>{t("Back")}</button>{:else}<span></span>{/if}
+      {#if i < LAST}<button class="-mr-3 min-h-11 px-3 text-[13px] text-fg-2" onclick={skip}>{t("Skip")}</button>{/if}
     </div>
-    <p class="sr-only" aria-live="polite">Step {i + 1} of {LAST + 1}</p>
+    <p class="sr-only" aria-live="polite">{t("Step {n} of {total}", { n: i + 1, total: LAST + 1 })}</p>
 
     <div class="slides" style="transform: translateX({-i * 100}%)">
-      <section class="slide" inert={i !== 0} aria-roledescription="slide" aria-label="1 of {LAST + 1}">
+      <section class="slide" inert={i !== 0} aria-roledescription="slide" aria-label={t("{n} of {total}", { n: 1, total: LAST + 1 })}>
         <Logo size={116} />
-        <h1>Agents that work while you sleep. Under rules you wrote.</h1>
-        <p>An agent is an AI helper with one job, a schedule and rules you wrote. Garu runs yours around the clock on your own computer. This app is the control room: see what they did, approve what they ask, talk to them.</p>
+        <h1>{t("Agents that work while you sleep. Under rules you wrote.")}</h1>
+        <p>{t("An agent is an AI helper with one job, a schedule and rules you wrote. Garu runs yours around the clock on your own computer. This app is the control room: see what they did, approve what they ask, talk to them.")}</p>
       </section>
 
-      <section class="slide" inert={i !== 1} aria-roledescription="slide" aria-label="2 of {LAST + 1}">
-        <h1>An agent is one file.</h1>
-        <p>Who it is, which AI model it thinks with, when it runs, what it can reach, and what it's allowed to do. You can read it before you run it.</p>
+      <section class="slide" inert={i !== 1} aria-roledescription="slide" aria-label={t("{n} of {total}", { n: 2, total: LAST + 1 })}>
+        <h1>{t("An agent is one file.")}</h1>
+        <p>{t("Who it is, which AI model it thinks with, when it runs, what it can reach, and what it's allowed to do. You can read it before you run it.")}</p>
         <div class="card yaml">
-          <div class="file mono">agents/bea/Garufile.yaml, in plain words</div>
-          <span class="k">name</span> <b>Bea</b>, a bee · <i>“Sorts the inbox so you don't have to.”</i><br>
-          <span class="k">thinks with</span> Gemini 3.5 Flash-Lite<br>
-          <span class="k">runs</span> weekdays at 7:15 AM<br>
-          <span class="k">can reach</span> your Gmail<br>
-          <span class="k">rules</span><br>
-          <span class="rule">read and file mail <span class="r-allow">→ allow</span></span><br>
-          <span class="rule">draft a reply <span class="r-ask">→ ask</span></span><br>
-          <span class="rule">anything else <span class="r-block">→ block</span></span>
+          <div class="file mono">{t("{file}, in plain words", { file: "agents/bea/Garufile.yaml" })}</div>
+          <span class="k">{t("name")}</span> <b>Bea</b>, {t("a bee")} · <i>{t("“Sorts the inbox so you don't have to.”")}</i><br>
+          <span class="k">{t("thinks with")}</span> Gemini 3.5 Flash-Lite<br>
+          <span class="k">{t("runs")}</span> {t("weekdays at 7:15 AM")}<br>
+          <span class="k">{t("can reach")}</span> {t("your Gmail")}<br>
+          <span class="k">{t("rules")}</span><br>
+          <span class="rule">{t("read and file mail")} <span class="r-allow">→ {t("allow")}</span></span><br>
+          <span class="rule">{t("draft a reply")} <span class="r-ask">→ {t("ask")}</span></span><br>
+          <span class="rule">{t("anything else")} <span class="r-block">→ {t("block")}</span></span>
         </div>
       </section>
 
-      <section class="slide" inert={i !== 2} aria-roledescription="slide" aria-label="3 of {LAST + 1}">
-        <h1>Every action passes through your rules.</h1>
-        <p>Allow runs. Ask pauses and comes to your phone. Block: it can't even try. If you don't answer in 30 minutes, the answer is no.</p>
+      <section class="slide" inert={i !== 2} aria-roledescription="slide" aria-label={t("{n} of {total}", { n: 3, total: LAST + 1 })}>
+        <h1>{t("Every action passes through your rules.")}</h1>
+        <p>{t("Allow runs. Ask pauses and comes to your phone. Block: it can't even try. If you don't answer in 30 minutes, the answer is no.")}</p>
         <div class="card rc">
           <div class="h">
             <span class="orb" style="background:{KIND_COLOR.bee}"><Creature kind="bee" size={22} /></span>
-            <span class="min-w-0"><b>bea</b> wants to draft <b>an email</b> <span class="tag">create_draft</span><span class="why">a draft reply in your name · expires in 30 min</span></span>
+            <span class="min-w-0"><b>bea</b> {t("wants to draft")} <b>{t("an email")}</b> <span class="tag">create_draft</span><span class="why">{t("a draft reply in your name · expires in 30 min")}</span></span>
           </div>
-          <div class="body"><span class="lbl">To</span> Lena Ortiz<br><span class="lbl">Re</span> Homepage draft<br>Hi Lena, thanks for sending the draft. I'll get back to you on the pricing copy before our review…</div>
-          <div class="btns"><span class="ok">Approve</span><span>Approve for 24h</span><span class="no">Decline</span></div>
+          <div class="body"><span class="lbl">{t("To")}</span> Lena Ortiz<br><span class="lbl">{t("Re")}</span> {t("Homepage draft")}<br>{t("Hi Lena, thanks for sending the draft. I'll get back to you on the pricing copy before our review…")}</div>
+          <div class="btns"><span class="ok">{t("Approve")}</span><span>{t("Approve for 24h")}</span><span class="no">{t("Decline")}</span></div>
         </div>
       </section>
 
-      <section class="slide" inert={i !== 3} aria-roledescription="slide" aria-label="4 of {LAST + 1}">
-        <h1>Meet two agents.</h1>
-        <p>They come with Garu, and you can make your own on your computer. Each has a face, a schedule and rules you can read.</p>
+      <section class="slide" inert={i !== 3} aria-roledescription="slide" aria-label={t("{n} of {total}", { n: 4, total: LAST + 1 })}>
+        <h1>{t("Meet two agents.")}</h1>
+        <p>{t("They come with Garu, and you can make your own on your computer. Each has a face, a schedule and rules you can read.")}</p>
         <div class="meet">
           {#each agents as a (a.name)}
             <div class="card agent">
@@ -115,18 +116,18 @@
         </div>
       </section>
 
-      <section class="slide last" inert={i !== LAST} aria-roledescription="slide" aria-label="{LAST + 1} of {LAST + 1}">
+      <section class="slide last" inert={i !== LAST} aria-roledescription="slide" aria-label={t("{n} of {total}", { n: LAST + 1, total: LAST + 1 })}>
         {#if alreadyPaired}
-          <h1>You're connected.</h1>
-          <p>This phone is already paired with your computer, so there's nothing to set up. That's the whole tour.</p>
+          <h1>{t("You're connected.")}</h1>
+          <p>{t("This phone is already paired with your computer, so there's nothing to set up. That's the whole tour.")}</p>
         {:else}
-          <h1>Connect to your computer.</h1>
-          <p>Your agents live on the computer running Garu. Pair this phone once and it talks straight to that computer over your private network; there's no Garu server in between.</p>
+          <h1>{t("Connect to your computer.")}</h1>
+          <p>{t("Your agents live on the computer running Garu. Pair this phone once and it talks straight to that computer over your private network; there's no Garu server in between.")}</p>
           <ol class="steps">
-            <li><i aria-hidden="true">1</i><span>On your computer, open Garu, then <b>Settings, Your phone &amp; other devices</b>.</span></li>
-            <li><i aria-hidden="true">2</i><span>Press <b>Show pairing code</b>, then {canScan ? "scan it below, or copy the link there and paste it below" : "press Copy link there and paste it below"}.</span></li>
-            <li><i aria-hidden="true">3</i><span>Both need <b>Tailscale</b> (free), signed in to the same account.</span></li>
-            <li><i aria-hidden="true">4</i><span>Don't have Garu yet? <a class="link" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">The website <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a> walks you through setting it up on your computer.</span></li>
+            <li><i aria-hidden="true">1</i><span>{t("On your computer, open Garu, then")} <b>{t("Settings, Your phone & other devices")}</b>.</span></li>
+            <li><i aria-hidden="true">2</i><span>{t("Press")} <b>{t("Show pairing code")}</b>, {canScan ? t("then scan it below, or copy the link there and paste it below.") : t("then press Copy link there and paste it below.")}</span></li>
+            <li><i aria-hidden="true">3</i><span>{t("Both need")} <b>Tailscale</b> {t("(free), signed in to the same account.")}</span></li>
+            <li><i aria-hidden="true">4</i><span>{t("Don't have Garu yet?")} <a class="link" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">{t("The website")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a> {t("walks you through setting it up on your computer.")}</span></li>
           </ol>
           <!-- only while this slide shows, so the camera never runs off-screen -->
           {#if i === LAST}<div class="w-full"><Pair embedded /></div>{/if}
@@ -137,11 +138,11 @@
     <div class="foot">
       <div class="dots" aria-hidden="true">{#each Array(LAST + 1) as _, d}<i class:on={d === i}></i>{/each}</div>
       {#if i < LAST}
-        <button class="cta" onclick={next}>{i === 0 ? "How does it work?" : "Next"}</button>
+        <button class="cta" onclick={next}>{i === 0 ? t("How does it work?") : t("Next")}</button>
       {:else if alreadyPaired}
-        <button class="cta" onclick={onDone}>Done</button>
+        <button class="cta" onclick={onDone}>{t("Done")}</button>
       {:else}
-        <button class="min-h-11 px-4 text-[13px] text-mute" onclick={onDone}>Close the tour</button>
+        <button class="min-h-11 px-4 text-[13px] text-mute" onclick={onDone}>{t("Close the tour")}</button>
       {/if}
     </div>
   </div>

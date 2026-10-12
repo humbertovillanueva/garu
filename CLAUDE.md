@@ -115,8 +115,12 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   trigger `catch-up:<cron>`. Don't double-fire; don't run catch-ups in parallel.
 - UI: black and white, no orange, in a dark and a light theme: every color is a token in `app.css`
   (the light theme flips them under `[data-theme="light"]`), never a hex in a component. Agent avatar
-  colors come from `packages/ui/src/lib/colors.ts`
-  (KIND_COLOR) and are used everywhere an agent is colored. Times are human (`humanTime`, `clock`,
+  colors come from `packages/ui/src/lib/colors.ts` (KIND_COLOR) and are used everywhere an agent is
+  colored. Every sentence a person reads goes through `t("English sentence", vars)` from
+  `lib/i18n.svelte.ts`, with the English as the key; the Spanish is in `lib/i18n/es.ts`, and
+  `i18n.test.ts` fails on a sentence without Spanish, a stale entry or a lost placeholder. Keys are
+  double-quoted literals, whole sentences, one key per plural form; agent names, tool ids, paths and
+  commands are never wrapped. Times are human (`humanTime`, `clock`,
   `until` in `lib/format.ts`): never ISO strings, never UTC, and no seconds in the UI, with one exception:
   the run timeline is the log of one run, so its exact stamps and `ok · 340ms` stay. `until()` already
   returns "in 25 min", so never write "in {until(...)}". Monospace is for code, ids and paths only.
@@ -133,7 +137,8 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 
 Built: kernel, CLI, control room, Android debug app, iPhone app in the Simulator (2026-10-11), login service, catch-up, brand, Owner's Guide,
 launch video v7, onboarding and UI audit fixes (2026-10-10), the always-on fixes from the full
-audit and its security items (2026-10-12). Open: the rest of that audit, in `docs/audit-2026-10-12.md`.
+audit and its security items, the app in Spanish with a language switch (2026-10-12). Open: the
+rest of that audit, in `docs/audit-2026-10-12.md`.
 
 Not launching yet. Order: understand → real app → Play closed test → launch → beyond. The real-app
 list is done in code (2026-10-12: crash screen, dark and light theme, accessibility pass, release
