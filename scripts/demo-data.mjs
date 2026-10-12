@@ -9,12 +9,18 @@
 // The people, meetings and emails are made up (example.com); the agents, their
 // tools, rules and schedules are the real ones in agents/.
 
-import { mkdirSync, writeFileSync, appendFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync, appendFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { Recorder, Inbox, ChatStore } from "../packages/kernel/dist/index.js";
 
 const root = resolve(process.cwd(), ".garu");
 const runs = join(root, "runs");
+// Never into a real control room: a .garu that already holds a sign-in token or runs is left alone,
+// unless --force says this copy is the demo and should be reseeded.
+if (!process.argv.includes("--force") && (existsSync(join(root, "ui-token")) || existsSync(runs))) {
+  console.error(`refusing to seed ${root}: it already has a sign-in token or runs, so it looks like a real control room.\nRun this from a copy of the repo (see CLAUDE.md), or pass --force if that copy is the demo.`);
+  process.exit(1);
+}
 mkdirSync(runs, { recursive: true });
 
 const minutesAgo = (m) => new Date(Date.now() - m * 60_000);

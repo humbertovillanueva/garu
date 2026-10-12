@@ -85,7 +85,8 @@ Garu on Humberto's Mac runs as the login service: after a build or a Garufile sc
 over Tailscale (the address is in `tailscale serve status`; don't write it into the repo).
 
 Seeded screens without touching the real `.garu/`: copy `agents/ examples/ scripts/ package.json` to a
-temp dir, symlink `packages` and `node_modules` into it, run `node scripts/demo-data.mjs` there, then
+temp dir, symlink `packages` and `node_modules` into it, run `node scripts/demo-data.mjs` there (it
+refuses a `.garu` that looks real; `--force` reseeds the demo copy), then
 `npm run garu -- ui -p 4100` from it. The greeting ("Still up" / "Good morning" …) follows the
 browser's clock and schedules follow the server's `TZ`, so set both to the same zone for captures.
 
@@ -130,8 +131,7 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 
 Built: kernel, CLI, control room, Android debug app, iPhone app in the Simulator (2026-10-11), login service, catch-up, brand, Owner's Guide,
 launch video v7, onboarding and UI audit fixes (2026-10-10), the always-on fixes from the full
-audit (2026-10-12). Open: the rest of that audit, in `docs/audit-2026-10-12.md` (committed once its
-security items are fixed).
+audit and its security items (2026-10-12). Open: the rest of that audit, in `docs/audit-2026-10-12.md`.
 
 Not launching yet. Order: understand → real app → Play closed test → launch → beyond. Still on the
 real-app list: crash screen, accessibility pass, theme setting, release signing (Humberto makes the
