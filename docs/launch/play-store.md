@@ -15,7 +15,8 @@ app is a companion to software you run yourself; it is not a cloud service.
 - App or game: App · Free · Category: **Productivity** (alt: Tools)
 - Contains ads: No · In-app purchases: No
 - Privacy policy URL: `https://humbertovillanueva.github.io/garu/privacy.html`
-- Contact email: the one on the developer account (shown publicly)
+- Contact email: a Garu-only alias (to be created; it also goes into `packages/ui/src/lib/support.ts`,
+  which puts an "Email support" link on the Help and About screens). Shown publicly.
 - Website: `https://humbertovillanueva.github.io/garu/`
 
 ## Store listing text
@@ -71,8 +72,10 @@ app is a companion to software you run yourself; it is not a cloud service.
 - App icon: `icon-512.png` (512×512, opaque).
 - Feature graphic: `feature-graphic.png` (1024×500).
 - Phone screenshots, 1080×1920 with captions, in this order: `home.png`,
-  `inbox.png`, `agent.png`, `agents.png`, `cost.png`, `pair.png`. Made from the
-  demo data with `scripts/demo-data.mjs`; retake after any big UI change.
+  `inbox.png`, `agent.png`, `agents.png`, `cost.png`, `pair.png`. Made 2026-10-12
+  from the demo data (`scripts/demo-data.mjs`) by capturing each screen at phone
+  size from the demo control room and framing it with its caption; retake after
+  any big UI change.
 
 ## Data safety form (answers)
 
@@ -95,14 +98,26 @@ violence, no gambling, no personal information collected → expect **Everyone**
 
 ## Release checklist
 
-1. `npm run sync -w @garu/app`, then in Android Studio: Build → Generate Signed
-   App Bundle. Create an upload key once; **back the keystore up** — losing it
-   means losing the ability to update the app.
+1. Make the upload key once and build the bundle: `docs/android.md`, "A release
+   for Google Play" (keytool, `keystore.properties`, `./gradlew bundleRelease`).
+   **Back the keystore up**; losing it means a support request to reset it.
 2. Play Console → Testing → Closed testing → new release → upload the `.aab`.
    Add the testers' emails as a list; share the opt-in link.
 3. Fill the listing, data safety, content rating, target audience (18+ or
    13+; not for children).
-4. After 14 days with ≥12 testers, apply for production access, then promote.
+4. After 14 days with ≥12 testers continuously opted in (if one drops out before
+   day 14, the count restarts), apply for production access on the dashboard,
+   then promote the release.
+
+## Before the first upload (status 2026-10-12)
+
+Done in the app: a crash screen instead of a blank page, dark and light themes
+(follows the phone, or pinned in Settings), an accessibility pass (screen-reader
+announcements, names, focus, 44 px targets, reduced motion), release signing
+wired in Gradle, no cloud backup of the pairing token, the privacy page matching
+what the app stores. Still to do: create the support alias (Humberto), make the
+upload key (Humberto), register the developer account (Humberto), gather twelve
+testers with Android phones (Humberto), then upload the bundle.
 
 ## Version naming
 
