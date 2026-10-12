@@ -6,8 +6,8 @@ On first launch it asks you to pair with the Garu running on your computer; afte
 that it talks to that computer over your private network (see [phone.md](phone.md)
 for Tailscale) using the control room's token.
 
-Nothing goes through a cloud. The app stores one thing: the address and token of
-your control room, on the phone.
+Nothing goes through a cloud. The app stores the address and token of your control
+room, and your display preferences, on the phone.
 
 ## What you need once
 
@@ -33,8 +33,8 @@ In Android Studio: pick a device (an emulator from *Device Manager*, or your pho
 with USB debugging on) and press **Run**. The first Gradle build downloads
 dependencies and takes a few minutes; later builds are fast.
 
-To pair the running app: on your computer, Garu → **Settings → Your phone → Show
-sign-in code**, then in the app press **Scan the code**. No camera on an emulator?
+To pair the running app: on your computer, Garu → **Settings → Your phone & other
+devices → Show pairing code**, then in the app press **Scan the code**. No camera on an emulator?
 Press *Copy link* on the computer and paste it into the app instead.
 
 Changed the UI? Run `npm run sync -w @garu/app` again and press Run again.

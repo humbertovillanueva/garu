@@ -47,7 +47,7 @@ docs/video/remotion the launch video's source (Remotion 4, React); see "Launch v
 
 ```
 npm install && npm run build          # all workspaces
-npm run typecheck && npm test         # tsc -b, vitest (205 tests); run before every commit
+npm run typecheck && npm test         # tsc -b, vitest (230 tests); run before every commit
 npx svelte-check --workspace packages/ui
 npm run garu -- <cmd>                 # the CLI from the repo (no global install yet)
 npm run garu -- service install|status|logs|restart|uninstall   # Garu as a login service (launchd)
@@ -139,10 +139,10 @@ keystore), support path, Why Garu page + fresh screenshots, privacy review. Then
 the video is done). Roadmap after that: push via a relay, hosted Garu, `garu install` registry, iPhone
 on a real device and TestFlight, two-way Slack.
 
-## Agents rework (in progress)
+## The Google agents
 
-New Tomay ("Your day") and Bea (inbox sorter) on Gmail and Google Calendar, switched on 2026-10-10.
-Plan, Google setup steps and what's next (onboarding, video): `docs/agents-plan.md`.
+Tomay ("Your day") and Bea (inbox sorter) run on Gmail and Google Calendar through `packages/mcp-google`,
+since 2026-10-10. What they do, the rules learned on real mail, and the setup: `docs/agents-plan.md`.
 
 ## Launch video
 

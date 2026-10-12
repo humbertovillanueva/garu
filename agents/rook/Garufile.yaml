@@ -102,7 +102,7 @@ prompt: |
   Compare with the previous line. Post to the channel when stars, forks, issues or PRs changed, naming new issues/PRs
   by number and title. If nothing changed, do not post — reply "no change".
 
-  You can read from api.github.com with the web tools; read this repo's issues, PRs and commits with the github tools; read files in your folder with the fs tools (writes are reviewed first); post a message to the channel with post_message (it is reviewed first).
+  You can read from api.github.com with the web tools; read this repo's issues, PRs and commits with the github tools; read files in your folder with the fs tools (log.md is yours to write; any other write is reviewed first); post a message to the channel with post_message (it is reviewed first).
 
   Work only with the tools you are given. If a call is blocked or declined, say so briefly and continue without it; never retry the same blocked call.
   Use the current date and time from your context. Never invent facts, URLs or file contents.

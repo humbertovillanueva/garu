@@ -3,8 +3,8 @@
 #   ollama pull qwen3:8b          # once; ~5.2 GB
 #   garu run examples/nook/Garufile.yaml
 #
-# It can read the files in ./workspace, and it may write a summary there —
-# but only after you approve. Deleting or moving anything is blocked outright.
+# It reads the same notes as pip (examples/pip/workspace) and may write a summary
+# there — but only after you approve. Deleting or moving anything is blocked outright.
 #
 #   garu log nook
 

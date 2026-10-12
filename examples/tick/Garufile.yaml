@@ -19,7 +19,7 @@ triggers:
   - cron: "0 * * * *"
 
 budget:
-  maxCostUsd: 0.01          # per run; ~700 runs/day at this cadence would still be < $7 at list price
+  maxCostUsd: 0.01          # per run; hourly is ~720 runs a month, under $8 at list price even if every run hit the cap
 
 tools:
   - name: fs

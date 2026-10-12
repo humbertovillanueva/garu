@@ -88,7 +88,7 @@ One file describes an agent: who it is, what it may touch, when it wakes up, and
 name: bea
 description: Sorts what arrived overnight into four labels and drafts replies to what needs one. Never sends.
 persona: { kind: bee, tagline: "Sorts the inbox so you don't have to." }
-model: gemini/gemini-3.5-flash-lite
+model: gemini/gemini-3.5-flash
 
 triggers:
   - cron: "15 7 * * 1-5"          # weekdays at 7:15, in your local time
@@ -115,6 +115,10 @@ policy:
     action: allow
   - tool: "gmail.label_thread"    # filing: a label comes off in one click, so it doesn't wait
     action: allow
+  - tool: "gmail.create_draft"    # rules see arguments: a reply to an address no one reads
+    when: { to: { matches: "no-?reply|notifications?|alerts?|newsletter", ignoreCase: true } }
+    action: block
+    reason: a reply to an automated sender goes nowhere
   - tool: "gmail.create_draft"    # a draft is words in your name: you see each one first
     action: ask
     reason: a draft reply in your name
@@ -218,7 +222,7 @@ Garu is a week old and already runs the author's own agents every day. Expect sh
 2. **Hosted Garu:** agents that keep running when your laptop is closed, tap-to-approve from anywhere, EU-friendly by default.
 3. Delegation between agents over A2A; transparent, editable memory.
 
-Done since the first commit: Gmail and Google Calendar through Garu's own server, with sign-in for local servers; remote MCP servers (Streamable HTTP + OAuth), the phone app over Tailscale with a sign-in token ([docs/phone.md](docs/phone.md)), a native Android app that pairs by scanning a code ([docs/android.md](docs/android.md)), `garu new`, personas, decline-with-a-note.
+Done since the first commit: Gmail and Google Calendar through Garu's own server, with sign-in for local servers; remote MCP servers (Streamable HTTP + OAuth), the phone app over Tailscale with a sign-in token ([docs/phone.md](docs/phone.md)), the control room as a native app for Android and iPhone ([docs/android.md](docs/android.md), [docs/ios.md](docs/ios.md)), `garu new`, personas, decline-with-a-note.
 
 ## Layout
 
@@ -226,8 +230,8 @@ Done since the first commit: Gmail and Google Calendar through Garu's own server
 packages/kernel     Garufile schema · policy engine · flight recorder · MCP bus · agent loop · scheduler · inbox · grants · suggestions · sandbox · providers
 packages/cli        the garu command
 packages/ui         the control room (Svelte 5 + Tailwind 4)
-packages/app        the control room as a native Android app (Capacitor), pairs with a running garu ui
-packages/mcp-fetch  a tiny MCP server: fetch_json / fetch_text, GET only
+packages/app        the control room as a native Android and iPhone app (Capacitor), pairs with a running garu ui
+packages/mcp-fetch  a tiny MCP server: fetch_json / fetch_text (GET, open web only) + post_message to one webhook
 packages/mcp-google Gmail and Calendar MCP server: read, label, draft; no send, no delete
 agents/             real agents that run from this repo (tomay, bea, rook, atlas)
 examples/           Garufiles to learn from
