@@ -99,6 +99,18 @@
       </div>
     </div>
 
+    <div>
+      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Appearance</h2>
+      <div class="panel rise flex flex-wrap items-center gap-3 px-4 py-3 text-[14px]">
+        <span class="flex-1">Theme</span>
+        <div class="flex gap-1" role="radiogroup" aria-label="Theme">
+          {#each [["auto", isApp ? "Phone" : "System"], ["dark", "Dark"], ["light", "Light"]] as const as [value, label] (value)}
+            <button class="btn py-1 text-[12.5px]" class:opacity-50={prefs.theme !== value} role="radio" aria-checked={prefs.theme === value} onclick={() => setPref("theme", value)}>{label}</button>
+          {/each}
+        </div>
+      </div>
+    </div>
+
     {#if isApp}
       <div>
         <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Preferences</h2>
@@ -132,7 +144,7 @@
           {#if !pairOpen}
             <p class="mb-3 text-[13.5px] text-fg-2">Install the Garu app on your phone and scan a code here to pair it.</p>
             <button class="btn" onclick={openPair}>Show pairing code</button>
-            {#if pairError}<p class="mt-2 text-[12.5px]" style="color: var(--color-bad)">{pairError}</p>{/if}
+            {#if pairError}<p class="mt-2 text-[12.5px]" role="alert" style="color: var(--color-bad)">{pairError}</p>{/if}
           {:else if !pairSvg}
             <Skeleton rows={1} h={180} />
           {:else}
@@ -140,12 +152,12 @@
               <div class="mb-3 flex flex-wrap items-center gap-1.5 text-[12px]">
                 <span class="text-mute">Code points to</span>
                 {#each options as o (o.url)}
-                  <button class="rounded-full border px-2.5 py-0.5 transition-colors" class:border-accent={chosen === o.url} class:text-fg={chosen === o.url} class:hairline={chosen !== o.url} class:text-mute={chosen !== o.url} onclick={() => choose(o.url)} title={o.url}>{o.label}</button>
+                  <button class="rounded-full border px-2.5 py-0.5 transition-colors" class:border-accent={chosen === o.url} class:text-fg={chosen === o.url} class:hairline={chosen !== o.url} class:text-mute={chosen !== o.url} aria-pressed={chosen === o.url} onclick={() => choose(o.url)} title={o.url}>{o.label}</button>
                 {/each}
               </div>
             {/if}
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-              <div class="qr w-[180px] flex-none rounded-xl p-2" style="background:#f4f1ea">{@html pairSvg}</div>
+              <div class="qr w-[180px] flex-none rounded-xl p-2" style="background:#f4f1ea" role="img" aria-label="Pairing code">{@html pairSvg}</div>
               <div class="min-w-0 flex-1 text-[13px] text-fg-2">
                 {#if chosenIsLocal}
                   <p style="color: var(--color-ask)">This code points at <span class="mono">{new URL(chosen).host}</span>, which a phone can't reach. Put the control room on your private network first: <span class="mono">tailscale serve --bg {s?.port ?? 4000}</span> on this computer, then come back here and the code will point there by itself.</p>
@@ -155,6 +167,7 @@
                 <p class="mt-2 text-[12px] text-mute">This code is a key. Anyone who scans it can approve actions as you.</p>
                 <div class="mt-3 flex flex-wrap gap-2">
                   <button class="btn" onclick={copyLink}>{copied ? "Copied" : "Copy link"}</button>
+                  <span class="sr-only" role="status">{copied ? "Link copied to the clipboard" : ""}</span>
                   <button class="btn" onclick={() => (showToken = !showToken)}>{showToken ? "Hide token" : "Show token"}</button>
                 </div>
                 {#if showToken}<div class="mono mt-2 break-all rounded-lg border hairline bg-bg px-2.5 py-2 text-[12px] select-all">{pairLink?.split("token=")[1]}</div>{/if}
@@ -178,7 +191,7 @@
       <summary class="cursor-pointer text-[11px] uppercase tracking-wider text-mute">Advanced</summary>
       <div class="mt-2 grid gap-4 lg:grid-cols-2">
         <div class="panel p-5">
-          <div class="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute"><Icon name="spark" size={14} /> The control room</div>
+          <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="spark" size={14} /> The control room</h3>
           <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[13.5px] [&>dd]:min-w-0 [&>dd]:[overflow-wrap:anywhere]">
             <dt class="text-mute">Garu</dt><dd>version {s.version}</dd>
             <dt class="text-mute">{isApp ? "This app" : "This page"}</dt><dd class="text-[12.5px]">{buildText(build)}</dd>
@@ -192,7 +205,7 @@
         </div>
 
         <div class="panel p-5">
-          <div class="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute"><Icon name="key" size={14} /> Models</div>
+          <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="key" size={14} /> Models</h3>
           <p class="mb-3 text-[13px] text-fg-2">{#if isApp}Keys stay on your computer. Garu only reports whether each is set.{:else}Keys live in <span class="mono">.env</span> on the computer. Garu only reports whether each is set.{/if}</p>
           <ul class="space-y-2 text-[13.5px]">
             <li class="flex items-center gap-2"><span class="dot" style="background: {s.providers.gemini ? 'var(--color-ok)' : 'var(--color-line-2)'}"></span><span class="mono">GEMINI_API_KEY</span><span class="text-mute">{s.providers.gemini ? "set" : "not set · free at aistudio.google.com"}</span></li>
@@ -202,7 +215,7 @@
         </div>
 
         <div class="panel p-5">
-          <div class="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute"><Icon name="shield" size={14} /> Variables your agents reference</div>
+          <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="shield" size={14} /> Variables your agents reference</h3>
           {#if s.env.length === 0}
             <p class="text-[13px] text-mute">{#if isApp}None.{:else}None. Agents reference secrets as <span class="mono">${"{VAR}"}</span> in their Garufile and Garu fills them from <span class="mono">.env</span> at run time.{/if}</p>
           {:else}
@@ -215,7 +228,7 @@
         </div>
 
         <div class="panel p-5">
-          <div class="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute"><Icon name="globe" size={14} /> Tool servers that sign in or connect</div>
+          <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="globe" size={14} /> Tool servers that sign in or connect</h3>
           {#if s.remotes.length === 0}
             <p class="text-[13px] text-mute">{#if isApp}None yet.{:else}None yet. A tool server can be a <span class="mono">url:</span> instead of a <span class="mono">command:</span>; servers that want a login use <span class="mono">auth: oauth</span> and <span class="mono">npm run garu -- auth</span>.{/if}</p>
           {:else}
@@ -224,7 +237,7 @@
                 <li>
                   <div class="flex items-center gap-2">
                     <span class="dot" style="background: {r.signedIn === false ? 'var(--color-ask)' : 'var(--color-ok)'}"></span>
-                    <a href={href("agent", r.agent)} class="font-medium hover:underline">{r.agent}</a><span class="text-mute">→</span><span class="mono">{r.server}</span>
+                    <a href={href("agent", r.agent)} class="font-medium hover:underline">{r.agent}</a><span class="text-mute" aria-hidden="true">→</span><span class="mono">{r.server}</span>
                     <span class="ml-auto text-[12px] text-mute">{r.auth === "oauth" ? (r.signedIn ? "signed in" : "not signed in") : isApp ? "key on your computer" : "headers from .env"}</span>
                   </div>
                   {#if r.local}
@@ -247,6 +260,6 @@
   .qr :global(svg) { display: block; width: 100%; height: auto; }
   details > summary { list-style: none; }
   details > summary::-webkit-details-marker { display: none; }
-  details > summary::before { content: "▸ "; }
+  details > summary::before { content: "▸ " / ""; }
   details[open] > summary::before { content: "▾ "; }
 </style>

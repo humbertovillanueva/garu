@@ -33,11 +33,7 @@ export const backHandlers: (() => boolean)[] = [];
 
 export async function setupNative(onResume: () => void): Promise<void> {
   if (!isApp) return;
-  try {
-    const { StatusBar, Style } = await import("@capacitor/status-bar");
-    await StatusBar.setStyle({ style: Style.Dark });
-    await StatusBar.setBackgroundColor({ color: "#0a0c0f" }).catch(() => {});
-  } catch { /* not on Android */ }
+  // The status bar's style and color follow the theme: lib/theme.svelte.ts sets them.
   try {
     const { App } = await import("@capacitor/app");
     await App.addListener("backButton", ({ canGoBack }) => {

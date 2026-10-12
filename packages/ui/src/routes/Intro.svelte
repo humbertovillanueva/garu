@@ -123,10 +123,10 @@
           <h1>Connect to your computer.</h1>
           <p>Your agents live on the computer running Garu. Pair this phone once and it talks straight to that computer over your private network; there's no Garu server in between.</p>
           <ol class="steps">
-            <li><i>1</i><span>On your computer, open Garu → <b>Settings → Your phone &amp; other devices</b>.</span></li>
-            <li><i>2</i><span>Press <b>Show pairing code</b>, then {canScan ? "scan it below, or copy the link there and paste it below" : "press Copy link there and paste it below"}.</span></li>
-            <li><i>3</i><span>Both need <b>Tailscale</b> (free), signed in to the same account.</span></li>
-            <li><i>4</i><span>Don't have Garu yet? <a class="link" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">The website ↗</a> walks you through setting it up on your computer.</span></li>
+            <li><i aria-hidden="true">1</i><span>On your computer, open Garu, then <b>Settings, Your phone &amp; other devices</b>.</span></li>
+            <li><i aria-hidden="true">2</i><span>Press <b>Show pairing code</b>, then {canScan ? "scan it below, or copy the link there and paste it below" : "press Copy link there and paste it below"}.</span></li>
+            <li><i aria-hidden="true">3</i><span>Both need <b>Tailscale</b> (free), signed in to the same account.</span></li>
+            <li><i aria-hidden="true">4</i><span>Don't have Garu yet? <a class="link" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">The website <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a> walks you through setting it up on your computer.</span></li>
           </ol>
           <!-- only while this slide shows, so the camera never runs off-screen -->
           {#if i === LAST}<div class="w-full"><Pair embedded /></div>{/if}
@@ -183,7 +183,7 @@
   .agent .when { font-size: 12px; color: var(--color-mute); }
   .agent .does { margin-top: 3px; font-size: 13.5px; line-height: 1.5; color: var(--color-fg-2); }
   .steps { width: 100%; text-align: left; font-size: 13.5px; color: var(--color-fg-2); display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
-  .steps li { display: flex; gap: 12px; align-items: flex-start; } .steps i { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--color-line-2); display: grid; place-items: center; font-style: normal; font-size: 11px; color: var(--color-fg); }
+  .steps li { display: flex; gap: 12px; align-items: flex-start; } .steps i { flex: none; min-width: 22px; min-height: 22px; padding: 0 6px; border-radius: 11px; border: 1px solid var(--color-line-2); display: grid; place-items: center; font-style: normal; font-size: 11px; color: var(--color-fg); }
   .steps b { color: var(--color-fg); font-weight: 500; }
   .link { color: var(--color-fg); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--color-mute); }
   .tag { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; color: var(--color-mute); border: 1px solid var(--color-line); border-radius: 4px; padding: 0 5px; margin-left: 4px; white-space: nowrap; }

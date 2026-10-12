@@ -31,9 +31,9 @@
     </ol>
     <label class="mt-5 block">
       <span class="text-[11px] uppercase tracking-wider text-mute">Token</span>
-      <input class="mono mt-1.5 w-full rounded-lg border hairline bg-bg px-3 py-2.5 text-[13px] outline-none focus:border-accent/60" type="password" autocomplete="off" spellcheck="false" placeholder="paste it here" bind:value={token} use:focus />
+      <input class="mono mt-1.5 w-full rounded-lg border field-border bg-bg px-3 py-2.5 text-[13px] outline-none focus:border-accent/60" type="password" autocomplete="off" spellcheck="false" placeholder="paste it here" bind:value={token} use:focus />
     </label>
-    {#if error}<p class="mt-2 text-[12.5px]" style="color: var(--color-bad)">{error}</p>{/if}
+    {#if error}<p class="mt-2 text-[12.5px]" role="alert" style="color: var(--color-bad)">{error}</p>{/if}
     <button class="btn btn-primary mt-4 w-full" type="submit" disabled={busy || !token.trim()}>{busy ? "Signing in…" : "Sign in"}</button>
     <p class="mt-4 text-[11.5px] leading-relaxed text-mute">The token is like a key: anyone who has it can approve actions as you. It never leaves your devices.</p>
   </form>

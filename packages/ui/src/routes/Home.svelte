@@ -62,7 +62,7 @@
 <section class="space-y-8">
   <div class="rise">
     <h1 class="text-[26px] font-semibold tracking-tight">{greeting}.</h1>
-    <p class="mt-1 text-[14px] text-fg-2">
+    <p class="mt-1 text-[14px] text-fg-2" aria-live="polite">
       {#if !live.loaded}Loading your agents…
       {:else if live.pending.length}<span class="font-medium text-fg">{live.pending.length} decision{live.pending.length === 1 ? "" : "s"}</span> waiting for you.
       {:else if working.length}{working.map((a) => a.name).join(", ")} {working.length === 1 ? "is" : "are"} working right now.
@@ -216,7 +216,7 @@
                 <div class="min-w-0 flex-1">
                   <div class="flex items-baseline gap-2 text-[13.5px]">
                     <span class="font-medium">{i.agent}</span>
-                    {#if n > 1}<span class="text-mute">× {n}</span>{/if}
+                    {#if n > 1}<span class="text-mute"><span aria-hidden="true">×</span><span class="sr-only">times</span> {n}</span>{/if}
                     {#if i.kind.startsWith("run.")}
                       <span style="color: {kindColor(i.kind)}">{statusLabel(i.kind.slice(4))}</span>
                     {:else if i.kind === "approval.decided"}

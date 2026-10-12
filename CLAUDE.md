@@ -113,7 +113,9 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   `ui/.../SuggestionCard.svelte`); "Add to Garufile" inserts it above the existing ask rule.
 - Scheduler catch-up: a cron fire missed in the last 6 h (machine asleep/off) runs once on start,
   trigger `catch-up:<cron>`. Don't double-fire; don't run catch-ups in parallel.
-- UI: black and white, no orange. Agent avatar colors come from `packages/ui/src/lib/colors.ts`
+- UI: black and white, no orange, in a dark and a light theme: every color is a token in `app.css`
+  (the light theme flips them under `[data-theme="light"]`), never a hex in a component. Agent avatar
+  colors come from `packages/ui/src/lib/colors.ts`
   (KIND_COLOR) and are used everywhere an agent is colored. Times are human (`humanTime`, `clock`,
   `until` in `lib/format.ts`): never ISO strings, never UTC, and no seconds in the UI, with one exception:
   the run timeline is the log of one run, so its exact stamps and `ok · 340ms` stay. `until()` already
@@ -133,9 +135,11 @@ Built: kernel, CLI, control room, Android debug app, iPhone app in the Simulator
 launch video v7, onboarding and UI audit fixes (2026-10-10), the always-on fixes from the full
 audit and its security items (2026-10-12). Open: the rest of that audit, in `docs/audit-2026-10-12.md`.
 
-Not launching yet. Order: understand → real app → Play closed test → launch → beyond. Still on the
-real-app list: crash screen, accessibility pass, theme setting, release signing (Humberto makes the
-keystore), support path, Why Garu page + fresh screenshots, privacy review. Then marketing (posts;
+Not launching yet. Order: understand → real app → Play closed test → launch → beyond. The real-app
+list is done in code (2026-10-12: crash screen, dark and light theme, accessibility pass, release
+signing wired, support-email slot in `packages/ui/src/lib/support.ts`, privacy page current). On
+Humberto's side before the closed test: the Play developer account, the upload key (`docs/android.md`),
+the support alias, twelve testers. The listing is `docs/launch/play-store.md`. Then marketing (posts;
 the video is done). Roadmap after that: push via a relay, hosted Garu, `garu install` registry, iPhone
 on a real device and TestFlight, two-way Slack.
 

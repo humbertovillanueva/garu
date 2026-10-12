@@ -41,15 +41,16 @@
     <h1 class="text-[24px] font-semibold tracking-tight">Report a problem</h1>
     <p class="mt-1 text-[13.5px] text-fg-2">Say what happened. The report opens as a draft issue on GitHub for you to review before posting; nothing is sent from here.</p>
   </div>
-  <textarea class="field" rows="5" placeholder="What did you expect, and what happened instead?" bind:value={what}></textarea>
-  <label class="flex items-center gap-3 text-[14px]">
+  <textarea class="field" rows="5" aria-label="What happened" placeholder="What did you expect, and what happened instead?" bind:value={what}></textarea>
+  <label class="flex min-h-11 items-center gap-3 text-[14px]">
     <input type="checkbox" class="h-4 w-4 accent-[var(--color-accent)]" bind:checked={includeLog} />
     <span>Include the last lines of Garu's log <span class="text-mute">(addresses and keys are masked)</span></span>
   </label>
   <div class="flex flex-wrap gap-2">
-    <a class="btn btn-primary" href={issueUrl} target="_blank" rel="noreferrer">Open as a GitHub issue ↗</a>
+    <a class="btn btn-primary" href={issueUrl} target="_blank" rel="noreferrer">Open as a GitHub issue <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
     <button class="btn" onclick={copy}>{copied ? "Copied" : "Copy the report"}</button>
-    {#if error}<span class="self-center text-[12.5px]" style="color: var(--color-bad)">{error}</span>{/if}
+    <span class="sr-only" role="status">{copied ? "Copied to the clipboard" : ""}</span>
+    {#if error}<span class="self-center text-[12.5px]" role="alert" style="color: var(--color-bad)">{error}</span>{/if}
   </div>
   {#if logPart && !linkHasLog}<p class="text-[12.5px] text-mute">The log is too long for the GitHub link: press Copy the report and paste it into the issue.</p>{/if}
   <details class="panel rise">

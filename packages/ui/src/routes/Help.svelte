@@ -2,6 +2,7 @@
   /** What each screen does and the three rules, in the words of the intro. Static on purpose: it works offline. */
   import { href } from "../lib/router.svelte";
   import { isApp } from "../lib/server.svelte";
+  import { SUPPORT_EMAIL } from "../lib/support";
   const sections: { title: string; body: string[] }[] = [
     { title: "What Garu is", body: [
       "Garu runs small AI agents on your own computer, on a schedule, under rules you wrote. An agent is one file: who it is, which model it thinks with, when it runs, which tools it has, and what each tool may do.",
@@ -46,8 +47,9 @@
     </div>
   {/each}
   <div class="rise flex flex-wrap gap-x-5 gap-y-2 text-[13.5px]">
-    <a class="underline hover:text-fg" href={href("about")}>About Garu</a>
-    <a class="underline hover:text-fg" href={href("report")}>Report a problem</a>
-    <a class="underline hover:text-fg" href="https://github.com/humbertovillanueva/garu/blob/main/docs/why.md" target="_blank" rel="noreferrer">Why Garu ↗</a>
+    <a class="inline-flex min-h-11 items-center underline hover:text-fg" href={href("about")}>About Garu</a>
+    <a class="inline-flex min-h-11 items-center underline hover:text-fg" href={href("report")}>Report a problem</a>
+    {#if SUPPORT_EMAIL}<a class="inline-flex min-h-11 items-center underline hover:text-fg" href="mailto:{SUPPORT_EMAIL}">Email {SUPPORT_EMAIL}</a>{/if}
+    <a class="inline-flex min-h-11 items-center underline hover:text-fg" href="https://github.com/humbertovillanueva/garu/blob/main/docs/why.md" target="_blank" rel="noreferrer">Why Garu <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
   </div>
 </section>

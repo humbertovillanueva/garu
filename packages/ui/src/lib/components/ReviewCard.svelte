@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import { haptic } from "../native";
   /**
    * One paused tool call, shown as the thing it is: an email looks like an email,
@@ -9,6 +10,9 @@
   import { until, when } from "../format";
   import Mark from "./Mark.svelte";
   import type { ApprovalRequest, WriteDiff } from "../types";
+  import { announce } from "../a11y.svelte";
+  /** This card's element: where focus goes next is decided from its neighbours. */
+  let cardEl = $state<HTMLElement | null>(null);
 
   let { req, compact = false }: { req: ApprovalRequest; compact?: boolean } = $props();
   let busy = $state(false);
@@ -24,9 +28,13 @@
       await api.decide(req.id, approve, forDuration, approve ? undefined : note.trim() || undefined);
       void haptic(approve ? "success" : "warning");
       // The card leaves now instead of when the live stream catches up, so it can't be tapped again.
-      // It stays busy until then: there is nothing left to decide on it.
+      // It stays busy until then: there is nothing left to decide on it. Say what happened, and move
+      // focus to the next card (or the page), since the button that had it is about to disappear.
+      announce(`${approve ? "Approved" : "Declined"}: ${req.agent}, ${object}`);
+      const next = (cardEl?.nextElementSibling ?? cardEl?.previousElementSibling)?.querySelector<HTMLElement>("button") ?? document.querySelector<HTMLElement>("main");
       live.pending = live.pending.filter((p) => p.id !== req.id);
       live.tick++;
+      void tick().then(() => next?.focus({ preventScroll: true }));
       void refreshCore().catch(() => {});
     } catch (e) { error = errorText(e); busy = false; }
   }
@@ -92,7 +100,7 @@
   });
 </script>
 
-<div class="panel-raised rise overflow-hidden" style="border-color: color-mix(in oklab, var(--color-ask) 35%, var(--color-line-2))">
+<div bind:this={cardEl} class="panel-raised rise overflow-hidden" style="border-color: color-mix(in oklab, var(--color-ask) 35%, var(--color-line-2))">
   <div class="flex flex-wrap items-start gap-3 px-4 pt-4">
     <Mark name={req.agent} size={34} status="waiting" />
     <div class="min-w-0 flex-1">
@@ -117,7 +125,7 @@
   <div class="px-4 pt-3">
     {#if shape === "email"}
       <div class="overflow-hidden rounded-lg border hairline bg-bg/60">
-        <div class="grid grid-cols-[64px_1fr] gap-y-1 border-b hairline px-3 py-2 text-[13px]">
+        <div class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 border-b hairline px-3 py-2 text-[13px]">
           <!-- Every address in full, one per line: who it goes to is what you're approving. -->
           {#snippet people(xs: string[])}<span class="min-w-0 space-y-1 [overflow-wrap:anywhere]">{#each xs.map(person) as p}<span class="block">{#if p.name}<span class="block">{p.name}</span>{/if}<span class="mono block {p.name ? 'text-[12px] text-mute' : ''}">{p.addr}</span></span>{/each}</span>{/snippet}
           <span class="text-mute">To</span>{@render people(list("to") ?? list("recipients") ?? [])}
@@ -133,7 +141,7 @@
           <span class="ml-auto flex-none">{diffReady ? changeLabel : `${content.split("\n").length} lines · ${content.length} chars`}</span>
         </div>
         {#if diffReady}
-          <pre class="mono max-h-64 overflow-auto px-0 py-2 text-[12.5px] leading-relaxed">{#each rows as r}<div class="diffline" data-t={r.t}>{#if r.t === "…"}<button class="tap w-full py-1.5 text-left text-mute" onclick={() => (wholeFile = true)}>⋯ {r.n} unchanged line{r.n === 1 ? "" : "s"}</button>{:else}<span class="sign">{r.t === "=" ? " " : r.t}</span>{r.s}{/if}</div>{/each}</pre>
+          <pre class="mono max-h-64 overflow-auto px-0 py-2 text-[12.5px] leading-relaxed">{#each rows as r}<div class="diffline" data-t={r.t}>{#if r.t === "…"}<button class="tap w-full py-1.5 text-left text-mute" onclick={() => (wholeFile = true)}><span aria-hidden="true">⋯ </span>{r.n} unchanged line{r.n === 1 ? "" : "s"}</button>{:else}<span class="sign">{r.t === "=" ? " " : r.t}</span>{r.s}{/if}</div>{/each}</pre>
           {#if wholeFile && (diff?.unchanged ?? 0) > 0}<button class="tap border-t hairline px-3 py-1.5 text-[11.5px] text-mute hover:text-fg" onclick={() => (wholeFile = false)}>show only the change</button>{/if}
         {:else}
           {#if diff?.secret}<p class="border-b hairline px-3 py-2 text-[12px] text-mute">This file holds secrets, so the current one isn't shown; below is what {req.agent} wants to write.</p>
@@ -166,7 +174,7 @@
       </div>
     {/if}
     {#if shape !== "generic"}
-      <button class="tap mt-2 text-[11.5px] text-mute hover:text-fg" onclick={() => (showRaw = !showRaw)}>{showRaw ? "hide" : "show"} raw arguments</button>
+      <button class="tap mt-2 text-[11.5px] text-mute hover:text-fg" aria-expanded={showRaw} onclick={() => (showRaw = !showRaw)}>{showRaw ? "hide" : "show"} raw arguments</button>
       {#if showRaw}<pre class="mono mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-md bg-bg/60 p-2 text-[11.5px] text-mute">{JSON.stringify(req.args, null, 2)}</pre>{/if}
     {/if}
   </div>
@@ -177,8 +185,8 @@
     {#if !declining}
       <button class="btn btn-bad" disabled={busy} onclick={() => (declining = true)}>Decline</button>
     {/if}
-    {#if error}<span class="text-[12.5px]" style="color: var(--color-bad)">{error}</span>{/if}
-    <a href={href("run", req.agent, req.runId)} class="tap ml-auto text-[12px] text-mute hover:text-fg">open run →</a>
+    {#if error}<span class="text-[12.5px]" role="alert" style="color: var(--color-bad)">{error}</span>{/if}
+    <a href={href("run", req.agent, req.runId)} class="tap ml-auto text-[12px] text-mute hover:text-fg">open run <span aria-hidden="true">→</span></a>
     <!-- What the 24h button really grants, on the card itself: a tooltip never shows on a phone. -->
     <span class="basis-full text-[11.5px] text-mute">“Approve for 24h” {grantHint.replace(/^Also allow/, "also allows")}.</span>
   </div>

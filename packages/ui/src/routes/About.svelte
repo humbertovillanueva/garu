@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { SUPPORT_EMAIL } from "../lib/support";
   import { api, live } from "../lib/api.svelte";
   import { href } from "../lib/router.svelte";
   import Logo from "../lib/components/Logo.svelte";
@@ -27,11 +28,12 @@
     <div class="flex justify-between gap-4 px-4 py-3"><span class="text-mute">Made by</span><span>Humberto Villanueva, Salt Lake City</span></div>
   </div>
   <div class="panel rise divide-y divide-line text-[14px]">
-    <a class="card-hover block px-4 py-3" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">Website ↗</a>
-    <a class="card-hover block px-4 py-3" href="https://github.com/humbertovillanueva/garu" target="_blank" rel="noreferrer">Source code ↗</a>
-    <a class="card-hover block px-4 py-3" href="https://humbertovillanueva.github.io/garu/privacy.html" target="_blank" rel="noreferrer">Privacy ↗</a>
+    <a class="card-hover block px-4 py-3" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">Website <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
+    <a class="card-hover block px-4 py-3" href="https://github.com/humbertovillanueva/garu" target="_blank" rel="noreferrer">Source code <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
+    <a class="card-hover block px-4 py-3" href="https://humbertovillanueva.github.io/garu/privacy.html" target="_blank" rel="noreferrer">Privacy <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
     <a class="card-hover block px-4 py-3" href={href("help")}>Help</a>
     <a class="card-hover block px-4 py-3" href={href("report")}>Report a problem</a>
+    {#if SUPPORT_EMAIL}<a class="card-hover block px-4 py-3" href="mailto:{SUPPORT_EMAIL}">Email support</a>{/if}
   </div>
   <p class="text-[12.5px] text-mute">Garu runs your agents on your own computer. The app stores only the address and the pairing token of that computer, on this phone.</p>
 </section>

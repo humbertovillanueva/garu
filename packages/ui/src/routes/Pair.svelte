@@ -10,6 +10,8 @@
   import { build, markIntroSeen, parsePairing, remember, server } from "../lib/server.svelte";
   import { canScan, haptic } from "../lib/native";
 
+  /** The button that had focus goes away when the scanner opens; Cancel takes it. */
+  const takeFocus = (n: HTMLElement) => { n.focus(); };
   let { problem = null, embedded = false, title = "Can't reach your control room" }: { problem?: string | null; embedded?: boolean; title?: string } = $props();
 
   let text = $state("");
@@ -101,12 +103,12 @@
     {/if}
 
     {#if scanning}
-      <div class="relative mt-4 overflow-hidden rounded-xl border hairline bg-black" style="aspect-ratio: 1 / 1">
+      <div class="relative mt-4 overflow-hidden rounded-xl border hairline bg-black" style="aspect-ratio: 1 / 1" role="img" aria-label="Camera: point it at the pairing code">
         <!-- svelte-ignore a11y_media_has_caption -->
         <video bind:this={video} class="h-full w-full object-cover" playsinline muted></video>
         <div class="pointer-events-none absolute inset-6 rounded-lg border-2 border-accent/70"></div>
       </div>
-      <button class="btn mt-3 w-full" onclick={stopScan}>Cancel</button>
+      <button class="btn mt-3 w-full" onclick={stopScan} use:takeFocus>Cancel</button>
     {:else}
       {#if canScan}
         <button class="btn btn-primary mt-5 w-full" onclick={startScan} disabled={busy}>Scan the code</button>
@@ -115,21 +117,21 @@
       <form onsubmit={(e) => { e.preventDefault(); void connect(text); }}>
         <label class="block">
           <span class="text-[11px] uppercase tracking-wider text-mute">Sign-in link</span>
-          <input class="mono mt-1.5 w-full rounded-lg border hairline bg-bg px-3 py-2.5 text-[12.5px] outline-none focus:border-accent/60" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://your-mac.tail…ts.net/?token=…" style={parsed ? "-webkit-text-security: disc" : undefined} bind:value={text} />
+          <input class="mono mt-1.5 w-full rounded-lg border field-border bg-bg px-3 py-2.5 text-[12.5px] outline-none focus:border-accent/60" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://your-mac.tail…ts.net/?token=…" style={parsed ? "-webkit-text-security: disc" : undefined} bind:value={text} />
         </label>
         {#if parsed}<p class="mt-1.5 text-[11.5px] text-mute">A link to <span class="mono [overflow-wrap:anywhere]">{parsed.base.replace(/^https?:\/\//, "")}</span>. Its key stays hidden.</p>{/if}
         <button class="btn mt-3 w-full" class:btn-primary={!canScan} type="submit" disabled={busy || !text.trim()}>{busy ? "Connecting…" : "Connect"}</button>
       </form>
     {/if}
 
-    {#if error}<p class="mt-3 text-[12.5px] leading-relaxed" style="color: var(--color-bad)">{error}</p>{/if}
+    {#if error}<p class="mt-3 text-[12.5px] leading-relaxed" role="alert" style="color: var(--color-bad)">{error}</p>{/if}
     <p class="mt-4 text-[11.5px] leading-relaxed text-mute">The link carries a key that lets this phone approve actions as you. It is stored only on this phone.</p>
     {#if !embedded && !problem}
       <div class="mt-4 flex flex-wrap gap-x-4 text-[12.5px]">
-        <a class="inline-flex min-h-11 items-center text-fg underline decoration-mute underline-offset-2" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">Don't have Garu yet? ↗</a>
+        <a class="inline-flex min-h-11 items-center text-fg underline decoration-mute underline-offset-2" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">Don't have Garu yet? <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
         <button class="min-h-11 text-fg-2 underline decoration-mute underline-offset-2" onclick={() => { markIntroSeen(false); location.reload(); }}>See the introduction</button>
       </div>
     {/if}
-    {#if !embedded}<p class="mt-3 text-[10.5px] text-mute">{buildText(build)}</p>{/if}
+    {#if !embedded}<p class="mt-3 text-[11.5px] text-mute">{buildText(build)}</p>{/if}
   </div>
 </div>

@@ -24,17 +24,17 @@
   <a href={href("home")} class="flex items-center gap-2.5 px-5 pt-5 pb-4">
     <Logo size={26} />
     <span class="text-[16px] font-semibold tracking-tight">Garu</span>
-    <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute" title={live.connected ? "connected to the control room" : "reconnecting…"}>
-      <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{live.connected ? "live" : "…"}
+    <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute" role="status">
+      <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{live.connected ? "live" : "reconnecting"}
     </span>
   </a>
 
-  <nav class="space-y-0.5 px-3">
+  <nav aria-label="Main" class="space-y-0.5 px-3">
     {#each nav as item}
       <a href={href(item.n)} class="navitem" class:active={item.active()}>
         <span class="navicon"><Icon name={item.icon} size={17} /></span>
         <span>{item.label}</span>
-        {#if item.n === "inbox" && live.pending.length}<span class="ml-auto rounded-full px-1.5 text-[11px] font-semibold text-bg" style="background: var(--color-ask)">{live.pending.length}</span>{/if}
+        {#if item.n === "inbox" && live.pending.length}<span class="ml-auto rounded-full px-1.5 text-[11px] font-semibold text-bg" style="background: var(--color-ask)">{live.pending.length}<span class="sr-only"> waiting</span></span>{/if}
       </a>
     {/each}
   </nav>
@@ -43,7 +43,7 @@
     <a href={href("agents")} class="hover:text-fg">Agents</a>
     <span>{live.agents.length}</span>
   </div>
-  <nav class="mt-1 flex-1 space-y-0.5 overflow-y-auto px-3 pb-3">
+  <nav aria-label="Agents" class="mt-1 flex-1 space-y-0.5 overflow-y-auto px-3 pb-3">
     {#each live.agents as a (a.name)}
       {@const sub = short(a)}
       <a href={href("agent", a.name)} class="navitem agent" class:active={isActive("agent", a.name)}>
@@ -81,7 +81,7 @@
     <Logo size={22} />
     <span class="text-[15px] font-semibold tracking-tight">Garu</span>
   </a>
-  <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute">
+  <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute" role="status">
     <!-- "connecting" until the first connection or a drop: a fresh launch isn't offline -->
     <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : live.disconnectedAt ? 'var(--color-ask)' : 'var(--color-mute)'}"></span>{live.connected ? "live" : live.disconnectedAt ? "offline" : "connecting"}
   </span>
@@ -89,13 +89,13 @@
 </header>
 
 <!-- Phone: bottom tab bar, within thumb reach -->
-<nav class="phonebar fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t hairline bg-bg/95 backdrop-blur lg:hidden" style="padding-bottom: env(safe-area-inset-bottom)">
+<nav aria-label="Main" class="phonebar fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t hairline bg-bg/95 backdrop-blur lg:hidden" style="padding-bottom: env(safe-area-inset-bottom)">
   {#each [["home", "Home"], ["inbox", "Inbox"], ["agents", "Agents"], ["runs", "Runs"]] as const as [n, l]}
     {@const active = route.name === n || (n === "agents" && route.name === "agent") || (n === "runs" && (route.name === "run" || route.name === "cost"))}
-    <a href={href(n)} class="tab" class:active aria-label={l}>
+    <a href={href(n)} class="tab" class:active aria-current={active ? "page" : undefined}>
       <span class="relative">
         <Icon name={n} />
-        {#if n === "inbox" && live.pending.length}<span class="absolute -right-2.5 -top-1.5 rounded-full px-1.5 text-[10px] font-semibold leading-4 text-bg" style="background: var(--color-ask)">{live.pending.length}</span>{/if}
+        {#if n === "inbox" && live.pending.length}<span class="absolute -right-2.5 -top-1.5 rounded-full px-1.5 text-[11px] font-semibold leading-4 text-bg" style="background: var(--color-ask)">{live.pending.length}<span class="sr-only"> waiting</span></span>{/if}
       </span>
       <span>{l}</span>
     </a>

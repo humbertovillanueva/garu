@@ -100,7 +100,7 @@
     <div class="panel overflow-hidden">
       <table class="w-full text-[13px]">
         <thead class="text-left text-[11px] uppercase tracking-wide text-mute">
-          <tr class="border-b hairline"><th class="px-4 py-2.5 font-medium">Day</th><th class="px-3 py-2.5 font-medium">Agent</th><th class="px-3 py-2.5 text-right font-medium">Runs</th><th class="px-3 py-2.5 text-right font-medium">Cost</th></tr>
+          <tr class="border-b hairline"><th scope="col" class="px-4 py-2.5 font-medium">Day</th><th scope="col" class="px-3 py-2.5 font-medium">Agent</th><th scope="col" class="px-3 py-2.5 text-right font-medium">Runs</th><th scope="col" class="px-3 py-2.5 text-right font-medium">Cost</th></tr>
         </thead>
         <tbody>
           {#each rows.slice().reverse() as r (r.day + r.agent)}

@@ -62,7 +62,7 @@
             {:else if d && d.action === "block"}
               <span class="mono text-[12px] text-mute">never executed</span>
             {/if}
-            <span class="ml-auto text-mute">{open[row.env.seq] ? "−" : "+"}</span>
+            <span class="ml-auto text-mute" aria-hidden="true">{open[row.env.seq] ? "−" : "+"}</span>
           </button>
           {#if open[row.env.seq]}
             <div class="grid gap-3 border-t hairline bg-bg/40 p-3 text-[12px] md:grid-cols-2">
@@ -78,7 +78,7 @@
           {#if e.type === "run.start"}<span class="text-mute">Run started{e["sandbox"] ? ", sandboxed" : ""}</span>
           {:else if e.type === "tools.offered"}<span class="text-mute">{(e["offered"] as string[]).length} tools offered{(e["hidden"] as string[]).length ? `, ${(e["hidden"] as string[]).length} more hidden because the policy always blocks them` : ""}</span>
           {:else if e.type === "run.end"}<span class="font-medium">Run {statusLabel(e["status"] as string)}</span>{#if e["summary"]}<span class="text-fg-2">— {plainTimes(String(e["summary"]))}</span>{/if}
-          {:else if e.type === "budget.exceeded"}<span style="color: var(--color-bad)">budget cap hit: {usd(e["costUsd"] as number)} ≥ {usd(e["maxCostUsd"] as number)} — {e["pendingToolCalls"]} call(s) not executed</span>
+          {:else if e.type === "budget.exceeded"}<span style="color: var(--color-bad)">budget cap hit: {usd(e["costUsd"] as number)} reached the cap of {usd(e["maxCostUsd"] as number)} — {e["pendingToolCalls"]} call(s) not executed</span>
           {:else if e.type === "model.retry"}<span style="color: var(--color-ask)">model busy ({e["reason"]}) — retrying in {Math.round((e["waitMs"] as number) / 1000)}s, attempt {e["attempt"]} of {e["maxAttempts"]}</span>
           {:else if e.type === "tools.retry"}<span style="color: var(--color-ask)">tool server "{e["server"]}" didn't start in time — retrying in {Math.round((e["waitMs"] as number) / 1000)}s</span>
           {:else if e.type === "error"}<span style="color: var(--color-bad)">{e["message"]}</span>

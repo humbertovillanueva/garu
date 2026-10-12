@@ -39,6 +39,37 @@ Press *Copy link* on the computer and paste it into the app instead.
 
 Changed the UI? Run `npm run sync -w @garu/app` again and press Run again.
 
+## A release for Google Play
+
+Play wants an app bundle (`.aab`) signed with an upload key you keep. Once:
+
+```sh
+keytool -genkeypair -v -keystore ~/garu-upload.jks -alias garu -keyalg RSA -keysize 2048 -validity 10000
+```
+
+It asks for a password and your name; remember the password and back the file up somewhere that
+isn't this repo (losing it means a support request to Google to reset the upload key). Then write
+`packages/app/android/keystore.properties` (ignored by git):
+
+```
+storeFile=/Users/you/garu-upload.jks
+storePassword=…
+keyAlias=garu
+keyPassword=…
+```
+
+Each upload needs a higher `versionCode` in `app/build.gradle` (1, 2, 3…; `versionName` follows
+the repo's version). Then:
+
+```sh
+npm run sync -w @garu/app
+cd packages/app/android && ./gradlew bundleRelease
+```
+
+The bundle lands at `app/build/outputs/bundle/release/app-release.aab`. Upload it in Play Console
+under the testing track; Google signs what users install with its own key (Play App Signing), your
+key only proves the upload came from you.
+
 ## How the pieces fit
 
 - `capacitor.config.ts`: app id `io.github.humbertovillanueva.garu`, web assets from

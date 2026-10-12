@@ -80,7 +80,7 @@
                   <div class="min-w-0 flex-1">
                     <div class="flex items-baseline gap-2 text-[13.5px]">
                       <span class="font-medium">{first.agent}</span>
-                      <span class="text-mute">× {n}</span>
+                      <span class="text-mute"><span aria-hidden="true">×</span><span class="sr-only">times</span> {n}</span>
                       <Status status={row.status} />
                       <span class="ml-auto flex-none text-[12px] text-mute">{clock(last.startedAt)} – {clock(first.startedAt)}</span>
                     </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api, live, agentByName, loader } from "../lib/api.svelte";
+  import { scrollBehavior } from "../lib/a11y.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
   import { usd, humanTime, statusLine, until, duration, cronLabel, triggerLabel, plainTimes } from "../lib/format";
@@ -45,7 +46,7 @@
       const grew = (messages?.length ?? 0) !== m.length;
       messages = m;
       // A new message scrolls into view; opening the page does not, so the page lands on the agent's name.
-      if (grew && !first) { await tick(); bottom?.scrollIntoView({ behavior: "smooth", block: "end" }); }
+      if (grew && !first) { await tick(); bottom?.scrollIntoView({ behavior: scrollBehavior(), block: "end" }); }
     }, (m) => (loadError = m));
   });
 
@@ -79,7 +80,7 @@
     seenLive = n; seenPending = p;
     void tick().then(() => {
       const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 320;
-      if (nearBottom || p > 0) bottom?.scrollIntoView({ behavior: "smooth", block: "end" });
+      if (nearBottom || p > 0) bottom?.scrollIntoView({ behavior: scrollBehavior(), block: "end" });
     });
   });
   const liveCost = $derived.by(() => {
@@ -159,7 +160,7 @@
       <div class="panel-raised rise p-4" style="border-color: color-mix(in oklab, var(--color-ask) 30%, var(--color-line-2))">
         <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
           <span class="dot pulse" style="background: var(--color-ask)"></span>
-          <span class="text-[14px] font-medium">{a.status === "waiting" ? "Paused for you" : "Working"}</span>
+          <span class="text-[14px] font-medium" role="status">{a.status === "waiting" ? "Paused for you" : "Working"}</span>
           {#if a.inFlight}<span class="text-[12px] text-mute">turn {a.inFlight.turn}{a.maxTurns ? ` of ${a.maxTurns}` : ""}</span>{/if}
           <div class="ml-auto"><Budget spent={liveCost} cap={a.budget?.maxCostUsd ?? null} free={a.budget?.free ?? false} /></div>
         </div>
@@ -186,12 +187,12 @@
       {@const busy = a.status === "working" || a.status === "waiting"}
       <div class="panel-raised rise sticky p-2" style="bottom: calc(0.75rem + var(--tabbar))">
         <div class="flex items-end gap-2">
-          <textarea class="field min-h-[42px] flex-1 resize-none" rows="1" placeholder={busy ? (a.status === "working" ? `${a.name} is working…` : "Waiting for your decision above") : hasKeyboard ? `Message ${a.name}  (${modKey}↵)` : `Message ${a.name}`} bind:value={note} bind:this={box} onkeydown={onKey} disabled={busy}></textarea>
-          <button class="btn btn-primary grid h-[42px] w-[42px] flex-none place-items-center rounded-full p-0" disabled={starting || !note.trim() || busy} onclick={send} aria-label="Send"><Icon name="send" size={18} /></button>
+          <textarea class="field min-h-[42px] flex-1 resize-none" rows="1" placeholder={busy ? (a.status === "working" ? `${a.name} is working…` : "Waiting for your decision above") : hasKeyboard ? `Message ${a.name}  (${modKey}↵)` : `Message ${a.name}`} aria-label="Message {a.name}" bind:value={note} bind:this={box} onkeydown={onKey} disabled={busy}></textarea>
+          <button class="btn btn-primary grid h-11 w-11 flex-none place-items-center rounded-full p-0" disabled={starting || !note.trim() || busy} onclick={send} aria-label="Send"><Icon name="send" size={18} /></button>
         </div>
         <div class="mt-1.5 flex items-center gap-2 px-1">
           <button class="btn py-1 text-[12.5px]" disabled={starting || busy} onclick={run} title="Run the agent's standing job now; a message above goes along as a note"><span class="inline-flex items-center gap-1"><Icon name="play" size={13} /> Run now</span></button>
-          {#if error}<span class="text-[12.5px]" style="color: var(--color-bad)">{error}</span>{/if}
+          {#if error}<span class="text-[12.5px]" role="alert" style="color: var(--color-bad)">{error}</span>{/if}
         </div>
       </div>
     {/if}

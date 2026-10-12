@@ -10,8 +10,8 @@ function inline(s: string): string {
     .replace(/`([^`]+)`/g, '<code class="mono rounded bg-bg/60 px-1 py-0.5 text-[0.92em]">$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>")
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a class="underline decoration-mute underline-offset-2 hover:text-fg" href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a class="underline decoration-mute underline-offset-2 hover:text-fg" href="$2" target="_blank" rel="noopener noreferrer">$2</a>');
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a class="underline decoration-mute underline-offset-2 hover:text-fg" href="$2" target="_blank" rel="noopener noreferrer">$1<span class="sr-only"> (opens in a new tab)</span></a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a class="underline decoration-mute underline-offset-2 hover:text-fg" href="$2" target="_blank" rel="noopener noreferrer">$2<span class="sr-only"> (opens in a new tab)</span></a>');
 }
 
 /** `breaks`: a single newline is a line break, for short summaries written one item per line. */

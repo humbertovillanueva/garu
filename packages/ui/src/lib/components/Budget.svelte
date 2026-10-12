@@ -12,6 +12,6 @@
     {#if cap}<span>cap {usd(cap)}</span>{:else if !free}<span>no cap</span>{/if}
   </div>
   <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-panel-3">
-    {#if cap}<div class="h-full rounded-full transition-[width] duration-500" style="width:{pct}%; background:{color}"></div>{/if}
+    {#if cap}<div class="h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none" style="width:{pct}%; background:{color}"></div>{/if}
   </div>
 </div>

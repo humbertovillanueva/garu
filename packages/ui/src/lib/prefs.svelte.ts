@@ -5,8 +5,10 @@ export interface Prefs {
   haptics: boolean;
   /** Opening the app with a decision waiting lands on the inbox. */
   landOnInbox: boolean;
+  /** Dark, light, or whatever the device is set to. */
+  theme: "auto" | "dark" | "light";
 }
-const defaults: Prefs = { haptics: true, landOnInbox: true };
+const defaults: Prefs = { haptics: true, landOnInbox: true, theme: "auto" };
 function load(): Prefs {
   try {
     const raw = localStorage.getItem(KEY);

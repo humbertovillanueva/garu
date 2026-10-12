@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api, live, loader, refreshCore, errorText } from "../lib/api.svelte";
+  import { announce } from "../lib/a11y.svelte";
   import { href } from "../lib/router.svelte";
   import { when, until, decidedBy, expired } from "../lib/format";
   import ReviewCard from "../lib/components/ReviewCard.svelte";
@@ -24,6 +25,7 @@
       const done = new Set(results.filter((r) => r.ok).map((r) => r.id));
       const failed = results.length - done.size;
       if (failed) notice = `${failed} of ${results.length} couldn't be ${approve ? "approved" : "declined"}. They may have expired or been decided elsewhere.`;
+      announce(`${done.size} ${approve ? "approved" : "declined"}`);
       live.pending = live.pending.filter((p) => !done.has(p.id));
       live.tick++;
       void refreshCore().catch(() => {});
@@ -97,7 +99,7 @@
       <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">Recently decided</h2>
       <div class="panel divide-y divide-line">
         {#each recent as r (r.id)}
-          <a href={href("run", r.agent, r.runId)} class="card-hover flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-[13px] first:rounded-t-xl last:rounded-b-xl">
+          <a href={href("run", r.agent, r.runId)} class="card-hover flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-3 text-[13px] first:rounded-t-xl last:rounded-b-xl">
             <Mark name={r.agent} size={22} />
             <span class="font-medium">{r.agent}</span>
             <span class="mono text-fg-2">{r.tool}</span>

@@ -23,6 +23,28 @@
 /* The one color for an agent with no face, and for "everyone else" in charts. Agent colors come from lib/colors.ts. */
 :root {
   --color-s-other: #5b6472;
+  --shadow-panel: 0 1px 0 rgba(255,255,255,.03) inset, 0 12px 40px -20px rgba(0,0,0,.8);
+  color-scheme: dark;
+}
+
+/* The light theme: the same tokens, flipped. Still black and white; status colors a shade deeper so they read on white. */
+:root[data-theme="light"] {
+  --color-bg: #f5f4f0;
+  --color-panel: #ffffff;
+  --color-panel-2: #f1efea;
+  --color-panel-3: #e8e5df;
+  --color-line: #e2dfd8;
+  --color-line-2: #cdc8bf;
+  --color-fg: #15171b;
+  --color-fg-2: #474e5b;
+  --color-mute: #666e7c;
+  --color-accent: #15171b;
+  --color-ok: #197a42;
+  --color-ask: #8a6a10;
+  --color-bad: #c62828;
+  --color-s-other: #6b7280;
+  --shadow-panel: 0 1px 0 rgba(255,255,255,.7) inset, 0 8px 24px -16px rgba(20,20,30,.28);
+  color-scheme: light;
 }
 
 html, body { height: 100%; }
@@ -42,7 +64,7 @@ body {
   background: linear-gradient(180deg, color-mix(in oklab, var(--color-panel-2) 100%, white 2%) 0%, var(--color-panel) 100%);
   border: 1px solid var(--color-line-2);
   border-radius: 14px;
-  box-shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 12px 40px -20px rgba(0,0,0,.8);
+  box-shadow: var(--shadow-panel);
 }
 .hairline { border-color: var(--color-line); }
 .card-hover { transition: border-color .15s ease, transform .15s ease, background .15s ease; }
@@ -57,7 +79,7 @@ body {
 /* Entry motion */
 .rise { animation: rise .35s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes rise { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
-@media (prefers-reduced-motion: reduce) { .rise, .pulse, .shimmer { animation: none !important } }
+@media (prefers-reduced-motion: reduce) { .rise, .pulse, .skel::after { animation: none !important } }
 
 /* Skeletons */
 .skel { position: relative; overflow: hidden; background: var(--color-panel-2); border-radius: 6px; }
@@ -79,7 +101,9 @@ body {
 .btn-bad { border-color: color-mix(in oklab, var(--color-bad) 55%, transparent); color: var(--color-bad); }
 .btn-bad:hover { background: color-mix(in oklab, var(--color-bad) 14%, var(--color-panel-2)); }
 .chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 10px; font-size: 12px; border: 1px solid var(--color-line-2); background: var(--color-panel-2); color: var(--color-fg-2); white-space: nowrap; }
-textarea.field, input.field { width: 100%; resize: vertical; min-height: 44px; border-radius: 10px; padding: 10px 12px; background: var(--color-bg); border: 1px solid var(--color-line-2); color: var(--color-fg); font-size: 14px; outline: none; }
+/* A box you can find before you focus it: the border clears 3:1 against the page (the hairline doesn't). */
+.field-border { border-color: color-mix(in oklab, var(--color-mute) 60%, var(--color-bg)); }
+textarea.field, input.field { width: 100%; resize: vertical; min-height: 44px; border-radius: 10px; padding: 10px 12px; background: var(--color-bg); border: 1px solid color-mix(in oklab, var(--color-mute) 60%, var(--color-bg)); color: var(--color-fg); font-size: 14px; outline: none; }
 textarea.field:focus, input.field:focus { border-color: color-mix(in oklab, var(--color-accent) 60%, var(--color-line-2)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 15%, transparent); }
 .navitem { position: relative; display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 9px; color: var(--color-fg-2); font-size: 14px; transition: background .12s ease, color .12s ease; }
 .navitem:hover { background: var(--color-panel-2); color: var(--color-fg); }
@@ -113,7 +137,7 @@ input.toggle:checked::after { transform: translateX(18px); background: #fff; }
 .stat .s { margin-top: 2px; font-size: 12px; color: var(--color-fg-2); }
 :root { --tabbar: calc(3.75rem + env(safe-area-inset-bottom)); }
 @media (min-width: 64rem) { :root { --tabbar: 0px; } }
-.tab { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 7px; font-size: 10.5px; color: var(--color-mute); -webkit-tap-highlight-color: transparent; }
+.tab { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 7px; font-size: 11.5px; overflow-wrap: anywhere; color: var(--color-mute); -webkit-tap-highlight-color: transparent; }
 .tab.active { color: var(--color-accent); }
 
 /* In the app, the phone bars are solid: a blurred translucent bar over a scrolling list leaves ghost frames in Android's WebView. */
