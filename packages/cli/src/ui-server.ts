@@ -9,7 +9,7 @@
  */
 import { createServer, type ServerResponse } from "node:http";
 import { existsSync, readFileSync, realpathSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
-import { extname, join, normalize, relative, resolve } from "node:path";
+import { basename, dirname, extname, join, normalize, relative, resolve } from "node:path";
 import { Cron } from "croner";
 import {
   ChatStore,
@@ -393,9 +393,9 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         // Secrets never go on a review card, not even as "the file this would replace".
         const rel = relative(opts.root, abs);
         if (/^\.env(\.|$)/.test(rel) || rel === ".garu" || rel.startsWith(".garu/")) return json(res, { secret: true });
-        let real = abs;
-        try { real = realpathSync(abs); } catch { /* a new file */ }
-        if (!real.startsWith(opts.root + "/")) return json(res, { outside: true });
+        // A symlink can't lead outside either. The project folder itself may sit behind one (/var on macOS),
+        // so both sides are resolved, and a file that doesn't exist yet is placed by its nearest real parent.
+        if (!realPathOf(abs).startsWith(realPathOf(opts.root) + "/")) return json(res, { outside: true });
         let before = "";
         let isNew = true;
         if (existsSync(abs) && !statSync(abs).isDirectory()) {
@@ -411,11 +411,13 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       if (d && req.method === "POST") {
         const body = (await readBody(req)) as { for?: string; note?: string };
         try {
+          // The duration is checked before anything is decided: a bad one changes nothing.
+          const durationMs = d[2] === "approve" && body.for ? parseDuration(body.for) : null;
           const r = inbox.decide(d[1]!, d[2] === "approve", opts.decider, typeof body.note === "string" ? body.note : undefined);
           let grant;
-          if (d[2] === "approve" && body.for) {
+          if (durationMs !== null) {
             const scope = scopeFor(r.args);
-            grant = grants.create({ agent: r.agent, tool: r.tool, scope, durationMs: parseDuration(body.for), createdBy: opts.decider });
+            grant = grants.create({ agent: r.agent, tool: r.tool, scope, durationMs, createdBy: opts.decider });
             opts.log(`grant ${grant.id}: ${describeGrant(grant)} for ${body.for}`);
             // anything else already waiting that this grant covers gets answered now
             for (const p of inbox.pending()) {
@@ -431,9 +433,9 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         }
       }
       if (path === "/api/inbox/batch" && req.method === "POST") {
-        const body = (await readBody(req)) as { ids?: string[]; approve?: boolean };
+        const body = (await readBody(req)) as { ids?: unknown; approve?: boolean };
         const results: { id: string; ok: boolean; error?: string }[] = [];
-        for (const id of body.ids ?? []) {
+        for (const id of Array.isArray(body.ids) ? body.ids.filter((x): x is string => typeof x === "string") : []) {
           try { inbox.decide(id, Boolean(body.approve), opts.decider); results.push({ id, ok: true }); }
           catch (e) { results.push({ id, ok: false, error: (e as Error).message }); }
         }
@@ -627,6 +629,11 @@ function sse(res: ServerResponse, clients: Set<ServerResponse>): void {
     clearInterval(keepalive);
     clients.delete(res);
   });
+}
+
+/** The real path of a file, following symlinks; for one that doesn't exist yet, its nearest existing parent's. */
+function realPathOf(p: string): string {
+  try { return realpathSync(p); } catch { return p === dirname(p) ? p : join(realPathOf(dirname(p)), basename(p)); }
 }
 
 function serveStatic(res: ServerResponse, dir: string, urlPath: string): void {
