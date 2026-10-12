@@ -127,7 +127,7 @@ prompt: |
 
 Its partner, [Tomay](agents/tomay/Garufile.yaml), only reads: calendar and mail are allowed read tools, its one write is today's brief in its own folder (`fs.write_file` with `when: { path: { matches: "briefs/\\d{4}-\\d{2}-\\d{2}\\.md$" } }`), and everything else is blocked, so it never pauses at all.
 
-Rules are evaluated top to bottom; the first match wins; nothing matching means `ask`, never a silent allow. `when` predicates (`eq`, `matches`, `gt`, `in`, …) let you allow a tool for one path or one host and block it everywhere else. `garu validate` lints the file and tells you which rules are unreachable.
+Rules are evaluated top to bottom; the first match wins; nothing matching means `ask`, never a silent allow. `when` predicates (`eq`, `matches` with `ignoreCase`, `gt`, `in`, …) let you allow a tool for one path or one host and block it everywhere else. `garu validate` lints the file and tells you which rules are unreachable.
 
 Other fields: `sandbox:` (image, network, workspace, memory, cpus), `modelOptions:` (provider knobs, e.g. Ollama `think: false`), `maxTurns:`.
 

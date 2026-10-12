@@ -61,7 +61,7 @@ policy:
     action: allow
   # A reply to an address no one reads goes nowhere, whatever the model decided.
   - tool: "gmail.create_draft"
-    when: { "to.0": { matches: "(?i:(^|[.\\-_+@<])(no-?reply|do-?not-?reply|donotreply|notifications?|notify|alerts?|mailer-daemon|newsletters?|digest|updates?|news|marketing)([.\\-_+@>]|$))" } }
+    when: { "to.0": { matches: "(^|[.\\-_+@<])(no-?reply|do-?not-?reply|donotreply|notifications?|notify|alerts?|mailer-daemon|newsletters?|digest|updates?|news|marketing)([.\\-_+@>]|$)", ignoreCase: true } }
     action: block
     reason: a reply to an automated sender goes nowhere
   # learned: approved 3× by humbertovillanueva (ui), 2026-10-12

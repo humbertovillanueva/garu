@@ -104,6 +104,8 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 ## Conventions
 
 - The two things that must not break: the Garufile schema and the flight-recorder format.
+- Everything must run on Node 22 (`engines`, and CI tests on 22) although this Mac has Node 25: no
+  regex inline modifiers like `(?i:…)`; a rule's `matches` takes `ignoreCase: true` instead.
 - Policy semantics: first matching rule wins; nothing matching = ask; an unanswered ask expires as a
   deny after 30 min; a tool the policy can never allow is not shown to the model. Approving the same
   agent → tool 3 times with no decline makes Garu suggest the rule (`kernel/src/suggest.ts`,

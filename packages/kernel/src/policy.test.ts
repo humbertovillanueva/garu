@@ -29,6 +29,8 @@ describe("predicateHolds", () => {
     expect(predicateHolds(3, { gt: 3 })).toBe(false);
     expect(predicateHolds("abc", { matches: "^a" })).toBe(true);
     expect(predicateHolds(5, { matches: "^a" })).toBe(false);
+    expect(predicateHolds("NoReply@x.com", { matches: "noreply" })).toBe(false);
+    expect(predicateHolds("NoReply@x.com", { matches: "noreply", ignoreCase: true })).toBe(true);
     expect(predicateHolds("x", { in: ["x", "y"] })).toBe(true);
     expect(predicateHolds(undefined, { exists: false })).toBe(true);
     expect(predicateHolds({ a: 1 }, { eq: { a: 1 } })).toBe(true);
@@ -66,10 +68,11 @@ describe("PolicyEngine.decide", () => {
 
   it("a rule can look at the first entry of a list, like a reply's first recipient", () => {
     const e = new PolicyEngine([
-      { tool: "gmail.create_draft", action: "block", when: { "to.0": { matches: "(?i:(^|[.\\-_+@<])(no-?reply|notifications?)([.\\-_+@>]|$))" } }, reason: "no one reads it" },
+      { tool: "gmail.create_draft", action: "block", when: { "to.0": { matches: "(^|[.\\-_+@<])(no-?reply|notifications?)([.\\-_+@>]|$)", ignoreCase: true } }, reason: "no one reads it" },
       { tool: "gmail.create_draft", action: "ask" },
     ]);
     expect(e.decide({ server: "gmail", tool: "create_draft", args: { to: ["Bank <alerts@notification.bank.com>"] } }).action).toBe("block");
+    expect(e.decide({ server: "gmail", tool: "create_draft", args: { to: ["NoReply@bank.com"] } }).action).toBe("block");
     expect(e.decide({ server: "gmail", tool: "create_draft", args: { to: ["Ana <ana@x.com>"] } }).action).toBe("ask");
   });
 

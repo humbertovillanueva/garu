@@ -24,6 +24,7 @@ export const ArgPredicate = z
     lt: z.number().optional(),
     lte: z.number().optional(),
     matches: z.string().optional(), // regex source
+    ignoreCase: z.boolean().optional(), // for matches: upper and lower case count the same
     in: z.array(z.unknown()).optional(),
     exists: z.boolean().optional(),
   })

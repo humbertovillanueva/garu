@@ -246,7 +246,7 @@
   You are Bea. Sort Humberto's inbox from the last day…</pre>
     <div class="steps">
       <div class="step"><h3>First match wins</h3><p>Rules are read top to bottom. Nothing matching means <code>ask</code> — never a silent allow.</p></div>
-      <div class="step"><h3>Rules see arguments</h3><p><code>when</code> predicates (<code>eq</code>, <code>matches</code>, <code>gt</code>, <code>in</code>, …) allow a tool for one host or one path and block it everywhere else.</p></div>
+      <div class="step"><h3>Rules see arguments</h3><p><code>when</code> predicates (<code>eq</code>, <code>matches</code> with <code>ignoreCase</code>, <code>gt</code>, <code>in</code>, …) allow a tool for one host or one path and block it everywhere else.</p></div>
       <div class="step"><h3>Blocked means invisible</h3><p>A tool no rule can ever allow is not offered to the model, so it never wastes a turn trying.</p></div>
       <div class="step"><h3>Secrets stay out of the file</h3><p><code>${VAR}</code> is read from <code>.env</code> at run time. The model never sees your keys, and a server that signs in gets only a one-hour token, never the client secret.</p></div>
       <div class="step"><h3><code>garu validate</code> lints it</h3><p>Unreachable rules, bad globs, a missing key — caught before the agent runs.</p></div>

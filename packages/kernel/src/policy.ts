@@ -56,7 +56,8 @@ export function predicateHolds(value: unknown, p: ArgPredicate): boolean {
   if (p.in !== undefined && !p.in.some((x) => deepEqual(x, value))) return false;
   if (p.matches !== undefined) {
     if (typeof value !== "string") return false;
-    if (!new RegExp(p.matches).test(value)) return false;
+    // A flag, not a pattern feature: "(?i:…)" inside the pattern needs Node 23+, and Garu runs on 22.
+    if (!new RegExp(p.matches, p.ignoreCase ? "i" : "").test(value)) return false;
   }
   const num = typeof value === "number" ? value : undefined;
   if (p.gt !== undefined && !(num !== undefined && num > p.gt)) return false;
