@@ -25,6 +25,8 @@ export interface RunSummary {
   costUsd: number;
   priced: boolean;
   summary: string | null;
+  /** Ended before the model answered because the network was down; the schedule doesn't count it. */
+  offline?: boolean;
   path: string;
 }
 
@@ -99,6 +101,7 @@ export function summarizeRun(path: string, events: Envelope[], now = Date.now())
         s.status = e.status;
         s.costUsd = e.costUsd ?? s.costUsd;
         s.priced = e.priced !== false;
+        if (e.offline) s.offline = true;
         s.summary = e.summary ?? null;
         break;
     }
@@ -175,6 +178,11 @@ export class RunStore {
         model: runs[0]?.model ?? null,
       };
     });
+  }
+
+  /** The newest run the schedule itself started (cron or catch-up) that reached the model; an offline attempt doesn't count. */
+  lastScheduledRun(agent: string): RunSummary | null {
+    return this.runs(agent).find((r) => (r.trigger.startsWith("cron:") || r.trigger.startsWith("catch-up:")) && !r.offline) ?? null;
   }
 
   /**

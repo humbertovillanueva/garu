@@ -14,7 +14,7 @@ import { formatUsd } from "./pricing.js";
 export type GaruEvent =
   | { type: "run.start"; agent: string; model: string; trigger: string; sandbox?: { image: string; network: string } }
   | { type: "tools.offered"; offered: string[]; hidden: string[] }
-  | { type: "run.end"; status: "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded"; summary?: string; costUsd?: number; priced?: boolean }
+  | { type: "run.end"; status: "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded"; summary?: string; costUsd?: number; priced?: boolean; offline?: boolean }
   | { type: "model.turn"; turn: number; inputTokens?: number; outputTokens?: number; text?: string; costUsd?: number; totalCostUsd?: number }
   | { type: "budget.exceeded"; costUsd: number; maxCostUsd: number; pendingToolCalls: number }
   | { type: "tool.request"; callId: string; request: ToolCallRequest }

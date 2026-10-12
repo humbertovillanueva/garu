@@ -6,6 +6,8 @@ export interface RunSummary {
   startedAt: string;
   endedAt: string | null;
   status: RunStatus;
+  /** Ended before the model answered because the network was down. */
+  offline?: boolean;
   trigger: string;
   model: string;
   sandbox: { image: string; network: string } | null;

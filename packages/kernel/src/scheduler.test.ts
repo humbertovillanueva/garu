@@ -227,4 +227,71 @@ triggers:
     expect(order.filter((o) => o.startsWith("start tick")).length).toBe(1);
     expect(order.indexOf("end brief")).toBeLessThan(order.indexOf("start tick catch-up:0 * * * *"));
   });
+
+  it("a queued catch-up is dropped when the agent's own cron ran while it waited", async () => {
+    const m = manualCron();
+    const tick = { ...brief, source: "t.yaml", garufile: parseGarufile(`
+name: tick
+model: fake/x
+prompt: p
+triggers:
+  - cron: "0 * * * *"
+`) };
+    const order: string[] = [];
+    let tickRanAt: Date | null = null;
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const s = new Scheduler({
+      runner: async (a, trigger) => { order.push(`start ${a.garufile.name} ${trigger}`); if (a.garufile.name === "brief") await gate; else tickRanAt = now(); return ok(a.garufile.name); },
+      cronFactory: m.factory,
+      catchUp: { lastRunAt: (name) => (name === "tick" ? tickRanAt : null), now, everyMs: 0 },
+    });
+    s.start([brief, tick]);
+    await new Promise((r) => setTimeout(r, 5)); // brief's catch-up is running; tick's waits behind it
+    m.tick("0 * * * *"); // tick's own cron fires meanwhile and runs
+    await new Promise((r) => setTimeout(r, 5));
+    release();
+    await new Promise((r) => setTimeout(r, 10));
+    await s.stop();
+    expect(order.filter((o) => o.startsWith("start tick"))).toEqual(["start tick cron:0 * * * *"]);
+  });
+
+  it("an agent whose model can't be reached is not run, and is tried again later", async () => {
+    const m = manualCron();
+    const events: SchedulerEvent[] = [];
+    const triggers: string[] = [];
+    let t = local(9, 9, 30);
+    let up = false;
+    const s = new Scheduler({
+      runner: async (a, trigger) => { triggers.push(trigger); return ok(a.garufile.name); },
+      onEvent: (e) => events.push(e),
+      cronFactory: m.factory,
+      online: async () => up,
+      catchUp: { lastRunAt: () => null, now: () => t, everyMs: 0 },
+    });
+    s.start([brief]);
+    await new Promise((r) => setTimeout(r, 5));
+    expect(events.some((e) => e.type === "offline")).toBe(true);
+    expect(triggers).toEqual([]);
+    expect(s.checkMissed()).toBe(0); // not again right away
+    up = true;
+    t = new Date(t.getTime() + 11 * 60_000);
+    expect(s.checkMissed()).toBe(1);
+    await new Promise((r) => setTimeout(r, 5));
+    await s.stop();
+    expect(triggers).toEqual(["catch-up:0 7 * * 1-5"]);
+  });
+
+  it("a run started elsewhere (the control room, chat) blocks a cron fire like one of its own", async () => {
+    const m = manualCron();
+    const events: SchedulerEvent[] = [];
+    let ran = 0;
+    const s = new Scheduler({ runner: async (a) => { ran++; return ok(a.garufile.name); }, onEvent: (e) => events.push(e), cronFactory: m.factory, isBusy: (name) => name === "a" });
+    s.start([agentA]);
+    m.tick("*/5 * * * *");
+    await new Promise((r) => setTimeout(r, 5));
+    await s.stop();
+    expect(ran).toBe(0);
+    expect(events.some((e) => e.type === "skip.overlap")).toBe(true);
+  });
 });

@@ -66,6 +66,24 @@ describe("RunStore", () => {
     expect(week.costUsd).toBeCloseTo(0.006);
   });
 
+  it("lastScheduledRun: the newest cron or catch-up run that reached the model; an offline attempt doesn't count", () => {
+    const root = mkdtempSync(join(tmpdir(), "store-"));
+    const good = new Recorder({ root, agent: "a" });
+    good.record({ type: "run.start", agent: "a", model: "gemini/x", trigger: "cron:0 7 * * 1-5" });
+    good.record({ type: "model.turn", turn: 1 });
+    good.record({ type: "run.end", status: "ok", costUsd: 0, priced: true, summary: "done" });
+    const dark = new Recorder({ root, agent: "a" });
+    dark.record({ type: "run.start", agent: "a", model: "gemini/x", trigger: "catch-up:0 7 * * 1-5" });
+    dark.record({ type: "run.end", status: "error", costUsd: 0, priced: true, offline: true, summary: "no network: fetch failed" });
+    const byHand = new Recorder({ root, agent: "a" });
+    byHand.record({ type: "run.start", agent: "a", model: "gemini/x", trigger: "ui" });
+    byHand.record({ type: "run.end", status: "ok", costUsd: 0, priced: true });
+    const last = new RunStore(root).lastScheduledRun("a");
+    expect(last?.runId).toBe(good.runId);
+    expect(new RunStore(root).runs("a").find((r) => r.runId === dark.runId)?.offline).toBe(true);
+    expect(new RunStore(root).lastScheduledRun("nobody")).toBeNull();
+  });
+
   it("a run without run.end is 'running'", () => {
     const root = mkdtempSync(join(tmpdir(), "store-"));
     const r = new Recorder({ root, agent: "live" });

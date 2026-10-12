@@ -187,6 +187,30 @@ budget:
     expect(res.costUsd).toBe(0);
   });
 
+  it("a provider that can't reach the network ends the run as offline, with no turns counted", async () => {
+    const logRoot = mkdtempSync(join(tmpdir(), "garu-"));
+    const cause = Object.assign(new Error("getaddrinfo ENOTFOUND generativelanguage.googleapis.com"), { code: "ENOTFOUND" });
+    const provider = { id: "fake", complete: async () => { throw new TypeError("fetch failed", { cause }); } };
+    const res = await runAgent({ garufile, logRoot, provider, approver: async () => ({ approved: false, by: "test" }), trigger: "cron:0 7 * * 1-5" });
+    expect(res).toMatchObject({ status: "error", offline: true, turns: 0 });
+    const end = readRun(res.logPath).find((e) => e.event.type === "run.end")!.event;
+    expect(end).toMatchObject({ type: "run.end", status: "error", offline: true });
+  });
+
+  it("a priced model whose provider reports no usage is not claimed as priced", async () => {
+    const logRoot = mkdtempSync(join(tmpdir(), "garu-"));
+    const quiet = parseGarufile(`
+name: quiet
+model: gemini/gemini-3.5-flash
+prompt: say hi
+`);
+    const provider = new FakeProvider([{ stopReason: "end_turn", content: [{ type: "text", text: "hi" }] }]);
+    const res = await runAgent({ garufile: quiet, logRoot, provider, approver: async () => ({ approved: false, by: "test" }) });
+    expect(res.status).toBe("ok");
+    const end = readRun(res.logPath).find((e) => e.event.type === "run.end")!.event;
+    expect(end).toMatchObject({ type: "run.end", status: "ok", priced: false });
+  });
+
   it("a tool server that won't start is a recorded error, not a crash", async () => {
     const bad = parseGarufile(`
 name: bad

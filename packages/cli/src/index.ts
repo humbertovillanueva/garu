@@ -4,6 +4,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { execFile, spawn } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { promisify } from "node:util";
 import { createServer as createHttpServer } from "node:http";
 import { dirname } from "node:path";
@@ -184,7 +185,7 @@ program
       onEvent: printSchedulerEvent,
       catchUp: {
         lastRunAt: (agent) => {
-          const r = upStore.runs(agent).find((x) => x.trigger.startsWith("cron:") || x.trigger.startsWith("catch-up:"));
+          const r = upStore.lastScheduledRun(agent);
           return r ? new Date(r.startedAt) : null;
         },
       },
@@ -249,6 +250,28 @@ sandboxCmd
 
 const service = program.command("service").description("Run the control room and the schedules as a login service, so a reboot doesn't take your agents down.");
 const run = promisify(execFile);
+
+/** Wait (up to 30 s) until launchd no longer knows the service: `bootout` returns before the stop has finished. */
+async function launchdGone(uid: string, label: string): Promise<boolean> {
+  const until = Date.now() + 30_000;
+  while (Date.now() < until) {
+    if (!(await quiet("launchctl", ["print", `gui/${uid}/${label}`]))) return true;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return false;
+}
+
+/** Homebrew's node lives at a versioned path that `brew upgrade` replaces; the `opt` link survives upgrades. */
+function stableNodePath(): string {
+  for (const candidate of ["/opt/homebrew/opt/node/bin/node", "/usr/local/opt/node/bin/node"]) {
+    try {
+      if (realpathSync(candidate) === realpathSync(process.execPath)) return candidate;
+    } catch {
+      /* not installed that way */
+    }
+  }
+  return process.execPath;
+}
 const quiet = async (cmd: string, args: string[]) => { try { await run(cmd, args); return true; } catch { return false; } };
 
 service
@@ -264,7 +287,7 @@ service
     const root = process.cwd();
     const as = process.env["GARU_USER"] && opts.as === (process.env["USER"] ?? "you") ? process.env["GARU_USER"] : opts.as;
     const args = ["--up", "--as", as, "--port", opts.port, "--host", opts.host, "--ask-timeout", opts.askTimeout, ...(opts.notify ? ["--notify", opts.notify] : [])];
-    const spec = { root, node: process.execPath, entry: fileURLToPath(import.meta.url), args, path: servicePath(process.env["PATH"]) };
+    const spec = { root, node: stableNodePath(), entry: fileURLToPath(import.meta.url), args, path: servicePath(process.env["PATH"]) };
     mkdirSync(join(root, ".garu"), { recursive: true });
     if (process.platform === "darwin") {
       const plist = launchdPlistPath(root);
@@ -272,6 +295,9 @@ service
       const label = launchdLabel(root);
       const uid = String(process.getuid?.() ?? 501);
       await quiet("launchctl", ["bootout", `gui/${uid}/${label}`]);
+      // bootout returns before the old service has finished stopping (it waits for runs in flight);
+      // loading the new file in that gap fails quietly and leaves nothing installed.
+      await launchdGone(uid, label);
       writeFileSync(plist, launchdPlist(spec));
       const ok = (await quiet("launchctl", ["bootstrap", `gui/${uid}`, plist])) || (await quiet("launchctl", ["load", "-w", plist]));
       if (!ok) { stderr.write(`wrote ${plist} but launchctl refused to load it. Try: launchctl bootstrap gui/${uid} ${plist}\n`); process.exit(1); }
@@ -320,7 +346,9 @@ service
     let running = false;
     if (process.platform === "darwin") {
       const uid = String(process.getuid?.() ?? 501);
-      running = await quiet("launchctl", ["print", `gui/${uid}/${launchdLabel(root)}`]);
+      // `launchctl print` succeeds for any loaded service, running or not: read its state line.
+      const out = await run("launchctl", ["print", `gui/${uid}/${launchdLabel(root)}`]).then((r) => r.stdout, () => "");
+      running = /^\s*state = running\b/m.test(out);
     } else if (process.platform === "linux") {
       running = await quiet("systemctl", ["--user", "is-active", "--quiet", `${serviceName(root)}.service`]);
     }
@@ -337,6 +365,8 @@ service
       if (!existsSync(launchdPlistPath(root))) { stdout.write(`not installed for ${root}. \`garu service install\` sets it up.\n`); return; }
       const uid = String(process.getuid?.() ?? 501);
       ok = await quiet("launchctl", ["kickstart", "-k", `gui/${uid}/${launchdLabel(root)}`]);
+      // Not loaded at all (an install or uninstall that stopped halfway): loading it also starts it.
+      if (!ok) ok = await quiet("launchctl", ["bootstrap", `gui/${uid}`, launchdPlistPath(root)]);
     } else if (process.platform === "linux") {
       if (!existsSync(systemdUnitPath(root))) { stdout.write(`not installed for ${root}. \`garu service install\` sets it up.\n`); return; }
       ok = await quiet("systemctl", ["--user", "restart", `${serviceName(root)}.service`]);
@@ -866,6 +896,9 @@ function printSchedulerEvent(e: SchedulerEvent): void {
       break;
     case "skip.overlap":
       stderr.write(`${t} ↷ ${e.agent}: previous run still going, skipped this tick\n`);
+      break;
+    case "offline":
+      stderr.write(`${t} ⏸ ${e.agent}: no network, will catch up\n`);
       break;
     case "run.done": {
       const r = e.result;

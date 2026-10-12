@@ -5,6 +5,7 @@
  */
 import type { CompleteRequest, CompleteResponse, ContentBlock, ModelProvider } from "../provider.js";
 
+const REQUEST_TIMEOUT_MS = 120_000;
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
 
 type GeminiPart =
@@ -119,11 +120,21 @@ export class GeminiProvider implements ModelProvider {
     const maxAttempts = this.maxAttempts;
     let lastMsg = "";
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const res = await this.fetchImpl(`${BASE}/models/${model}:generateContent`, {
-        method: "POST",
-        headers: { "x-goog-api-key": this.apiKey, "content-type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      let res: Response;
+      try {
+        res = await this.fetchImpl(`${BASE}/models/${model}:generateContent`, {
+          method: "POST",
+          headers: { "x-goog-api-key": this.apiKey, "content-type": "application/json" },
+          body: JSON.stringify(body),
+          // A request cut off by the machine going to sleep would otherwise hang until the next wake, hours later.
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        });
+      } catch (e) {
+        // The network, not Google. One quick retry covers a blip; a dead network fails fast and says so.
+        if (attempt >= Math.min(2, maxAttempts)) throw new Error(`gemini ${model}: can't reach the network (${(e as Error).message})`, { cause: e });
+        await this.sleep(2000);
+        continue;
+      }
       const json = (await res.json().catch(() => ({}))) as GeminiResponse;
       if (res.ok && !json.error) return { res, json };
       lastMsg = json.error?.message ?? `HTTP ${res.status}`;
@@ -143,6 +154,7 @@ export class GeminiProvider implements ModelProvider {
 
   /** Overridable for tests. */
   maxAttempts = 6;
+  /** Also overridable: tests set `sleep` to skip the waits. */
   sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms));
   onRetry: ((info: { model: string; attempt: number; maxAttempts: number; status: number; waitMs: number; message: string }) => void) | undefined =
     (i) => process.stderr.write(`         gemini ${i.status}: waiting ${Math.round(i.waitMs / 1000)}s then retrying (${i.attempt}/${this.maxAttempts})\n`);

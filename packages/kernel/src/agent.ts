@@ -42,6 +42,21 @@ export interface RunResult {
   costUsd: number | null;
   inputTokens: number;
   outputTokens: number;
+  /** The network was down before the model ever answered. The schedule treats such a run as not run. */
+  offline?: boolean;
+}
+
+/** The network, not the model, failed: fetch's "fetch failed", a DNS or socket error, a timeout, Ollama unreachable. */
+export function isConnectionError(e: unknown): boolean {
+  const seen = new Set<unknown>();
+  for (let cur = e; cur && typeof cur === "object" && !seen.has(cur); cur = (cur as { cause?: unknown }).cause) {
+    seen.add(cur);
+    const { name, code, message } = cur as { name?: string; code?: string; message?: string };
+    if (name === "TimeoutError" || name === "AbortError") return true;
+    if (code && /^(ENOTFOUND|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|ENETUNREACH|EHOSTUNREACH|EPIPE|UND_ERR_(CONNECT_TIMEOUT|SOCKET))$/.test(code)) return true;
+    if (message && /fetch failed|can't reach|network error|socket hang up|connection error|getaddrinfo/i.test(message)) return true;
+  }
+  return false;
 }
 
 const SYSTEM_PREAMBLE = `You are an autonomous agent running inside Garu.
@@ -54,6 +69,15 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
   const g = opts.garufile;
   const { provider: providerId, model } = splitModelId(g.model);
   const provider = opts.provider ?? getProvider(providerId);
+
+  // Refused before anything is recorded: a run that can't start must not leave a "running" run behind.
+  const price = g.budget.pricing ?? priceFor(g.model);
+  const maxCost = g.budget.maxCostUsd;
+  if (maxCost !== undefined && !price) {
+    throw new Error(
+      `budget.maxCostUsd is set but "${g.model}" has no known price; add budget.pricing to the Garufile`,
+    );
+  }
 
   const recorder = new Recorder({ root: opts.logRoot, agent: g.name, ...(opts.sink ? { sink: opts.sink } : {}) });
   const policy = new PolicyEngine(g.policy);
@@ -72,16 +96,15 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
   let output = "";
   let turn = 0;
 
-  const price = g.budget.pricing ?? priceFor(g.model);
-  const maxCost = g.budget.maxCostUsd;
   let totalCost = 0;
   let inputTokens = 0;
   let outputTokens = 0;
-  if (maxCost !== undefined && !price) {
-    throw new Error(
-      `budget.maxCostUsd is set but "${g.model}" has no known price; add budget.pricing to the Garufile`,
-    );
-  }
+  // Turns the model actually answered. `turn` counts attempts, so an error mid-call doesn't inflate it.
+  let completed = 0;
+  // A priced model that reports no usage can't be metered: the run says so instead of claiming a price.
+  let unmetered = false;
+  // The network was down before the model ever answered: not a run, as far as the schedule is concerned.
+  let offline = false;
 
   try {
     await bus.connect(g.tools);
@@ -121,6 +144,8 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
         model, system, messages, tools, options: g.modelOptions,
         onRetry: (r) => recorder.record({ type: "model.retry", attempt: r.attempt, maxAttempts: r.maxAttempts, waitMs: r.waitMs, reason: r.reason }),
       });
+      completed++;
+      if (price && !res.usage) unmetered = true;
       const text = res.content.filter((b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text").map((b) => b.text).join("\n");
       let turnCost: number | undefined;
       if (res.usage) {
@@ -189,15 +214,17 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
   } catch (e) {
     status = "error";
     const err = e as Error;
+    offline = completed === 0 && isConnectionError(err);
     recorder.record({ type: "error", message: err.message, ...(err.stack ? { stack: err.stack } : {}) });
-    output = err.message;
+    output = offline ? `no network: ${err.message}` : err.message;
   } finally {
     await bus.close();
     recorder.record({
       type: "run.end",
       status,
       costUsd: totalCost,
-      priced: price !== null,
+      priced: price !== null && !unmetered,
+      ...(offline ? { offline: true } : {}),
       ...(output ? { summary: output.slice(0, 200) } : {}),
     });
   }
@@ -207,9 +234,10 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     logPath: recorder.path,
     status,
     output,
-    turns: turn,
+    turns: completed,
     costUsd: price ? totalCost : null,
     inputTokens,
     outputTokens,
+    ...(offline ? { offline: true } : {}),
   };
 }

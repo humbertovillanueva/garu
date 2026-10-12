@@ -44,6 +44,18 @@ tools:
     expect(() => parseGarufile(minimal + "\ntriggers:\n  - {}\n")).toThrow(/trigger needs one of/);
   });
 
+  it("rejects a rule pattern that isn't a valid regular expression, at parse time", () => {
+    expect(() => parseGarufile(`
+name: x
+model: fake/x
+prompt: p
+policy:
+  - tool: "a.b"
+    action: block
+    when: { url: { matches: "(unclosed" } }
+`)).toThrow(/not a valid pattern/);
+  });
+
   it("parses the full example", () => {
     const y = `
 name: inbox-triage

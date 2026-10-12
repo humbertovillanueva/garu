@@ -28,7 +28,16 @@ export const ArgPredicate = z
     in: z.array(z.unknown()).optional(),
     exists: z.boolean().optional(),
   })
-  .strict();
+  .strict()
+  // Compiled here, so `garu validate` catches a bad pattern instead of the run dying at its first tool call.
+  .superRefine((p, ctx) => {
+    if (p.matches === undefined) return;
+    try {
+      new RegExp(p.matches, p.ignoreCase ? "i" : "");
+    } catch (e) {
+      ctx.addIssue({ code: "custom", path: ["matches"], message: `not a valid pattern: ${(e as Error).message}` });
+    }
+  });
 export type ArgPredicate = z.infer<typeof ArgPredicate>;
 
 export const PolicyRule = z

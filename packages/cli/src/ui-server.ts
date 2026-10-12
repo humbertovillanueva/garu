@@ -169,12 +169,15 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       // A Mac that was asleep or off at fire time still gets its run, once, labelled catch-up.
       catchUp: {
         lastRunAt: (agent) => {
-          const r = store.runs(agent).find((x) => x.trigger.startsWith("cron:") || x.trigger.startsWith("catch-up:"));
+          const r = store.lastScheduledRun(agent);
           return r ? new Date(r.startedAt) : null;
         },
       },
+      // A run started from the control room or chat is just as much "running" as a scheduled one.
+      isBusy: (name) => live.has(name),
       onEvent: (e) => {
         if (e.type === "fire") opts.log(`▶ ${e.agent} (cron ${e.cron})`);
+        else if (e.type === "offline") opts.log(`⏸ ${e.agent}: no network, will catch up`);
         else if (e.type === "catch-up") opts.log(`↺ ${e.agent}: missed ${e.missedAt.toLocaleTimeString()} (cron ${e.cron}), catching up`);
         else if (e.type === "run.done") opts.log(`■ ${e.agent}: ${e.result.status} in ${e.result.turns} turn(s)`);
         else if (e.type === "run.failed") opts.log(`✖ ${e.agent}: ${e.error}`);
@@ -320,7 +323,9 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         const body = (await readBody(req)) as { note?: string };
         const note = body.note?.trim();
         opts.log(`▶ ${name} (from the control room${note ? ", with a note" : ""})`);
-        void startRun(a, "ui", note || undefined).then((r) => opts.log(`■ ${name}: ${r.status} in ${r.turns} turn(s)`));
+        void startRun(a, "ui", note || undefined)
+          .then((r) => opts.log(`■ ${name}: ${r.status} in ${r.turns} turn(s)`))
+          .catch((e: unknown) => opts.log(`✖ ${name}: ${(e as Error).message}`));
         // give run.start a moment to land so the client can navigate to it
         await new Promise((r) => setTimeout(r, 250));
         return json(res, { started: true, runId: live.get(name)?.runId ?? null }, 202);

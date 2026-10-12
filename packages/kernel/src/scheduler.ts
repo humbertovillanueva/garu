@@ -6,6 +6,7 @@
  * behind itself), every fire and skip is visible, and shutdown waits for
  * in-flight runs instead of killing them mid-tool-call.
  */
+import { lookup } from "node:dns/promises";
 import { Cron } from "croner";
 import type { Garufile } from "./garufile.js";
 import type { RunResult } from "./agent.js";
@@ -21,6 +22,7 @@ export type SchedulerEvent =
   | { type: "fire"; agent: string; cron: string }
   | { type: "catch-up"; agent: string; cron: string; missedAt: Date }
   | { type: "skip.overlap"; agent: string; cron: string }
+  | { type: "offline"; agent: string; cron: string }
   | { type: "run.done"; agent: string; result: RunResult }
   | { type: "run.failed"; agent: string; error: string }
   | { type: "stopping"; inFlight: number }
@@ -61,6 +63,28 @@ export const defaultCronFactory: CronFactory = (pattern, cb) => {
   return { stop: () => job.stop(), nextRun: () => job.nextRun(), lastDue: (now, since) => lastDue(pattern, now, since) };
 };
 
+/**
+ * Where each model provider lives, for the "can we reach it?" check before a run. A provider not
+ * listed here (Ollama, a custom one) is taken as always reachable.
+ */
+export const PROVIDER_HOSTS: Record<string, string> = {
+  gemini: "generativelanguage.googleapis.com",
+  anthropic: "api.anthropic.com",
+};
+/** After an offline attempt, how long before the schedule tries that agent again. */
+export const OFFLINE_RETRY_MS = 10 * 60_000;
+
+/** A 3-second DNS lookup: enough to tell a laptop waking in the dark (no network for a few seconds) from a real wake. */
+async function reachable(host: string): Promise<boolean> {
+  const timeout = new Promise<boolean>((r) => setTimeout(() => r(false), 3000).unref?.());
+  return Promise.race([lookup(host).then(() => true, () => false), timeout]);
+}
+
+export async function defaultOnline(a: ScheduledAgent): Promise<boolean> {
+  const host = PROVIDER_HOSTS[a.garufile.model.split("/")[0] ?? ""];
+  return host ? reachable(host) : true;
+}
+
 /** Throws with a readable message if the cron pattern is invalid. */
 export function assertValidCron(pattern: string): void {
   try {
@@ -76,7 +100,7 @@ export function assertValidCron(pattern: string): void {
  * window with no run started since is fired once with a `catch-up:` trigger.
  */
 export interface CatchUpOptions {
-  /** When this agent's last scheduled run (cron or catch-up, not chat) started; null if never. */
+  /** When this agent's last scheduled run (cron or catch-up, not chat) started; null if never. An attempt that never reached the model (offline) doesn't count. */
   lastRunAt: (agent: string) => Date | null;
   /** How far back a missed fire still counts. Default 6 hours. */
   windowMs?: number;
@@ -91,12 +115,20 @@ export interface SchedulerOptions {
   onEvent?: (e: SchedulerEvent) => void;
   cronFactory?: CronFactory;
   catchUp?: CatchUpOptions;
+  /** Whether the agent's model can be reached right now. Default: a DNS lookup of the provider's host. */
+  online?: (agent: ScheduledAgent) => Promise<boolean>;
+  /** A run of this agent started elsewhere (the control room, chat) that the scheduler can't see. */
+  isBusy?: (agent: string) => boolean;
 }
 
 export class Scheduler {
   private readonly handles: CronHandle[] = [];
   private readonly jobs: { agent: ScheduledAgent; cron: string; handle: CronHandle }[] = [];
   private readonly inFlight = new Map<string, Promise<void>>();
+  /** Agents between "fire" and "running": the reachability check is async, and two fires in one tick must not both pass. */
+  private readonly starting = new Set<string>();
+  /** Agents found offline, and when the schedule may try them again. */
+  private readonly offlineUntil = new Map<string, number>();
   private stopping = false;
   private timer: NodeJS.Timeout | undefined;
   /** Catch-up runs go one after another, not all at once: a laptop waking up should not hammer the model's rate limit. */
@@ -140,7 +172,8 @@ export class Scheduler {
     let queued = 0;
     for (const j of this.jobs) {
       const name = j.agent.garufile.name;
-      if (this.inFlight.has(name) || this.catchUpPending.has(name)) continue;
+      if (this.inFlight.has(name) || this.starting.has(name) || this.catchUpPending.has(name)) continue;
+      if ((this.offlineUntil.get(name) ?? 0) > now.getTime()) continue;
       const due = j.handle.lastDue(now, since);
       if (!due) continue;
       const last = cu.lastRunAt(name);
@@ -149,6 +182,9 @@ export class Scheduler {
       this.catchUpPending.add(name);
       this.catchUpQueue = this.catchUpQueue.then(() => {
         this.catchUpPending.delete(name);
+        // While it waited its turn, its own cron may have fired and run: check again before firing.
+        const lastNow = cu.lastRunAt(name);
+        if (this.inFlight.has(name) || this.starting.has(name) || (lastNow && lastNow.getTime() >= due.getTime())) return;
         return this.fire(j.agent, j.cron, "catch-up");
       });
       queued++;
@@ -160,10 +196,25 @@ export class Scheduler {
   async fire(a: ScheduledAgent, cron: string, kind: "cron" | "catch-up" = "cron"): Promise<void> {
     const name = a.garufile.name;
     if (this.stopping) return;
-    if (this.inFlight.has(name)) {
+    if (this.inFlight.has(name) || this.starting.has(name) || this.opts.isBusy?.(name)) {
       this.emit({ type: "skip.overlap", agent: name, cron });
       return;
     }
+    this.starting.add(name);
+    let online: boolean;
+    try {
+      online = await (this.opts.online ?? defaultOnline)(a);
+    } finally {
+      this.starting.delete(name);
+    }
+    if (!online) {
+      // A laptop waking in the dark, or no Wi-Fi: a run now could only fail. Catch-up retries once the network is back.
+      const now = (this.opts.catchUp?.now ?? (() => new Date()))();
+      this.offlineUntil.set(name, now.getTime() + OFFLINE_RETRY_MS);
+      this.emit({ type: "offline", agent: name, cron });
+      return;
+    }
+    if (this.stopping || this.inFlight.has(name)) return;
     this.emit({ type: "fire", agent: name, cron });
     const p = this.opts
       .runner(a, `${kind}:${cron}`)
