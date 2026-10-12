@@ -114,7 +114,8 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   trigger `catch-up:<cron>`. Don't double-fire; don't run catch-ups in parallel.
 - UI: black and white, no orange. Agent avatar colors come from `packages/ui/src/lib/colors.ts`
   (KIND_COLOR) and are used everywhere an agent is colored. Times are human (`humanTime`, `clock`,
-  `until` in `lib/format.ts`): never ISO strings, never seconds, never UTC in the UI. `until()` already
+  `until` in `lib/format.ts`): never ISO strings, never UTC, and no seconds in the UI, with one exception:
+  the run timeline is the log of one run, so its exact stamps and `ok · 340ms` stay. `until()` already
   returns "in 25 min", so never write "in {until(...)}". Monospace is for code, ids and paths only.
   No CLI commands or shell flags on phone screens; say "needs setup on your computer" and keep the
   commands under Settings → Advanced on the desktop.
@@ -128,9 +129,9 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 ## Status (2026-10-10)
 
 Built: kernel, CLI, control room, Android debug app, iPhone app in the Simulator (2026-10-11), login service, catch-up, brand, Owner's Guide,
-launch video v7, onboarding and UI audit fixes (2026-10-10). Open: the run timeline still shows
-seconds and "ok · 340ms" (allowed by a comment in `format.ts`, against the rule above: Humberto to
-decide).
+launch video v7, onboarding and UI audit fixes (2026-10-10), the always-on fixes from the full
+audit (2026-10-12). Open: the rest of that audit, in `docs/audit-2026-10-12.md` (committed once its
+security items are fixed).
 
 Not launching yet. Order: understand → real app → Play closed test → launch → beyond. Still on the
 real-app list: crash screen, accessibility pass, theme setting, release signing (Humberto makes the

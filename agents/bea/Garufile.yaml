@@ -22,7 +22,7 @@ description: Sorts what arrived overnight into four labels and drafts replies to
 persona:
   kind: bee
   tagline: "Sorts the inbox so you don't have to."
-model: gemini/gemini-3.5-flash-lite
+model: gemini/gemini-3.5-flash
 
 triggers:
   - cron: "15 7 * * 1-5"
@@ -54,8 +54,6 @@ policy:
     action: allow
   - tool: "gmail.list_labels"
     action: allow
-  - tool: "gmail.list_drafts"
-    action: allow
   # Filing: a label can be taken off in one click, so it doesn't wait for you.
   - tool: "gmail.label_thread"
     action: allow
@@ -64,9 +62,6 @@ policy:
     when: { "to.0": { matches: "(^|[.\\-_+@<])(no-?reply|do-?not-?reply|donotreply|notifications?|notify|alerts?|mailer-daemon|newsletters?|digest|updates?|news|marketing)([.\\-_+@>]|$)", ignoreCase: true } }
     action: block
     reason: a reply to an automated sender goes nowhere
-  # learned: approved 3× by humbertovillanueva (ui), 2026-10-12
-  - tool: gmail.create_draft
-    action: allow
   # A draft is words in your name: you see each one first.
   - tool: "gmail.create_draft"
     action: ask
