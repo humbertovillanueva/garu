@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "description": "Garu — the open personal agent cloud. Always-on agents, any model, any MCP tool, every action through a policy kernel you control.",
   "license": "Apache-2.0",
-  "author": "Humberto Villanueva <hachevillanueva99@gmail.com> (https://humbertovillanueva.dev)",
+  "author": "Humberto Villanueva <umbertocornejo8@gmail.com> (https://humbertovillanueva.dev)",
   "homepage": "https://github.com/humbertovillanueva/garu",
   "repository": { "type": "git", "url": "https://github.com/humbertovillanueva/garu.git" },
   "workspaces": ["packages/*"],
