@@ -64,6 +64,15 @@ describe("PolicyEngine.decide", () => {
     expect(engine.decide({ server: "fs", tool: "read_file", args: { path: "/etc/passwd" } }).action).toBe("ask");
   });
 
+  it("a rule can look at the first entry of a list, like a reply's first recipient", () => {
+    const e = new PolicyEngine([
+      { tool: "gmail.create_draft", action: "block", when: { "to.0": { matches: "(?i:(^|[.\\-_+@<])(no-?reply|notifications?)([.\\-_+@>]|$))" } }, reason: "no one reads it" },
+      { tool: "gmail.create_draft", action: "ask" },
+    ]);
+    expect(e.decide({ server: "gmail", tool: "create_draft", args: { to: ["Bank <alerts@notification.bank.com>"] } }).action).toBe("block");
+    expect(e.decide({ server: "gmail", tool: "create_draft", args: { to: ["Ana <ana@x.com>"] } }).action).toBe("ask");
+  });
+
   it("never silently allows when nothing matches", () => {
     const empty = new PolicyEngine([]);
     const d = empty.decide({ server: "x", tool: "y", args: {} });

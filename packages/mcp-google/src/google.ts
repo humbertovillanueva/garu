@@ -120,6 +120,38 @@ export function header(part: GmailPart | undefined, name: string): string | unde
   return part?.headers?.find((h) => h.name.toLowerCase() === n)?.value;
 }
 
+/**
+ * Mail no one reads a reply to. The address says so itself (noreply@, notifications@, a
+ * "notification." subdomain, a newsletter), or the headers do: sent automatically, bulk, a
+ * mailing list. A draft reply to any of these goes nowhere, so the tools refuse to write one.
+ */
+export const AUTOMATED_ADDRESS = /(?:^|[.\-_+@<])(?:no-?reply|do-?not-?reply|donotreply|notifications?|notify|alerts?|mailer-daemon|postmaster|bounces?|auto(?:mated|matic|mailer)?|newsletters?|digest|updates?|news|marketing|unsubscribe)(?:[.\-_+@>]|$)/i;
+
+export function looksAutomated(address: string): boolean {
+  return AUTOMATED_ADDRESS.test(address.trim());
+}
+
+const bareAddress = (v: string) => /<([^>]+)>/.exec(v)?.[1] ?? v.trim();
+
+/** Why this message can't be replied to, in words, or null when a person might read a reply. */
+export function automatedSender(part: GmailPart | undefined): string | null {
+  const auto = header(part, "Auto-Submitted");
+  if (auto && !/^no\b/i.test(auto.trim())) return "it was sent automatically (Auto-Submitted)";
+  const prec = header(part, "Precedence")?.trim();
+  if (prec && /^(bulk|list|junk|auto_reply)$/i.test(prec)) return `it's bulk mail (Precedence: ${prec})`;
+  if (header(part, "List-Unsubscribe") || header(part, "List-Id")) return "it's a mailing list (List-Unsubscribe)";
+  for (const name of ["Reply-To", "From"]) {
+    const v = header(part, name);
+    if (v && looksAutomated(v)) return `${bareAddress(v)} is an address no one reads`;
+  }
+  return null;
+}
+
+/** A model sometimes writes "\n" as two characters. A body with those and no real line breaks meant them as breaks. */
+export function unescapeBreaks(text: string): string {
+  return !text.includes("\n") && text.includes("\\n") ? text.replace(/\\r\\n|\\n/g, "\n") : text;
+}
+
 const decode = (data: string) => Buffer.from(data, "base64url").toString("utf8");
 
 /** The readable body of a message: its text/plain part, else its HTML as text. Attachments are skipped. */
@@ -151,9 +183,11 @@ export function attachmentNames(part: GmailPart | undefined): string[] {
 
 export function messageView(m: GmailMessage, maxChars: number) {
   const files = attachmentNames(m.payload);
+  const automated = automatedSender(m.payload);
   return {
     id: m.id,
     from: header(m.payload, "From") ?? "",
+    ...(automated ? { automated } : {}),
     to: header(m.payload, "To") ?? "",
     ...(header(m.payload, "Cc") ? { cc: header(m.payload, "Cc") } : {}),
     date: header(m.payload, "Date") ?? "",
@@ -168,10 +202,12 @@ export function threadSummary(t: GmailThread) {
   const msgs = t.messages ?? [];
   const last = msgs.at(-1);
   const labels = [...new Set(msgs.flatMap((m) => m.labelIds ?? []))];
+  const automated = automatedSender(last?.payload);
   return {
     id: t.id,
     subject: header(msgs[0]?.payload, "Subject") ?? "",
     from: header(last?.payload, "From") ?? "",
+    ...(automated ? { automated } : {}),
     date: header(last?.payload, "Date") ?? "",
     messages: msgs.length,
     labels,

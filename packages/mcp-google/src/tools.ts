@@ -8,13 +8,16 @@ import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import {
   CALENDAR,
   GMAIL,
+  automatedSender,
   buildDraft,
   checkUserLabels,
   eventView,
   header,
+  looksAutomated,
   mapLimit,
   messageView,
   threadSummary,
+  unescapeBreaks,
   type Call,
   type CalendarEvent,
   type GmailLabel,
@@ -70,6 +73,9 @@ const q = (params: Record<string, string | number | boolean | undefined>) => {
 };
 const instant = z.string().refine((s) => !Number.isNaN(Date.parse(s)), "an RFC 3339 date-time with offset, e.g. 2026-10-12T00:00:00-06:00");
 
+/** The headers that tell automated mail from a person's, asked for wherever a thread is summarised. */
+const AUTOMATED_HEADERS = "&metadataHeaders=Reply-To&metadataHeaders=Auto-Submitted&metadataHeaders=Precedence&metadataHeaders=List-Unsubscribe&metadataHeaders=List-Id";
+
 export function calendarTools(call: Call): Record<string, ToolDef> {
   return labelled({
     list_calendars: tool("List the calendars you can see: your own and the ones shared with you. Returns each one's id, name and time zone.", {}, async () => {
@@ -121,7 +127,7 @@ export function gmailTools(call: Call): Record<string, ToolDef> {
         const r = await call<{ threads?: { id: string }[]; resultSizeEstimate?: number }>(`${GMAIL}/threads?${q({ q: query, maxResults })}`);
         const ids = (r.threads ?? []).map((t) => t.id);
         const threads = await mapLimit(ids, 5, (id) =>
-          call<GmailThread>(`${GMAIL}/threads/${encodeURIComponent(id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`),
+          call<GmailThread>(`${GMAIL}/threads/${encodeURIComponent(id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date${AUTOMATED_HEADERS}`),
         );
         return { threads: threads.map(threadSummary), ...(ids.length === maxResults ? { more: "there may be more; narrow the query" } : {}) };
       },
@@ -168,7 +174,7 @@ export function gmailTools(call: Call): Record<string, ToolDef> {
     ),
 
     create_draft: tool(
-      "Save a plain-text email as a draft in Gmail. It is not sent: it waits in Drafts. For a reply, pass the threadId and write to and subject as they should appear (usually the sender and \"Re: <subject>\").",
+      "Save a plain-text email as a draft in Gmail. It is not sent: it waits in Drafts. For a reply, pass the threadId and write to and subject as they should appear (usually the sender and \"Re: <subject>\"). Refuses a reply to an automated sender (noreply@, notifications, mailing lists): no one reads those.",
       {
         to: z.array(z.string().min(3)).min(1).max(20).describe('one address per entry: "a@b.com" or "Name <a@b.com>"'),
         cc: z.array(z.string().min(3)).max(20).optional(),
@@ -177,15 +183,20 @@ export function gmailTools(call: Call): Record<string, ToolDef> {
         threadId: z.string().optional().describe("the thread this replies to"),
       },
       async ({ to, cc, subject, body, threadId }) => {
+        // A reply no one will read is not worth a draft, however sure the model was.
+        const dead = to.find((a) => looksAutomated(a));
+        if (dead) throw new Error(`no draft saved: ${dead} is an automated address, and a reply there goes nowhere. File the thread instead.`);
         let inReplyTo: string | undefined;
         let references: string | undefined;
         if (threadId) {
-          const t = await call<GmailThread>(`${GMAIL}/threads/${encodeURIComponent(threadId)}?format=metadata&metadataHeaders=Message-ID&metadataHeaders=References`);
+          const t = await call<GmailThread>(`${GMAIL}/threads/${encodeURIComponent(threadId)}?format=metadata&metadataHeaders=Message-ID&metadataHeaders=References&metadataHeaders=From${AUTOMATED_HEADERS}`);
           const last = t.messages?.at(-1)?.payload;
+          const why = automatedSender(last);
+          if (why) throw new Error(`no draft saved: this thread can't be replied to, ${why}. File it instead.`);
           inReplyTo = header(last, "Message-ID");
           references = [header(last, "References"), inReplyTo].filter(Boolean).join(" ") || undefined;
         }
-        const raw = buildDraft({ to, cc, subject, body, inReplyTo, references });
+        const raw = buildDraft({ to, cc, subject, body: unescapeBreaks(body), inReplyTo, references });
         const d = await call<{ id: string; message?: { threadId?: string } }>(`${GMAIL}/drafts`, { method: "POST", body: { message: { raw, ...(threadId ? { threadId } : {}) } } });
         return { draftId: d.id, threadId: d.message?.threadId ?? threadId ?? "", to, ...(cc?.length ? { cc } : {}), subject, saved: "in Drafts, not sent" };
       },

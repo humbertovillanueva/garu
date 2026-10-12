@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GMAIL, bodyText, buildDraft, checkAddresses, checkUserLabels, eventView, googleClient, stripQuoted, type Call } from "./google.js";
+import { GMAIL, automatedSender, bodyText, buildDraft, checkAddresses, checkUserLabels, eventView, googleClient, looksAutomated, stripQuoted, unescapeBreaks, type Call } from "./google.js";
 import { calendarTools, gmailTools } from "./tools.js";
 
 const b64 = (s: string) => Buffer.from(s, "utf8").toString("base64url");
@@ -38,6 +38,30 @@ describe("drafts", () => {
     expect(() => checkAddresses(["a@b.com, evil@x.com"], "to")).toThrow(/isn't one email address/);
     expect(() => checkAddresses(["a@b.com\nBcc: evil@x.com"], "to")).toThrow();
     expect(checkAddresses([" Ana <ana@b.com> ", "bo@c.org"], "to")).toEqual(["Ana <ana@b.com>", "bo@c.org"]);
+  });
+});
+
+describe("automated mail", () => {
+  it("knows an address no one reads, by its name or its domain", () => {
+    for (const a of ["noreply@github.com", "Do-Not-Reply@bank.com", "T-Mobile <capitalone@notification.capitalone.com>", "news@nytimes.com", "alerts@mail.chase.com"]) expect(looksAutomated(a), a).toBe(true);
+    for (const a of ["ana@x.com", "Ana <ana@example.com>", "renotification@x.com", "newsday@x.com", "autopay@x.com", "support@small.shop"]) expect(looksAutomated(a), a).toBe(false);
+  });
+
+  it("reads the headers too: sent automatically, bulk, or a mailing list", () => {
+    const h = (...hs: [string, string][]) => ({ headers: hs.map(([name, value]) => ({ name, value })) });
+    expect(automatedSender(h(["From", "Ana <ana@x.com>"]))).toBeNull();
+    expect(automatedSender(h(["From", "Ana <ana@x.com>"], ["Auto-Submitted", "no"]))).toBeNull();
+    expect(automatedSender(h(["From", "Ana <ana@x.com>"], ["Auto-Submitted", "auto-generated"]))).toMatch(/automatically/);
+    expect(automatedSender(h(["From", "Ana <ana@x.com>"], ["Precedence", "bulk"]))).toMatch(/bulk/);
+    expect(automatedSender(h(["From", "Ana <ana@x.com>"], ["List-Unsubscribe", "<mailto:u@x.com>"]))).toMatch(/mailing list/);
+    expect(automatedSender(h(["From", "Ana <ana@x.com>"], ["Reply-To", "noreply@x.com"]))).toMatch(/noreply@x\.com/);
+    expect(automatedSender(h(["From", "T-Mobile <capitalone@notification.capitalone.com>"]))).toMatch(/notification\.capitalone\.com/);
+  });
+
+  it("turns a model's backslash-n into line breaks, and leaves real ones alone", () => {
+    expect(unescapeBreaks("Hi,\\n\\nThanks,\\nHumberto")).toBe("Hi,\n\nThanks,\nHumberto");
+    expect(unescapeBreaks("Hi,\n\nSee C:\\new\\notes")).toBe("Hi,\n\nSee C:\\new\\notes");
+    expect(unescapeBreaks("one line")).toBe("one line");
   });
 });
 
@@ -118,6 +142,34 @@ describe("tools", () => {
     const r = await run(gmailTools(call).label_thread!, { threadIds: ["a", "b", "gone", "a"], labelIds: ["Label_3"] });
     expect(r).toEqual({ added: ["Garu/Newsletters"], filed: 2, failed: [{ threadId: "gone", error: "not found (Requested entity was not found.)" }] });
     expect(asked.filter((u) => u.endsWith("/modify")).sort()).toEqual([`${GMAIL}/threads/a/modify`, `${GMAIL}/threads/b/modify`, `${GMAIL}/threads/gone/modify`]);
+  });
+
+  it("create_draft refuses a reply into an automated thread, and saves nothing", async () => {
+    const g = fakeGoogle({
+      "/threads/t9?format=metadata": { id: "t9", messages: [{ id: "m9", threadId: "t9", payload: { headers: [{ name: "Message-Id", value: "<x@mail>" }, { name: "From", value: "Capital One <capitalone@notification.capitalone.com>" }] } }] },
+      "/drafts": { id: "d9" },
+    });
+    await expect(run(gmailTools(g.call).create_draft!, { to: ["Capital One <capitalone@notification.capitalone.com>"], subject: "Re: Alert", body: "Hi", threadId: "t9" })).rejects.toThrow(/automated address/);
+    await expect(run(gmailTools(g.call).create_draft!, { to: ["someone@x.com"], subject: "Re: Alert", body: "Hi", threadId: "t9" })).rejects.toThrow(/can't be replied to/);
+    expect(g.asked.some((a) => a.url.endsWith("/drafts"))).toBe(false);
+  });
+
+  it("create_draft writes real line breaks when the model escaped them", async () => {
+    const g = fakeGoogle({ "/drafts": { id: "d2" } });
+    await run(gmailTools(g.call).create_draft!, { to: ["ana@x.com"], subject: "Hi", body: "Hi Ana,\\n\\nTuesday works.\\n\\nHumberto" });
+    const raw = unraw((g.asked.at(-1)!.body as { message: { raw: string } }).message.raw);
+    const text = Buffer.from(raw.split("\r\n\r\n")[1]!.replace(/\r\n/g, ""), "base64").toString("utf8");
+    expect(text).toBe("Hi Ana,\r\n\r\nTuesday works.\r\n\r\nHumberto");
+  });
+
+  it("search_threads says when a thread is automated mail", async () => {
+    const g = fakeGoogle({
+      "/threads?": { threads: [{ id: "t2" }] },
+      "/threads/t2?format=metadata": { id: "t2", messages: [{ id: "m1", threadId: "t2", payload: { headers: [{ name: "Subject", value: "Your statement" }, { name: "From", value: "Capital One <capitalone@notification.capitalone.com>" }] } }] },
+    });
+    const r = (await run(gmailTools(g.call).search_threads!, { query: "newer_than:1d", maxResults: 20 })) as { threads: { automated?: string }[] };
+    expect(r.threads[0]!.automated).toMatch(/notification\.capitalone\.com is an address no one reads/);
+    expect(g.asked[1]!.url).toContain("metadataHeaders=List-Unsubscribe");
   });
 
   it("create_draft saves a reply in the thread, and says it wasn't sent", async () => {
