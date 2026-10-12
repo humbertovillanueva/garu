@@ -179,7 +179,7 @@
       <div class="mt-2 grid gap-4 lg:grid-cols-2">
         <div class="panel p-5">
           <div class="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute"><Icon name="spark" size={14} /> The control room</div>
-          <dl class="grid grid-cols-[120px_1fr] gap-y-2 text-[13.5px]">
+          <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[13.5px] [&>dd]:min-w-0 [&>dd]:[overflow-wrap:anywhere]">
             <dt class="text-mute">Garu</dt><dd>version {s.version}</dd>
             <dt class="text-mute">{isApp ? "This app" : "This page"}</dt><dd class="text-[12.5px]">{buildText(build)}</dd>
             <dt class="text-mute">Deciding as</dt><dd>{s.user}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--as</span> to change</span>{/if}</dd>

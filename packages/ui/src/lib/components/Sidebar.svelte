@@ -2,6 +2,7 @@
   import Logo from "./Logo.svelte";
   import { route, href } from "../router.svelte";
   import { live } from "../api.svelte";
+  import { isApp } from "../server.svelte";
   import { statusLine } from "../format";
   import Mark from "./Mark.svelte";
   import Icon from "./Icon.svelte";
@@ -57,7 +58,7 @@
       </a>
     {/each}
     {#if live.loaded && live.agents.length === 0}
-      <div class="px-2 py-3 text-[12.5px] text-mute">No Garufiles found under this folder yet. <span class="mono">npm run garu -- new</span> makes one.</div>
+      <div class="px-2 py-3 text-[12.5px] text-mute">No Garufiles found under this folder yet. {#if isApp}Make one on your computer.{:else}<span class="mono">npm run garu -- new</span> makes one.{/if}</div>
     {/if}
   </nav>
 

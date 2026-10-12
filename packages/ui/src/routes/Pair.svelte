@@ -30,7 +30,7 @@
     if (/^https?:\/\/(localhost|127\.|\[::1\])/.test(p.base)) { error = "This code points at the computer itself, which a phone can't reach. Garu has to be shared over Tailscale first; that needs setup on your computer (Settings → Your phone & other devices shows how)."; return; }
     busy = true; error = null;
     try {
-      const res = await fetch(`${p.base}/api/agents`, { headers: { authorization: `Bearer ${p.token}` }, cache: "no-store" });
+      const res = await fetch(`${p.base}/api/agents`, { headers: { authorization: `Bearer ${p.token}` }, cache: "no-store", signal: AbortSignal.timeout(10_000) });
       if (res.status === 401) { error = "The control room answered, but the token is not right. Get a fresh code on your computer: Settings → Your phone & other devices."; return; }
       if (!res.ok) { error = "The control room had a problem answering. Try again in a moment."; return; }
       remember(p.base, p.token);

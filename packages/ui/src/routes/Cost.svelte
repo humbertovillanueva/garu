@@ -1,8 +1,8 @@
 <script lang="ts">
   import { api, live, loader } from "../lib/api.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
-  import { usd, agentColor, localDay } from "../lib/format";
-  import { KIND_COLOR } from "../lib/colors";
+  import { usd, localDay } from "../lib/format";
+  import { KIND_COLOR, NO_FACE_COLOR } from "../lib/colors";
   import Mark from "../lib/components/Mark.svelte";
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
@@ -41,9 +41,9 @@
   const total = $derived((rows ?? []).reduce((s, r) => s + r.costUsd, 0));
   const totalRuns = $derived((rows ?? []).reduce((s, r) => s + r.runs, 0));
   const dayWord = (d: string) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  // The same color as the agent's avatar, so the legend needs no decoding.
-  // "other" is everyone past the first six, so it gets the neutral color rather than one an agent might wear.
-  const colorFor = (agent: string) => { if (agent === "other") return "var(--color-s-other)"; const k = live.agents.find((a) => a.name === agent)?.persona?.kind; return k ? KIND_COLOR[k] : agentOrder.indexOf(agent) < 6 ? agentColor(agent) : "var(--color-s-other)"; };
+  // The same color as the agent's avatar, so the legend needs no decoding; "other" (everyone past the
+  // first six) and a faceless agent are grey, never a color a creature wears.
+  const colorFor = (agent: string) => { const k = agent === "other" ? undefined : live.agents.find((a) => a.name === agent)?.persona?.kind; return k ? KIND_COLOR[k] : NO_FACE_COLOR; };
 </script>
 
 <section class="space-y-5">
@@ -63,7 +63,7 @@
   {:else if rows.length === 0}
     <Empty title="No spend recorded in this window" />
   {:else}
-    <div class="panel rise grid grid-cols-3 divide-x divide-line">
+    <div class="panel rise grid grid-cols-1 divide-y divide-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
       <div class="px-4 py-3"><div class="text-[11px] uppercase tracking-wider text-mute">Total</div><div class="mt-0.5 text-[20px] font-semibold tabular-nums">{usd(total)}</div></div>
       <div class="px-4 py-3"><div class="text-[11px] uppercase tracking-wider text-mute">Runs</div><div class="mt-0.5 text-[20px] font-semibold tabular-nums">{totalRuns}</div></div>
       <div class="px-4 py-3"><div class="text-[11px] uppercase tracking-wider text-mute">Per run</div><div class="mt-0.5 text-[20px] font-semibold tabular-nums">{usd(totalRuns ? total / totalRuns : 0)}</div></div>

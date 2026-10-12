@@ -133,9 +133,11 @@
           <span class="ml-auto flex-none">{diffReady ? changeLabel : `${content.split("\n").length} lines · ${content.length} chars`}</span>
         </div>
         {#if diffReady}
-          <pre class="mono max-h-64 overflow-auto px-0 py-2 text-[12.5px] leading-relaxed">{#each rows as r}<div class="diffline" data-t={r.t}>{#if r.t === "…"}<button class="w-full text-left text-mute" onclick={() => (wholeFile = true)}>⋯ {r.n} unchanged line{r.n === 1 ? "" : "s"}</button>{:else}<span class="sign">{r.t === "=" ? " " : r.t}</span>{r.s}{/if}</div>{/each}</pre>
+          <pre class="mono max-h-64 overflow-auto px-0 py-2 text-[12.5px] leading-relaxed">{#each rows as r}<div class="diffline" data-t={r.t}>{#if r.t === "…"}<button class="tap w-full py-1.5 text-left text-mute" onclick={() => (wholeFile = true)}>⋯ {r.n} unchanged line{r.n === 1 ? "" : "s"}</button>{:else}<span class="sign">{r.t === "=" ? " " : r.t}</span>{r.s}{/if}</div>{/each}</pre>
           {#if wholeFile && (diff?.unchanged ?? 0) > 0}<button class="tap border-t hairline px-3 py-1.5 text-[11.5px] text-mute hover:text-fg" onclick={() => (wholeFile = false)}>show only the change</button>{/if}
         {:else}
+          {#if diff?.secret}<p class="border-b hairline px-3 py-2 text-[12px] text-mute">This file holds secrets, so the current one isn't shown; below is what {req.agent} wants to write.</p>
+          {:else if diff?.outside}<p class="border-b hairline px-3 py-2 text-[12px] text-mute">This path is outside the project folder, so the current file isn't shown; below is what {req.agent} wants to write.</p>{/if}
           <pre class="mono max-h-56 overflow-auto whitespace-pre-wrap px-3 py-3 text-[12.5px] leading-relaxed text-fg-2">{content}</pre>
         {/if}
       </div>
@@ -155,8 +157,8 @@
           <tbody>
             {#each Object.entries(a) as [k, v]}
               <tr class="border-b hairline last:border-0 align-top">
-                <td class="mono w-32 px-3 py-1.5 text-mute">{k}</td>
-                <td class="mono whitespace-pre-wrap break-words px-3 py-1.5 text-fg-2">{typeof v === "string" ? v : JSON.stringify(v)}</td>
+                <td class="mono whitespace-nowrap px-3 py-1.5 text-mute">{k}</td>
+                <td class="mono w-full whitespace-pre-wrap px-3 py-1.5 text-fg-2 [overflow-wrap:anywhere]">{typeof v === "string" ? v : JSON.stringify(v)}</td>
               </tr>
             {/each}
           </tbody>
@@ -177,12 +179,14 @@
     {/if}
     {#if error}<span class="text-[12.5px]" style="color: var(--color-bad)">{error}</span>{/if}
     <a href={href("run", req.agent, req.runId)} class="tap ml-auto text-[12px] text-mute hover:text-fg">open run →</a>
+    <!-- What the 24h button really grants, on the card itself: a tooltip never shows on a phone. -->
+    <span class="basis-full text-[11.5px] text-mute">“Approve for 24h” {grantHint.replace(/^Also allow/, "also allows")}.</span>
   </div>
   {#if declining}
     <!-- A decline can carry a reason. The agent reads it before its next step, so "wrong repo" fixes the run instead of just stopping one call. -->
     <div class="flex flex-wrap items-center gap-2 border-t hairline bg-bg/30 px-4 py-3">
       <!-- svelte-ignore a11y_autofocus -->
-      <input class="field min-w-0 flex-1" style="min-height: 36px; padding: 6px 10px" aria-label="Why you're declining (optional)" placeholder="Why? Optional. {req.agent} reads this before its next step, e.g. shorter, and don't promise a date" bind:value={note} onkeydown={onNoteKey} autofocus />
+      <input class="field min-w-0 flex-1" aria-label="Why you're declining (optional)" placeholder="Why? Optional. {req.agent} reads this before its next step, e.g. shorter, and don't promise a date" bind:value={note} onkeydown={onNoteKey} autofocus />
       <button class="btn btn-bad" disabled={busy} onclick={() => decide(false)}>{note.trim() ? "Decline with note" : "Decline"}</button>
       <button class="btn" disabled={busy} onclick={() => { declining = false; note = ""; }}>Cancel</button>
     </div>

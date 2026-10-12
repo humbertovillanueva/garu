@@ -21,8 +21,10 @@
   $effect(() => { live.tick; load(api.feed(60), (f) => { feed = f; feedError = null; }, (m) => (feedError = m)); });
   $effect(() => { live.tick; loadToday(api.today(), (t) => (today = t), () => {}); });
 
-  const hour = new Date().getHours();
-  const greeting = hour < 5 ? "Still up" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  // Follows the clock: a page left open overnight says good morning in the morning.
+  let now = $state(new Date());
+  $effect(() => { const t = setInterval(() => (now = new Date()), 60_000); return () => clearInterval(t); });
+  const greeting = $derived.by(() => { const hour = now.getHours(); return hour < 5 ? "Still up" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"; });
   const runsToday = $derived(live.agents.reduce((s, a) => s + a.runsToday, 0));
   const spendToday = $derived(live.agents.reduce((s, a) => s + a.costTodayUsd, 0));
   const working = $derived(live.agents.filter((a) => a.status === "working"));

@@ -95,13 +95,6 @@ export function statusLabel(s: string): string {
   return ({ ok: "done", error: "error", running: "running", interrupted: "interrupted", blocked: "blocked", max_turns: "hit turn limit", budget_exceeded: "over budget", "run.ok": "done", "needs-setup": "needs setup", waiting: "waiting for you", working: "working", scheduled: "scheduled", idle: "idle" } as Record<string, string>)[s] ?? s;
 }
 
-/** Stable identity color per agent name. */
-export function agentColor(name: string): string {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return `var(--color-s${(h % 6) + 1})`;
-}
-
 /** First-person status line, the way a colleague would say it. */
 export function statusLine(a: { status: string; inFlight: { turn: number } | null; pending: number; nextRun: string | null; lastRun: { status: string; startedAt: string } | null; cron: string | null; configured: boolean; needs?: string[]; signIn?: string[] }): string {
   if (a.status === "waiting") return a.pending === 1 ? "Waiting for you to approve one action" : `Waiting for you on ${a.pending} actions`;

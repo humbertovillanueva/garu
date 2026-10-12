@@ -50,11 +50,11 @@
         {@const req = e["request"] as { server: string; tool: string; args: Record<string, unknown> }}
         {@const { d, approval, waiting, result } = decisionOf(row)}
         <div class="panel overflow-hidden" style={waiting ? "border-color: color-mix(in oklab, var(--color-ask) 45%, var(--color-line))" : ""}>
-          <button class="tap flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-left text-[13px]" onclick={() => (open[row.env.seq] = !open[row.env.seq])}>
+          <button class="tap flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-left text-[13px]" aria-expanded={Boolean(open[row.env.seq])} onclick={() => (open[row.env.seq] = !open[row.env.seq])}>
             <span class="mono text-mute">{clockExact(row.env.ts)}</span>
             <span class="mono font-medium">{req.server}.{req.tool}</span>
             {#if d}<Decision action={d.action} />{/if}
-            {#if approval}<Decision action={approval.approved ? "allow" : "block"} label={approval.approved ? `approved by ${decidedBy(approval.by)}` : expired(approval.by) ? "expired, no answer" : `declined by ${decidedBy(approval.by)}`} />{/if}
+            {#if approval}<Decision action={approval.approved ? "allow" : "block"} label={approval.approved ? (/^grant\b/.test(approval.by) ? "allowed by your 24h approval" : `approved by ${decidedBy(approval.by)}`) : expired(approval.by) ? "expired, no answer" : `declined by ${decidedBy(approval.by)}`} />{/if}
             {#if approval?.note}<span class="text-[12.5px] italic text-fg-2">“{approval.note}”</span>{/if}
             {#if waiting}<span class="pulse text-[12px]" style="color: var(--color-ask)">waiting for you</span>{/if}
             {#if result}

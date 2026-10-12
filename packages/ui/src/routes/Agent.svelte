@@ -29,6 +29,10 @@
   let showAllRuns = $state(false);
   let bottom = $state<HTMLDivElement | null>(null);
   const hasKeyboard = typeof window === "undefined" || !window.matchMedia("(hover: none)").matches;
+  const modKey = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘" : "Ctrl";
+  // The message box grows with its text and shrinks back when it's cleared after a send.
+  let box = $state<HTMLTextAreaElement | null>(null);
+  $effect(() => { note; if (!box) return; box.style.height = "auto"; box.style.height = note ? `${Math.min(box.scrollHeight, 160)}px` : ""; });
 
   let loadError = $state<string | null>(null);
   const loadRuns = loader(), loadChat = loader();
@@ -60,11 +64,12 @@
   }
   // While working or waiting, stream the current run's events into the live panel.
   const currentRunId = $derived(a?.inFlight?.runId ?? pending[0]?.runId ?? null);
+  const loadLive = loader(); // newest answer wins: a slow older one can't shrink the timeline after a newer one grew it
   $effect(() => {
     live.tick;
     const id = currentRunId;
     if (!id) { liveEvents = null; return; }
-    api.run(name, id).then((e) => (liveEvents = e)).catch(() => (liveEvents = null));
+    loadLive(api.run(name, id), (e) => (liveEvents = e), () => (liveEvents = null));
   });
   // Follow the run as it grows, unless the reader has scrolled up to study something.
   let seenLive = 0, seenPending = 0;
@@ -89,7 +94,7 @@
       const r = await api.startRun(name, note.trim() || undefined);
       note = "";
       live.tick++;
-      if (r.runId) location.hash = href("agent", name); // stay here; live panel shows it
+      void r; // the live panel on this page shows the run
     } catch (e) { error = (e as Error).message; } finally { starting = false; }
   }
 </script>
@@ -181,8 +186,7 @@
       {@const busy = a.status === "working" || a.status === "waiting"}
       <div class="panel-raised rise sticky p-2" style="bottom: calc(0.75rem + var(--tabbar))">
         <div class="flex items-end gap-2">
-          <textarea class="field min-h-[42px] flex-1 resize-none" rows="1" placeholder={busy ? (a.status === "working" ? `${a.name} is working…` : "Waiting for your decision above") : hasKeyboard ? `Message ${a.name}  (⌘↵)` : `Message ${a.name}`} bind:value={note} onkeydown={onKey} disabled={busy}
-                    oninput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 160) + "px"; }}></textarea>
+          <textarea class="field min-h-[42px] flex-1 resize-none" rows="1" placeholder={busy ? (a.status === "working" ? `${a.name} is working…` : "Waiting for your decision above") : hasKeyboard ? `Message ${a.name}  (${modKey}↵)` : `Message ${a.name}`} bind:value={note} bind:this={box} onkeydown={onKey} disabled={busy}></textarea>
           <button class="btn btn-primary grid h-[42px] w-[42px] flex-none place-items-center rounded-full p-0" disabled={starting || !note.trim() || busy} onclick={send} aria-label="Send"><Icon name="send" size={18} /></button>
         </div>
         <div class="mt-1.5 flex items-center gap-2 px-1">

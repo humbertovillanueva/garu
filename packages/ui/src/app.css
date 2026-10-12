@@ -20,14 +20,8 @@
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
-/* Agent identity colors (validated for this surface). Referenced via var() only, so they live outside @theme. */
+/* The one color for an agent with no face, and for "everyone else" in charts. Agent colors come from lib/colors.ts. */
 :root {
-  --color-s1: #4f8fd9;
-  --color-s2: #2a9d78;
-  --color-s3: #9a6fd0;
-  --color-s4: #d0663a;
-  --color-s5: #c9a227;
-  --color-s6: #d05a8a;
   --color-s-other: #5b6472;
 }
 

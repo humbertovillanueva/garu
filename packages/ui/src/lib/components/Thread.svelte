@@ -10,7 +10,7 @@
   import { renderMarkdown } from "../md";
   import type { ChatMessage } from "../types";
 
-  let { agent, messages }: { agent: string; messages: ChatMessage[]; userName?: string } = $props();
+  let { agent, messages }: { agent: string; messages: ChatMessage[] } = $props();
 
   type Item = { kind: "msg"; m: ChatMessage } | { kind: "diary"; runs: ChatMessage[] };
   const groups = $derived.by(() => {

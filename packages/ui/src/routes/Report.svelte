@@ -16,17 +16,21 @@
     api.settings().then((s) => (version = s.version)).catch(() => (version = null));
     api.logs(80).then((r) => (lines = r.lines)).catch(() => (lines = []));
   });
-  const device = typeof navigator === "undefined" ? "" : navigator.userAgent.replace(/^Mozilla\/5\.0 \(/, "(").slice(0, 120);
-  const report = $derived.by(() => {
-    const parts = [
-      `## What happened\n\n${what.trim() || "(describe it here)"}`,
-      `## Where\n\n- ${isApp ? "Android app" : "Browser"}: ${build}\n- Garu: ${version === undefined ? "checking" : version ? `version ${version}` : "not reachable"}\n- Device: ${device}${isApp ? `\n- Paired with: ${server.base.replace(/^https?:\/\//, "").replace(/\.[^.]+\.ts\.net$/, ".….ts.net") || "—"}` : ""}`,
-    ];
-    if (includeLog && lines?.length) parts.push(`## Last lines of the service log\n\n\`\`\`\n${lines.slice(-40).join("\n")}\n\`\`\``);
-    return parts.join("\n\n");
-  });
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  const device = ua.replace(/^Mozilla\/5\.0 \(/, "(").slice(0, 120);
+  const where = isApp ? (/iPhone|iPad|iPod/.test(ua) ? "iPhone app" : "Android app") : "Browser";
+  const summary = $derived([
+    `## What happened\n\n${what.trim() || "(describe it here)"}`,
+    `## Where\n\n- ${where}: ${build}\n- Garu: ${version === undefined ? "checking" : version ? `version ${version}` : "not reachable"}\n- Device: ${device}${isApp ? `\n- Paired with: ${server.base.replace(/^https?:\/\//, "").replace(/\.[^.]+\.ts\.net$/, ".….ts.net") || "—"}` : ""}`,
+  ].join("\n\n"));
+  const logPart = $derived(includeLog && lines?.length ? `## Last lines of the service log\n\n\`\`\`\n${lines.slice(-40).join("\n")}\n\`\`\`` : "");
+  const report = $derived(logPart ? `${summary}\n\n${logPart}` : summary);
   const title = $derived(what.trim().split("\n")[0]?.slice(0, 72) || "Problem report");
-  const issueUrl = $derived(`https://github.com/humbertovillanueva/garu/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(report)}`);
+  // GitHub refuses a new-issue link past about 8 KB, and 40 log lines can be more than that: then the
+  // link carries the summary and the log goes by Copy the report.
+  const ISSUE_LINK_MAX = 6000;
+  const linkHasLog = $derived(Boolean(logPart) && encodeURIComponent(report).length <= ISSUE_LINK_MAX);
+  const issueUrl = $derived(`https://github.com/humbertovillanueva/garu/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(linkHasLog || !logPart ? report : `${summary}\n\n## Last lines of the service log\n\n(too long for a link: paste the copied report here)`)}`);
   async function copy() {
     try { await navigator.clipboard.writeText(report); copied = true; setTimeout(() => (copied = false), 1500); } catch { error = "Couldn't copy; select the text below instead."; }
   }
@@ -47,6 +51,7 @@
     <button class="btn" onclick={copy}>{copied ? "Copied" : "Copy the report"}</button>
     {#if error}<span class="self-center text-[12.5px]" style="color: var(--color-bad)">{error}</span>{/if}
   </div>
+  {#if logPart && !linkHasLog}<p class="text-[12.5px] text-mute">The log is too long for the GitHub link: press Copy the report and paste it into the issue.</p>{/if}
   <details class="panel rise">
     <summary class="cursor-pointer px-4 py-3 text-[13.5px] text-fg-2">What the report contains</summary>
     <pre class="mono max-h-80 overflow-auto whitespace-pre-wrap break-words border-t hairline px-4 py-3 text-[12px] text-fg-2 select-all">{report}</pre>

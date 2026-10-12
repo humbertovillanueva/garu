@@ -20,7 +20,7 @@
       "Settings: this device, how it's paired, and the advanced details of the control room.",
     ] },
     { title: "Approvals that learn", body: [
-      "Approve for 24h creates a grant: this agent, this tool, this exact file or address, until tomorrow. Grants are listed in the inbox and can be revoked.",
+      "Approve for 24h creates a grant: this agent, this tool, and when the call names a file or an address, only that one, until tomorrow. The card says what it would cover. Grants are listed in the inbox and can be revoked.",
       "Approve the same thing three times and Garu proposes the exact rule, scoped to what you approved. Add it to the agent's file in one tap, or dismiss it.",
     ] },
     { title: "Pairing and security", body: [

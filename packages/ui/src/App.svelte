@@ -38,7 +38,7 @@
     if (!isApp || !live.loaded || !prefs.landOnInbox) return;
     if (live.pending.length && (route.name === "home" || !location.hash)) location.hash = href("inbox");
   }
-  async function resume() { await refreshNow(); landOnPending(); }
+  async function resume() { if (!paired()) return; await refreshNow(); landOnPending(); }
 
   onMount(() => {
     if (isApp) document.documentElement.classList.add("app");
