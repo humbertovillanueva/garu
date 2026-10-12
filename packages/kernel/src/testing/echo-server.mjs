@@ -3,6 +3,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
+// NOISY_STDERR=<bytes>: write that much to stderr first, like a server that logs a lot while starting.
+if (process.env.NOISY_STDERR) process.stderr.write("log ".repeat(Math.ceil(Number(process.env.NOISY_STDERR) / 4)) + "\n");
+
 const server = new McpServer({ name: "echo-test", version: "0.0.1" });
 
 server.registerTool(

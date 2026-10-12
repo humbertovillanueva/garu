@@ -117,6 +117,24 @@ describe("ToolBus retries a server that dies while starting", () => {
   }, 30_000);
 });
 
+describe("ToolBus and a server's stderr", () => {
+  it("a server that floods stderr while starting still connects and answers", async () => {
+    const rec = new Recorder({ root: mkdtempSync(join(tmpdir(), "garu-")), agent: "noisy" });
+    const bus = new ToolBus({ policy: new PolicyEngine([{ tool: "*", action: "allow" }]), recorder: rec, approver: async () => ({ approved: true, by: "t" }) });
+    await bus.connect([{ name: "echo", command: process.execPath, args: [serverPath], env: { NOISY_STDERR: "300000" } } as never]);
+    const out = await bus.call("echo.echo", { text: "still here" });
+    expect(out.status).toBe("ok");
+    await bus.close();
+  }, 20_000);
+
+  it("what a server said on stderr is part of the 'failed to start' message", async () => {
+    const rec = new Recorder({ root: mkdtempSync(join(tmpdir(), "garu-")), agent: "dying" });
+    const bus = new ToolBus({ policy: new PolicyEngine([{ tool: "*", action: "allow" }]), recorder: rec, approver: async () => ({ approved: true, by: "t" }), startupRetryMs: 10 });
+    await expect(bus.connect([{ name: "bad", command: process.execPath, args: ["-e", "process.stderr.write('config: FOO is not set\\n'); process.exit(1)"], env: {} } as never])).rejects.toThrow(/failed to start[\s\S]*FOO is not set/);
+    await bus.close();
+  }, 20_000);
+});
+
 describe("expandSpec", () => {
   const spec = { name: "web", command: "node", args: ["server.js", "--token=${TOKEN}"], env: { WEBHOOK_URL: "${HOOK}", PLAIN: "x" } };
   it("fills ${VAR} from the environment", () => {

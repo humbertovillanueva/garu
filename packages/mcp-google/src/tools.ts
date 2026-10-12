@@ -184,7 +184,7 @@ export function gmailTools(call: Call): Record<string, ToolDef> {
       },
       async ({ to, cc, subject, body, threadId }) => {
         // A reply no one will read is not worth a draft, however sure the model was.
-        const dead = to.find((a) => looksAutomated(a));
+        const dead = [...to, ...(cc ?? [])].find((a) => looksAutomated(a));
         if (dead) throw new Error(`no draft saved: ${dead} is an automated address, and a reply there goes nowhere. File the thread instead.`);
         let inReplyTo: string | undefined;
         let references: string | undefined;

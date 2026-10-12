@@ -44,12 +44,9 @@ export function dockerArgs(spec: StdioServerSpec, sandbox: Sandbox, agent: strin
   for (const m of sandbox.mounts) {
     args.push("-v", `${resolve(cwd, m.host)}:${m.container}:${m.readonly ? "ro" : "rw"}`);
   }
-  for (const [k, v] of Object.entries(spec.env)) {
-    args.push("-e", `${k}=${v}`);
-  }
-  // Secrets Garu adds (an access token) go by name only: docker reads the value from its own
-  // environment, so it never shows on a command line.
-  for (const k of passByName) args.push("-e", k);
+  // Every variable goes by name only: docker reads the value from its own environment, so a secret
+  // never shows in `ps` or `docker inspect`.
+  for (const k of [...Object.keys(spec.env), ...passByName]) args.push("-e", k);
   args.push(sandbox.image, spec.command, ...spec.args);
   return { command: "docker", args, containerName };
 }

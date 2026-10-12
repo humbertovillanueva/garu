@@ -147,6 +147,7 @@ export function decidedBy(by: string | undefined): string {
   if (!by) return "";
   if (/expired/.test(by)) return "nobody answered in time";
   if (/vanished/.test(by)) return "the request went away";
+  if (/garu stopped/.test(by)) return "a restart of Garu";
   if (/^grant\b/.test(by)) return "your 24-hour approval";
   if (/\((ui|cli|phone|app)\)$/.test(by)) return "you";
   return by;

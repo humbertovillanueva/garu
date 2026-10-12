@@ -64,8 +64,10 @@ export class Inbox {
 
   async create(req: ToolCallRequest, decision: Decision, ctx: ApprovalContext): Promise<ApprovalRequest> {
     const now = this.now();
+    let id = shortId();
+    while (existsSync(this.path(id))) id = shortId(); // six characters: a collision is rare, and would overwrite history
     const r: ApprovalRequest = {
-      id: shortId(),
+      id,
       agent: ctx.agent,
       runId: ctx.runId,
       callId: ctx.callId,
@@ -80,12 +82,22 @@ export class Inbox {
     return r;
   }
 
+  private closedReason: string | null = null;
+  /** Garu is stopping: every wait ends now, declined and recorded with this reason, so no ask outlives the run it paused. */
+  close(reason = "inbox: garu stopped"): void {
+    this.closedReason = reason;
+  }
+
   /** Resolve when a decision lands or the request expires (expiry = deny). */
   async waitFor(id: string): Promise<{ approved: boolean; by: string; note?: string }> {
     for (;;) {
       const r = this.get(id);
       if (!r) return { approved: false, by: "inbox: request vanished" };
       if (r.decision) return { approved: r.decision.approved, by: r.decision.by, ...(r.decision.note ? { note: r.decision.note } : {}) };
+      if (this.closedReason) {
+        try { this.decide(id, false, this.closedReason); } catch { /* decided in the meantime */ }
+        return { approved: false, by: this.closedReason };
+      }
       if (this.now().getTime() >= Date.parse(r.expiresAt)) {
         this.decide(id, false, "inbox: expired");
         return { approved: false, by: "inbox: expired" };

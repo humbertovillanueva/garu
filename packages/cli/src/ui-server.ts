@@ -529,7 +529,10 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     close: async () => {
       for (const w of watchers) w.close();
       for (const c of clients) c.end();
-      await scheduler?.stop();
+      // A restart shouldn't wait half an hour for an answer nobody is giving: paused asks end now,
+      // recorded as declined by the stop, and runs get ten seconds to wrap up.
+      inbox.close();
+      await scheduler?.stop(10_000);
       server.close();
     },
   };

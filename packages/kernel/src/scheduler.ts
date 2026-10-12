@@ -225,15 +225,16 @@ export class Scheduler {
     await p;
   }
 
-  /** Stop scheduling new runs and wait for in-flight ones. */
-  async stop(): Promise<void> {
+  /** Stop scheduling new runs and wait for in-flight ones: forever by default, or up to `deadlineMs`. */
+  async stop(deadlineMs?: number): Promise<void> {
     this.stopping = true;
     if (this.timer) clearInterval(this.timer);
     for (const h of this.handles) h.stop();
     this.handles.length = 0;
     this.jobs.length = 0;
     this.emit({ type: "stopping", inFlight: this.inFlight.size });
-    await Promise.allSettled([...this.inFlight.values()]);
+    const all = Promise.allSettled([...this.inFlight.values()]);
+    await (deadlineMs === undefined ? all : Promise.race([all, new Promise<void>((r) => setTimeout(r, deadlineMs).unref?.())]));
     this.emit({ type: "stopped" });
   }
 

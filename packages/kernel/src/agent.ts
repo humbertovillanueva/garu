@@ -172,7 +172,8 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
       }
 
       // Money guard: the turn we just paid for is recorded; nothing further runs.
-      if (maxCost !== undefined && totalCost >= maxCost) {
+      // A free model at a cap of 0 has spent nothing, so it carries on; a paid one stops at its first cent.
+      if (maxCost !== undefined && totalCost > 0 && totalCost >= maxCost) {
         recorder.record({ type: "budget.exceeded", costUsd: totalCost, maxCostUsd: maxCost, pendingToolCalls: toolUses.length });
         status = "budget_exceeded";
         output = text || `stopped: estimated cost reached the budget cap`;

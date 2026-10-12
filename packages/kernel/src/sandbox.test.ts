@@ -18,7 +18,7 @@ describe("dockerArgs", () => {
     expect(a).toContain("--read-only");
     expect(a[a.indexOf("--cap-drop") + 1]).toBe("ALL");
     expect(a).toContain("/repo/examples/hello/workspace:/workspace:rw");
-    expect(a).toContain("FOO=bar");
+    expect(a).toContain("FOO");
     // image, then the real command and its args, last
     expect(a.slice(-3)).toEqual(["garu-sandbox", "mcp-server-filesystem", "/workspace"]);
   });

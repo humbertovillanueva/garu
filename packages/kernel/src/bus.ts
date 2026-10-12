@@ -112,8 +112,8 @@ export class ToolBus {
       const makeTransport = () => new StdioClientTransport({
         command: wrapped?.command ?? spec.command,
         args: wrapped?.args ?? spec.args,
-        // inside a container, env goes in via -e; on the host, into the process
-        env: wrapped ? { ...getDefaultEnvironment(), ...signedIn } : { ...getDefaultEnvironment(), ...spec.env, ...signedIn },
+        // the server's env goes into the process; in a container, docker passes each name on from there (never a value on a command line)
+        env: { ...getDefaultEnvironment(), ...spec.env, ...signedIn },
         stderr: "pipe",
         ...(spec.cwd && !wrapped ? { cwd: spec.cwd } : {}),
       });
@@ -124,12 +124,16 @@ export class ToolBus {
       let transport = makeTransport();
       for (let attempt = 1; attempt <= MAX; attempt++) {
         const c = new Client({ name: "garu", version: "0.1.0" });
+        const connecting = c.connect(transport);
+        // The server's stderr is piped. Unread, a chatty one (Python servers log there) fills the pipe
+        // and blocks; read it as it comes, and keep the last lines for the "failed to start" message.
+        const stderrTail = drainStderr(transport);
         try {
-          await c.connect(transport);
+          await connecting;
           client = c;
           break;
         } catch (e) {
-          const raw = (e as Error).message;
+          const raw = (e as Error).message + stderrTail.text();
           // Timeouts and a process that died during the handshake are worth one more go; a command that
           // doesn't exist (ENOENT) or Docker refusing are not.
           const transient = /timed out|-32001|ETIMEDOUT|EAGAIN|ECONNRESET|connection closed/i.test(raw) && !/ENOENT/.test(raw);
@@ -246,6 +250,13 @@ export class ToolBus {
     this.servers.clear();
     this.tools = [];
   }
+}
+
+/** Keeps a child's stderr flowing and remembers its last 4 KB, formatted for an error message. */
+function drainStderr(transport: StdioClientTransport): { text: () => string } {
+  let tail = "";
+  transport.stderr?.on("data", (chunk: Buffer) => { tail = (tail + chunk.toString("utf8")).slice(-4096); });
+  return { text: () => (tail.trim() ? `\n  it said: ${tail.trim().split("\n").slice(-6).join("\n  ")}` : "") };
 }
 
 /**

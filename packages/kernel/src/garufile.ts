@@ -53,7 +53,10 @@ export const PolicyRule = z
   .strict();
 export type PolicyRule = z.infer<typeof PolicyRule>;
 
-const serverName = z.string().regex(/^[a-z][a-z0-9_-]*$/, "server name: lowercase, digits, - or _");
+const serverName = z
+  .string()
+  .regex(/^[a-z][a-z0-9_-]*$/, "server name: lowercase, digits, - or _")
+  .refine((s) => !s.includes("__"), "server name: no double underscore (it separates server and tool in the model's view)");
 
 /**
  * Your own OAuth client, for servers that don't hand one out (Google's MCP servers, for one).

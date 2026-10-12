@@ -74,8 +74,10 @@ export class GrantStore {
 
   create(input: { agent: string; tool: string; scope?: { key: string; value: unknown } | undefined; durationMs: number; createdBy: string }): Grant {
     const now = this.now();
+    let id = randomUUID().replace(/-/g, "").slice(0, 6);
+    while (this.grants.some((x) => x.id === id)) id = randomUUID().replace(/-/g, "").slice(0, 6);
     const g: Grant = {
-      id: randomUUID().replace(/-/g, "").slice(0, 6),
+      id,
       agent: input.agent,
       tool: input.tool,
       ...(input.scope ? { scope: input.scope } : {}),
