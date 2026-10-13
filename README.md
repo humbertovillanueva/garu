@@ -1,3 +1,5 @@
+*En español: [README.es.md](README.es.md)*
+
 <p align="center">
   <img src="docs/demo.gif" alt="Bea, an inbox agent, and her rules in plain words: reading and filing mail are allowed, she can't send email at all, and drafting a reply asks first. The draft-a-reply rule grows into an approval card for a reply to Lena; one tap approves it and it's saved in Drafts, not sent." width="900">
 </p>

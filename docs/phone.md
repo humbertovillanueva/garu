@@ -1,3 +1,5 @@
+*En español: [phone.es.md](phone.es.md)*
+
 # Garu on your phone
 
 The control room is a web app that installs to your home screen. Approve what an agent asks from wherever you are, watch a run live, check the spend. Nothing moves to a cloud: your phone talks to the same `garu ui` process on your computer, over a private connection.

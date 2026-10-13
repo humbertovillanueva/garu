@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a0c0f">
+<title>Garu — agentes siempre activos en los que puedes confiar</title>
+<meta name="description" content="Garu ejecuta agentes 24/7 con cualquier modelo y cualquier herramienta MCP, y pasa cada acción por una política que tú escribiste: permitir, preguntar o bloquear. Código abierto, Apache-2.0.">
+<meta property="og:title" content="Garu — agentes siempre activos en los que puedes confiar">
+<meta property="og:description" content="Cualquier modelo. Cualquier herramienta MCP. Cada acción pasa por una política que tú escribiste, queda registrada, con tope de gasto y aislada.">
+<meta property="og:image" content="https://humbertovillanueva.github.io/garu/screenshots/home.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f; --panel: #11141a; --panel-2: #171b22; --line: #1e232c; --line-2: #2a303b;
+    --fg: #e6eaf0; --fg-2: #aeb6c2; --mute: #7f8899; --accent: #f4f1ea; --ask: #d9b24c; --ok: #43c979; --bad: #ef5350;
+    --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --w: 1080px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; font-feature-settings: "cv11" 1, "ss01" 1; }
+  a { color: inherit; text-decoration: none; }
+  a:hover { color: var(--fg); }
+  code, pre, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .wrap { max-width: var(--w); margin: 0 auto; padding: 0 20px; }
+  .eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--mute); }
+
+  /* nav */
+  nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px); background: color-mix(in oklab, var(--bg) 88%, transparent); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; gap: 22px; height: 56px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; letter-spacing: -.01em; }
+  .mark { width: 26px; height: 26px; display: block; }
+  nav .links { margin-left: auto; display: flex; gap: 18px; font-size: 14px; color: var(--fg-2); }
+  nav .links a.gh { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border: 1px solid var(--line-2); border-radius: 8px; color: var(--fg); background: var(--panel); }
+  nav .links a.gh:hover { background: var(--panel-2); }
+  @media (max-width: 640px) { nav .links a:not(.gh) { display: none; } }
+
+  /* hero */
+  header { padding: 72px 0 36px; text-align: center; }
+  h1 { font-size: clamp(34px, 5.4vw, 60px); line-height: 1.04; letter-spacing: -.035em; margin: 14px 0 18px; font-weight: 650; }
+  h1 em { font-style: normal; color: var(--accent); }
+  .lede { max-width: 700px; margin: 0 auto; color: var(--fg-2); font-size: clamp(16px, 1.6vw, 19px); }
+  .lede b { color: var(--fg); font-weight: 500; }
+  .cta { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--panel); font-size: 15px; font-weight: 500; }
+  .btn:hover { background: var(--panel-2); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #141008; }
+  .btn.primary:hover { filter: brightness(1.06); color: #141008; }
+  .install { margin: 26px auto 0; display: inline-flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--panel); font-family: var(--mono); font-size: 13.5px; color: var(--fg-2); }
+  .install span { color: var(--mute); }
+  @media (max-width: 760px) { .install { display: none; } }
+
+  .shot { margin: 44px auto 0; max-width: 1000px; border: 1px solid var(--line-2); border-radius: 14px; overflow: hidden; background: var(--panel); box-shadow: 0 30px 80px -30px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.02) inset; }
+  .shot img, .shot video { display: block; width: 100%; height: auto; }
+  .caption { margin-top: 14px; text-align: center; color: var(--mute); font-size: 13.5px; }
+  .caption code { color: var(--fg-2); font-size: 12.5px; }
+
+  /* sections */
+  section.wrap { padding-top: 88px; }
+  h2 { font-size: clamp(26px, 3vw, 36px); letter-spacing: -.028em; line-height: 1.12; margin: 10px 0 14px; font-weight: 620; }
+  .sub { color: var(--fg-2); max-width: 680px; font-size: 17px; margin: 0 0 34px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 20px 18px; }
+  .card h3 { margin: 10px 0 6px; font-size: 16.5px; font-weight: 600; letter-spacing: -.01em; }
+  .card p { margin: 0; color: var(--fg-2); font-size: 14.5px; }
+  .card .tag { font-family: var(--mono); font-size: 11.5px; color: var(--mute); }
+  .card .tag.allow { color: var(--ok); } .card .tag.ask { color: var(--accent); } .card .tag.block { color: var(--bad); }
+
+  /* two-up */
+  .two { display: grid; grid-template-columns: 1.05fr .95fr; gap: 34px; align-items: start; }
+  @media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
+  pre.code { margin: 0; background: var(--panel); border: 1px solid var(--line-2); border-radius: 14px; padding: 18px 20px; overflow-x: auto; font-size: 12.8px; line-height: 1.6; color: var(--fg-2); }
+  pre.code .k { color: var(--fg); } pre.code .s { color: #c9a227; } pre.code .c { color: var(--mute); } pre.code .a { color: var(--ok); } pre.code .q { color: var(--accent); } pre.code .b { color: var(--bad); }
+  .steps { counter-reset: s; display: grid; gap: 18px; }
+  .step { position: relative; padding-left: 44px; }
+  .step::before { counter-increment: s; content: counter(s); position: absolute; left: 0; top: 2px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-family: var(--mono); font-size: 12.5px; background: var(--panel-2); border: 1px solid var(--line-2); color: var(--fg-2); }
+  .step h3 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+  .step p { margin: 0; color: var(--fg-2); font-size: 14.5px; }
+
+  /* flow diagram */
+  .flow { background: var(--panel); border: 1px solid var(--line-2); border-radius: 14px; padding: 22px 20px; overflow-x: auto; max-width: 100%; }
+  .flow svg { display: block; width: 100%; height: auto; min-width: 640px; font-family: var(--mono); font-size: 12.5px; }
+
+  /* phone */
+  .phone { display: grid; grid-template-columns: 1fr 300px; gap: 40px; align-items: center; }
+  @media (max-width: 800px) { .phone { grid-template-columns: 1fr; } .phone img { max-width: 300px; margin: 0 auto; } }
+  .phone img { display: block; width: 100%; height: auto; border-radius: 26px; border: 1px solid var(--line-2); box-shadow: 0 30px 80px -30px rgba(0,0,0,.8); }
+  .phone > div { min-width: 0; }
+  .phone pre.code { margin-top: 18px; }
+
+  /* quickstart */
+  .qs { background: var(--panel); border: 1px solid var(--line-2); border-radius: 14px; padding: 22px 24px; }
+  .qs pre { margin: 10px 0 0; padding: 0; background: none; border: 0; font-size: 13px; line-height: 1.7; color: var(--fg-2); overflow-x: auto; }
+  .qs pre .c { color: var(--mute); } .qs p { margin: 0 0 4px; color: var(--fg-2); font-size: 14.5px; }
+  .qs p + pre { margin-top: 12px; }
+
+  footer { margin-top: 96px; border-top: 1px solid var(--line); padding: 28px 0 44px; color: var(--mute); font-size: 13.5px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 26px; align-items: center; }
+  footer a { color: var(--fg-2); } footer a:hover { color: var(--fg); }
+  footer .right { margin-left: auto; }
+  @media (prefers-reduced-motion: no-preference) {
+    .rise { animation: rise .5s cubic-bezier(.2,.7,.2,1) both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="mark" fill="none" color="currentColor"><defs><mask id="garu-cat"><g fill="#fff"><ellipse cx="48.5" cy="52.0" rx="23.0" ry="20.70"/><polygon points="44.82,42.34 29.64,40.96 27.80,19.34"/><polygon points="52.18,42.34 67.36,40.96 69.20,19.34"/></g><g fill="#000"><rect x="25.04" y="41.42" width="46.92" height="4.60" rx="2.30" transform="rotate(6 48.5 43.72)"/><ellipse cx="39.30" cy="53.38" rx="5.98" ry="2.07" transform="rotate(12 39.30 53.38)"/><ellipse cx="57.70" cy="53.38" rx="5.98" ry="2.07" transform="rotate(-12 57.70 53.38)"/><polygon points="46.66,60.28 50.34,60.28 48.5,62.58"/></g><g fill="#fff"><rect x="38.61" y="51.66" width="1.38" height="3.45" rx="0.69"/><rect x="57.01" y="51.66" width="1.38" height="3.45" rx="0.69"/></g></mask></defs> <path d="M 91.77 54.39 A 42 42 0 1 1 84.82 26.51" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"/> <rect width="100" height="100" fill="currentColor" mask="url(#garu-cat)"/> <g stroke="currentColor" stroke-width="3.91" stroke-linecap="round" stroke-linejoin="round"><polyline points="71.04,44.18 83.98,36.13 98.35,39.01"/><polyline points="71.04,44.18 83.11,47.63 96.34,53.95"/></g> <g fill="currentColor"><circle cx="71.04" cy="44.18" r="3.22"/></g></svg>Garu</a>
+    <div class="links">
+      <a href="#how">Cómo funciona</a>
+      <a href="#garufile">Garufile</a>
+      <a href="#phone">Teléfono</a>
+      <a href="https://github.com/humbertovillanueva/garu/blob/main/README.es.md">Docs</a>
+      <a href="index.html">English</a>
+      <a class="gh" href="https://github.com/humbertovillanueva/garu">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</nav>
+
+<header class="wrap rise">
+  <div class="eyebrow">Código abierto · Apache-2.0 · corre en tu computadora</div>
+  <h1>Agentes siempre activos<br>en los que <em>puedes confiar</em>.</h1>
+  <p class="lede">Cualquier modelo. Cualquier herramienta MCP. Cada acción pasa por una política que escribiste <b>tú</b> — <b>permitir</b>, <b>preguntar</b> o <b>bloquear</b> — registrada, con tope de costo y aislada. Garu es <b>systemd para tus agentes</b>.</p>
+  <div class="cta">
+    <a class="btn primary" href="https://github.com/humbertovillanueva/garu/blob/main/README.es.md#pruébalo-en-cinco-minutos-gratis">Pruébalo en cinco minutos</a>
+    <a class="btn" href="https://github.com/humbertovillanueva/garu">Dale una estrella en GitHub</a>
+  </div>
+  <div class="install"><span>$</span> git clone https://github.com/humbertovillanueva/garu &amp;&amp; cd garu &amp;&amp; npm install &amp;&amp; npm run build</div>
+
+  <div class="shot"><video src="video/garu-v7-16x9.mp4" poster="screenshots/video-poster.jpg" width="1000" height="563" autoplay muted loop playsinline controls preload="metadata" aria-label="El video de lanzamiento de Garu: Tomay prepara tu día a partir de tu agenda, Bea ordena tu bandeja y redacta respuestas que esperan tu aprobación, y Garu aprende qué aprobaciones preferirías saltarte."></video></div>
+  <p class="caption">El video de lanzamiento de 45 segundos (aquí sin sonido). Tomay prepara tu día; Bea clasifica tu correo y redacta respuestas que esperan un toque, y no puede enviar. Las pantallas de la sala de control se reconstruyeron para el video; las reuniones y los correos son ejemplos.</p>
+</header>
+
+<section id="why" class="wrap">
+  <div class="eyebrow">Por qué</div>
+  <h2>Los agentes que trabajan mientras duermes solo sirven si puedes dejarlos.</h2>
+  <p class="sub">Dots de OpenAI y Muse de Meta corren todo el día y actúan por ti: cerrados, de un solo proveedor, no disponibles en buena parte del mundo. Garu es la versión abierta, construida alrededor de la parte que ellos tratan como un detalle: el control.</p>
+  <div class="grid">
+    <div class="card"><div class="tag allow">allow</div><h3>Un núcleo de política delante de cada herramienta</h3><p>Reglas por nombre de herramienta <em>y</em> por argumento: deja que un agente clasifique correo pero pregunte antes de cada borrador, que escriba solo en <code>briefs/2026-*.md</code>, y bloquea todo lo demás. Las herramientas que nunca podrían pasar la política nunca se le muestran al modelo.</p></div>
+    <div class="card"><div class="tag ask">ask</div><h3>Una bandeja, no una avalancha</h3><p>Cuando una regla dice preguntar, la ejecución se pausa. Ves el correo como un correo, el archivo como un archivo, el borrador como un borrador. Aprueba una vez, aprueba por 24 horas o rechaza. El silencio es un no.</p></div>
+    <div class="card"><div class="tag block">block</div><h3>Una política que aprende, contigo al mando</h3><p>Aprueba lo mismo tres veces y Garu propone la regla más estrecha que cubre exactamente lo que aprobaste, y la escribe en tu archivo cuando tú lo digas. Los comentarios se conservan.</p></div>
+    <div class="card"><div class="tag">caja negra</div><h3>Una caja negra</h3><p>Cada turno del modelo, cada llamada a una herramienta, cada decisión y cada aprobación en un registro al que solo se agrega, un archivo por ejecución. Repasa cualquier ejecución como una línea de tiempo, en el navegador o con <code>garu log</code>.</p></div>
+    <div class="card"><div class="tag">$ tope</div><h3>Un presupuesto en cada ejecución</h3><p>El costo se estima a partir de los tokens reales a precio de lista. Una ejecución se detiene en el momento en que cruzaría <code>maxCostUsd</code>. Los modelos locales cobran $0 y aun así muestran lo que habría costado.</p></div>
+    <div class="card"><div class="tag">aislado</div><h3>Cualquier modelo, en una caja</h3><p>Gemini en el nivel gratuito, Claude, u Ollama en tu laptop: una línea para cambiar. Cada servidor de herramientas puede correr en su propio contenedor de Docker: sin red, raíz de solo lectura, solo la carpeta de trabajo del agente montada.</p></div>
+  </div>
+</section>
+
+<section id="how" class="wrap">
+  <div class="eyebrow">Cómo funciona</div>
+  <h2>Un bucle, una puerta, un registro.</h2>
+  <p class="sub">Un agente solo toca el mundo a través del <a href="https://modelcontextprotocol.io" style="color:var(--fg)">Model Context Protocol</a>. El núcleo de política se sienta entre el modelo y cada servidor MCP. La caja negra ve todo lo que ve el núcleo. La sala de control es una vista sobre esos archivos. No hay base de datos.</p>
+  <div class="flow">
+    <svg viewBox="0 0 1050 300" role="img" aria-label="Tú hablas con la sala de control o la CLI, que mueve el bucle del agente y un modelo. Cada llamada a una herramienta que hace el modelo va al núcleo de política, que la permite hacia el servidor de herramientas MCP, te pregunta por la bandeja, o la bloquea. Todo se escribe en la caja negra.">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#7f8899"/></marker></defs>
+      <g stroke="#2a303b" stroke-width="1" fill="#171b22">
+        <rect x="20" y="30" width="110" height="44" rx="9"/>
+        <rect x="190" y="30" width="170" height="44" rx="9"/>
+        <rect x="420" y="30" width="140" height="44" rx="9"/>
+        <rect x="620" y="30" width="150" height="44" rx="9"/>
+        <rect x="420" y="130" width="140" height="44" rx="9" stroke="#d9b24c" stroke-opacity=".6"/>
+        <rect x="660" y="106" width="372" height="40" rx="9"/>
+        <rect x="660" y="156" width="372" height="40" rx="9"/>
+        <rect x="660" y="206" width="372" height="40" rx="9"/>
+        <rect x="190" y="232" width="370" height="44" rx="9"/>
+      </g>
+      <g fill="#e6eaf0" text-anchor="middle">
+        <text x="75" y="57">tú</text>
+        <text x="275" y="57">sala de control · CLI</text>
+        <text x="490" y="57">bucle del agente</text>
+        <text x="695" y="57">modelo</text>
+        <text x="490" y="157" fill="#d9b24c">política</text>
+        <text x="375" y="259">caja negra · .garu/runs/*.jsonl</text>
+      </g>
+      <g fill="#aeb6c2" text-anchor="start">
+        <text x="676" y="131"><tspan fill="#43c979">permitir</tspan> → servidor MCP (Docker opcional)</text>
+        <text x="676" y="181"><tspan fill="#d9b24c">preguntar</tspan> → bandeja → tú · web · teléfono</text>
+        <text x="676" y="231"><tspan fill="#ef5350">bloquear</tspan> → nunca se ejecuta, nunca se ofrece</text>
+      </g>
+      <g fill="#7f8899" font-size="11">
+        <text x="695" y="95" text-anchor="middle">Gemini · Claude · Ollama</text>
+      </g>
+      <g stroke="#7f8899" stroke-width="1.2" fill="none" marker-end="url(#ar)">
+        <path d="M130 52H190"/><path d="M360 52H420"/><path d="M560 52H620"/>
+        <path d="M490 74V130"/>
+        <path d="M560 152C600 152 620 126 660 126"/>
+        <path d="M560 152C600 152 620 176 660 176"/>
+        <path d="M560 152C600 152 620 226 660 226"/>
+        <path d="M490 174V232"/>
+      </g>
+      <g stroke="#2a303b" stroke-width="1" stroke-dasharray="3 4" fill="none"><path d="M490 232H560" /></g>
+    </svg>
+  </div>
+</section>
+
+<section id="garufile" class="wrap">
+  <div class="eyebrow">El Garufile</div>
+  <h2>Un agente es un archivo YAML pequeño. La política es la parte interesante.</h2>
+  <p class="sub">Esta es Bea, uno de los agentes de este repositorio: a las 7:15 entre semana clasifica el correo del día en cuatro etiquetas y redacta las respuestas. Leer y clasificar están permitidos, cada borrador te pregunta, y su servidor de Gmail no tiene ninguna herramienta para enviar.</p>
+  <div class="two">
+<pre class="code"><span class="k">name:</span> bea
+<span class="k">persona:</span> { <span class="k">kind:</span> bee, <span class="k">tagline:</span> <span class="s">"Sorts the inbox so you don't have to."</span> }
+<span class="k">model:</span> gemini/gemini-3.5-flash-lite
+<span class="k">triggers:</span>
+  - <span class="k">cron:</span> <span class="s">"15 7 * * 1-5"</span>
+<span class="k">budget:</span> { <span class="k">maxCostUsd:</span> 0.05 }
+
+<span class="k">tools:</span>
+  - <span class="k">name:</span> gmail                 <span class="c"># el servidor de Gmail de Garu</span>
+    <span class="k">command:</span> node
+    <span class="k">args:</span> [<span class="s">"packages/mcp-google/dist/index.js"</span>, <span class="s">"gmail"</span>]
+    <span class="k">auth:</span> oauth                   <span class="c"># inicia sesión una vez: garu auth</span>
+    <span class="k">oauth:</span>
+      <span class="k">issuer:</span> https://accounts.google.com
+      <span class="k">clientId:</span> <span class="s">${GOOGLE_CLIENT_ID}</span>
+      <span class="k">clientSecret:</span> <span class="s">${GOOGLE_CLIENT_SECRET}</span>
+      <span class="k">scopes:</span> [https://www.googleapis.com/auth/gmail.modify]
+
+<span class="k">policy:</span>
+  - <span class="k">tool:</span> <span class="s">"gmail.search_threads"</span>  <span class="c"># leer: siempre está bien</span>
+    <span class="k">action:</span> <span class="a">allow</span>
+  - <span class="k">tool:</span> <span class="s">"gmail.get_thread"</span>
+    <span class="k">action:</span> <span class="a">allow</span>
+  - <span class="k">tool:</span> <span class="s">"gmail.label_thread"</span>    <span class="c"># una etiqueta se quita con un clic</span>
+    <span class="k">action:</span> <span class="a">allow</span>
+  - <span class="k">tool:</span> <span class="s">"gmail.create_draft"</span>    <span class="c"># palabras en tu nombre: ves cada una</span>
+    <span class="k">action:</span> <span class="q">ask</span>
+  - <span class="k">tool:</span> <span class="s">"*"</span>
+    <span class="k">action:</span> <span class="b">block</span>
+
+<span class="k">prompt:</span> |
+  You are Bea. Sort Humberto's inbox from the last day…</pre>
+    <div class="steps">
+      <div class="step"><h3>Gana la primera coincidencia</h3><p>Las reglas se leen de arriba abajo. Si ninguna coincide, es <code>ask</code>: nunca un permiso silencioso.</p></div>
+      <div class="step"><h3>Las reglas ven los argumentos</h3><p>Los predicados <code>when</code> (<code>eq</code>, <code>matches</code> con <code>ignoreCase</code>, <code>gt</code>, <code>in</code>, …) permiten una herramienta para un solo host o una sola ruta y la bloquean en todo lo demás.</p></div>
+      <div class="step"><h3>Bloqueado es invisible</h3><p>Una herramienta que ninguna regla podría permitir no se le ofrece al modelo, así que nunca gasta un turno intentándolo.</p></div>
+      <div class="step"><h3>Los secretos se quedan fuera del archivo</h3><p><code>${VAR}</code> se lee de <code>.env</code> al ejecutarse. El modelo nunca ve tus claves, y un servidor que inicia sesión recibe solo un token de una hora, nunca el secreto del cliente.</p></div>
+      <div class="step"><h3><code>garu validate</code> lo revisa</h3><p>Reglas inalcanzables, patrones mal escritos, una clave que falta: se detectan antes de que el agente corra.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="phone" class="wrap">
+  <div class="phone">
+    <div>
+      <div class="eyebrow">En tu teléfono</div>
+      <h2>Aprueba desde la cama. O desde el autobús.</h2>
+      <p class="sub" style="margin-bottom:14px">La sala de control se instala en tu pantalla de inicio. Habla con el mismo <code>garu ui</code> de tu computadora por Tailscale: HTTPS, solo tus dispositivos, nada expuesto a internet. Con <a href="https://ntfy.sh" style="color:var(--fg)">ntfy</a> configurado, llega un aviso push cuando un agente se pausa; un toque te deja en la tarjeta de revisión.</p>
+<pre class="code">tailscale serve --bg 4000
+<span class="c"># → https://your-mac.tail1234.ts.net</span>
+<span class="c"># Safari → Share → Add to Home Screen</span></pre>
+      <p class="sub" style="margin-top:14px;font-size:14.5px"><a href="https://github.com/humbertovillanueva/garu/blob/main/docs/phone.es.md" style="color:var(--fg)">Lee la guía del teléfono →</a></p>
+    </div>
+    <img src="screenshots/phone-approve.png" alt="La sala de control en un teléfono: el borrador de respuesta de Bea para Lena mostrado como un correo, con Para, Asunto y el texto, y los botones Aprobar, Aprobar por 24 h y Rechazar sobre una barra de cuatro pestañas." width="390" height="844" loading="eager">
+  </div>
+</section>
+
+<section id="start" class="wrap">
+  <div class="eyebrow">Inicio rápido</div>
+  <h2>Cinco minutos, gratis.</h2>
+  <p class="sub">Node 22+ y una clave gratuita de Gemini de <a href="https://aistudio.google.com" style="color:var(--fg)">aistudio.google.com</a> (sin tarjeta). O sáltate la clave y corre un modelo local con Ollama por $0.</p>
+  <div class="qs">
+<pre>git clone https://github.com/humbertovillanueva/garu &amp;&amp; cd garu
+npm install &amp;&amp; npm run build
+printf 'GEMINI_API_KEY=your-key\nGARU_USER=YourName\n' &gt; .env
+
+npm run garu -- ui --up --as YourName       <span class="c"># control room at http://localhost:4000</span></pre>
+    <p style="margin-top:16px">Haz clic en <b>pip</b> en la barra lateral y pulsa <b>Ejecutar ahora</b>. Lee un archivo de notas, se pausa para preguntar antes de escribir un resumen, y tú apruebas desde el navegador. Luego escríbele un mensaje.</p>
+    <p style="margin-top:10px">Los agentes de verdad, <b>Tomay</b> (tu día, a partir de tu agenda y tu correo) y <b>Bea</b> (tu bandeja, ordenada, con las respuestas redactadas), necesitan un proyecto gratuito de Google Cloud una sola vez: <a href="https://github.com/humbertovillanueva/garu/blob/main/docs/google.es.md" style="color:var(--fg)">la guía de Google</a> toma unos quince minutos.</p>
+<pre>npm run garu -- run examples/nook/Garufile.yaml      <span class="c"># fully local with Ollama, $0</span>
+npm run garu -- run examples/vault/Garufile.yaml  <span class="c"># tools in Docker, network off</span>
+npm run garu -- log pip                                   <span class="c"># replay the flight recorder</span></pre>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span class="brand" style="font-size:14px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="mark" style="width:18px;height:18px" fill="none" color="currentColor"><defs><mask id="garu-cat"><g fill="#fff"><ellipse cx="48.5" cy="52.0" rx="23.0" ry="20.70"/><polygon points="44.82,42.34 29.64,40.96 27.80,19.34"/><polygon points="52.18,42.34 67.36,40.96 69.20,19.34"/></g><g fill="#000"><rect x="25.04" y="41.42" width="46.92" height="4.60" rx="2.30" transform="rotate(6 48.5 43.72)"/><ellipse cx="39.30" cy="53.38" rx="5.98" ry="2.07" transform="rotate(12 39.30 53.38)"/><ellipse cx="57.70" cy="53.38" rx="5.98" ry="2.07" transform="rotate(-12 57.70 53.38)"/><polygon points="46.66,60.28 50.34,60.28 48.5,62.58"/></g><g fill="#fff"><rect x="38.61" y="51.66" width="1.38" height="3.45" rx="0.69"/><rect x="57.01" y="51.66" width="1.38" height="3.45" rx="0.69"/></g></mask></defs> <path d="M 91.77 54.39 A 42 42 0 1 1 84.82 26.51" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"/> <rect width="100" height="100" fill="currentColor" mask="url(#garu-cat)"/> <g stroke="currentColor" stroke-width="3.91" stroke-linecap="round" stroke-linejoin="round"><polyline points="71.04,44.18 83.98,36.13 98.35,39.01"/><polyline points="71.04,44.18 83.11,47.63 96.34,53.95"/></g> <g fill="currentColor"><circle cx="71.04" cy="44.18" r="3.22"/></g></svg>Garu</span>
+    <a href="https://github.com/humbertovillanueva/garu">GitHub</a>
+    <a href="https://github.com/humbertovillanueva/garu/blob/main/README.es.md">README</a>
+    <a href="https://github.com/humbertovillanueva/garu/blob/main/docs/phone.es.md">Guía del teléfono</a>
+    <a href="https://github.com/humbertovillanueva/garu/blob/main/LICENSE">Apache-2.0</a>
+    <a href="index.html" lang="en">English</a>
+    <a href="privacy.html">Privacidad</a>
+    <span class="right">Hecho por <a href="https://humbertovillanueva.dev">Humberto Villanueva</a></span>
+  </div>
+</footer>
+
+</body>
+</html>

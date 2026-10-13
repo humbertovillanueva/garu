@@ -1,3 +1,5 @@
+*En español: [google.es.md](google.es.md)*
+
 # Gmail and Google Calendar
 
 Two of the agents in this repo work on your Google account:
