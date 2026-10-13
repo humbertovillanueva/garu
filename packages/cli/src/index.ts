@@ -46,6 +46,7 @@ import {
 } from "@garu/kernel";
 
 import { startUiServer } from "./ui-server.js";
+import { t } from "./i18n.js";
 import { KINDS, SCHEDULES, cronFor, isFreeModel, renderGarufile, suggestModel, type Kind, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
 import { launchdLabel, launchdPlist, launchdPlistPath, logPath, servicePath, serviceName, systemdUnit, systemdUnitPath } from "./service.js";
 
@@ -64,67 +65,69 @@ stdout.on("error", (e: NodeJS.ErrnoException) => {
 
 const program = new Command()
   .name("garu")
-  .description("Garu — the open personal agent cloud. Run agents that can only act through policy you wrote.")
-  .version("0.1.0");
+  .description(t("Garu — the open personal agent cloud. Run agents that can only act through policy you wrote."))
+  .version("0.1.0", "-V, --version", t("show the version"))
+  .helpOption("-h, --help", t("show help for a command"))
+  .helpCommand("help [command]", t("show help for a command"));
 
 program
   .command("validate")
-  .argument("[file]", "Garufile path", "Garufile.yaml")
-  .description("Parse a Garufile and lint its policy")
+  .argument("[file]", t("Garufile path"), "Garufile.yaml")
+  .description(t("Parse a Garufile and lint its policy"))
   .action((file: string) => {
     loadDotEnv();
     const g = loadGarufile(file);
     const engine = new PolicyEngine(g.policy);
     const dead = engine.unreachableRules();
-    stdout.write(`✔ ${file}: agent "${g.name}", model ${g.model}, ${g.tools.length} tool server(s), ${g.policy.length} policy rule(s)\n`);
+    stdout.write(`✔ ${file}: ${t("agent \"{name}\", model {model}, {tools} tool server(s), {rules} policy rule(s)", { name: g.name, model: g.model, tools: g.tools.length, rules: g.policy.length })}\n`);
     const needs = missingEnv(g.tools, process.env);
-    if (needs.length) stdout.write(`  ⚠ needs ${needs.map((n) => `$\{${n}\}`).join(", ")} — not set in .env, so this agent cannot run here yet\n`);
-    for (const t of g.tools) {
-      const signIn = t.auth === "oauth" ? (signInFor(t, resolve(process.cwd(), ".garu", "auth")).signedIn() ? " · signed in" : ` · ✖ not signed in — run: garu auth ${file} ${t.name}`) : "";
-      if (isRemoteServer(t)) stdout.write(`  remote: ${t.name} → ${t.url}${signIn || (Object.keys(t.headers).length ? " · headers from .env" : "")}\n`);
-      else if (signIn) stdout.write(`  local: ${t.name} signs in with ${t.oauth?.issuer}${signIn}\n`);
+    if (needs.length) stdout.write(`  ⚠ ${t("needs {vars} — not set in .env, so this agent cannot run here yet", { vars: needs.map((n) => `$\{${n}\}`).join(", ") })}\n`);
+    for (const tool of g.tools) {
+      const signIn = tool.auth === "oauth" ? (signInFor(tool, resolve(process.cwd(), ".garu", "auth")).signedIn() ? ` · ${t("signed in")}` : ` · ✖ ${t("not signed in — run: {command}", { command: `garu auth ${file} ${tool.name}` })}`) : "";
+      if (isRemoteServer(tool)) stdout.write(`  ${t("remote: {server} → {url}", { server: tool.name, url: tool.url })}${signIn || (Object.keys(tool.headers).length ? ` · ${t("headers from .env")}` : "")}\n`);
+      else if (signIn) stdout.write(`  ${t("local: {server} signs in with {issuer}", { server: tool.name, issuer: String(tool.oauth?.issuer) })}${signIn}\n`);
     }
     for (const i of dead) {
-      stdout.write(`  ⚠ policy rule #${i + 1} (${g.policy[i]!.tool}) is unreachable: an earlier rule matches everything\n`);
+      stdout.write(`  ⚠ ${t("policy rule #{n} ({tool}) is unreachable: an earlier rule matches everything", { n: i + 1, tool: g.policy[i]!.tool })}\n`);
     }
     const last = g.policy.at(-1);
     if (!last || last.tool !== "*") {
-      stdout.write(`  ℹ no explicit catch-all rule; unmatched tools default to ask\n`);
+      stdout.write(`  ℹ ${t("no explicit catch-all rule; unmatched tools default to ask")}\n`);
     }
-    for (const t of g.triggers) {
-      if (t.cron) {
+    for (const tr of g.triggers) {
+      if (tr.cron) {
         try {
-          assertValidCron(t.cron);
-          stdout.write(`  trigger: cron "${t.cron}"\n`);
+          assertValidCron(tr.cron);
+          stdout.write(`  ${t("trigger: cron \"{cron}\"", { cron: tr.cron })}\n`);
         } catch (e) {
           fail((e as Error).message);
         }
       }
     }
     if (g.sandbox) {
-      stdout.write(`  sandbox: image ${g.sandbox.image}, network ${g.sandbox.network}, ${g.sandbox.memory} / ${g.sandbox.cpus} cpu${g.sandbox.workspace ? `, workspace ${g.sandbox.workspace}` : ""}\n`);
+      stdout.write(`  ${t("sandbox: image {image}, network {network}, {memory} / {cpus} cpu", { image: g.sandbox.image, network: g.sandbox.network, memory: g.sandbox.memory, cpus: g.sandbox.cpus })}${g.sandbox.workspace ? `, ${t("workspace {path}", { path: g.sandbox.workspace })}` : ""}\n`);
     } else if (g.tools.some((t) => !isRemoteServer(t))) {
-      stdout.write(`  ⚠ no sandbox: local tool servers run directly on this machine. Add a \`sandbox:\` block to containerise them.\n`);
+      stdout.write(`  ⚠ ${t("no sandbox: local tool servers run directly on this machine. Add a `sandbox:` block to containerise them.")}\n`);
     }
     const price = g.budget.pricing ?? priceFor(g.model);
     if (g.budget.maxCostUsd !== undefined) {
-      stdout.write(`  budget: cap ${formatUsd(g.budget.maxCostUsd)} per run${price ? ` at $${price.inputPerMTok}/$${price.outputPerMTok} per MTok` : " — ✖ model has no known price, add budget.pricing"}\n`);
+      stdout.write(`  ${t("budget: cap {cap} per run", { cap: formatUsd(g.budget.maxCostUsd) })}${price ? ` ${t("at ${input}/${output} per MTok", { input: price.inputPerMTok, output: price.outputPerMTok })}` : ` — ✖ ${t("model has no known price, add budget.pricing")}`}\n`);
     } else if (price && price.inputPerMTok === 0 && price.outputPerMTok === 0) {
-      stdout.write(`  budget: model is priced at $0 (local/free), no cap needed\n`);
+      stdout.write(`  ${t("budget: model is priced at $0 (local/free), no cap needed")}\n`);
     } else {
-      stdout.write(`  ⚠ no budget.maxCostUsd — fine for a one-off, risky for an always-on agent\n`);
+      stdout.write(`  ⚠ ${t("no budget.maxCostUsd — fine for a one-off, risky for an always-on agent")}\n`);
     }
   });
 
 program
   .command("run")
-  .argument("[file]", "Garufile path", "Garufile.yaml")
-  .option("-i, --input <text>", "extra input for this run")
-  .option("--yes", "auto-approve every `ask` decision (dangerous; for demos)")
-  .option("--deny", "auto-deny every `ask` decision")
-  .option("--log-root <dir>", "where run logs go", DEFAULT_LOG_ROOT)
-  .option("-q, --quiet", "don't stream events to stderr")
-  .description("Run an agent once, right now")
+  .argument("[file]", t("Garufile path"), "Garufile.yaml")
+  .option("-i, --input <text>", t("extra input for this run"))
+  .option("--yes", t("auto-approve every `ask` decision (dangerous; for demos)"))
+  .option("--deny", t("auto-deny every `ask` decision"))
+  .option("--log-root <dir>", t("where run logs go"), DEFAULT_LOG_ROOT)
+  .option("-q, --quiet", t("don't stream events to stderr"))
+  .description(t("Run an agent once, right now"))
   .action(async (file: string, opts: { input?: string; yes?: boolean; deny?: boolean; logRoot: string; quiet?: boolean }) => {
     loadDotEnv();
     const g = loadGarufile(file);
@@ -139,35 +142,35 @@ program
       ...(opts.quiet ? {} : { sink: (e) => stderr.write(formatEvent(e) + "\n") }),
     });
     if (res.output) stdout.write(res.output.trimEnd() + "\n");
-    const cost = res.costUsd === null ? "unpriced model" : formatUsd(res.costUsd);
+    const cost = res.costUsd === null ? t("unpriced model") : formatUsd(res.costUsd);
     stderr.write(
-      `\nrun ${res.runId} → ${res.status} in ${res.turns} turn(s), ${res.inputTokens + res.outputTokens} tokens, ${cost}. log: ${res.logPath}\n`,
+      `\n${t("run {id} → {status} in {turns} turn(s), {tokens} tokens, {cost}. log: {path}", { id: res.runId, status: res.status, turns: res.turns, tokens: res.inputTokens + res.outputTokens, cost, path: res.logPath })}\n`,
     );
     process.exitCode = res.status === "ok" ? 0 : 1;
   });
 
 program
   .command("up")
-  .argument("<files...>", "Garufiles to keep running on their cron triggers")
-  .option("--on-ask <mode>", "what to do with `ask` decisions: inbox (pause for `garu approve`) | deny | allow | terminal", "inbox")
-  .option("--ask-timeout <minutes>", "inbox mode: deny a request nobody answers after this long", "30")
-  .option("--notify <url>", "inbox mode: POST each approval request to this URL (ntfy.sh topic URLs work)")
-  .option("--inbox-root <dir>", "where approval requests live", DEFAULT_INBOX_ROOT)
-  .option("--log-root <dir>", "where run logs go", DEFAULT_LOG_ROOT)
-  .option("-q, --quiet", "only print scheduler events, not every run step")
-  .option("--once", "fire every cron agent once right now, then exit (for testing)")
-  .description("Run agents on their schedules until stopped (Ctrl-C)")
+  .argument("<files...>", t("Garufiles to keep running on their cron triggers"))
+  .option("--on-ask <mode>", t("what to do with `ask` decisions: inbox (pause for `garu approve`) | deny | allow | terminal"), "inbox")
+  .option("--ask-timeout <minutes>", t("inbox mode: deny a request nobody answers after this long"), "30")
+  .option("--notify <url>", t("inbox mode: POST each approval request to this URL (ntfy.sh topic URLs work)"))
+  .option("--inbox-root <dir>", t("where approval requests live"), DEFAULT_INBOX_ROOT)
+  .option("--log-root <dir>", t("where run logs go"), DEFAULT_LOG_ROOT)
+  .option("-q, --quiet", t("only print scheduler events, not every run step"))
+  .option("--once", t("fire every cron agent once right now, then exit (for testing)"))
+  .description(t("Run agents on their schedules until stopped (Ctrl-C)"))
   .action(async (files: string[], opts: { onAsk: string; askTimeout: string; notify?: string; inboxRoot: string; logRoot: string; quiet?: boolean; once?: boolean }) => {
     loadDotEnv();
     const agents = files.map((f) => ({ source: f, garufile: loadGarufile(f) })).filter((a) => {
       const needs = missingEnv(a.garufile.tools, process.env);
-      if (needs.length) stderr.write(`${a.garufile.name}: not scheduled — needs ${needs.join(", ")} in .env\n`);
+      if (needs.length) stderr.write(`${t("{agent}: not scheduled — needs {vars} in .env", { agent: a.garufile.name, vars: needs.join(", ") })}\n`);
       return needs.length === 0;
     });
-    if (agents.length === 0) fail("nothing to run: every agent given is missing something in .env");
-    if (!["inbox", "deny", "allow", "terminal"].includes(opts.onAsk)) fail(`--on-ask must be inbox, deny, allow or terminal (got "${opts.onAsk}")`);
+    if (agents.length === 0) fail(t("nothing to run: every agent given is missing something in .env"));
+    if (!["inbox", "deny", "allow", "terminal"].includes(opts.onAsk)) fail(t("--on-ask must be inbox, deny, allow or terminal (got \"{mode}\")", { mode: opts.onAsk }));
     const timeoutMin = Number(opts.askTimeout);
-    if (!Number.isFinite(timeoutMin) || timeoutMin <= 0) fail(`--ask-timeout must be a positive number of minutes`);
+    if (!Number.isFinite(timeoutMin) || timeoutMin <= 0) fail(t("--ask-timeout must be a positive number of minutes"));
     const approver: Approver =
       opts.onAsk === "allow" ? autoApprove
       : opts.onAsk === "terminal" ? terminalApprover
@@ -176,7 +179,7 @@ program
           root: opts.inboxRoot,
           timeoutMs: timeoutMin * 60_000,
           onRequest: async (r) => {
-            stderr.write(`\n┌ APPROVAL NEEDED  (expires ${r.expiresAt.slice(11, 16)} UTC)\n│ ${formatRequest(r)}\n└ garu approve ${r.id}   ·   garu deny ${r.id}\n\n`);
+            stderr.write(`\n┌ ${t("APPROVAL NEEDED  (expires {time} UTC)", { time: r.expiresAt.slice(11, 16) })}\n│ ${formatRequest(r)}\n└ garu approve ${r.id}   ·   garu deny ${r.id}\n\n`);
             if (opts.notify) await notify(opts.notify, r);
           },
         }).approver();
@@ -202,8 +205,8 @@ program
     });
 
     const n = scheduler.start(agents);
-    if (n === 0) fail("none of these Garufiles has a cron trigger; use `garu run` for one-off agents");
-    stderr.write(`garu up: ${n} schedule(s) across ${agents.length} agent(s); ask → ${opts.onAsk}. Ctrl-C to stop.\n`);
+    if (n === 0) fail(t("none of these Garufiles has a cron trigger; use `garu run` for one-off agents"));
+    stderr.write(`${t("garu up: {schedules} schedule(s) across {agents} agent(s); ask → {mode}. Ctrl-C to stop.", { schedules: n, agents: agents.length, mode: opts.onAsk })}\n`);
 
     if (opts.once) {
       for (const a of agents) for (const t of a.garufile.triggers) if (t.cron) await scheduler.fire(a, t.cron);
@@ -212,7 +215,7 @@ program
     }
 
     const shutdown = (sig: string) => {
-      stderr.write(`\n${sig}: finishing in-flight runs…\n`);
+      stderr.write(`\n${t("{signal}: finishing in-flight runs…", { signal: sig })}\n`);
       void scheduler.stop().then(() => process.exit(0));
     };
     process.once("SIGINT", () => shutdown("SIGINT"));
@@ -220,15 +223,15 @@ program
     await new Promise<never>(() => {}); // run until a signal
   });
 
-const sandboxCmd = program.command("sandbox").description("Manage the Docker image tool servers run in");
+const sandboxCmd = program.command("sandbox").description(t("Manage the Docker image tool servers run in"));
 sandboxCmd
   .command("build")
-  .option("--tag <name>", "image tag", DEFAULT_SANDBOX_IMAGE)
-  .option("--context <dir>", "Dockerfile directory", defaultSandboxContext())
-  .description("Build the sandbox image (node + common MCP servers)")
+  .option("--tag <name>", t("image tag"), DEFAULT_SANDBOX_IMAGE)
+  .option("--context <dir>", t("Dockerfile directory"), defaultSandboxContext())
+  .description(t("Build the sandbox image (node + common MCP servers)"))
   .action(async (opts: { tag: string; context: string }) => {
-    if (!existsSync(join(opts.context, "Dockerfile"))) fail(`no Dockerfile in ${opts.context}`);
-    stderr.write(`building ${opts.tag} from ${opts.context}…\n`);
+    if (!existsSync(join(opts.context, "Dockerfile"))) fail(t("no Dockerfile in {dir}", { dir: opts.context }));
+    stderr.write(`${t("building {tag} from {dir}…", { tag: opts.tag, dir: opts.context })}\n`);
     let stderrTail = "";
     const code = await new Promise<number>((done) => {
       const p = spawn("docker", ["build", "-t", opts.tag, opts.context], { stdio: ["ignore", "inherit", "pipe"] });
@@ -238,19 +241,19 @@ sandboxCmd
         stderr.write(text);
       });
       p.on("error", (e: NodeJS.ErrnoException) => {
-        if (e.code === "ENOENT") fail("Docker isn't installed or not on PATH. Install Docker Desktop and try again.");
+        if (e.code === "ENOENT") fail(t("Docker isn't installed or not on PATH. Install Docker Desktop and try again."));
         fail(e.message);
       });
       p.on("exit", (c) => done(c ?? 1));
     });
     if (code !== 0) {
-      if (/docker API|docker\.sock|daemon/i.test(stderrTail)) fail("Docker is installed but not running. Start Docker Desktop, wait for the whale to settle, then try again.");
-      fail(`docker build exited with ${code}`);
+      if (/docker API|docker\.sock|daemon/i.test(stderrTail)) fail(t("Docker is installed but not running. Start Docker Desktop, wait for the whale to settle, then try again."));
+      fail(t("docker build exited with {code}", { code }));
     }
-    stdout.write(`✔ built ${opts.tag}. Agents with a \`sandbox:\` block will use it.\n`);
+    stdout.write(`✔ ${t("built {tag}. Agents with a `sandbox:` block will use it.", { tag: opts.tag })}\n`);
   });
 
-const service = program.command("service").description("Run the control room and the schedules as a login service, so a reboot doesn't take your agents down.");
+const service = program.command("service").description(t("Run the control room and the schedules as a login service, so a reboot doesn't take your agents down."));
 const run = promisify(execFile);
 
 /** Wait (up to 30 s) until launchd no longer knows the service: `bootout` returns before the stop has finished. */
@@ -278,12 +281,12 @@ const quiet = async (cmd: string, args: string[]) => { try { await run(cmd, args
 
 service
   .command("install")
-  .option("-p, --port <n>", "port", "4000")
-  .option("--host <host>", "bind address", "127.0.0.1")
-  .option("--as <name>", "your name", process.env["GARU_USER"] ?? process.env["USER"] ?? "you")
-  .option("--notify <url>", "POST approval requests to this URL")
-  .option("--ask-timeout <minutes>", "deny approvals nobody answers after this long", "30")
-  .description("Start `garu ui --up` for this folder at every login, and now.")
+  .option("-p, --port <n>", t("port"), "4000")
+  .option("--host <host>", t("bind address"), "127.0.0.1")
+  .option("--as <name>", t("your name"), process.env["GARU_USER"] ?? process.env["USER"] ?? "you")
+  .option("--notify <url>", t("POST approval requests to this URL"))
+  .option("--ask-timeout <minutes>", t("deny approvals nobody answers after this long"), "30")
+  .description(t("Start `garu ui --up` for this folder at every login, and now."))
   .action(async (opts: { port: string; host: string; as: string; notify?: string; askTimeout: string }) => {
     loadDotEnv();
     const root = process.cwd();
@@ -302,25 +305,25 @@ service
       await launchdGone(uid, label);
       writeFileSync(plist, launchdPlist(spec));
       const ok = (await quiet("launchctl", ["bootstrap", `gui/${uid}`, plist])) || (await quiet("launchctl", ["load", "-w", plist]));
-      if (!ok) { stderr.write(`wrote ${plist} but launchctl refused to load it. Try: launchctl bootstrap gui/${uid} ${plist}\n`); process.exit(1); }
-      stdout.write(`✔ Garu will start at login and is starting now.\n  folder   ${root}\n  service  ${label}\n  log      ${logPath(root)}\n  control room → http://localhost:${opts.port}\n\nIf you had \`garu ui\` running in a terminal, stop it (Ctrl-C): the service has the port now.\n`);
+      if (!ok) { stderr.write(`${t("wrote {file} but launchctl refused to load it. Try: {command}", { file: plist, command: `launchctl bootstrap gui/${uid} ${plist}` })}\n`); process.exit(1); }
+      stdout.write(`✔ ${t("Garu will start at login and is starting now.")}\n  ${t("folder   {root}", { root })}\n  ${t("service  {service}", { service: label })}\n  ${t("log      {path}", { path: logPath(root) })}\n  ${t("control room → {url}", { url: `http://localhost:${opts.port}` })}\n\n${t("If you had `garu ui` running in a terminal, stop it (Ctrl-C): the service has the port now.")}\n`);
     } else if (process.platform === "linux") {
       const unit = systemdUnitPath(root);
       mkdirSync(dirname(unit), { recursive: true });
       writeFileSync(unit, systemdUnit(spec));
       const name = serviceName(root);
       const ok = (await quiet("systemctl", ["--user", "daemon-reload"])) && (await quiet("systemctl", ["--user", "enable", "--now", `${name}.service`]));
-      if (!ok) { stderr.write(`wrote ${unit} but systemctl --user could not enable it. Is this a desktop session? Try: systemctl --user enable --now ${name}\n`); process.exit(1); }
-      stdout.write(`✔ Garu will start at login and is starting now.\n  folder   ${root}\n  service  ${name}\n  log      ${logPath(root)}\n  control room → http://localhost:${opts.port}\n\nOn a server with no login session: loginctl enable-linger $USER keeps it running after you log out.\n`);
+      if (!ok) { stderr.write(`${t("wrote {file} but systemctl --user could not enable it. Is this a desktop session? Try: {command}", { file: unit, command: `systemctl --user enable --now ${name}` })}\n`); process.exit(1); }
+      stdout.write(`✔ ${t("Garu will start at login and is starting now.")}\n  ${t("folder   {root}", { root })}\n  ${t("service  {service}", { service: name })}\n  ${t("log      {path}", { path: logPath(root) })}\n  ${t("control room → {url}", { url: `http://localhost:${opts.port}` })}\n\n${t("On a server with no login session: loginctl enable-linger $USER keeps it running after you log out.")}\n`);
     } else {
-      stderr.write(`garu service is for macOS and Linux today. On Windows, run \`garu ui --up\` from Task Scheduler at log on.\n`);
+      stderr.write(`${t("garu service is for macOS and Linux today. On Windows, run `garu ui --up` from Task Scheduler at log on.")}\n`);
       process.exit(1);
     }
   });
 
 service
   .command("uninstall")
-  .description("Stop the login service for this folder and remove it.")
+  .description(t("Stop the login service for this folder and remove it."))
   .action(async () => {
     const root = process.cwd();
     if (process.platform === "darwin") {
@@ -335,16 +338,16 @@ service
       if (existsSync(unit)) unlinkSync(unit);
       await quiet("systemctl", ["--user", "daemon-reload"]);
     }
-    stdout.write(`✔ removed. Garu no longer starts at login for ${root}.\n`);
+    stdout.write(`✔ ${t("removed. Garu no longer starts at login for {root}.", { root })}\n`);
   });
 
 service
   .command("status")
-  .description("Is the login service for this folder installed and running?")
+  .description(t("Is the login service for this folder installed and running?"))
   .action(async () => {
     const root = process.cwd();
     const installed = process.platform === "darwin" ? existsSync(launchdPlistPath(root)) : process.platform === "linux" ? existsSync(systemdUnitPath(root)) : false;
-    if (!installed) { stdout.write(`not installed for ${root}. \`garu service install\` sets it up.\n`); return; }
+    if (!installed) { stdout.write(`${t("not installed for {root}. `garu service install` sets it up.", { root })}\n`); return; }
     let running = false;
     if (process.platform === "darwin") {
       const uid = String(process.getuid?.() ?? 501);
@@ -354,59 +357,59 @@ service
     } else if (process.platform === "linux") {
       running = await quiet("systemctl", ["--user", "is-active", "--quiet", `${serviceName(root)}.service`]);
     }
-    stdout.write(`${running ? "● running" : "○ installed but not running"} — ${process.platform === "darwin" ? launchdLabel(root) : serviceName(root)}\n  log: ${logPath(root)}\n`);
+    stdout.write(`${running ? `● ${t("running")}` : `○ ${t("installed but not running")}`} — ${process.platform === "darwin" ? launchdLabel(root) : serviceName(root)}\n  ${t("log: {path}", { path: logPath(root) })}\n`);
   });
 
 service
   .command("restart")
-  .description("Restart the login service, e.g. after `npm run build` or a schedule change in a Garufile.")
+  .description(t("Restart the login service, e.g. after `npm run build` or a schedule change in a Garufile."))
   .action(async () => {
     const root = process.cwd();
     let ok = false;
     if (process.platform === "darwin") {
-      if (!existsSync(launchdPlistPath(root))) { stdout.write(`not installed for ${root}. \`garu service install\` sets it up.\n`); return; }
+      if (!existsSync(launchdPlistPath(root))) { stdout.write(`${t("not installed for {root}. `garu service install` sets it up.", { root })}\n`); return; }
       const uid = String(process.getuid?.() ?? 501);
       ok = await quiet("launchctl", ["kickstart", "-k", `gui/${uid}/${launchdLabel(root)}`]);
       // Not loaded at all (an install or uninstall that stopped halfway): loading it also starts it.
       if (!ok) ok = await quiet("launchctl", ["bootstrap", `gui/${uid}`, launchdPlistPath(root)]);
     } else if (process.platform === "linux") {
-      if (!existsSync(systemdUnitPath(root))) { stdout.write(`not installed for ${root}. \`garu service install\` sets it up.\n`); return; }
+      if (!existsSync(systemdUnitPath(root))) { stdout.write(`${t("not installed for {root}. `garu service install` sets it up.", { root })}\n`); return; }
       ok = await quiet("systemctl", ["--user", "restart", `${serviceName(root)}.service`]);
     } else {
-      stderr.write(`garu service is for macOS and Linux today.\n`);
+      stderr.write(`${t("garu service is for macOS and Linux today.")}\n`);
       process.exit(1);
     }
-    if (!ok) { stderr.write(`could not restart; try \`garu service uninstall\` then \`garu service install\`.\n`); process.exit(1); }
-    stdout.write(`✔ restarted. Garu is coming back up on the current build; \`garu service logs\` shows it.\n`);
+    if (!ok) { stderr.write(`${t("could not restart; try `garu service uninstall` then `garu service install`.")}\n`); process.exit(1); }
+    stdout.write(`✔ ${t("restarted. Garu is coming back up on the current build; `garu service logs` shows it.")}\n`);
   });
 
 service
   .command("logs")
-  .option("-n <lines>", "how many lines", "60")
-  .description("Show the end of the service log.")
+  .option("-n <lines>", t("how many lines"), "60")
+  .description(t("Show the end of the service log."))
   .action((opts: { n: string }) => {
     const p = logPath(process.cwd());
-    if (!existsSync(p)) { stdout.write(`no log yet at ${p}\n`); return; }
+    if (!existsSync(p)) { stdout.write(`${t("no log yet at {path}", { path: p })}\n`); return; }
     const lines = readFileSync(p, "utf8").split("\n");
     stdout.write(lines.slice(-Number(opts.n)).join("\n") + "\n");
   });
 
 program
   .command("ui")
-  .option("-p, --port <n>", "port", "4000")
-  .option("--host <host>", "bind address (localhost only by default)", "127.0.0.1")
-  .option("--up", "also run cron schedules for every Garufile found under this directory")
-  .option("--ask-timeout <minutes>", "deny approvals nobody answers after this long", "30")
-  .option("--notify <url>", "POST approval requests to this URL (ntfy.sh topic URLs work)")
-  .option("--log-root <dir>", "where run logs live", DEFAULT_LOG_ROOT)
-  .option("--inbox-root <dir>", "where approval requests live", DEFAULT_INBOX_ROOT)
-  .option("--as <name>", "your name — how approvals are recorded and how agents address you", process.env["GARU_USER"] ?? process.env["USER"] ?? "you")
-  .option("--require-login", "ask for the token even in the browser on this computer")
-  .description("Open the control room: your agents, live, in the browser. Add --up to run their schedules too.")
+  .option("-p, --port <n>", t("port"), "4000")
+  .option("--host <host>", t("bind address (localhost only by default)"), "127.0.0.1")
+  .option("--up", t("also run cron schedules for every Garufile found under this directory"))
+  .option("--ask-timeout <minutes>", t("deny approvals nobody answers after this long"), "30")
+  .option("--notify <url>", t("POST approval requests to this URL (ntfy.sh topic URLs work)"))
+  .option("--log-root <dir>", t("where run logs live"), DEFAULT_LOG_ROOT)
+  .option("--inbox-root <dir>", t("where approval requests live"), DEFAULT_INBOX_ROOT)
+  .option("--as <name>", t("your name — how approvals are recorded and how agents address you"), process.env["GARU_USER"] ?? process.env["USER"] ?? "you")
+  .option("--require-login", t("ask for the token even in the browser on this computer"))
+  .description(t("Open the control room: your agents, live, in the browser. Add --up to run their schedules too."))
   .action(async (opts: { port: string; host: string; up?: boolean; askTimeout: string; notify?: string; logRoot: string; inboxRoot: string; as: string; requireLogin?: boolean }) => {
     loadDotEnv();
     const staticDir = uiStaticDir();
-    const t = (msg: string) => stderr.write(`${new Date().toISOString().slice(11, 19)} ${msg}\n`);
+    const log = (msg: string) => stderr.write(`${new Date().toISOString().slice(11, 19)} ${msg}\n`);
     const srv = startUiServer({
       port: Number(opts.port),
       host: opts.host,
@@ -424,19 +427,19 @@ program
       ...(opts.notify ? { notify: opts.notify } : {}),
       tokenPath: DEFAULT_TOKEN_PATH,
       requireLogin: Boolean(opts.requireLogin),
-      log: t,
+      log,
     });
-    stderr.write(`garu control room → ${srv.url}${opts.requireLogin ? `/?token=${srv.token}` : ""}\n`);
-    stderr.write(`  from your phone or another computer: scan the code in Settings → Your phone, or sign in with the token in .garu/ui-token\n`);
+    stderr.write(`${t("garu control room")} → ${srv.url}${opts.requireLogin ? `/?token=${srv.token}` : ""}\n`);
+    stderr.write(`  ${t("from your phone or another computer: scan the code in Settings → Your phone, or sign in with the token in .garu/ui-token")}\n`);
     if (!/^(127\.0\.0\.1|localhost|::1)$/.test(opts.host)) {
-      stderr.write(`  bound to ${opts.host}: anyone on this network can reach the page; approving anything needs the token.\n`);
-      stderr.write(`  For your phone, \`tailscale serve --bg ${opts.port}\` on the default host is simpler — HTTPS, your devices only. See docs/phone.md.\n`);
+      stderr.write(`  ${t("bound to {host}: anyone on this network can reach the page; approving anything needs the token.", { host: opts.host })}\n`);
+      stderr.write(`  ${t("For your phone, `{command}` on the default host is simpler — HTTPS, your devices only. See docs/phone.md.", { command: `tailscale serve --bg ${opts.port}` })}\n`);
     }
-    if (!existsSync(join(staticDir, "index.html"))) stderr.write(`  UI not built yet: run \`npm run build\` in the repo\n`);
-    if (opts.up) stderr.write(`  running ${srv.agents} cron schedule(s) from Garufiles under ${process.cwd()}\n`);
-    stderr.write(`Ctrl-C to stop.\n`);
+    if (!existsSync(join(staticDir, "index.html"))) stderr.write(`  ${t("UI not built yet: run `npm run build` in the repo")}\n`);
+    if (opts.up) stderr.write(`  ${t("running {n} cron schedule(s) from Garufiles under {dir}", { n: srv.agents, dir: process.cwd() })}\n`);
+    stderr.write(`${t("Ctrl-C to stop.")}\n`);
     const shutdown = () => {
-      stderr.write(`\nstopping…\n`);
+      stderr.write(`\n${t("stopping…")}\n`);
       void srv.close().then(() => process.exit(0));
     };
     process.once("SIGINT", shutdown);
@@ -446,18 +449,18 @@ program
 
 program
   .command("inbox")
-  .option("--inbox-root <dir>", "where approval requests live", DEFAULT_INBOX_ROOT)
-  .option("--all", "include decided and expired requests")
-  .description("List approval requests waiting for you")
+  .option("--inbox-root <dir>", t("where approval requests live"), DEFAULT_INBOX_ROOT)
+  .option("--all", t("include decided and expired requests"))
+  .description(t("List approval requests waiting for you"))
   .action((opts: { inboxRoot: string; all?: boolean }) => {
     const inbox = new Inbox({ root: opts.inboxRoot });
     const rows = opts.all ? inbox.all() : inbox.pending();
     if (rows.length === 0) {
-      stdout.write(opts.all ? "inbox is empty\n" : "nothing waiting for approval\n");
+      stdout.write((opts.all ? t("inbox is empty") : t("nothing waiting for approval")) + "\n");
       return;
     }
     for (const r of rows) {
-      const state = r.decision ? (r.decision.approved ? `approved by ${r.decision.by}` : `denied by ${r.decision.by}`) : `pending, expires ${r.expiresAt.slice(11, 16)} UTC`;
+      const state = r.decision ? (r.decision.approved ? t("approved by {who}", { who: r.decision.by }) : t("denied by {who}", { who: r.decision.by })) : t("pending, expires {time} UTC", { time: r.expiresAt.slice(11, 16) });
       stdout.write(`${formatRequest(r)}\n    ${r.createdAt.slice(0, 19).replace("T", " ")}  ·  ${state}\n`);
     }
   });
@@ -465,20 +468,20 @@ program
 for (const [cmd, approved] of [["approve", true], ["deny", false]] as const) {
   const c = program
     .command(cmd)
-    .argument("<id>", "approval request id (from `garu inbox`)")
-    .option("--inbox-root <dir>", "where approval requests live", DEFAULT_INBOX_ROOT)
-    .option("--as <name>", "who is deciding", process.env["USER"] ?? "terminal")
-    .description(approved ? "Let a paused tool call through" : "Refuse a paused tool call");
-  if (approved) c.option("--for <duration>", "also allow this agent+tool (same path/url/recipient) without asking, e.g. 24h, 7d");
-  else c.option("--note <text>", "tell the agent why; it reads this before its next step");
+    .argument("<id>", t("approval request id (from `garu inbox`)"))
+    .option("--inbox-root <dir>", t("where approval requests live"), DEFAULT_INBOX_ROOT)
+    .option("--as <name>", t("who is deciding"), process.env["USER"] ?? "terminal")
+    .description(approved ? t("Let a paused tool call through") : t("Refuse a paused tool call"));
+  if (approved) c.option("--for <duration>", t("also allow this agent+tool (same path/url/recipient) without asking, e.g. 24h, 7d"));
+  else c.option("--note <text>", t("tell the agent why; it reads this before its next step"));
   c.action((id: string, opts: { inboxRoot: string; as: string; for?: string; note?: string }) => {
     const inbox = new Inbox({ root: opts.inboxRoot });
     try {
       const r = inbox.decide(id, approved, opts.as, opts.note);
-      stdout.write(`${approved ? "✔ approved" : "✖ denied"} ${r.tool} for ${r.agent} — the run will continue\n`);
+      stdout.write(`${approved ? `✔ ${t("approved {tool} for {agent} — the run will continue", { tool: r.tool, agent: r.agent })}` : `✖ ${t("denied {tool} for {agent} — the run will continue", { tool: r.tool, agent: r.agent })}`}\n`);
       if (approved && opts.for) {
         const g = new GrantStore(DEFAULT_GRANTS_PATH).create({ agent: r.agent, tool: r.tool, scope: scopeFor(r.args), durationMs: parseDuration(opts.for), createdBy: opts.as });
-        stdout.write(`  grant ${g.id}: ${describeGrant(g)} until ${g.expiresAt.slice(0, 16).replace("T", " ")} UTC\n`);
+        stdout.write(`  ${t("grant {id}: {what} until {time} UTC", { id: g.id, what: describeGrant(g), time: g.expiresAt.slice(0, 16).replace("T", " ") })}\n`);
       }
     } catch (e) {
       fail((e as Error).message);
@@ -486,50 +489,50 @@ for (const [cmd, approved] of [["approve", true], ["deny", false]] as const) {
   });
 }
 
-const grantsCmd = program.command("grants").description("Temporary allow rules created with approve --for");
+const grantsCmd = program.command("grants").description(t("Temporary allow rules created with approve --for"));
 grantsCmd
   .command("list", { isDefault: true })
-  .option("--all", "include expired and revoked")
-  .description("List grants")
+  .option("--all", t("include expired and revoked"))
+  .description(t("List grants"))
   .action((opts: { all?: boolean }) => {
     const store = new GrantStore(DEFAULT_GRANTS_PATH);
     const rows = opts.all ? store.all() : store.active();
-    if (!rows.length) return void stdout.write(opts.all ? "no grants\n" : "no active grants\n");
+    if (!rows.length) return void stdout.write((opts.all ? t("no grants") : t("no active grants")) + "\n");
     for (const g of rows) {
-      const state = g.revokedAt ? "revoked" : Date.parse(g.expiresAt) < Date.now() ? "expired" : `until ${g.expiresAt.slice(0, 16).replace("T", " ")} UTC`;
-      stdout.write(`${g.id}  ${describeGrant(g)}  · ${state} · used ${g.uses}×\n`);
+      const state = g.revokedAt ? t("revoked") : Date.parse(g.expiresAt) < Date.now() ? t("expired") : t("until {time} UTC", { time: g.expiresAt.slice(0, 16).replace("T", " ") });
+      stdout.write(`${g.id}  ${describeGrant(g)}  · ${state} · ${t("used {n}×", { n: g.uses })}\n`);
     }
   });
 grantsCmd
   .command("revoke")
-  .argument("<id>", "grant id")
-  .description("End a grant now")
+  .argument("<id>", t("grant id"))
+  .description(t("End a grant now"))
   .action((id: string) => {
-    try { const g = new GrantStore(DEFAULT_GRANTS_PATH).revoke(id); stdout.write(`revoked ${g.id}: ${describeGrant(g)}\n`); }
+    try { const g = new GrantStore(DEFAULT_GRANTS_PATH).revoke(id); stdout.write(`${t("revoked {id}: {what}", { id: g.id, what: describeGrant(g) })}\n`); }
     catch (e) { fail((e as Error).message); }
   });
 
 program
   .command("log")
-  .argument("[agent]", "agent name (omit to list agents)")
-  .argument("[run]", "run id (omit for the latest)")
-  .option("--log-root <dir>", "where run logs live", DEFAULT_LOG_ROOT)
-  .option("--json", "raw JSONL instead of pretty lines")
-  .description("Show the flight recorder for a run")
+  .argument("[agent]", t("agent name (omit to list agents)"))
+  .argument("[run]", t("run id (omit for the latest)"))
+  .option("--log-root <dir>", t("where run logs live"), DEFAULT_LOG_ROOT)
+  .option("--json", t("raw JSONL instead of pretty lines"))
+  .description(t("Show the flight recorder for a run"))
   .action((agent: string | undefined, run: string | undefined, opts: { logRoot: string; json?: boolean }) => {
-    if (!existsSync(opts.logRoot)) fail(`no runs yet under ${opts.logRoot}`);
+    if (!existsSync(opts.logRoot)) fail(t("no runs yet under {dir}", { dir: opts.logRoot }));
     if (!agent) {
       for (const a of readdirSync(opts.logRoot)) {
         const n = readdirSync(join(opts.logRoot, a)).filter((f) => f.endsWith(".jsonl")).length;
-        stdout.write(`${a}  (${n} run${n === 1 ? "" : "s"})\n`);
+        stdout.write(`${a}  (${n === 1 ? t("1 run") : t("{n} runs", { n })})\n`);
       }
       return;
     }
     const dir = join(opts.logRoot, agent);
-    if (!existsSync(dir)) fail(`no runs for agent "${agent}"`);
+    if (!existsSync(dir)) fail(t("no runs for agent \"{agent}\"", { agent }));
     const runs = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
     const pick = run ? `${run}.jsonl` : runs.at(-1);
-    if (!pick || !existsSync(join(dir, pick))) fail(`no run ${run ?? ""} for agent "${agent}"`);
+    if (!pick || !existsSync(join(dir, pick))) fail(t("no run {run} for agent \"{agent}\"", { run: run ?? "", agent }));
     const events = readRun(join(dir, pick));
     for (const e of events) stdout.write((opts.json ? JSON.stringify(e) : formatEvent(e)) + "\n");
     if (!opts.json) stdout.write(summarize(events) + "\n");
@@ -541,20 +544,20 @@ program
 
 program
   .command("new")
-  .argument("[name]", "agent name (lowercase, digits, hyphens)")
-  .description("Create a new agent: a few questions, then a Garufile with a closed policy")
-  .option("--task <text>", "what the agent does, in one or two sentences")
-  .option("--kind <kind>", "its face: owl | fox | turtle | bee | cat | octopus | rabbit | bear | frog | penguin | raccoon | whale")
-  .option("--tagline <text>", "one line of character shown under its name")
-  .option("--when <schedule>", "manual | weekday-morning | hourly | daily | a cron expression")
-  .option("--model <provider/model>", "e.g. gemini/gemini-3.5-flash-lite, ollama/qwen3:8b")
-  .option("--web <hosts>", "comma-separated hosts it may fetch from, 'ask' to review each fetch, or 'none'")
-  .option("--fs <path>", "a folder it can use, or 'none'")
-  .option("--write <mode>", "allow | ask — whether it may write in that folder without asking")
-  .option("--webhook <ENV_VAR>", "post to a Slack/Discord webhook kept in this .env variable")
-  .option("--budget <usd>", "cap per run in USD")
-  .option("-y, --yes", "accept defaults for anything not given")
-  .option("--force", "overwrite an existing Garufile")
+  .argument("[name]", t("agent name (lowercase, digits, hyphens)"))
+  .description(t("Create a new agent: a few questions, then a Garufile with a closed policy"))
+  .option("--task <text>", t("what the agent does, in one or two sentences"))
+  .option("--kind <kind>", t("its face: owl | fox | turtle | bee | cat | octopus | rabbit | bear | frog | penguin | raccoon | whale"))
+  .option("--tagline <text>", t("one line of character shown under its name"))
+  .option("--when <schedule>", t("manual | weekday-morning | hourly | daily | a cron expression"))
+  .option("--model <provider/model>", t("e.g. gemini/gemini-3.5-flash-lite, ollama/qwen3:8b"))
+  .option("--web <hosts>", t("comma-separated hosts it may fetch from, 'ask' to review each fetch, or 'none'"))
+  .option("--fs <path>", t("a folder it can use, or 'none'"))
+  .option("--write <mode>", t("allow | ask — whether it may write in that folder without asking"))
+  .option("--webhook <ENV_VAR>", t("post to a Slack/Discord webhook kept in this .env variable"))
+  .option("--budget <usd>", t("cap per run in USD"))
+  .option("-y, --yes", t("accept defaults for anything not given"))
+  .option("--force", t("overwrite an existing Garufile"))
   .action(async (nameArg: string | undefined, opts: { task?: string; kind?: string; tagline?: string; when?: string; model?: string; web?: string; fs?: string; write?: string; webhook?: string; budget?: string; yes?: boolean; force?: boolean }) => {
     loadDotEnv();
     const interactive = !opts.yes && stdin.isTTY;
@@ -572,7 +575,7 @@ program
     const pick = async <T extends string>(label: string, choices: { key: T; label: string }[], def: T): Promise<T> => {
       if (!rl) return def;
       stdout.write(`${label}\n`);
-      choices.forEach((c, i) => stdout.write(`  ${i + 1}) ${c.label}${c.key === def ? "   (default)" : ""}\n`));
+      choices.forEach((c, i) => stdout.write(`  ${i + 1}) ${c.label}${c.key === def ? `   ${t("(default)")}` : ""}\n`));
       const a = (await rl.question(`> `)).trim();
       const n = Number(a);
       if (a && Number.isInteger(n) && n >= 1 && n <= choices.length) return choices[n - 1]!.key;
@@ -581,41 +584,41 @@ program
     const section = (s: string) => { if (rl) stdout.write(s ? `\n${s}\n` : "\n"); };
 
     try {
-      if (rl) stdout.write(`\nLet's make an agent. Enter accepts the default.\n`);
+      if (rl) stdout.write(`\n${t("Let's make an agent. Enter accepts the default.")}\n`);
 
       // Task first: it's easier to name something once you've said what it does.
       let task = opts.task?.trim() ?? "";
       if (!task) {
-        section(`What should this agent do? One or two sentences, like you'd brief a new hire.`);
+        section(t("What should this agent do? One or two sentences, like you'd brief a new hire."));
         task = await ask(">");
       }
-      if (!task) fail(`--task is required when not interactive`);
+      if (!task) fail(t("--task is required when not interactive"));
 
       // Kind: its face, and a hint for the name
       let kind: Kind | undefined;
       if (opts.kind !== undefined) {
-        if (!(opts.kind in KINDS)) fail(`--kind must be one of ${Object.keys(KINDS).join(", ")}`);
+        if (!(opts.kind in KINDS)) fail(t("--kind must be one of {kinds}", { kinds: Object.keys(KINDS).join(", ") }));
         kind = opts.kind as Kind;
       } else if (rl) {
         section("");
-        kind = await pick(`What kind of agent is it? (this picks its face)`, (Object.keys(KINDS) as Kind[]).map((k) => ({ key: k, label: `${k.padEnd(8)} ${KINDS[k].label}` })), "cat");
+        kind = await pick(t("What kind of agent is it? (this picks its face)"), (Object.keys(KINDS) as Kind[]).map((k) => ({ key: k, label: `${k.padEnd(8)} ${KINDS[k].label}` })), "cat");
       }
 
       // Name
       let name = nameArg ?? "";
       const suggested = kind ? KINDS[kind].names.find((n) => !existsSync(join("agents", n, "Garufile.yaml"))) : undefined;
       while (!/^[a-z][a-z0-9-]*$/.test(name)) {
-        if (name) stdout.write(`  name must be lowercase letters, digits and hyphens, starting with a letter\n`);
-        if (!rl) fail(`agent name "${name || "(missing)"}" must be lowercase letters, digits and hyphens`);
+        if (name) stdout.write(`  ${t("name must be lowercase letters, digits and hyphens, starting with a letter")}\n`);
+        if (!rl) fail(t("agent name \"{name}\" must be lowercase letters, digits and hyphens", { name: name || t("(missing)") }));
         section("");
-        name = (await ask(`Name it (lowercase; this is what you'll call it):`, suggested)).toLowerCase();
+        name = (await ask(t("Name it (lowercase; this is what you'll call it):"), suggested)).toLowerCase();
       }
       const dir = join("agents", name);
       const file = join(dir, "Garufile.yaml");
-      if (existsSync(file) && !opts.force) fail(`${file} already exists (use --force to overwrite)`);
+      if (existsSync(file) && !opts.force) fail(t("{file} already exists (use --force to overwrite)", { file }));
 
       let tagline = opts.tagline?.trim();
-      if (tagline === undefined && rl && kind) tagline = (await ask(`One line of character for ${name} (optional, shown under its name):`)).trim() || undefined;
+      if (tagline === undefined && rl && kind) tagline = (await ask(t("One line of character for {name} (optional, shown under its name):", { name }))).trim() || undefined;
 
       // Schedule
       let schedule: Schedule;
@@ -623,14 +626,14 @@ program
         schedule = (opts.when in SCHEDULES ? (opts.when as Schedule) : { cron: opts.when });
       } else {
         section("");
-        const k = await pick(`When should it run?`, [
+        const k = await pick(t("When should it run?"), [
           { key: "manual", label: SCHEDULES.manual.label },
           { key: "weekday-morning", label: SCHEDULES["weekday-morning"].label },
           { key: "hourly", label: SCHEDULES.hourly.label },
           { key: "daily", label: SCHEDULES.daily.label },
-          { key: "cron", label: "a cron expression I'll type" },
+          { key: "cron", label: t("a cron expression I'll type") },
         ], "manual");
-        schedule = k === "cron" ? { cron: await ask("Cron (minute hour day month weekday):", "0 9 * * *") } : k;
+        schedule = k === "cron" ? { cron: await ask(t("Cron (minute hour day month weekday):"), "0 9 * * *") } : k;
       }
       const cron = cronFor(schedule);
       if (cron) assertValidCron(cron);
@@ -640,9 +643,9 @@ program
       let model = opts.model ?? "";
       if (!model) {
         section("");
-        model = await pick(`Which model?`, suggestions.map((s) => ({ key: s.model, label: `${s.model}   — ${s.why}` })), suggestions[0]!.model);
+        model = await pick(t("Which model?"), suggestions.map((s) => ({ key: s.model, label: `${s.model}   — ${s.why}` })), suggestions[0]!.model);
       }
-      if (!/^[a-z0-9-]+\/.+$/.test(model)) fail(`model must look like provider/model-id (got "${model}")`);
+      if (!/^[a-z0-9-]+\/.+$/.test(model)) fail(t("model must look like provider/model-id (got \"{model}\")", { model }));
 
       // Web
       let web: ScaffoldAnswers["web"] = null;
@@ -650,8 +653,8 @@ program
         web = opts.web === "none" ? null : opts.web === "ask" ? { hosts: [] } : { hosts: opts.web.split(",").map((h) => h.trim()).filter(Boolean) };
       } else if (rl) {
         section("");
-        if (await yesNo(`Does it need to read from the web (APIs, pages)?`, false)) {
-          const hosts = await ask(`Which hosts? Comma-separated, e.g. api.github.com, hn.algolia.com. Empty = review every fetch:`);
+        if (await yesNo(t("Does it need to read from the web (APIs, pages)?"), false)) {
+          const hosts = await ask(t("Which hosts? Comma-separated, e.g. api.github.com, hn.algolia.com. Empty = review every fetch:"));
           web = { hosts: hosts.split(",").map((h) => h.trim()).filter(Boolean) };
         }
       }
@@ -663,9 +666,9 @@ program
         if (opts.fs !== "none") fs = { path: opts.fs, write: opts.write === "allow" ? "allow" : "ask" };
       } else if (rl) {
         section("");
-        if (await yesNo(`Give it a folder to work in?`, true)) {
-          const path = await ask(`Folder:`, defaultWs);
-          const write = (await yesNo(`May it write there without asking each time? (it still can't touch anything outside)`, false)) ? "allow" : "ask";
+        if (await yesNo(t("Give it a folder to work in?"), true)) {
+          const path = await ask(t("Folder:"), defaultWs);
+          const write = (await yesNo(t("May it write there without asking each time? (it still can't touch anything outside)"), false)) ? "allow" : "ask";
           fs = { path, write };
         }
       } else if (opts.yes) {
@@ -677,8 +680,8 @@ program
       if (opts.webhook) webhook = { envVar: opts.webhook };
       else if (rl) {
         section("");
-        if (await yesNo(`Should it be able to post to a Slack or Discord channel (always asks first)?`, false)) {
-          const envVar = await ask(`Name of the .env variable holding the webhook URL:`, `${name.toUpperCase().replace(/-/g, "_")}_WEBHOOK_URL`);
+        if (await yesNo(t("Should it be able to post to a Slack or Discord channel (always asks first)?"), false)) {
+          const envVar = await ask(t("Name of the .env variable holding the webhook URL:"), `${name.toUpperCase().replace(/-/g, "_")}_WEBHOOK_URL`);
           webhook = { envVar };
         }
       }
@@ -687,12 +690,12 @@ program
       let maxCostUsd: number | null = isFreeModel(model) ? null : 0.05;
       if (opts.budget !== undefined) {
         maxCostUsd = Number(opts.budget);
-        if (!Number.isFinite(maxCostUsd) || maxCostUsd < 0) fail(`--budget must be a non-negative number`);
+        if (!Number.isFinite(maxCostUsd) || maxCostUsd < 0) fail(t("--budget must be a non-negative number"));
       } else if (rl && maxCostUsd !== null) {
         section("");
-        const b = await ask(`Cap per run, in dollars:`, String(maxCostUsd));
+        const b = await ask(t("Cap per run, in dollars:"), String(maxCostUsd));
         maxCostUsd = Number(b);
-        if (!Number.isFinite(maxCostUsd) || maxCostUsd < 0) fail(`budget must be a non-negative number`);
+        if (!Number.isFinite(maxCostUsd) || maxCostUsd < 0) fail(t("budget must be a non-negative number"));
       }
 
       const answers: ScaffoldAnswers = { name, task, model, schedule, web, fs, webhook, maxCostUsd, fetchServerPath: fetchServerPath(), ...(kind ? { kind } : {}), ...(tagline ? { tagline } : {}) };
@@ -705,12 +708,12 @@ program
 
       stdout.write(`\n✔ ${file}\n`);
       stdout.write(`  ${g.description}\n`);
-      stdout.write(`  model ${g.model} · ${cron ? `cron "${cron}"` : "runs when told"} · ${g.tools.length} tool server(s) · ${g.policy.length} policy rules${maxCostUsd !== null ? ` · cap ${formatUsd(maxCostUsd)}/run` : ""}\n`);
-      if (webhook) stdout.write(`\n  Add the webhook to .env before it runs:\n    read -s -p "webhook url: " W && echo && echo "${webhook.envVar}=$W" >> .env\n`);
-      stdout.write(`\n  Try it:\n`);
+      stdout.write(`  ${t("model {model}", { model: g.model })} · ${cron ? t("cron \"{cron}\"", { cron }) : t("runs when told")} · ${t("{n} tool server(s)", { n: g.tools.length })} · ${t("{n} policy rules", { n: g.policy.length })}${maxCostUsd !== null ? ` · ${t("cap {cap}/run", { cap: formatUsd(maxCostUsd) })}` : ""}\n`);
+      if (webhook) stdout.write(`\n  ${t("Add the webhook to .env before it runs:")}\n    read -s -p "webhook url: " W && echo && echo "${webhook.envVar}=$W" >> .env\n`);
+      stdout.write(`\n  ${t("Try it:")}\n`);
       stdout.write(`    npm run garu -- run ${file}\n`);
-      stdout.write(`  or open the control room (npm run garu -- ui --up), click ${name}, and press Run job.\n`);
-      stdout.write(`  Edit ${file} any time; npm run garu -- validate ${file} checks it.\n`);
+      stdout.write(`  ${t("or open the control room (npm run garu -- ui --up), click {name}, and press Run job.", { name })}\n`);
+      stdout.write(`  ${t("Edit {file} any time; {command} checks it.", { file, command: `npm run garu -- validate ${file}` })}\n`);
     } finally {
       rl?.close();
     }
@@ -718,21 +721,21 @@ program
 
 program
   .command("auth")
-  .argument("<file>", "Garufile path")
-  .argument("<server>", "name of a tool server with `auth: oauth`")
-  .option("--forget", "remove the saved sign-in for this server")
-  .option("--auth-root <dir>", "where sign-ins are kept", resolve(process.cwd(), ".garu", "auth"))
-  .description("Sign in for a tool server in your browser, once. Runs then use the saved tokens.")
+  .argument("<file>", t("Garufile path"))
+  .argument("<server>", t("name of a tool server with `auth: oauth`"))
+  .option("--forget", t("remove the saved sign-in for this server"))
+  .option("--auth-root <dir>", t("where sign-ins are kept"), resolve(process.cwd(), ".garu", "auth"))
+  .description(t("Sign in for a tool server in your browser, once. Runs then use the saved tokens."))
   .action(async (file: string, serverName: string, opts: { forget?: boolean; authRoot: string }) => {
     loadDotEnv();
     const g = loadGarufile(file);
     const raw = g.tools.find((t) => t.name === serverName);
-    if (!raw) fail(`no tool server "${serverName}" in ${file} (have: ${g.tools.map((t) => t.name).join(", ") || "none"})`);
+    if (!raw) fail(t("no tool server \"{server}\" in {file} (have: {have})", { server: serverName, file, have: g.tools.map((t) => t.name).join(", ") || t("none") }));
     const spec = expandSpec(raw, process.env);
     if (spec.auth !== "oauth") {
       fail(isRemoteServer(spec)
-        ? `"${serverName}" has auth: ${spec.auth}. Set \`auth: oauth\` on it in ${file} first.`
-        : `"${serverName}" is a local server that doesn't sign in. To give it one, add auth: oauth and an oauth: block with an issuer in ${file}.`);
+        ? t("\"{server}\" has auth: {auth}. Set `auth: oauth` on it in {file} first.", { server: serverName, auth: String(spec.auth), file })
+        : t("\"{server}\" is a local server that doesn't sign in. To give it one, add auth: oauth and an oauth: block with an issuer in {file}.", { server: serverName, file }));
     }
     // A remote server is asked who to sign in with; a local one names it (oauth.issuer).
     const where = isRemoteServer(spec) ? spec.url : spec.oauth!.issuer!;
@@ -740,7 +743,7 @@ program
     const provider = signInFor(spec, opts.authRoot);
     if (opts.forget) {
       provider.forget();
-      stdout.write(`forgot the sign-in for ${spec.name} (${where})\n`);
+      stdout.write(`${t("forgot the sign-in for {server} ({where})", { server: spec.name, where })}\n`);
       return;
     }
 
@@ -754,39 +757,39 @@ program
       const err = u.searchParams.get("error");
       const c = u.searchParams.get("code");
       res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      res.end(`<!doctype html><meta charset="utf-8"><title>Garu</title><body style="font-family:system-ui;background:#0a0c0f;color:#e6eaf0;display:grid;place-items:center;height:100vh;margin:0"><div style="text-align:center"><div style="font-size:22px;font-weight:600">${err ? "Sign-in failed" : "Signed in"}</div><div style="color:#aeb6c2;margin-top:8px">${err ? `${err}: ${u.searchParams.get("error_description") ?? ""}` : `${spec.name} can now be used by your agents. You can close this tab.`}</div></div>`);
-      if (err || !c) gotError(new Error(`authorization server answered: ${err ?? "no code"} ${u.searchParams.get("error_description") ?? ""}`.trim()));
+      res.end(`<!doctype html><meta charset="utf-8"><title>Garu</title><body style="font-family:system-ui;background:#0a0c0f;color:#e6eaf0;display:grid;place-items:center;height:100vh;margin:0"><div style="text-align:center"><div style="font-size:22px;font-weight:600">${err ? t("Sign-in failed") : t("Signed in")}</div><div style="color:#aeb6c2;margin-top:8px">${err ? `${err}: ${u.searchParams.get("error_description") ?? ""}` : t("{server} can now be used by your agents. You can close this tab.", { server: spec.name })}</div></div>`);
+      if (err || !c) gotError(new Error(t("authorization server answered: {error} {description}", { error: err ?? t("no code"), description: u.searchParams.get("error_description") ?? "" }).trim()));
       else gotCode(c);
     });
     await new Promise<void>((res, rej) => {
-      listener.once("error", (e: NodeJS.ErrnoException) => rej(new Error(e.code === "EADDRINUSE" ? `port ${AUTH_CALLBACK_PORT} is in use. Stop whatever holds it, or set GARU_AUTH_PORT to another port (the same one every time).` : e.message)));
+      listener.once("error", (e: NodeJS.ErrnoException) => rej(new Error(e.code === "EADDRINUSE" ? t("port {port} is in use. Stop whatever holds it, or set GARU_AUTH_PORT to another port (the same one every time).", { port: AUTH_CALLBACK_PORT }) : e.message)));
       listener.listen(AUTH_CALLBACK_PORT, "127.0.0.1", () => res());
     });
 
     try {
       const openBrowser = (url: URL) => {
-        stdout.write(`\nOpening your browser to sign in to ${spec.name}. If it doesn't open, visit:\n  ${url.href}\n\n`);
+        stdout.write(`\n${t("Opening your browser to sign in to {server}. If it doesn't open, visit:", { server: spec.name })}\n  ${url.href}\n\n`);
         const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
         const args = process.platform === "win32" ? ["/c", "start", "", url.href] : [url.href];
         try { spawn(cmd, args, { stdio: "ignore", detached: true }).on("error", () => {}).unref(); } catch { /* printed above */ }
       };
       const interactive = signInFor(spec, opts.authRoot, { redirectUrl: AUTH_REDIRECT_URL, onAuthorize: openBrowser });
       const waitForCode = () => {
-        stdout.write(`waiting for the sign-in to finish (5 minutes)…\n`);
-        return Promise.race([code, new Promise<string>((_, rej) => setTimeout(() => rej(new Error("timed out waiting for the browser")), 5 * 60_000))]);
+        stdout.write(`${t("waiting for the sign-in to finish (5 minutes)…")}\n`);
+        return Promise.race([code, new Promise<string>((_, rej) => setTimeout(() => rej(new Error(t("timed out waiting for the browser"))), 5 * 60_000))]);
       };
 
       if (!isRemoteServer(spec)) {
         // A local server has nothing to connect to yet: sign in with the issuer directly. Garu keeps
         // the tokens and hands the server a current access token at the start of each run.
         if (provider.signedIn()) {
-          stdout.write(`✔ already signed in for ${spec.name} (${where})\n`);
+          stdout.write(`✔ ${t("already signed in for {server} ({where})", { server: spec.name, where })}\n`);
         } else {
           if ((await auth(interactive, { serverUrl: where })) === "REDIRECT") await auth(interactive, { serverUrl: where, authorizationCode: await waitForCode() });
-          if (!provider.signedIn()) fail(`the sign-in for ${spec.name} didn't finish; run this again`);
-          stdout.write(`✔ signed in for ${spec.name} with ${new URL(where).host} — ${spec.oauth?.scopes?.length ?? 0} permission(s) asked for\n`);
+          if (!provider.signedIn()) fail(t("the sign-in for {server} didn't finish; run this again", { server: spec.name }));
+          stdout.write(`✔ ${t("signed in for {server} with {host} — {n} permission(s) asked for", { server: spec.name, host: new URL(where).host, n: spec.oauth?.scopes?.length ?? 0 })}\n`);
         }
-        stdout.write(`  tokens: ${opts.authRoot}/ (shared by every agent asking ${where} for the same permissions)\n`);
+        stdout.write(`  ${t("tokens: {dir}/ (shared by every agent asking {where} for the same permissions)", { dir: opts.authRoot, where })}\n`);
         return;
       }
 
@@ -813,13 +816,13 @@ program
         await c2.connect(t2 as unknown as Parameters<Client["connect"]>[0]);
         const { tools } = await c2.listTools();
         await c2.close();
-        stdout.write(`✔ signed in to ${spec.name} — ${tools.length} tool(s): ${tools.slice(0, 8).map((t) => t.name).join(", ")}${tools.length > 8 ? ", …" : ""}\n`);
+        stdout.write(`✔ ${t("signed in to {server} — {n} tool(s): {tools}", { server: spec.name, n: tools.length, tools: tools.slice(0, 8).map((t) => t.name).join(", ") })}${tools.length > 8 ? ", …" : ""}\n`);
       } else {
         const { tools } = await client.listTools();
         await client.close();
-        stdout.write(`✔ already signed in to ${spec.name} — ${tools.length} tool(s)\n`);
+        stdout.write(`✔ ${t("already signed in to {server} — {n} tool(s)", { server: spec.name, n: tools.length })}\n`);
       }
-      stdout.write(`  tokens: ${opts.authRoot}/ (shared by every agent that uses ${spec.url})\n`);
+      stdout.write(`  ${t("tokens: {dir}/ (shared by every agent that uses {url})", { dir: opts.authRoot, url: spec.url })}\n`);
     } finally {
       listener.close();
     }
@@ -829,7 +832,7 @@ program
 
 function loadGarufile(file: string): Garufile {
   const path = resolve(file);
-  if (!existsSync(path) || !statSync(path).isFile()) fail(`no Garufile at ${path}`);
+  if (!existsSync(path) || !statSync(path).isFile()) fail(t("no Garufile at {path}", { path }));
   try {
     return parseGarufile(readFileSync(path, "utf8"), file);
   } catch (e) {
@@ -871,51 +874,51 @@ const unattendedDeny: Approver = async () => ({ approved: false, by: "unattended
 
 /** Push an approval request to a URL. Body is plain text so ntfy.sh (free push to your phone) shows it as-is. */
 async function notify(url: string, r: ApprovalRequest): Promise<void> {
-  const body = `${r.agent} wants ${r.tool}\n${JSON.stringify(r.args).slice(0, 300)}\nreason: ${r.reason}\n\ngaru approve ${r.id}\ngaru deny ${r.id}`;
+  const body = `${t("{agent} wants {tool}", { agent: r.agent, tool: r.tool })}\n${JSON.stringify(r.args).slice(0, 300)}\n${t("reason: {reason}", { reason: r.reason })}\n\ngaru approve ${r.id}\ngaru deny ${r.id}`;
   try {
     const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "text/plain", Title: `Garu: approval needed (${r.agent})`, Priority: "high", Tags: "lock" },
       body,
     });
-    if (!res.ok) stderr.write(`notify: ${url} answered HTTP ${res.status}\n`);
+    if (!res.ok) stderr.write(`${t("notify: {url} answered HTTP {status}", { url, status: res.status })}\n`);
   } catch (e) {
-    stderr.write(`notify: could not reach ${url}: ${(e as Error).message}\n`);
+    stderr.write(`${t("notify: could not reach {url}: {error}", { url, error: (e as Error).message })}\n`);
   }
 }
 
 function printSchedulerEvent(e: SchedulerEvent): void {
-  const t = new Date().toISOString().slice(11, 19);
+  const now = new Date().toISOString().slice(11, 19);
   switch (e.type) {
     case "scheduled":
-      stderr.write(`${t} ⏰ ${e.agent}: "${e.cron}" next at ${e.nextRun?.toISOString() ?? "?"}\n`);
+      stderr.write(`${now} ⏰ ${t("{agent}: \"{cron}\" next at {time}", { agent: e.agent, cron: e.cron, time: e.nextRun?.toISOString() ?? "?" })}\n`);
       break;
     case "fire":
-      stderr.write(`${t} ▶ ${e.agent} (cron ${e.cron})\n`);
+      stderr.write(`${now} ▶ ${t("{agent} (cron {cron})", { agent: e.agent, cron: e.cron })}\n`);
       break;
     case "catch-up":
-      stderr.write(`${t} ↺ ${e.agent}: was due ${e.missedAt.toISOString().slice(11, 16)} UTC (cron ${e.cron}) while garu was not running; catching up\n`);
+      stderr.write(`${now} ↺ ${t("{agent}: was due {time} UTC (cron {cron}) while garu was not running; catching up", { agent: e.agent, time: e.missedAt.toISOString().slice(11, 16), cron: e.cron })}\n`);
       break;
     case "skip.overlap":
-      stderr.write(`${t} ↷ ${e.agent}: previous run still going, skipped this tick\n`);
+      stderr.write(`${now} ↷ ${t("{agent}: previous run still going, skipped this tick", { agent: e.agent })}\n`);
       break;
     case "offline":
-      stderr.write(`${t} ⏸ ${e.agent}: no network, will catch up\n`);
+      stderr.write(`${now} ⏸ ${t("{agent}: no network, will catch up", { agent: e.agent })}\n`);
       break;
     case "run.done": {
       const r = e.result;
-      const cost = r.costUsd === null ? "unpriced" : formatUsd(r.costUsd);
-      stderr.write(`${t} ■ ${e.agent}: ${r.status} in ${r.turns} turn(s), ${cost} — ${r.logPath}\n`);
+      const cost = r.costUsd === null ? t("unpriced") : formatUsd(r.costUsd);
+      stderr.write(`${now} ■ ${t("{agent}: {status} in {turns} turn(s), {cost} — {path}", { agent: e.agent, status: r.status, turns: r.turns, cost, path: r.logPath })}\n`);
       break;
     }
     case "run.failed":
-      stderr.write(`${t} ✖ ${e.agent}: ${e.error}\n`);
+      stderr.write(`${now} ✖ ${e.agent}: ${e.error}\n`);
       break;
     case "stopping":
-      if (e.inFlight > 0) stderr.write(`${t} waiting for ${e.inFlight} run(s) to finish…\n`);
+      if (e.inFlight > 0) stderr.write(`${now} ${t("waiting for {n} run(s) to finish…", { n: e.inFlight })}\n`);
       break;
     case "stopped":
-      stderr.write(`${t} garu up: stopped\n`);
+      stderr.write(`${now} ${t("garu up: stopped")}\n`);
       break;
   }
 }
@@ -924,12 +927,12 @@ const autoDeny: Approver = async () => ({ approved: false, by: "--deny" });
 const terminalApprover: Approver = async (req, decision) => {
   const rl = createInterface({ input: stdin, output: stderr });
   try {
-    stderr.write(`\n┌ approval needed: ${req.server}.${req.tool}\n`);
+    stderr.write(`\n┌ ${t("approval needed: {tool}", { tool: `${req.server}.${req.tool}` })}\n`);
     stderr.write(`│ ${decision.reason}\n`);
-    stderr.write(`│ args: ${JSON.stringify(req.args, null, 2).split("\n").join("\n│       ")}\n`);
-    const answer = (await rl.question("└ allow? [y/N] ")).trim().toLowerCase();
+    stderr.write(`│ ${t("args:")} ${JSON.stringify(req.args, null, 2).split("\n").join("\n│       ")}\n`);
+    const answer = (await rl.question(`└ ${t("allow?")} [y/N] `)).trim().toLowerCase();
     if (answer === "y" || answer === "yes") return { approved: true, by: "terminal" };
-    const note = (await rl.question("  why? (optional — the agent reads this) ")).trim();
+    const note = (await rl.question(`  ${t("why? (optional — the agent reads this)")} `)).trim();
     return { approved: false, by: "terminal", ...(note ? { note } : {}) };
   } finally {
     rl.close();
@@ -952,7 +955,7 @@ function summarize(events: Envelope[]): string {
     }
   }
   const calls = decisions.allow + decisions.ask + decisions.block;
-  return `── ${turns} turn(s) · ${calls} tool call(s) (${decisions.allow} allowed, ${decisions.ask} asked, ${decisions.block} blocked) · ${inTok + outTok} tokens · ${priced ? formatUsd(cost) : "unpriced model"}`;
+  return `── ${t("{turns} turn(s) · {calls} tool call(s) ({allowed} allowed, {asked} asked, {blocked} blocked) · {tokens} tokens · {cost}", { turns, calls, allowed: decisions.allow, asked: decisions.ask, blocked: decisions.block, tokens: inTok + outTok, cost: priced ? formatUsd(cost) : t("unpriced model") })}`;
 }
 
 /** Path to the bundled fetch server, relative to where the Garufile will be run from (the cwd). */

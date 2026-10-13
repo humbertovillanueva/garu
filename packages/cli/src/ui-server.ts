@@ -38,6 +38,7 @@ import {
   diffStats,
   localDay,
 } from "@garu/kernel";
+import { t } from "./i18n.js";
 import { authenticate, clearSessionCookie, corsHeaders, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, rotateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
 import { SeenHosts, tailscaleAddresses, type Address } from "./ui-addresses.js";
 
@@ -261,7 +262,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       for (const [k, v] of Object.entries(corsHeaders(req))) res.setHeader(k, v);
       if (req.method === "OPTIONS") { res.writeHead(204); return void res.end(); }
       // --- who is this? ---
-      if (isCrossSiteWrite(req)) return json(res, { error: "cross-site request refused" }, 403);
+      if (isCrossSiteWrite(req)) return json(res, { error: t("cross-site request refused") }, 403);
       const linkToken = url.searchParams.get("token");
       if (linkToken !== null && !path.startsWith("/api/")) {
         // A sign-in link (the QR code, or the one printed at start): set the cookie, then show the clean URL.
@@ -276,7 +277,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       }
       if (path === "/api/login" && req.method === "POST") {
         const body = (await readBody(req)) as { token?: string };
-        if (typeof body.token !== "string" || !tokensMatch(body.token.trim(), token)) return json(res, { error: "that token is not right" }, 403);
+        if (typeof body.token !== "string" || !tokensMatch(body.token.trim(), token)) return json(res, { error: t("that token is not right") }, 403);
         res.setHeader("set-cookie", sessionCookie(token, isHttps(req)));
         return json(res, { ok: true });
       }
@@ -286,7 +287,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       }
       if (path.startsWith("/api/")) {
         const who = authenticate(req, url, token, requireLogin);
-        if (who !== "ok") return json(res, { error: who === "bad" ? "wrong token" : "sign in", signIn: true }, 401);
+        if (who !== "ok") return json(res, { error: who === "bad" ? t("wrong token") : t("sign in"), signIn: true }, 401);
         seen.note(req.headers); // an address that reached us with the right token is one a phone can use
       }
       if (path === "/api/pair" && req.method === "POST") {
@@ -319,8 +320,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       if (run && req.method === "POST") {
         const name = decodeURIComponent(run[1]!);
         const a = discover().agents.find((x) => x.garufile.name === name);
-        if (!a) return json(res, { error: `no Garufile for agent "${name}"` }, 404);
-        if (live.has(name)) return json(res, { error: `${name} is already running` }, 409);
+        if (!a) return json(res, { error: t("no Garufile for agent \"{name}\"", { name }) }, 404);
+        if (live.has(name)) return json(res, { error: t("{name} is already running", { name }) }, 409);
         const body = (await readBody(req)) as { note?: string };
         const note = body.note?.trim();
         opts.log(`▶ ${name} (from the control room${note ? ", with a note" : ""})`);
@@ -338,11 +339,11 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         if (req.method === "GET") return json(res, chat.messages(name));
         if (req.method === "POST") {
           const a = discover().agents.find((x) => x.garufile.name === name);
-          if (!a) return json(res, { error: `no Garufile for agent "${name}"` }, 404);
-          if (live.has(name)) return json(res, { error: `${name} is still working on the last message` }, 409);
+          if (!a) return json(res, { error: t("no Garufile for agent \"{name}\"", { name }) }, 404);
+          if (live.has(name)) return json(res, { error: t("{name} is still working on the last message", { name }) }, 409);
           const body = (await readBody(req)) as { text?: string };
           const text = body.text?.trim();
-          if (!text) return json(res, { error: "empty message" }, 400);
+          if (!text) return json(res, { error: t("empty message") }, 400);
           const displayName = name.charAt(0).toUpperCase() + name.slice(1);
           const view = agentView(a, name);
           const input = chat.transcript(name, opts.userName, displayName, text, 20, {
@@ -362,13 +363,13 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
 
       if (path === "/api/runs") {
         const agent = url.searchParams.get("agent");
-        if (agent !== null && !/^[A-Za-z0-9._-]+$/.test(agent)) return json(res, { error: "bad agent name" }, 400);
+        if (agent !== null && !/^[A-Za-z0-9._-]+$/.test(agent)) return json(res, { error: t("bad agent name") }, 400);
         return json(res, agent ? store.runs(agent) : store.allRuns().slice(0, 200));
       }
       const m = /^\/api\/runs\/([^/]+)\/([^/]+)$/.exec(path);
       if (m) {
         const events = store.run(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!));
-        return events ? json(res, events) : json(res, { error: "no such run" }, 404);
+        return events ? json(res, events) : json(res, { error: t("no such run") }, 404);
       }
       if (path === "/api/inbox") {
         const all = inbox.all();
@@ -383,11 +384,11 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       const diffM = /^\/api\/inbox\/([a-z0-9]+)\/diff$/.exec(path);
       if (diffM) {
         const p = inbox.pending().find((x) => x.id === diffM[1]);
-        if (!p) return json(res, { error: "not pending" }, 404);
+        if (!p) return json(res, { error: t("not pending") }, 404);
         const args = p.args as Record<string, unknown>;
         const target = typeof args["path"] === "string" ? args["path"] : typeof args["file"] === "string" ? args["file"] : null;
         const next = typeof args["content"] === "string" ? args["content"] : typeof args["text"] === "string" ? args["text"] : null;
-        if (!target || next === null) return json(res, { error: "not a file write" }, 400);
+        if (!target || next === null) return json(res, { error: t("not a file write") }, 400);
         const abs = resolve(opts.root, target);
         if (!abs.startsWith(opts.root + "/") && abs !== opts.root) return json(res, { outside: true });
         // Secrets never go on a review card, not even as "the file this would replace".
@@ -452,9 +453,9 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         const id = decodeURIComponent(sg[1]!);
         if (sg[2] === "dismiss") { dismissed.add(id); saveDismissed(); ping(); return json(res, { dismissed: id }); }
         const sug = suggestRules(inbox.all(), { dismissed }).find((x) => x.id === id);
-        if (!sug) return json(res, { error: "suggestion no longer applies" }, 404);
+        if (!sug) return json(res, { error: t("suggestion no longer applies") }, 404);
         const a = discover().agents.find((x) => x.garufile.name === sug.agent);
-        if (!a) return json(res, { error: `no Garufile for ${sug.agent}` }, 404);
+        if (!a) return json(res, { error: t("no Garufile for {name}", { name: sug.agent }) }, 404);
         try {
           const { inserted } = addPolicyRule(a.path, sug.rule, `learned: approved ${sug.approvals}× by ${opts.decider}, ${new Date().toISOString().slice(0, 10)}`);
           dismissed.add(id); saveDismissed();
@@ -462,7 +463,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           ping();
           return json(res, { applied: true, file: a.source, inserted, rule: sug.rule });
         } catch (e) {
-          return json(res, { error: `could not edit ${a.source}: ${(e as Error).message}` }, 500);
+          return json(res, { error: t("could not edit {file}: {error}", { file: a.source, error: (e as Error).message }) }, 500);
         }
       }
       if (path === "/api/feed") return json(res, feed(store, inbox, Number(url.searchParams.get("limit") ?? 80)));
@@ -508,7 +509,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           login: { required: requireLogin, direct: isDirectLoopback(req), tokenPath: opts.tokenPath },
         });
       }
-      if (path.startsWith("/api/")) return json(res, { error: "not found" }, 404);
+      if (path.startsWith("/api/")) return json(res, { error: t("not found") }, 404);
       return serveStatic(res, opts.staticDir, path);
     } catch (e) {
       return json(res, { error: (e as Error).message }, (e as { status?: number }).status ?? 500);
@@ -639,7 +640,7 @@ function realPathOf(p: string): string {
 function serveStatic(res: ServerResponse, dir: string, urlPath: string): void {
   const rel = normalize(decodeURIComponent(urlPath)).replace(/^(\.\.[/\\])+/, "");
   let file = join(dir, rel);
-  if (!file.startsWith(dir)) return void json(res, { error: "forbidden" }, 403);
+  if (!file.startsWith(dir)) return void json(res, { error: t("forbidden") }, 403);
   if (!existsSync(file) || statSync(file).isDirectory()) file = join(dir, "index.html");
   if (!existsSync(file)) {
     res.writeHead(503, { "content-type": "text/plain" });

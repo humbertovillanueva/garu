@@ -3,22 +3,23 @@
  * closed: only the tools you named, writes ask unless you said otherwise,
  * everything else blocked. Pure functions here; the questions live in the CLI.
  */
+import { t, locale } from "./i18n.js";
 
 export type Schedule = "manual" | "weekday-morning" | "hourly" | "daily" | { cron: string };
 
 export const KINDS = {
-  owl: { label: "a watcher — checks things on a schedule and notices change", names: ["rook", "sage", "argus"] },
-  fox: { label: "a messenger — reads around, writes, delivers", names: ["scout", "rusty", "ember"] },
-  turtle: { label: "a keeper — steady, tidy, keeps files and logs", names: ["tick", "moss", "shelby"] },
-  bee: { label: "a worker — does one small job over and over", names: ["buzz", "dot", "hum"] },
-  cat: { label: "a reader — curious, answers questions about what it finds", names: ["pip", "mochi", "nook"] },
-  octopus: { label: "a planner — many tools, juggles tasks", names: ["atlas", "otto", "inky"] },
-  rabbit: { label: "a runner — quick checks and small errands, often", names: ["hop", "clover", "juno"] },
-  bear: { label: "a guardian — watches over backups and safety", names: ["bruno", "kodi", "ursa"] },
-  frog: { label: "a connector — hops between your apps", names: ["lily", "kero", "jumper"] },
-  penguin: { label: "an organizer — sorts and tidies things into place", names: ["pebble", "waddle", "ice"] },
-  raccoon: { label: "a tinkerer — works in a locked box, safe to experiment", names: ["ringo", "dash", "bandit"] },
-  whale: { label: "a deep reader — takes long documents slowly and well", names: ["deep", "marina", "jonah"] },
+  owl: { label: t("a watcher — checks things on a schedule and notices change"), names: ["rook", "sage", "argus"] },
+  fox: { label: t("a messenger — reads around, writes, delivers"), names: ["scout", "rusty", "ember"] },
+  turtle: { label: t("a keeper — steady, tidy, keeps files and logs"), names: ["tick", "moss", "shelby"] },
+  bee: { label: t("a worker — does one small job over and over"), names: ["buzz", "dot", "hum"] },
+  cat: { label: t("a reader — curious, answers questions about what it finds"), names: ["pip", "mochi", "nook"] },
+  octopus: { label: t("a planner — many tools, juggles tasks"), names: ["atlas", "otto", "inky"] },
+  rabbit: { label: t("a runner — quick checks and small errands, often"), names: ["hop", "clover", "juno"] },
+  bear: { label: t("a guardian — watches over backups and safety"), names: ["bruno", "kodi", "ursa"] },
+  frog: { label: t("a connector — hops between your apps"), names: ["lily", "kero", "jumper"] },
+  penguin: { label: t("an organizer — sorts and tidies things into place"), names: ["pebble", "waddle", "ice"] },
+  raccoon: { label: t("a tinkerer — works in a locked box, safe to experiment"), names: ["ringo", "dash", "bandit"] },
+  whale: { label: t("a deep reader — takes long documents slowly and well"), names: ["deep", "marina", "jonah"] },
 } as const;
 export type Kind = keyof typeof KINDS;
 
@@ -44,10 +45,10 @@ export interface ScaffoldAnswers {
 }
 
 export const SCHEDULES: Record<Exclude<Schedule, { cron: string }>, { cron: string | null; label: string }> = {
-  manual: { cron: null, label: "when I tell it (Run job, a message, or garu run)" },
-  "weekday-morning": { cron: "0 7 * * 1-5", label: "every weekday at 7:00" },
-  hourly: { cron: "0 * * * *", label: "every hour" },
-  daily: { cron: "0 9 * * *", label: "every day at 9:00" },
+  manual: { cron: null, label: t("when I tell it (Run job, a message, or garu run)") },
+  "weekday-morning": { cron: "0 7 * * 1-5", label: t("every weekday at 7:00") },
+  hourly: { cron: "0 * * * *", label: t("every hour") },
+  daily: { cron: "0 9 * * *", label: t("every day at 9:00") },
 };
 
 export function cronFor(s: Schedule): string | null {
@@ -57,10 +58,10 @@ export function cronFor(s: Schedule): string | null {
 /** Default model for whichever provider the user has a key for. */
 export function suggestModel(env: NodeJS.ProcessEnv): { model: string; why: string }[] {
   const out: { model: string; why: string }[] = [];
-  if (env["GEMINI_API_KEY"]) out.push({ model: "gemini/gemini-3.5-flash-lite", why: "GEMINI_API_KEY is set · free tier" });
-  if (env["ANTHROPIC_API_KEY"]) out.push({ model: "anthropic/claude-haiku-4-5", why: "ANTHROPIC_API_KEY is set" });
-  out.push({ model: "ollama/qwen3:8b", why: env["OLLAMA_HOST"] ? "OLLAMA_HOST is set · local, $0" : "local via Ollama, $0 (needs `ollama pull qwen3:8b`)" });
-  if (!env["GEMINI_API_KEY"]) out.push({ model: "gemini/gemini-3.5-flash-lite", why: "free tier · add GEMINI_API_KEY to .env" });
+  if (env["GEMINI_API_KEY"]) out.push({ model: "gemini/gemini-3.5-flash-lite", why: t("GEMINI_API_KEY is set · free tier") });
+  if (env["ANTHROPIC_API_KEY"]) out.push({ model: "anthropic/claude-haiku-4-5", why: t("ANTHROPIC_API_KEY is set") });
+  out.push({ model: "ollama/qwen3:8b", why: env["OLLAMA_HOST"] ? t("OLLAMA_HOST is set · local, $0") : t("local via Ollama, $0 (needs `ollama pull qwen3:8b`)") });
+  if (!env["GEMINI_API_KEY"]) out.push({ model: "gemini/gemini-3.5-flash-lite", why: t("free tier · add GEMINI_API_KEY to .env") });
   return out;
 }
 
@@ -116,29 +117,31 @@ export function renderGarufile(a: ScaffoldAnswers): string {
   const out: string[] = [];
   out.push(`# ${titleCase(a.name)} — ${firstSentence(a.task)}`);
   out.push(`#`);
-  out.push(`# Made with \`garu new\`. The policy starts closed: only the tools named below,`);
-  out.push(`# ${a.fs?.write === "allow" ? "writes allowed inside its own folder" : "writes ask first"}, everything else blocked. Edit freely; \`garu validate\` checks it.`);
+  out.push(`# ${t("Made with `garu new`. The policy starts closed: only the tools named below,")}`);
+  out.push(`# ${a.fs?.write === "allow" ? t("writes allowed inside its own folder, everything else blocked. Edit freely; `garu validate` checks it.") : t("writes ask first, everything else blocked. Edit freely; `garu validate` checks it.")}`);
   out.push(``);
   out.push(`name: ${a.name}`);
   out.push(`description: ${q(firstSentence(a.task))}`);
+  // A Spanish terminal gets an agent that writes in Spanish; in English the file is as it always was.
+  if (locale() !== "en") out.push(`language: ${locale()}              # ${t("what it writes to you in; it gets the date in that language too")}`);
   if (a.kind) {
     out.push(`persona:`);
-    out.push(`  kind: ${a.kind}                 # its face in the control room: ${KINDS[a.kind].label.split(" — ")[0]}`);
+    out.push(`  kind: ${a.kind}                 # ${t("its face in the control room: {face}", { face: KINDS[a.kind].label.split(" — ")[0]! })}`);
     if (a.tagline) out.push(`  tagline: ${q(a.tagline)}`);
   }
   out.push(`model: ${a.model}`);
   out.push(``);
   if (cron) {
     out.push(`triggers:`);
-    out.push(`  - cron: ${q(cron)}        # ${typeof a.schedule === "string" ? SCHEDULES[a.schedule].label : "custom"} · runs while \`garu ui --up\` is on`);
+    out.push(`  - cron: ${q(cron)}        # ${typeof a.schedule === "string" ? SCHEDULES[a.schedule].label : t("custom")} · ${t("runs while `garu ui --up` is on")}`);
   } else {
     out.push(`triggers:`);
-    out.push(`  - manual: true          # runs when you press Run job, send it a message, or \`garu run\``);
+    out.push(`  - manual: true          # ${t("runs when you press Run job, send it a message, or `garu run`")}`);
   }
   out.push(``);
   if (a.maxCostUsd !== null) {
     out.push(`budget:`);
-    out.push(`  maxCostUsd: ${a.maxCostUsd}        # a run stops before it crosses this`);
+    out.push(`  maxCostUsd: ${a.maxCostUsd}        # ${t("a run stops before it crosses this")}`);
     out.push(``);
   }
   out.push(`maxTurns: 10`);
@@ -151,7 +154,7 @@ export function renderGarufile(a: ScaffoldAnswers): string {
     tools.push(`    args: [${q(fetchServer)}]`);
     if (a.webhook) {
       tools.push(`    env:`);
-      tools.push(`      WEBHOOK_URL: ${q("${" + a.webhook.envVar + "}")}     # Slack or Discord incoming webhook, kept in .env`);
+      tools.push(`      WEBHOOK_URL: ${q("${" + a.webhook.envVar + "}")}     # ${t("Slack or Discord incoming webhook, kept in .env")}`);
     }
   }
   if (a.fs) {
@@ -163,28 +166,28 @@ export function renderGarufile(a: ScaffoldAnswers): string {
     out.push(`tools:`);
     out.push(...tools);
   } else {
-    out.push(`tools: []                 # no tools: it can only think and reply`);
+    out.push(`tools: []                 # ${t("no tools: it can only think and reply")}`);
   }
   out.push(``);
 
   out.push(`policy:`);
   if (a.web) {
     if (a.web.hosts.length) {
-      out.push(`  # Reading: only these hosts, by URL. Add a host here to widen it.`);
+      out.push(`  # ${t("Reading: only these hosts, by URL. Add a host here to widen it.")}`);
       out.push(`  - tool: "web.fetch_*"`);
       out.push(`    action: allow`);
       out.push(`    when:`);
       out.push(`      url: { matches: ${q(hostsRegex(a.web.hosts))} }`);
     } else {
-      out.push(`  # Reading: no host list yet, so every fetch is reviewed. Approve a few and Garu`);
-      out.push(`  # will propose the exact allow rule; or add a \`when: url: matches\` here.`);
+      out.push(`  # ${t("Reading: no host list yet, so every fetch is reviewed. Approve a few and Garu")}`);
+      out.push(`  # ${t("will propose the exact allow rule; or add a `when: url: matches` here.")}`);
       out.push(`  - tool: "web.fetch_*"`);
       out.push(`    action: ask`);
       out.push(`    reason: fetching a URL`);
     }
   }
   if (a.webhook) {
-    out.push(`  # Posting to your channel: always ask. The model never sees or chooses the URL.`);
+    out.push(`  # ${t("Posting to your channel: always ask. The model never sees or chooses the URL.")}`);
     out.push(`  - tool: "web.post_message"`);
     out.push(`    action: ask`);
     out.push(`    reason: posting to your channel`);
@@ -194,7 +197,7 @@ export function renderGarufile(a: ScaffoldAnswers): string {
     out.push(`    action: block`);
   }
   if (a.fs) {
-    out.push(`  # Files: the server only sees ${a.fs.path}. Reads are fine; ${a.fs.write === "allow" ? "writes too, inside that folder." : "writes are reviewed."}`);
+    out.push(`  # ${a.fs.write === "allow" ? t("Files: the server only sees {path}. Reads are fine; writes too, inside that folder.", { path: a.fs.path }) : t("Files: the server only sees {path}. Reads are fine; writes are reviewed.", { path: a.fs.path })}`);
     out.push(`  - tool: "fs.list_*"`);
     out.push(`    action: allow`);
     out.push(`  - tool: "fs.read_*"`);
