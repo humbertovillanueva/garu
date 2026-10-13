@@ -45,6 +45,9 @@ describe("automated mail", () => {
   it("knows an address no one reads, by its name or its domain", () => {
     for (const a of ["noreply@github.com", "Do-Not-Reply@bank.com", "T-Mobile <capitalone@notification.capitalone.com>", "news@nytimes.com", "alerts@mail.chase.com"]) expect(looksAutomated(a), a).toBe(true);
     for (const a of ["ana@x.com", "Ana <ana@example.com>", "renotification@x.com", "newsday@x.com", "autopay@x.com", "support@small.shop"]) expect(looksAutomated(a), a).toBe(false);
+    // Spanish senders say it in Spanish
+    for (const a of ["no-responder@banco.mx", "noresponder@tienda.com", "Notificaciones <notificaciones@correo.x.com>", "avisos@x.com", "boletin@x.com", "novedades@x.com", "promociones@x.com", "automatico@x.com", "alertas@x.es"]) expect(looksAutomated(a), a).toBe(true);
+    for (const a of ["noresponderte@x.com", "María Novedades <maria@x.com>", "contestar@x.com", "boletinero@x.com"]) expect(looksAutomated(a), a).toBe(false);
   });
 
   it("reads the headers too: sent automatically, bulk, or a mailing list", () => {

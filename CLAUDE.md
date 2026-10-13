@@ -47,7 +47,7 @@ docs/video/remotion the launch video's source (Remotion 4, React); see "Launch v
 
 ```
 npm install && npm run build          # all workspaces
-npm run typecheck && npm test         # tsc -b, vitest (230 tests); run before every commit
+npm run typecheck && npm test         # tsc -b, vitest (250 tests); run before every commit
 npx svelte-check --workspace packages/ui
 npm run garu -- <cmd>                 # the CLI from the repo (no global install yet)
 npm run garu -- service install|status|logs|restart|uninstall   # Garu as a login service (launchd)
@@ -111,6 +111,11 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   deny after 30 min; a tool the policy can never allow is not shown to the model. Approving the same
   agent → tool 3 times with no decline makes Garu suggest the rule (`kernel/src/suggest.ts`,
   `ui/.../SuggestionCard.svelte`); "Add to Garufile" inserts it above the existing ask rule.
+- A Garufile may say `language: es`: the kernel then hands the model the date in that language and tells
+  it to write to its owner in it; the owner's name reaches the model from `--as` / `GARU_USER`, so no
+  prompt names a person. Tomay and Bea ship a Spanish edition as `Garufile.es.yaml` beside the English
+  one (discovery ignores it; `docs/google.md` says how to switch). Spanish no-reply address words live
+  in `mcp-google/src/google.ts` and in Bea's block rule, both editions.
 - Scheduler catch-up: a cron fire missed in the last 6 h (machine asleep/off) runs once on start,
   trigger `catch-up:<cron>`. Don't double-fire; don't run catch-ups in parallel.
 - UI: black and white, no orange, in a dark and a light theme: every color is a token in `app.css`

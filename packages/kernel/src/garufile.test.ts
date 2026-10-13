@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { parseGarufile, GarufileError } from "./garufile.js";
 
 const minimal = `
@@ -54,6 +56,21 @@ policy:
     action: block
     when: { url: { matches: "(unclosed" } }
 `)).toThrow(/not a valid pattern/);
+  });
+
+  it("takes a language code, not a language name", () => {
+    expect(parseGarufile("name: a\nmodel: fake/any\nprompt: p\nlanguage: es\n").language).toBe("es");
+    expect(parseGarufile("name: a\nmodel: fake/any\nprompt: p\nlanguage: pt-BR\n").language).toBe("pt-BR");
+    expect(parseGarufile("name: a\nmodel: fake/any\nprompt: p\n").language).toBeUndefined();
+    expect(() => parseGarufile("name: a\nmodel: fake/any\nprompt: p\nlanguage: Spanish\n")).toThrow(/language/);
+  });
+
+  it("the shipped Spanish editions parse and say so", () => {
+    for (const name of ["tomay", "bea"]) {
+      const g = parseGarufile(readFileSync(join(import.meta.dirname, "..", "..", "..", "agents", name, "Garufile.es.yaml"), "utf8"));
+      expect(g.name).toBe(name);
+      expect(g.language).toBe("es");
+    }
   });
 
   it("parses the full example", () => {

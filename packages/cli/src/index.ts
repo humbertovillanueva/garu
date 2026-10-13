@@ -135,6 +135,7 @@ program
       approver,
       trigger: "manual",
       ...(opts.input ? { input: opts.input } : {}),
+      ...(process.env["GARU_USER"] ? { owner: process.env["GARU_USER"] } : {}),
       ...(opts.quiet ? {} : { sink: (e) => stderr.write(formatEvent(e) + "\n") }),
     });
     if (res.output) stdout.write(res.output.trimEnd() + "\n");
@@ -196,6 +197,7 @@ program
           approver,
           trigger,
           ...(opts.quiet ? {} : { sink: (e) => stderr.write(`  [${a.garufile.name}] ${formatEvent(e)}\n`) }),
+          ...(process.env["GARU_USER"] ? { owner: process.env["GARU_USER"] } : {}),
         }),
     });
 

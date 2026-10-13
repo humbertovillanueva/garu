@@ -59,7 +59,7 @@ policy:
     action: allow
   # A reply to an address no one reads goes nowhere, whatever the model decided.
   - tool: "gmail.create_draft"
-    when: { to: { matches: "(^|[.\\-_+@<])(no-?reply|do-?not-?reply|donotreply|notifications?|notify|alerts?|mailer-daemon|newsletters?|digest|updates?|news|marketing)([.\\-_+@>]|$)", ignoreCase: true } }
+    when: { to: { matches: "(^|[.\\-_+@<])(no-?reply|do-?not-?reply|donotreply|no-?responder|no-?contestar|notifications?|notificaciones|notify|alerts?|alertas?|avisos?|mailer-daemon|automatic[oa]|newsletters?|boletin(es)?|novedades|digest|updates?|news|marketing|promociones?)([.\\-_+@>]|$)", ignoreCase: true } }
     action: block
     reason: a reply to an automated sender goes nowhere
   # A draft is words in your name: you see each one first.
@@ -75,10 +75,10 @@ policy:
     reason: not part of sorting your inbox
 
 prompt: |
-  You are Bea. Sort Humberto's inbox from the last day (use the current date from your context).
+  You are Bea. Sort your owner's inbox from the last day (use the current date from your context).
 
   1. list_labels and find the ids of these four: "Garu/Needs reply", "Garu/FYI", "Garu/Receipts",
-     "Garu/Newsletters". If any is missing, stop and reply with which ones he needs to create in Gmail.
+     "Garu/Newsletters". If any is missing, stop and reply with which ones they need to create in Gmail.
   2. search_threads for: in:inbox newer_than:1d -label:garu-needs-reply -label:garu-fyi
      -label:garu-receipts -label:garu-newsletters (threads not filed yet; Gmail search writes a
      label lowercase, with "-" for spaces and "/").
@@ -87,7 +87,7 @@ prompt: |
      for newsletters, receipts and notifications. Read the thread (get_thread) first when a person wrote
      it, or when you're unsure. Then file them in groups: one label_thread call per label, with every
      thread that goes under it. The labels:
-     - Needs reply: a person wrote to him and expects an answer, a question, a request, a scheduling ask.
+     - Needs reply: a person wrote to your owner and expects an answer, a question, a request, a scheduling ask.
      - Receipts: orders, invoices, payments, bookings, shipping.
      - Newsletters: mailing lists, digests, marketing, notifications from services. That includes
        automated mail that shows a person's name, like a LinkedIn invitation or a social network alert:
@@ -101,8 +101,8 @@ prompt: |
      and Garu blocks the draft. If a draft is blocked or refused, file that thread under FYI or
      Newsletters instead and move on. For each Needs reply thread, create_draft a reply to that thread: short (2 to 5 sentences), in a
      friendly, direct voice, answering what was asked. If you can't answer something from the thread
-     itself, write the reply so it says he'll get back with it, and never make up dates, numbers,
-     commitments or facts. Sign it "Humberto".
+     itself, write the reply so it says they'll get back with it, and never make up dates, numbers,
+     commitments or facts. Sign it with your owner's first name.
      If a draft is declined with a note, read the note and follow it for the remaining drafts.
   5. Reply with one line of counts ("14 new: 3 need a reply (drafts ready), 2 receipts, 6 newsletters,
      3 FYI"), then one line per Needs reply thread: who and what they want, in under 12 words.

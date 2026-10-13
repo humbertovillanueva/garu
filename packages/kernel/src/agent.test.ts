@@ -31,6 +31,24 @@ policy:
 `);
 
 describe("runAgent", () => {
+  it("tells the model its owner and language, and hands it the date in that language", async () => {
+    const provider = new FakeProvider([{ stopReason: "end_turn", content: [{ type: "text", text: "listo" }] }]);
+    const res = await runAgent({
+      garufile: { ...garufile, language: "es" },
+      logRoot: mkdtempSync(join(tmpdir(), "garu-")),
+      provider,
+      owner: "Ana",
+      approver: async () => ({ approved: false, by: "test-human" }),
+      now: () => new Date("2026-10-07T05:00:00.000Z"),
+    });
+    expect(res.status).toBe("ok");
+    const system = provider.calls[0]?.system ?? "";
+    const at = new Date("2026-10-07T05:00:00.000Z");
+    expect(system).toContain(`Current time: ${at.toLocaleDateString("es", { weekday: "long" })}, ${at.getDate()} de octubre de 2026`);
+    expect(system).toContain("Your owner: Ana.");
+    expect(system).toContain("in Spanish. Answer an email in the language it was written in.");
+  });
+
   it("runs tools through policy and feeds results back to the model", async () => {
     const provider = new FakeProvider([
       {

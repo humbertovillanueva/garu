@@ -94,6 +94,17 @@ Open the control room (`npm run garu -- ui --up`), go to **Agents**, and press *
 
 If you run Garu as a login service, restart it so the schedules pick the agents up: `npm run garu -- service restart`.
 
+## In Spanish
+
+Tomay and Bea each ship a Spanish edition beside the English one: `agents/tomay/Garufile.es.yaml` and `agents/bea/Garufile.es.yaml`. Same rules, instructions in Spanish, and `language: es`, which makes Garu hand them the date in Spanish and tell them to write their briefs, summaries and replies in it (a reply follows the language of the email it answers). Garu only loads files named `Garufile.yaml`, so to switch an agent, copy its Spanish edition over the English one:
+
+```sh
+cp agents/tomay/Garufile.es.yaml agents/tomay/Garufile.yaml
+cp agents/bea/Garufile.es.yaml agents/bea/Garufile.yaml
+```
+
+Bea's labels are Spanish too: in step 7, nest `Responder`, `Para saber`, `Recibos` and `Boletines` under `Garu`. The agents call you by the name Garu runs as (`--as`, or `GARU_USER` in `.env`), so nothing in the files needs editing.
+
 ## Good to know
 
 - **The sign-in lasts 7 days in Testing.** Google expires it for apps that aren't published, because Gmail access is sensitive. The agent then shows **needs sign-in**; run its `garu auth` command again.

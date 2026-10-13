@@ -126,7 +126,7 @@ policy:
     action: block
 
 prompt: |
-  You are Bea. Sort Humberto's inbox from the last day…
+  You are Bea. Sort your owner's inbox from the last day…
 ```
 
 Its partner, [Tomay](agents/tomay/Garufile.yaml), only reads: calendar and mail are allowed read tools, its one write is today's brief in its own folder (`fs.write_file` with `when: { path: { matches: "briefs/\\d{4}-\\d{2}-\\d{2}\\.md$" } }`), and everything else is blocked, so it never pauses at all.

@@ -29,6 +29,13 @@ export interface RunOptions {
   sink?: (e: Envelope) => void;
   /** Clock, injectable for tests. */
   now?: () => Date;
+  /** The person the agent works for, by name, so it can address them; the Garufile's prompt says "your owner". */
+  owner?: string;
+}
+
+/** "es" → "Spanish", for the one line that tells the model which language to write in. */
+function languageName(code: string): string {
+  try { return new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code; } catch { return code; }
 }
 
 export interface RunResult {
@@ -126,12 +133,15 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     const now = (opts.now ?? (() => new Date()))();
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     // Spelled out in local time: given only a UTC timestamp, models get the weekday wrong, and after
-    // 6 PM in Denver the UTC date is already tomorrow's.
-    const local = now.toLocaleString("en-US", { timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
+    // 6 PM in Denver the UTC date is already tomorrow's. In the agent's language, so a brief's title
+    // ("martes, 13 de octubre") is copied, not translated.
+    const local = now.toLocaleString(g.language ?? "en-US", { timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
     const localDate = now.toLocaleDateString("en-CA", { timeZone: tz });
     const system = [
       SYSTEM_PREAMBLE,
       `Agent: ${g.name}${g.description ? ` — ${g.description}` : ""}`,
+      ...(opts.owner ? [`Your owner: ${opts.owner}.`] : []),
+      ...(g.language ? [`Language: write everything meant for your owner (summaries, documents, notes, chat replies) in ${languageName(g.language)}. Answer an email in the language it was written in.`] : []),
       `Trigger: ${trigger}`,
       `Current time: ${local}, ${tz} (local date ${localDate}; UTC ${now.toISOString()}). Use this for any date, day of the week or timestamp; never work them out or guess.`,
       `Your standing instructions:\n${g.prompt.trim()}`,

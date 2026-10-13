@@ -140,7 +140,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     };
     let result: RunResult | undefined;
     try {
-      result = await runAgent({ garufile: a.garufile, logRoot: opts.logRoot, approver, trigger, sink, ...(input ? { input } : {}) });
+      result = await runAgent({ garufile: a.garufile, logRoot: opts.logRoot, approver, trigger, sink, ...(input ? { input } : {}), ...(opts.userName && opts.userName !== "you" ? { owner: opts.userName } : {}) });
       return result;
     } catch (e) {
       chat.append(name, { role: "agent", kind: "error", text: (e as Error).message });

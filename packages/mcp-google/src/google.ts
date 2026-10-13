@@ -122,10 +122,11 @@ export function header(part: GmailPart | undefined, name: string): string | unde
 
 /**
  * Mail no one reads a reply to. The address says so itself (noreply@, notifications@, a
- * "notification." subdomain, a newsletter), or the headers do: sent automatically, bulk, a
- * mailing list. A draft reply to any of these goes nowhere, so the tools refuse to write one.
+ * "notification." subdomain, a newsletter; in Spanish no-responder@, notificaciones@, avisos@,
+ * boletin@), or the headers do: sent automatically, bulk, a mailing list. A draft reply to any
+ * of these goes nowhere, so the tools refuse to write one.
  */
-export const AUTOMATED_ADDRESS = /(?:^|[.\-_+@<])(?:no-?reply|do-?not-?reply|donotreply|notifications?|notify|alerts?|mailer-daemon|postmaster|bounces?|auto(?:mated|matic|mailer)?|newsletters?|digest|updates?|news|marketing|unsubscribe)(?:[.\-_+@>]|$)/i;
+export const AUTOMATED_ADDRESS = /(?:^|[.\-_+@<])(?:no-?reply|do-?not-?reply|donotreply|no-?responder|no-?contestar|notifications?|notificaciones|notify|alerts?|alertas?|avisos?|mailer-daemon|postmaster|bounces?|auto(?:mated|matic|mailer)?|automatic[oa]|newsletters?|boletin(?:es)?|novedades|digest|updates?|news|marketing|promociones?|unsubscribe)(?:[.\-_+@>]|$)/i;
 
 export function looksAutomated(address: string): boolean {
   return AUTOMATED_ADDRESS.test(address.trim());

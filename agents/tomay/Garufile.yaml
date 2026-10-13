@@ -90,10 +90,10 @@ policy:
     reason: not part of preparing your day
 
 prompt: |
-  You are Tomay. Prepare Humberto's day (use the current date and time zone from your context).
+  You are Tomay. Prepare your owner's day (use the current date and time zone from your context).
 
-  1. List today's events on his calendars (list_calendars, then list_events for today only).
-  2. For each event with at least one other attendee, search his email for recent threads with those
+  1. List today's events on their calendars (list_calendars, then list_events for today only).
+  2. For each event with at least one other attendee, search their email for recent threads with those
      people (search_threads with their addresses, last 60 days) and read the one or two most relevant
      (get_thread). Skip events with no other attendees, but keep them in the schedule.
   3. Call fs.list_allowed_directories to find the briefs folder, then write <that folder>/<YYYY-MM-DD>.md:

@@ -1,0 +1,124 @@
+# Tomay — tu día, listo antes que tú.
+#
+# Cada día entre semana a las 7:00, Tomay lee la agenda de hoy y, para cada reunión con otras
+# personas, busca tu correo reciente con ellas y escribe una nota de preparación: quién viene,
+# de qué hablaron la última vez, qué sigue pendiente. También lista tus huecos libres.
+#
+# Solo lee. A Google se le pide acceso de solo lectura (los permisos de abajo), el programa de
+# Google de Garu no tiene ninguna herramienta que cambie la agenda o envíe correo, y la política
+# bloquea todo lo demás, así que ni una regla equivocada podría cambiar nada. Lo único que escribe
+# es el resumen de hoy, en su propia carpeta. No se publica en ningún lado: el resumen se queda
+# en esta computadora y en el hilo de Tomay en tu teléfono.
+#
+# Esta es la edición en español de agents/tomay/Garufile.yaml: las mismas reglas, y escribe en
+# español. Para usarla, cópiala encima de Garufile.yaml (docs/google.md explica cómo).
+#
+# Necesita: GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en .env (el cliente OAuth de tu proyecto de
+# Google Cloud) y, una sola vez: garu auth agents/tomay/Garufile.yaml calendar
+#                             y: garu auth agents/tomay/Garufile.yaml gmail
+
+name: tomay
+description: Lee la agenda de hoy y escribe una nota de preparación para cada reunión, a partir de tu correo reciente con quienes asisten.
+language: es
+persona:
+  kind: fox
+  tagline: "Recoge la mañana y te la trae."
+model: gemini/gemini-3.5-flash-lite
+
+triggers:
+  - cron: "0 7 * * 1-5"
+
+budget:
+  maxCostUsd: 0.05
+
+maxTurns: 14
+
+tools:
+  # El programa de Google de Garu (packages/mcp-google). Garu inicia sesión y le pasa un token de una hora.
+  - name: calendar
+    command: node
+    args: ["packages/mcp-google/dist/index.js", "calendar"]
+    auth: oauth
+    oauth:
+      issuer: https://accounts.google.com
+      clientId: ${GOOGLE_CLIENT_ID}
+      clientSecret: ${GOOGLE_CLIENT_SECRET}
+      scopes:
+        - https://www.googleapis.com/auth/calendar.calendarlist.readonly
+        - https://www.googleapis.com/auth/calendar.events.readonly
+      authorizationParams: { access_type: offline, prompt: consent }
+  - name: gmail
+    command: node
+    args: ["packages/mcp-google/dist/index.js", "gmail"]
+    auth: oauth
+    oauth:
+      issuer: https://accounts.google.com
+      clientId: ${GOOGLE_CLIENT_ID}
+      clientSecret: ${GOOGLE_CLIENT_SECRET}
+      scopes:
+        - https://www.googleapis.com/auth/gmail.readonly
+      authorizationParams: { access_type: offline, prompt: consent }
+  - name: fs
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "./agents/tomay/briefs"]
+
+policy:
+  # Agenda: solo lectura. Crear, cambiar, borrar o contestar un evento es trabajo de alguien más.
+  - tool: "calendar.list_calendars"
+    action: allow
+  - tool: "calendar.list_events"
+    action: allow
+  - tool: "calendar.get_event"
+    action: allow
+  - tool: "calendar.*"
+    action: block
+    reason: Tomay solo lee tu agenda
+  # Gmail: buscar y leer, para saber de qué hablaste por última vez con cada persona. Sin etiquetas, sin borradores.
+  - tool: "gmail.search_threads"
+    action: allow
+  - tool: "gmail.get_thread"
+    action: allow
+  - tool: "gmail.*"
+    action: block
+    reason: Tomay solo lee tu correo
+  # Archivos: solo el resumen de hoy, en su propia carpeta.
+  - tool: "fs.list_*"
+    action: allow
+  - tool: "fs.read_*"
+    action: allow
+  - tool: "fs.write_file"
+    action: allow
+    when:
+      path: { matches: "briefs/\\d{4}-\\d{2}-\\d{2}\\.md$" }
+  - tool: "*"
+    action: block
+    reason: no es parte de preparar tu día
+
+prompt: |
+  Eres Tomay. Prepara el día de tu dueño (usa la fecha y la zona horaria de tu contexto).
+
+  1. Lista los eventos de hoy en sus calendarios (list_calendars y luego list_events solo para hoy).
+  2. Para cada evento con al menos otra persona invitada, busca en su correo los hilos recientes con
+     esas personas (search_threads con sus direcciones, últimos 60 días) y lee el hilo o los dos más
+     relevantes (get_thread). Salta los eventos sin otros invitados, pero déjalos en la agenda.
+  3. Llama a fs.list_allowed_directories para encontrar la carpeta de resúmenes y escribe
+     <esa carpeta>/<AAAA-MM-DD>.md:
+
+  # Tu día — <día de la semana, D de mes>
+  ## Agenda
+  Una línea por evento: hora, título y "(nota abajo)" cuando haya nota.
+  ## Huecos libres
+  Espacios de 45 minutos o más entre las 8:00 y las 18:00, como horas.
+  ## <hora> · <título del evento>
+  Para cada evento con otras personas, una nota corta:
+  - **Quiénes:** nombres (y su cargo o empresa si el correo lo deja claro).
+  - **La última vez:** una o dos frases sobre el hilo relevante más reciente, con su fecha.
+  - **Pendiente:** preguntas, promesas o fechas límite de esos hilos. Di "nada pendiente" si no hay.
+  - **Lleva:** lo que los hilos digan que hay que preparar o enviar. Omítelo si no hay nada.
+
+  Todo el resumen en menos de 400 palabras. Claro, sin adornos. No cites nada privado más allá de lo
+  que una nota de preparación necesita. Nunca inventes personas, hilos ni hechos; si no encontraste
+  correo con alguien, dilo.
+  No crees ningún otro archivo, y no intentes cambiar la agenda ni el correo.
+  Al final, responde con tres o cuatro líneas: cuántas reuniones hay, cuál necesita más preparación
+  y por qué, y el hueco libre más largo.
