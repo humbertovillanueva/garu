@@ -125,7 +125,10 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   `lib/i18n.svelte.ts`, with the English as the key; the Spanish is in `lib/i18n/es.ts`, and
   `i18n.test.ts` fails on a sentence without Spanish, a stale entry or a lost placeholder. Keys are
   double-quoted literals, whole sentences, one key per plural form; agent names, tool ids, paths and
-  commands are never wrapped. Times are human (`humanTime`, `clock`,
+  commands are never wrapped. The terminal has the same layer (`packages/cli/src/i18n.ts`, language from
+  `GARU_LANG` / `LANG`, Spanish in `cli/src/i18n/es.ts`, same test), and the reading material ships a Spanish
+  twin beside each English file (`README.es.md`, `docs/*.es.md`, `docs/index.es.html`) with a link at the
+  top of both. Times are human (`humanTime`, `clock`,
   `until` in `lib/format.ts`): never ISO strings, never UTC, and no seconds in the UI, with one exception:
   the run timeline is the log of one run, so its exact stamps and `ok · 340ms` stay. `until()` already
   returns "in 25 min", so never write "in {until(...)}". Monospace is for code, ids and paths only.
@@ -142,8 +145,8 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 
 Built: kernel, CLI, control room, Android debug app, iPhone app in the Simulator (2026-10-11), login service, catch-up, brand, Owner's Guide,
 launch video v7, onboarding and UI audit fixes (2026-10-10), the always-on fixes from the full
-audit and its security items, the app in Spanish with a language switch (2026-10-12). Open: the
-rest of that audit, in `docs/audit-2026-10-12.md`.
+audit and its security items, Spanish end to end: app, terminal, Tomay and Bea, website and guides
+(2026-10-12). Open: the rest of that audit, in `docs/audit-2026-10-12.md`.
 
 Not launching yet. Order: understand → real app → Play closed test → launch → beyond. The real-app
 list is done in code (2026-10-12: crash screen, dark and light theme, accessibility pass, release

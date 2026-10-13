@@ -361,7 +361,7 @@ export const es: Record<string, string> = {
   "can reach": "puede acceder a",
   "your Gmail": "tu Gmail",
   "rules": "reglas",
-  "read and file mail": "leer y archivar correo",
+  "read and file mail": "leer y clasificar correo",
   "allow": "permitir",
   "draft a reply": "redactar una respuesta",
   "ask": "preguntar",

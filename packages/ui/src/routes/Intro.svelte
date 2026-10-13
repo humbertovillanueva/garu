@@ -9,7 +9,7 @@
   import Creature from "../lib/components/Creature.svelte";
   import Pair from "./Pair.svelte";
   import { backHandlers, canScan, haptic } from "../lib/native";
-  import { t } from "../lib/i18n.svelte";
+  import { t, siteUrl } from "../lib/i18n.svelte";
 
   let { onDone, splash = true, alreadyPaired = false }: { onDone: () => void; splash?: boolean; alreadyPaired?: boolean } = $props();
 
@@ -127,7 +127,7 @@
             <li><i aria-hidden="true">1</i><span>{t("On your computer, open Garu, then")} <b>{t("Settings, Your phone & other devices")}</b>.</span></li>
             <li><i aria-hidden="true">2</i><span>{t("Press")} <b>{t("Show pairing code")}</b>, {canScan ? t("then scan it below, or copy the link there and paste it below.") : t("then press Copy link there and paste it below.")}</span></li>
             <li><i aria-hidden="true">3</i><span>{t("Both need")} <b>Tailscale</b> {t("(free), signed in to the same account.")}</span></li>
-            <li><i aria-hidden="true">4</i><span>{t("Don't have Garu yet?")} <a class="link" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">{t("The website")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a> {t("walks you through setting it up on your computer.")}</span></li>
+            <li><i aria-hidden="true">4</i><span>{t("Don't have Garu yet?")} <a class="link" href={siteUrl()} target="_blank" rel="noreferrer">{t("The website")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a> {t("walks you through setting it up on your computer.")}</span></li>
           </ol>
           <!-- only while this slide shows, so the camera never runs off-screen -->
           {#if i === LAST}<div class="w-full"><Pair embedded /></div>{/if}
@@ -172,7 +172,7 @@
   .rc { border-color: color-mix(in oklab, var(--color-ask) 40%, var(--color-line)); }
   .rc .h { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; font-size: 13.5px; line-height: 1.4; } .rc .h b { font-weight: 600; }
   .rc .why { display: block; margin-top: 2px; font-size: 12px; color: var(--color-mute); }
-  .rc .body .lbl { color: var(--color-mute); display: inline-block; width: 22px; }
+  .rc .body .lbl { color: var(--color-mute); display: inline-block; min-width: 22px; }  /* "Para" is wider than "To" */
   .rc .body { margin: 0 14px; border: 1px solid var(--color-line); border-radius: 10px; background: color-mix(in oklab, var(--color-bg) 60%, transparent); font-size: 12px; color: var(--color-fg-2); padding: 10px 12px; line-height: 1.5; }
   .rc .btns { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px; } .rc .btns span { flex: 1 1 auto; min-width: 0; text-align: center; padding: 9px 6px; border-radius: 9px; border: 1px solid var(--color-line-2); font-size: 13px; white-space: nowrap; }
   .rc .btns .ok { border-color: color-mix(in oklab, var(--color-ok) 40%, transparent); color: var(--color-ok); } .rc .btns .no { border-color: color-mix(in oklab, var(--color-bad) 40%, transparent); color: var(--color-bad); }

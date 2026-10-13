@@ -9,7 +9,7 @@
   import { connectLive, live } from "../lib/api.svelte";
   import { build, markIntroSeen, parsePairing, remember, server } from "../lib/server.svelte";
   import { canScan, haptic } from "../lib/native";
-  import { t } from "../lib/i18n.svelte";
+  import { t, siteUrl } from "../lib/i18n.svelte";
 
   /** The button that had focus goes away when the scanner opens; Cancel takes it. */
   const takeFocus = (n: HTMLElement) => { n.focus(); };
@@ -129,7 +129,7 @@
     <p class="mt-4 text-[11.5px] leading-relaxed text-mute">{t("The link carries a key that lets this phone approve actions as you. It is stored only on this phone.")}</p>
     {#if !embedded && !problem}
       <div class="mt-4 flex flex-wrap gap-x-4 text-[12.5px]">
-        <a class="inline-flex min-h-11 items-center text-fg underline decoration-mute underline-offset-2" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">{t("Don't have Garu yet?")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a>
+        <a class="inline-flex min-h-11 items-center text-fg underline decoration-mute underline-offset-2" href={siteUrl()} target="_blank" rel="noreferrer">{t("Don't have Garu yet?")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a>
         <button class="min-h-11 text-fg-2 underline decoration-mute underline-offset-2" onclick={() => { markIntroSeen(false); location.reload(); }}>{t("See the introduction")}</button>
       </div>
     {/if}

@@ -22,6 +22,9 @@ export function dateLocale(): string | undefined {
 }
 
 /** The sentence in the current language. `{name}` placeholders are filled from `vars`. */
+/** The website in the reader's language; the Spanish page sits beside the English one. */
+export const siteUrl = (): string => (locale() === "es" ? "https://humbertovillanueva.github.io/garu/index.es.html" : "https://humbertovillanueva.github.io/garu/");
+
 export function t(key: string, vars?: Record<string, string | number>): string {
   const text = locale() === "es" ? (es[key] ?? key) : key;
   return vars ? text.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : text;

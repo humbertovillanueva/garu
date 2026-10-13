@@ -4,7 +4,7 @@
   import { href } from "../lib/router.svelte";
   import Logo from "../lib/components/Logo.svelte";
   import { build, isApp, server } from "../lib/server.svelte";
-  import { t } from "../lib/i18n.svelte";
+  import { t, siteUrl } from "../lib/i18n.svelte";
   let version = $state<string | null | undefined>(undefined); // undefined while still asking
   $effect(() => { live.tick; api.settings().then((s) => (version = s.version)).catch(() => (version = null)); });
   import { humanTime } from "../lib/format";
@@ -29,7 +29,7 @@
     <div class="flex justify-between gap-4 px-4 py-3"><span class="text-mute">{t("Made by")}</span><span>Humberto Villanueva, Salt Lake City</span></div>
   </div>
   <div class="panel rise divide-y divide-line text-[14px]">
-    <a class="card-hover block px-4 py-3" href="https://humbertovillanueva.github.io/garu/" target="_blank" rel="noreferrer">{t("Website")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a>
+    <a class="card-hover block px-4 py-3" href={siteUrl()} target="_blank" rel="noreferrer">{t("Website")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a>
     <a class="card-hover block px-4 py-3" href="https://github.com/humbertovillanueva/garu" target="_blank" rel="noreferrer">{t("Source code")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a>
     <a class="card-hover block px-4 py-3" href="https://humbertovillanueva.github.io/garu/privacy.html" target="_blank" rel="noreferrer">{t("Privacy")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a>
     <a class="card-hover block px-4 py-3" href={href("help")}>{t("Help")}</a>
