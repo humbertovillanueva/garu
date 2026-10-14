@@ -44,6 +44,9 @@ policy:
     action: allow
   - tool: "linear.list_users"
     action: allow
+  # learned: approved 3× by humbertovillanueva (ui), 2026-10-13
+  - tool: linear.save_issue
+    action: allow
   # Writing: one issue or comment at a time, and you see it first.
   # (Linear's save_issue both creates and updates.)
   - tool: "linear.save_issue"
