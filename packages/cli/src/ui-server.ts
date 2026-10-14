@@ -457,7 +457,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         const a = discover().agents.find((x) => x.garufile.name === sug.agent);
         if (!a) return json(res, { error: t("no Garufile for {name}", { name: sug.agent }) }, 404);
         try {
-          const { inserted } = addPolicyRule(a.path, sug.rule, `learned: approved ${sug.approvals}× by ${opts.decider}, ${new Date().toISOString().slice(0, 10)}`);
+          const { inserted } = addPolicyRule(a.path, sug.rule, `learned: approved ${sug.approvals}× by ${opts.decider}, ${new Date().toLocaleDateString("en-CA")}`);
           dismissed.add(id); saveDismissed();
           opts.log(`policy: added "${sug.summary}" to ${a.source}`);
           ping();
