@@ -1,3 +1,4 @@
+import { ModelQuotaError } from "./providers/gemini.js";
 /**
  * The agent loop.
  *
@@ -38,6 +39,9 @@ function languageName(code: string): string {
   try { return new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code; } catch { return code; }
 }
 
+/** The model's daily quota is used up: which model, and when it resets. */
+export type ModelQuota = { model: string; retryAt: string; limit?: number };
+
 export interface RunResult {
   runId: string;
   logPath: string;
@@ -51,6 +55,8 @@ export interface RunResult {
   outputTokens: number;
   /** The network was down before the model ever answered. The schedule treats such a run as not run. */
   offline?: boolean;
+  /** The run stopped because the model's daily quota is used up. */
+  quota?: ModelQuota;
 }
 
 /** The network, not the model, failed: fetch's "fetch failed", a DNS or socket error, a timeout, Ollama unreachable. */
@@ -112,6 +118,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
   let unmetered = false;
   // The network was down before the model ever answered: not a run, as far as the schedule is concerned.
   let offline = false;
+  let quota: ModelQuota | undefined;
 
   try {
     await bus.connect(g.tools);
@@ -226,6 +233,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     status = "error";
     const err = e as Error;
     offline = completed === 0 && isConnectionError(err);
+    if (err instanceof ModelQuotaError) quota = { model: err.model, retryAt: err.retryAt, ...(err.limit !== undefined ? { limit: err.limit } : {}) };
     recorder.record({ type: "error", message: err.message, ...(err.stack ? { stack: err.stack } : {}) });
     output = offline ? `no network: ${err.message}` : err.message;
   } finally {
@@ -236,6 +244,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
       costUsd: totalCost,
       priced: price !== null && !unmetered,
       ...(offline ? { offline: true } : {}),
+      ...(quota ? { quota } : {}),
       ...(output ? { summary: output.slice(0, 200) } : {}),
     });
   }
@@ -245,6 +254,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     logPath: recorder.path,
     status,
     output,
+    ...(quota ? { quota } : {}),
     turns: completed,
     costUsd: price ? totalCost : null,
     inputTokens,

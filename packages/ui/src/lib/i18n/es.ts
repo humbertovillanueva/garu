@@ -580,6 +580,12 @@ export const es: Record<string, string> = {
 
   // ---- a run, step by step (timeline, decisions)
   "run {id}": "ejecución {id}",
+  "What it said": "Lo que dijo",
+  "How it was made": "Cómo se hizo",
+  "{n} steps": "{n} pasos",
+  "rate limited": "límite de velocidad",
+  "high demand": "alta demanda",
+  "Gemini's daily limit for {model} is used up; it resets {when}. Add billing to the key, or switch the model.": "Se agotó el límite diario de Gemini para {model}; se reinicia {when}. Agrega facturación a la clave o cambia el modelo.",
   "That run doesn't exist": "Esa ejecución no existe",
   "No runs yet": "Aún no hay ejecuciones",
   "Open an agent and press Run now.": "Abre un agente y pulsa Ejecutar ahora.",

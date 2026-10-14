@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GeminiProvider, sanitizeSchema } from "./gemini.js";
+import { GeminiProvider, ModelQuotaError, retryHintSeconds, sanitizeSchema } from "./gemini.js";
 
 describe("sanitizeSchema", () => {
   it("keeps only keywords Gemini accepts and fills type/properties", () => {
@@ -111,8 +111,8 @@ describe("GeminiProvider (mocked fetch)", () => {
     expect(res.content).toEqual([{ type: "text", text: "ok" }]);
     expect(waits).toEqual([5000, 10000]);
     expect(seen).toEqual([
-      { attempt: 1, maxAttempts: 6, reason: "This model is currently experiencing high demand" },
-      { attempt: 2, maxAttempts: 6, reason: "This model is currently experiencing high demand" },
+      { attempt: 1, maxAttempts: 6, reason: "high demand" },
+      { attempt: 2, maxAttempts: 6, reason: "high demand" },
     ]);
   });
 
@@ -130,6 +130,22 @@ describe("GeminiProvider (mocked fetch)", () => {
     q.sleep = async () => {}; q.onRetry = undefined;
     await expect(q.complete({ model: "m", system: "", messages: [], tools: [] })).rejects.toThrow(/bad schema/);
     expect(calls400).toBe(1);
+  });
+
+  it("stops at once on a daily quota and says when it resets", async () => {
+    let calls = 0;
+    const quota = (async () => { calls++; return new Response(JSON.stringify({ error: { message: "You exceeded your current quota, please check your plan and billing details. * Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash Please retry in 9h27m42.194989591s." } }), { status: 429 }); }) as typeof fetch;
+    const p = new GeminiProvider("k", quota);
+    p.sleep = async () => {}; p.onRetry = undefined;
+    const err = await p.complete({ model: "m", system: "", messages: [], tools: [] }).then(() => null, (e) => e as ModelQuotaError);
+    expect(err).toBeInstanceOf(ModelQuotaError);
+    expect(err!.message).toMatch(/daily quota.*20 requests a day on the free tier.*9 h 28 min/);
+    expect(err!.limit).toBe(20);
+    expect(new Date(err!.retryAt).getTime() - Date.now()).toBeGreaterThan(9 * 3600_000);
+    expect(calls).toBe(1);
+    expect(retryHintSeconds("Please retry in 20s.")).toBe(20);
+    expect(retryHintSeconds("Please retry in 9h27m42.1s")).toBeCloseTo(34062.1, 1);
+    expect(retryHintSeconds("no hint")).toBeNull();
   });
 
   it("requires a key", () => {

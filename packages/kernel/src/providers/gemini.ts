@@ -18,6 +18,29 @@ interface GeminiContent {
   parts: GeminiPart[];
 }
 
+/** "retry in 20s", "Please retry in 9h27m42.19s" → seconds, or null when the message has no hint. */
+export function retryHintSeconds(message: string): number | null {
+  const m = /retry in (?:(\d+)h)?(?:(\d+)m)?([0-9.]+)s/i.exec(message);
+  return m ? Number(m[1] ?? 0) * 3600 + Number(m[2] ?? 0) * 60 + parseFloat(m[3]!) : null;
+}
+/** A retry hint longer than this is a daily quota, not a rate limit. */
+const QUOTA_WAIT_S = 300;
+
+/** The model's daily quota is used up. Says so plainly, and carries when it resets so the app can say it in the reader's words. */
+export class ModelQuotaError extends Error {
+  readonly retryAt: string;
+  readonly limit: number | undefined;
+  constructor(readonly model: string, apiMessage: string, waitS: number) {
+    const limit = /limit:\s*(\d+)/i.exec(apiMessage)?.[1];
+    const h = Math.floor(waitS / 3600);
+    const min = Math.round((waitS % 3600) / 60);
+    super(`gemini ${model}: the daily quota for this model is used up${limit ? ` (${limit} requests a day${/free_tier/i.test(apiMessage) ? " on the free tier" : ""})` : ""}; it resets in about ${h ? `${h} h ` : ""}${min} min. Add billing to the key, or switch the model.`);
+    this.name = "ModelQuotaError";
+    this.retryAt = new Date(Date.now() + waitS * 1000).toISOString();
+    this.limit = limit ? Number(limit) : undefined;
+  }
+}
+
 export class GeminiProvider implements ModelProvider {
   readonly id = "gemini";
   private readonly apiKey: string;
@@ -139,14 +162,17 @@ export class GeminiProvider implements ModelProvider {
       if (res.ok && !json.error) return { res, json };
       lastMsg = json.error?.message ?? `HTTP ${res.status}`;
       const retryable = res.status === 429 || res.status === 503;
-      if (!retryable || attempt === maxAttempts) break;
-      const hinted = /retry in ([0-9.]+)s/i.exec(lastMsg);
+      if (!retryable) break;
+      // "Please retry in 9h27m42s" is a daily quota, not a rate limit: waiting won't help and every retry counts, so stop and say so.
+      const hintedS = retryHintSeconds(lastMsg);
+      if (res.status === 429 && hintedS !== null && hintedS > QUOTA_WAIT_S) throw new ModelQuotaError(model, lastMsg, hintedS);
+      if (attempt === maxAttempts) break;
       // 429 says how long to wait. 503 ("high demand") doesn't, and those spikes last longer than a few seconds: back off harder.
       const base = res.status === 503 ? 5000 * 2 ** (attempt - 1) : 2 ** attempt * 1000;
-      const waitMs = Math.min(hinted ? Math.ceil(parseFloat(hinted[1]!) * 1000) + 500 : base, 65_000);
+      const waitMs = Math.min(hintedS !== null ? Math.ceil(hintedS * 1000) + 500 : base, 65_000);
       const info = { model, attempt, maxAttempts, status: res.status, waitMs, message: lastMsg };
       this.onRetry?.(info);
-      onRetry?.({ attempt, maxAttempts, waitMs, reason: lastMsg.replace(/\.\s.*$/, "") });
+      onRetry?.({ attempt, maxAttempts, waitMs, reason: res.status === 503 ? "high demand" : "rate limited" });
       await this.sleep(waitMs);
     }
     throw new Error(`gemini ${model}: ${lastMsg}`);

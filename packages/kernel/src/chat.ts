@@ -19,6 +19,8 @@ export interface ChatMessage {
   runId?: string;
   /** "chat" for replies to you; the trigger name for diary entries from other runs; "error" when a run failed. */
   kind: "chat" | "run" | "error";
+  /** The run stopped because the model's daily quota is used up; the app says so in the reader's words. */
+  quota?: { model: string; retryAt: string; limit?: number };
 }
 
 /** What the agent is told about its own schedule and runs before it answers you. Facts, not memory. */

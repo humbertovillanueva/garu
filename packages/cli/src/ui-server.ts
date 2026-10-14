@@ -150,7 +150,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       // The thread is the agent's diary: a chat reply for chat runs, a short entry for everything else.
       if (result) {
         const text = result.output?.trim() || `run ${result.status} with nothing to say`;
-        chat.append(name, { role: "agent", kind: trigger === "chat" ? (result.status === "ok" ? "chat" : "error") : result.status === "ok" ? "run" : "error", text, runId: result.runId });
+        chat.append(name, { role: "agent", kind: trigger === "chat" ? (result.status === "ok" ? "chat" : "error") : result.status === "ok" ? "run" : "error", text, runId: result.runId, ...(result.quota ? { quota: result.quota } : {}) });
       }
       live.delete(name);
       ping();

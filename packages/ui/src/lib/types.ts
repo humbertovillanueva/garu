@@ -100,6 +100,8 @@ export interface ChatMessage {
   text: string;
   runId?: string;
   kind: "chat" | "run" | "error";
+  /** The run stopped because the model's daily quota is used up. */
+  quota?: { model: string; retryAt: string; limit?: number };
 }
 
 export interface Grant {

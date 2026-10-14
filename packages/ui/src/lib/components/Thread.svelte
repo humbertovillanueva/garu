@@ -5,7 +5,7 @@
    * into a single quiet line that opens on tap.
    */
   import { href } from "../router.svelte";
-  import { clock, dayLabel, plainTimes } from "../format";
+  import { clock, dayLabel, plainTimes, until } from "../format";
   import Mark from "./Mark.svelte";
   import { renderMarkdown } from "../md";
   import { t } from "../i18n.svelte";
@@ -91,7 +91,7 @@
           <div class="min-w-0 max-w-[85%]">
             <div class="rounded-2xl rounded-tl-md px-4 py-2.5 text-[14px] leading-relaxed" class:panel={m.kind !== "error"}
                  style={m.kind === "error" ? "background: color-mix(in oklab, var(--color-bad) 10%, var(--color-panel)); border: 1px solid color-mix(in oklab, var(--color-bad) 35%, var(--color-line))" : ""}>
-              <div class="md space-y-2">{@html renderMarkdown(plainTimes(m.text))}</div>
+              {#if m.quota}{@const q = m.quota}<p>{t("Gemini's daily limit for {model} is used up; it resets {when}. Add billing to the key, or switch the model.", { model: q.model, when: until(q.retryAt) })}</p>{:else}<div class="md space-y-2">{@html renderMarkdown(plainTimes(m.text))}</div>{/if}
             </div>
             <div class="mt-1 text-[11px] text-mute">{clock(m.ts)}{#if m.runId}<span class="mx-1">·</span><a class="tap hover:text-fg" href={href("run", agent, m.runId)}>{t("see the run")}</a>{/if}</div>
           </div>
