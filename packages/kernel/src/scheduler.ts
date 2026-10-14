@@ -178,14 +178,13 @@ export class Scheduler {
       if (!due) continue;
       const last = cu.lastRunAt(name);
       if (last && last.getTime() >= due.getTime()) continue;
-      this.emit({ type: "catch-up", agent: name, cron: j.cron, missedAt: due });
       this.catchUpPending.add(name);
       this.catchUpQueue = this.catchUpQueue.then(() => {
         this.catchUpPending.delete(name);
         // While it waited its turn, its own cron may have fired and run: check again before firing.
         const lastNow = cu.lastRunAt(name);
         if (this.inFlight.has(name) || this.starting.has(name) || (lastNow && lastNow.getTime() >= due.getTime())) return;
-        return this.fire(j.agent, j.cron, "catch-up");
+        return this.fire(j.agent, j.cron, "catch-up", due);
       });
       queued++;
     }
@@ -193,7 +192,7 @@ export class Scheduler {
   }
 
   /** Fire one agent now (also used by cron callbacks). Resolves when the run finishes or is skipped. */
-  async fire(a: ScheduledAgent, cron: string, kind: "cron" | "catch-up" = "cron"): Promise<void> {
+  async fire(a: ScheduledAgent, cron: string, kind: "cron" | "catch-up" = "cron", missedAt?: Date): Promise<void> {
     const name = a.garufile.name;
     if (this.stopping) return;
     if (this.inFlight.has(name) || this.starting.has(name) || this.opts.isBusy?.(name)) {
@@ -215,6 +214,8 @@ export class Scheduler {
       return;
     }
     if (this.stopping || this.inFlight.has(name)) return;
+    // Said only now, once the network is there: a wake without network says "no network, will catch up" and nothing else.
+    if (kind === "catch-up" && missedAt) this.emit({ type: "catch-up", agent: name, cron, missedAt });
     this.emit({ type: "fire", agent: name, cron });
     const p = this.opts
       .runner(a, `${kind}:${cron}`)

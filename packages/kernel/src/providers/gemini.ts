@@ -6,6 +6,10 @@
 import type { CompleteRequest, CompleteResponse, ContentBlock, ModelProvider } from "../provider.js";
 
 const REQUEST_TIMEOUT_MS = 120_000;
+/** A request that took this much longer than its timeout means the machine slept through it (timers pause in sleep). */
+const SLEPT_MS = 30_000;
+/** How many wakes a request may straddle before giving up; a laptop dozing with its lid closed wakes for a minute at a time. */
+const SLEEP_NET_TRIES = 4;
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
 
 type GeminiPart =
@@ -142,8 +146,11 @@ export class GeminiProvider implements ModelProvider {
   private async postWithRetry(model: string, body: unknown, onRetry?: CompleteRequest["onRetry"]): Promise<{ res: Response; json: GeminiResponse }> {
     const maxAttempts = this.maxAttempts;
     let lastMsg = "";
+    let netTries = 0;
+    let patient = false; // once the machine is seen to have slept, every network failure in this call gets the patient treatment
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       let res: Response;
+      const sentAt = this.now();
       try {
         res = await this.fetchImpl(`${BASE}/models/${model}:generateContent`, {
           method: "POST",
@@ -153,9 +160,14 @@ export class GeminiProvider implements ModelProvider {
           signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         });
       } catch (e) {
-        // The network, not Google. One quick retry covers a blip; a dead network fails fast and says so.
-        if (attempt >= Math.min(2, maxAttempts)) throw new Error(`gemini ${model}: can't reach the network (${(e as Error).message})`, { cause: e });
-        await this.sleep(2000);
+        // The network, not Google. A blip gets one quick retry, and a dead network fails fast and says so. A machine
+        // that slept through the request (the clock jumped past the timeout: a laptop dozing with its lid closed) gets
+        // patient ones, since the network is back a few seconds after a wake and the next wake may be the one that answers.
+        if (this.now() - sentAt > REQUEST_TIMEOUT_MS + SLEPT_MS) patient = true;
+        netTries++;
+        if (netTries > (patient ? SLEEP_NET_TRIES : 1)) throw new Error(`gemini ${model}: can't reach the network (${(e as Error).message})`, { cause: e });
+        await this.sleep(patient ? 15_000 : 2000);
+        attempt--; // network tries don't count against the API attempts
         continue;
       }
       const json = (await res.json().catch(() => ({}))) as GeminiResponse;
@@ -180,8 +192,9 @@ export class GeminiProvider implements ModelProvider {
 
   /** Overridable for tests. */
   maxAttempts = 6;
-  /** Also overridable: tests set `sleep` to skip the waits. */
+  /** Also overridable: tests set `sleep` to skip the waits, and `now` to make the clock jump. */
   sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms));
+  now: () => number = Date.now;
   onRetry: ((info: { model: string; attempt: number; maxAttempts: number; status: number; waitMs: number; message: string }) => void) | undefined =
     (i) => process.stderr.write(`         gemini ${i.status}: waiting ${Math.round(i.waitMs / 1000)}s then retrying (${i.attempt}/${this.maxAttempts})\n`);
 }

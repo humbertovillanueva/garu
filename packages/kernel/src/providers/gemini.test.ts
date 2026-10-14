@@ -148,6 +148,30 @@ describe("GeminiProvider (mocked fetch)", () => {
     expect(retryHintSeconds("no hint")).toBeNull();
   });
 
+  it("waits for the network after the machine slept through a request, instead of failing", async () => {
+    let clock = 0;
+    let calls = 0;
+    const ok = new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "morning" }] }, finishReason: "STOP" }] }), { status: 200 });
+    // the first request "takes" three hours: the laptop slept, and the timeout fired on wake
+    const dozing = (async () => { calls++; if (calls === 1) { clock += 3 * 3600_000; throw new DOMException("The operation was aborted due to timeout", "TimeoutError"); } return ok; }) as typeof fetch;
+    const p = new GeminiProvider("k", dozing);
+    p.now = () => clock;
+    const waits: number[] = []; p.sleep = async (ms) => { waits.push(ms); }; p.onRetry = undefined;
+    const res = await p.complete({ model: "m", system: "", messages: [], tools: [] });
+    expect(res.content).toEqual([{ type: "text", text: "morning" }]);
+    expect(waits).toEqual([15_000]);
+    expect(calls).toBe(2);
+
+    // a dead network with no sleep still fails fast: one quick retry, then the plain sentence
+    let dead = 0;
+    const down = (async () => { dead++; throw new TypeError("fetch failed"); }) as typeof fetch;
+    const q = new GeminiProvider("k", down);
+    const w2: number[] = []; q.sleep = async (ms) => { w2.push(ms); }; q.onRetry = undefined;
+    await expect(q.complete({ model: "m", system: "", messages: [], tools: [] })).rejects.toThrow(/can't reach the network \(fetch failed\)/);
+    expect(dead).toBe(2);
+    expect(w2).toEqual([2000]);
+  });
+
   it("requires a key", () => {
     const saved = process.env["GEMINI_API_KEY"];
     delete process.env["GEMINI_API_KEY"];
