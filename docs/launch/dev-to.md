@@ -95,4 +95,4 @@ npm run garu -- ui --up --as YourName
 
 Five minutes, free key from aistudio.google.com, no card. Click `pip`, press Run job, approve the write when it asks.
 
-I'd like to know where it breaks for you, what agent you'd actually run, and what the policy language can't express yet. Repo: [github.com/humbertovillanueva/garu](https://github.com/humbertovillanueva/garu). Site: [humbertovillanueva.github.io/garu](https://garu-app.vercel.app/).
+I'd like to know where it breaks for you, what agent you'd actually run, and what the policy language can't express yet. Repo: [github.com/humbertovillanueva/garu](https://github.com/humbertovillanueva/garu). Site: [garu-app.vercel.app](https://garu-app.vercel.app/).
