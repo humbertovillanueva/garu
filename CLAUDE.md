@@ -7,7 +7,7 @@ on the control room and the phone app. Everything is files on the user's machine
 no account, no cloud. Tagline: "Always-on agents you can actually trust."
 
 Owner: Humberto Villanueva (Salt Lake City). Personal project, Apache-2.0, unrelated to his employer.
-Repo: https://github.com/humbertovillanueva/garu · Site: https://garu-app.vercel.app/
+Repo: https://github.com/humbertovillanueva/garu · Site: https://garuagents.com/
 
 ## Non-negotiables
 
@@ -152,7 +152,7 @@ Not launching yet. Order: understand → real app → Play closed test → launc
 list is done in code (2026-10-12: crash screen, dark and light theme, accessibility pass, release
 signing wired, support-email slot in `packages/ui/src/lib/support.ts`, privacy page current). The
 Play developer account is verified and the app exists in the console with its declarations; support is
-`garu@humbertovillanueva.dev` (a Namecheap forwarder to his Gmail). Left on Humberto's side: the upload
+`support@garuagents.com` (a Namecheap forwarder to his Gmail; the site and the mail share the domain). Left on Humberto's side: the upload
 key (`docs/android.md`) and twelve testers. The listing is `docs/launch/play-store.md`. Then marketing (posts;
 the video is done). Roadmap after that: push via a relay, hosted Garu, `garu install` registry, iPhone
 on a real device and TestFlight, two-way Slack.

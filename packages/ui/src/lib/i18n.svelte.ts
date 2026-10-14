@@ -23,7 +23,7 @@ export function dateLocale(): string | undefined {
 
 /** The sentence in the current language. `{name}` placeholders are filled from `vars`. */
 /** The website in the reader's language; the Spanish page sits beside the English one. */
-export const siteUrl = (): string => (locale() === "es" ? "https://garu-app.vercel.app/index.es.html" : "https://garu-app.vercel.app/");
+export const siteUrl = (): string => (locale() === "es" ? "https://garuagents.com/index.es.html" : "https://garuagents.com/");
 
 export function t(key: string, vars?: Record<string, string | number>): string {
   const text = locale() === "es" ? (es[key] ?? key) : key;

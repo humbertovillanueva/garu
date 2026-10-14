@@ -31,7 +31,7 @@
   <div class="panel rise divide-y divide-line text-[14px]">
     <a class="card-hover block px-4 py-3" href={siteUrl()} target="_blank" rel="noreferrer">{t("Website")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a>
     <a class="card-hover block px-4 py-3" href="https://github.com/humbertovillanueva/garu" target="_blank" rel="noreferrer">{t("Source code")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a>
-    <a class="card-hover block px-4 py-3" href="https://garu-app.vercel.app/privacy.html" target="_blank" rel="noreferrer">{t("Privacy")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a>
+    <a class="card-hover block px-4 py-3" href="https://garuagents.com/privacy.html" target="_blank" rel="noreferrer">{t("Privacy")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a>
     <a class="card-hover block px-4 py-3" href={href("help")}>{t("Help")}</a>
     <a class="card-hover block px-4 py-3" href={href("report")}>{t("Report a problem")}</a>
     {#if SUPPORT_EMAIL}<a class="card-hover block px-4 py-3" href="mailto:{SUPPORT_EMAIL}">{t("Email support")}</a>{/if}

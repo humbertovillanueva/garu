@@ -14,11 +14,11 @@ app is a companion to software you run yourself; it is not a cloud service.
 - Default language: English (United States)
 - App or game: App · Free · Category: **Productivity** (alt: Tools)
 - Contains ads: No · In-app purchases: No
-- Privacy policy URL: `https://garu-app.vercel.app/privacy.html`
-- Contact email: `garu@humbertovillanueva.dev`, a Namecheap forwarder to Humberto's Gmail (2026-10-14).
+- Privacy policy URL: `https://garuagents.com/privacy.html`
+- Contact email: `support@garuagents.com`, a Namecheap forwarder to Humberto's Gmail (2026-10-14).
   Also in `packages/ui/src/lib/support.ts`, which puts an "Email support" link on the Help and About
   screens. Shown publicly.
-- Website: `https://garu-app.vercel.app/`
+- Website: `https://garuagents.com/`
 
 ## Store listing text
 
