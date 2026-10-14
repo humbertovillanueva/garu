@@ -90,7 +90,7 @@ Un archivo describe un agente: quién es, qué puede tocar, cuándo despierta y 
 name: bea
 description: Sorts what arrived overnight into four labels and drafts replies to what needs one. Never sends.
 persona: { kind: bee, tagline: "Sorts the inbox so you don't have to." }
-model: gemini/gemini-3.5-flash
+model: gemini/gemini-3.5-flash-lite
 
 triggers:
   - cron: "15 7 * * 1-5"          # entre semana a las 7:15, en tu hora local

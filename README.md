@@ -90,7 +90,7 @@ One file describes an agent: who it is, what it may touch, when it wakes up, and
 name: bea
 description: Sorts what arrived overnight into four labels and drafts replies to what needs one. Never sends.
 persona: { kind: bee, tagline: "Sorts the inbox so you don't have to." }
-model: gemini/gemini-3.5-flash
+model: gemini/gemini-3.5-flash-lite
 
 triggers:
   - cron: "15 7 * * 1-5"          # weekdays at 7:15, in your local time

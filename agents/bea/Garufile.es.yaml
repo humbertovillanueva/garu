@@ -29,7 +29,7 @@ language: es
 persona:
   kind: bee
   tagline: "Ordena la bandeja para que tú no tengas que hacerlo."
-model: gemini/gemini-3.5-flash
+model: gemini/gemini-3.5-flash-lite
 
 triggers:
   - cron: "15 7 * * 1-5"

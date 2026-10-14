@@ -22,7 +22,7 @@ description: Sorts what arrived overnight into four labels and drafts replies to
 persona:
   kind: bee
   tagline: "Sorts the inbox so you don't have to."
-model: gemini/gemini-3.5-flash
+model: gemini/gemini-3.5-flash-lite
 
 triggers:
   - cron: "15 7 * * 1-5"
