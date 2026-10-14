@@ -11,7 +11,7 @@
 Cualquier modelo. Cualquier herramienta MCP. Cada acción pasa por una política que tú escribiste, queda registrada, con tope de gasto y aislada.</p>
 
 <p align="center">
-  <a href="https://humbertovillanueva.github.io/garu/index.es.html">Sitio web</a> ·
+  <a href="https://garu-app.vercel.app/index.es.html">Sitio web</a> ·
   <a href="docs/why.md">Por qué Garu</a> ·
   <a href="#pruébalo-en-cinco-minutos-gratis">Inicio rápido</a> ·
   <a href="#cómo-funciona">Cómo funciona</a> ·

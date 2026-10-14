@@ -7,7 +7,7 @@ on the control room and the phone app. Everything is files on the user's machine
 no account, no cloud. Tagline: "Always-on agents you can actually trust."
 
 Owner: Humberto Villanueva (Salt Lake City). Personal project, Apache-2.0, unrelated to his employer.
-Repo: https://github.com/humbertovillanueva/garu · Site: https://humbertovillanueva.github.io/garu/
+Repo: https://github.com/humbertovillanueva/garu · Site: https://garu-app.vercel.app/
 
 ## Non-negotiables
 

@@ -2,7 +2,7 @@
 title: I built Garu, an open-source runtime for always-on agents you can actually trust
 published: false
 tags: ai, opensource, typescript, agents
-cover_image: https://humbertovillanueva.github.io/garu/screenshots/home.png
+cover_image: https://garu-app.vercel.app/screenshots/home.png
 ---
 
 OpenAI shipped Dots and Meta shipped Muse: agents that run all day on a computer of their own and act for you. I wanted that. I also wanted to know exactly what the thing could touch while I slept, and neither of those gives you that. They're closed, tied to one vendor, and not available where a lot of people live.
@@ -11,7 +11,7 @@ So I built the open version, and I built it around the part they treat as an aft
 
 Garu runs agents 24/7 with any model and any MCP tool. Every action the agent takes goes through a policy I wrote. It's a week old, it runs my own agents every day, and it's Apache-2.0.
 
-![Tomay writes the morning brief, pauses before posting it to Slack, and I approve from the browser](https://humbertovillanueva.github.io/garu/demo.gif)
+![Tomay writes the morning brief, pauses before posting it to Slack, and I approve from the browser](https://garu-app.vercel.app/demo.gif)
 
 That's a real run. Four fetches and a file write allowed by policy, one Slack post paused for me, approved, posted. Twenty seconds, $0.003.
 
@@ -95,4 +95,4 @@ npm run garu -- ui --up --as YourName
 
 Five minutes, free key from aistudio.google.com, no card. Click `pip`, press Run job, approve the write when it asks.
 
-I'd like to know where it breaks for you, what agent you'd actually run, and what the policy language can't express yet. Repo: [github.com/humbertovillanueva/garu](https://github.com/humbertovillanueva/garu). Site: [humbertovillanueva.github.io/garu](https://humbertovillanueva.github.io/garu/).
+I'd like to know where it breaks for you, what agent you'd actually run, and what the policy language can't express yet. Repo: [github.com/humbertovillanueva/garu](https://github.com/humbertovillanueva/garu). Site: [humbertovillanueva.github.io/garu](https://garu-app.vercel.app/).
