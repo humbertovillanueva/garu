@@ -150,9 +150,10 @@ audit and its security items, Spanish end to end: app, terminal, Tomay and Bea, 
 
 Not launching yet. Order: understand → real app → Play closed test → launch → beyond. The real-app
 list is done in code (2026-10-12: crash screen, dark and light theme, accessibility pass, release
-signing wired, support-email slot in `packages/ui/src/lib/support.ts`, privacy page current). On
-Humberto's side before the closed test: the Play developer account, the upload key (`docs/android.md`),
-the support alias, twelve testers. The listing is `docs/launch/play-store.md`. Then marketing (posts;
+signing wired, support-email slot in `packages/ui/src/lib/support.ts`, privacy page current). The
+Play developer account is verified and the app exists in the console with its declarations; support is
+`garu@humbertovillanueva.dev` (a Namecheap forwarder to his Gmail). Left on Humberto's side: the upload
+key (`docs/android.md`) and twelve testers. The listing is `docs/launch/play-store.md`. Then marketing (posts;
 the video is done). Roadmap after that: push via a relay, hosted Garu, `garu install` registry, iPhone
 on a real device and TestFlight, two-way Slack.
 

@@ -15,8 +15,9 @@ app is a companion to software you run yourself; it is not a cloud service.
 - App or game: App · Free · Category: **Productivity** (alt: Tools)
 - Contains ads: No · In-app purchases: No
 - Privacy policy URL: `https://humbertovillanueva.github.io/garu/privacy.html`
-- Contact email: a Garu-only alias (to be created; it also goes into `packages/ui/src/lib/support.ts`,
-  which puts an "Email support" link on the Help and About screens). Shown publicly.
+- Contact email: `garu@humbertovillanueva.dev`, a Namecheap forwarder to Humberto's Gmail (2026-10-14).
+  Also in `packages/ui/src/lib/support.ts`, which puts an "Email support" link on the Help and About
+  screens. Shown publicly.
 - Website: `https://humbertovillanueva.github.io/garu/`
 
 ## Store listing text
@@ -162,15 +163,18 @@ violence, no gambling, no personal information collected → expect **Everyone**
    day 14, the count restarts), apply for production access on the dashboard,
    then promote the release.
 
-## Before the first upload (status 2026-10-12)
+## Before the first upload (status 2026-10-14)
 
 Done in the app: a crash screen instead of a blank page, dark and light themes
 (follows the phone, or pinned in Settings), an accessibility pass (screen-reader
 announcements, names, focus, 44 px targets, reduced motion), release signing
 wired in Gradle, no cloud backup of the pairing token, the privacy page matching
-what the app stores. Still to do: create the support alias (Humberto), make the
-upload key (Humberto), register the developer account (Humberto), gather twelve
-testers with Android phones (Humberto), then upload the bundle.
+what the app stores. Done on Humberto's side: the developer account (identity
+verified 2026-10-14), the app created in the console with its content
+declarations (sign-in details, ads, content rating Everyone, 18+, data safety
+"no data collected"), and the support alias. Still to do: the upload key
+(Humberto), the store listing, the closed-testing track, twelve testers with
+Android phones, then upload the bundle.
 
 ## Version naming
 
