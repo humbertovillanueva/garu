@@ -137,7 +137,7 @@
             {#if r.doc}
               <!-- The document it wrote (Tomay's brief), the top of it; the rest is one tap away. -->
               <div class="doc relative mt-3 overflow-hidden rounded-lg border hairline bg-bg/60 px-3 py-2">
-                <div class="md space-y-1 text-[13px]">{@html renderMarkdown(plainTimes(r.doc.content))}</div>
+                <div class="md space-y-1 text-[13px]">{@html renderMarkdown(plainTimes(r.doc.content), { breaks: true })}</div>
               </div>
             {/if}
             <div class="mt-auto flex flex-wrap gap-x-4 pt-3 text-[12.5px]">
