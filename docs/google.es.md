@@ -5,7 +5,7 @@
 Dos de los agentes de este repositorio trabajan sobre tu cuenta de Google:
 
 - **Tomay** (`agents/tomay`) lee la agenda de hoy cada día entre semana a las 7:00 y escribe una nota de preparación para cada reunión a partir de tu correo reciente con las personas que participan, más tus huecos libres. Solo lee.
-- **Bea** (`agents/bea`) clasifica el correo del último día en cuatro etiquetas a las 7:15 y redacta respuestas para lo que las necesita. Cada borrador espera tu aprobación, y ella no tiene forma de enviar.
+- **Bea** (`agents/bea`) clasifica el correo del último día en cuatro etiquetas a las 8:00 y redacta respuestas para lo que las necesita. Cada borrador espera tu aprobación, y ella no tiene forma de enviar.
 
 Hablan con Google a través de `packages/mcp-google`, el servidor de Gmail y Calendar de Garu. Google necesita saber quién pregunta, así que creas un proyecto gratuito de Google Cloud una sola vez. Toma unos quince minutos y no cuesta nada: sin cuenta de facturación, sin tarjeta.
 

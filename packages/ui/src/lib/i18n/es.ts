@@ -340,7 +340,7 @@ export const es: Record<string, string> = {
   // ---- intro (the tour)
   "Weekdays · 7:00 AM": "Entre semana · 7:00 AM",
   "Reads your calendar and your email, and writes a prep note for each meeting. It only reads.": "Lee tu calendario y tu correo, y escribe una nota de preparación para cada reunión. Solo lee.",
-  "Weekdays · 7:15 AM": "Entre semana · 7:15 AM",
+  "Weekdays · 8:00 AM": "Entre semana · 8:00 AM",
   "Sorts new mail into four labels and drafts the replies for you to approve. She can't send.": "Ordena el correo nuevo en cuatro etiquetas y redacta las respuestas para que las apruebes. No puede enviar.",
   "Introduction": "Introducción",
   "Back": "Atrás",
@@ -357,7 +357,7 @@ export const es: Record<string, string> = {
   "“Sorts the inbox so you don't have to.”": "“Ordena la bandeja para que tú no tengas que hacerlo.”",
   "thinks with": "piensa con",
   "runs": "se ejecuta",
-  "weekdays at 7:15 AM": "entre semana a las 7:15 AM",
+  "weekdays at 8:00 AM": "entre semana a las 8:00 AM",
   "can reach": "puede acceder a",
   "your Gmail": "tu Gmail",
   "rules": "reglas",

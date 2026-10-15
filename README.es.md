@@ -63,7 +63,7 @@ npm run garu -- log      pip                          # repasa la caja negra
 
 **Aislado:** con Docker corriendo, `npm run garu -- sandbox build` una vez, y luego `npm run garu -- run examples/vault/Garufile.yaml`.
 
-**Tu día y tu bandeja:** los dos agentes en `agents/` trabajan sobre Gmail y Google Calendar. Tomay lee tu agenda cada día entre semana a las 7 y escribe una nota de preparación para cada reunión; Bea clasifica el correo del último día en cuatro etiquetas a las 7:15 y redacta respuestas que esperan por ti. Necesitan un proyecto gratuito de Google Cloud una sola vez: [docs/google.es.md](docs/google.es.md) te guía en unos quince minutos.
+**Tu día y tu bandeja:** los dos agentes en `agents/` trabajan sobre Gmail y Google Calendar. Tomay lee tu agenda cada día entre semana a las 7 y escribe una nota de preparación para cada reunión; Bea clasifica el correo del último día en cuatro etiquetas a las 8 y redacta respuestas que esperan por ti. Necesitan un proyecto gratuito de Google Cloud una sola vez: [docs/google.es.md](docs/google.es.md) te guía en unos quince minutos.
 
 ## Cómo funciona
 
@@ -93,7 +93,7 @@ persona: { kind: bee, tagline: "Sorts the inbox so you don't have to." }
 model: gemini/gemini-3.5-flash-lite
 
 triggers:
-  - cron: "15 7 * * 1-5"          # entre semana a las 7:15, en tu hora local
+  - cron: "0 8 * * 1-5"           # entre semana a las 8:00, en tu hora local
 
 budget:
   maxCostUsd: 0.05                # por ejecución; la ejecución se detiene si lo cruzaría

@@ -8,7 +8,7 @@ are the same as theirs, so the policies would carry over if that changes.
 - **Tomay** (`agents/tomay/Garufile.yaml`), weekdays 7:00: reads today's calendar, writes a prep
   note per meeting from recent email with the attendees, lists free blocks. Read-only scopes; its
   one write is `briefs/<date>.md`; it posts nothing.
-- **Bea** (`agents/bea/Garufile.yaml`), weekdays 7:15: files new threads under the Gmail labels
+- **Bea** (`agents/bea/Garufile.yaml`), weekdays 8:00: files new threads under the Gmail labels
   Garu/Needs reply, Garu/FYI, Garu/Receipts, Garu/Newsletters (create them once, nested under
   Garu) and drafts replies. Labeling is `allow`; a draft is `ask`; a draft to an automated
   address is blocked by rule and refused by the server; nothing can send, because no send tool

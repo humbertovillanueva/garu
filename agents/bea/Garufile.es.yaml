@@ -1,6 +1,6 @@
 # Bea — tu bandeja, ordenada antes de que la abras.
 #
-# Cada día entre semana a las 7:15, Bea repasa lo que llegó desde ayer y clasifica cada hilo
+# Cada día entre semana a las 8:00, Bea repasa lo que llegó desde ayer y clasifica cada hilo
 # bajo una de cuatro etiquetas de Gmail (créalas una vez en Gmail): Garu/Responder,
 # Garu/Para saber, Garu/Recibos, Garu/Boletines. Para cada uno que necesita respuesta, redacta
 # un borrador corto con tu voz.
@@ -32,7 +32,7 @@ persona:
 model: gemini/gemini-3.5-flash-lite
 
 triggers:
-  - cron: "15 7 * * 1-5"
+  - cron: "0 8 * * 1-5"
 
 budget:
   maxCostUsd: 0.05

@@ -63,7 +63,7 @@ npm run garu -- log      pip                          # replay the flight record
 
 **Sandboxed:** with Docker running, `npm run garu -- sandbox build` once, then `npm run garu -- run examples/vault/Garufile.yaml`.
 
-**Your day and your inbox:** the two agents in `agents/` work on Gmail and Google Calendar. Tomay reads your calendar every weekday at 7 and writes a prep note for each meeting; Bea files the last day's mail under four labels at 7:15 and drafts replies that wait for you. They need a free Google Cloud project once: [docs/google.md](docs/google.md) walks through it in about fifteen minutes.
+**Your day and your inbox:** the two agents in `agents/` work on Gmail and Google Calendar. Tomay reads your calendar every weekday at 7 and writes a prep note for each meeting; Bea files the last day's mail under four labels at 8 and drafts replies that wait for you. They need a free Google Cloud project once: [docs/google.md](docs/google.md) walks through it in about fifteen minutes.
 
 ## How it works
 
@@ -93,7 +93,7 @@ persona: { kind: bee, tagline: "Sorts the inbox so you don't have to." }
 model: gemini/gemini-3.5-flash-lite
 
 triggers:
-  - cron: "15 7 * * 1-5"          # weekdays at 7:15, in your local time
+  - cron: "0 8 * * 1-5"           # weekdays at 8:00, in your local time
 
 budget:
   maxCostUsd: 0.05                # per run; the run stops if it would cross this

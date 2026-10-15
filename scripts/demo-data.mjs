@@ -174,14 +174,14 @@ function approved(agent, runId, step, agoMinutes) {
 }
 
 // Earlier mornings, each draft approved.
-const [, ...earlier] = weekdayMornings(3, 7, 15);
+const [, ...earlier] = weekdayMornings(3, 8, 0);
 const BEA_DAYS = [
   { summary: "9 new: 1 needs a reply (draft ready), 2 receipts, 5 newsletters, 1 FYI\nPriya Nair: asks if Monday lunch still works.", counts: { Newsletters: 5, Receipts: 2, FYI: 1, "Needs reply": 1 }, drafts: [PRIYA] },
   { summary: "11 new: 1 needs a reply (draft ready), 1 receipt, 7 newsletters, 2 FYI\nSam Park: asks whether the hero image slows the page.", counts: { Newsletters: 7, Receipts: 1, FYI: 2, "Needs reply": 1 }, drafts: [SAM] },
 ];
 earlier.forEach((ago, i) => {
   const d = BEA_DAYS[i];
-  const id = run("bea", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron:15 7 * * 1-5", ...BEA_TOOLS, endMinutesAgo: ago - 0.25, secs: 14, steps: beaSteps(d.counts, d.drafts), summary: d.summary });
+  const id = run("bea", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron:0 8 * * 1-5", ...BEA_TOOLS, endMinutesAgo: ago - 0.25, secs: 14, steps: beaSteps(d.counts, d.drafts), summary: d.summary });
   for (const s of d.drafts) approved("bea", id, s, ago - 0.2);
 });
 // Right now: 18 new threads filed, Jordan's draft approved, paused on Lena's, waiting for you.

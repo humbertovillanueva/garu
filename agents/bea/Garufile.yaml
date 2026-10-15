@@ -1,6 +1,6 @@
 # Bea — your inbox, sorted before you open it.
 #
-# Every weekday at 7:15 Bea goes through what arrived since yesterday and files each thread
+# Every weekday at 8:00 Bea goes through what arrived since yesterday and files each thread
 # under one of four Gmail labels (create them once in Gmail): Garu/Needs reply, Garu/FYI,
 # Garu/Receipts, Garu/Newsletters. For each one that needs a reply, she writes a short draft
 # in your voice.
@@ -25,7 +25,7 @@ persona:
 model: gemini/gemini-3.5-flash-lite
 
 triggers:
-  - cron: "15 7 * * 1-5"
+  - cron: "0 8 * * 1-5"
 
 budget:
   maxCostUsd: 0.05

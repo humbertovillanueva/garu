@@ -5,7 +5,7 @@
 Two of the agents in this repo work on your Google account:
 
 - **Tomay** (`agents/tomay`) reads today's calendar every weekday at 7:00 and writes a prep note for each meeting from your recent email with the people in it, plus your free blocks. It only reads.
-- **Bea** (`agents/bea`) files the last day's mail under four labels at 7:15 and drafts replies to what needs one. Every draft waits for your approval, and she has no way to send.
+- **Bea** (`agents/bea`) files the last day's mail under four labels at 8:00 and drafts replies to what needs one. Every draft waits for your approval, and she has no way to send.
 
 They talk to Google through `packages/mcp-google`, Garu's own Gmail and Calendar server. Google needs to know who is asking, so you make a free Google Cloud project once. It takes about fifteen minutes and costs nothing: no billing account, no card.
 

@@ -47,7 +47,7 @@
 
   const agents = $derived([
     { kind: "fox", name: "Tomay", when: t("Weekdays · 7:00 AM"), does: t("Reads your calendar and your email, and writes a prep note for each meeting. It only reads.") },
-    { kind: "bee", name: "Bea", when: t("Weekdays · 7:15 AM"), does: t("Sorts new mail into four labels and drafts the replies for you to approve. She can't send.") },
+    { kind: "bee", name: "Bea", when: t("Weekdays · 8:00 AM"), does: t("Sorts new mail into four labels and drafts the replies for you to approve. She can't send.") },
   ] as const);
 </script>
 
@@ -78,7 +78,7 @@
           <div class="file mono">{t("{file}, in plain words", { file: "agents/bea/Garufile.yaml" })}</div>
           <span class="k">{t("name")}</span> <b>Bea</b>, {t("a bee")} · <i>{t("“Sorts the inbox so you don't have to.”")}</i><br>
           <span class="k">{t("thinks with")}</span> Gemini 3.5 Flash-Lite<br>
-          <span class="k">{t("runs")}</span> {t("weekdays at 7:15 AM")}<br>
+          <span class="k">{t("runs")}</span> {t("weekdays at 8:00 AM")}<br>
           <span class="k">{t("can reach")}</span> {t("your Gmail")}<br>
           <span class="k">{t("rules")}</span><br>
           <span class="rule">{t("read and file mail")} <span class="r-allow">→ {t("allow")}</span></span><br>

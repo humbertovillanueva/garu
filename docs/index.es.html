@@ -212,13 +212,13 @@
 <section id="garufile" class="wrap">
   <div class="eyebrow">El Garufile</div>
   <h2>Un agente es un archivo YAML pequeño. La política es la parte interesante.</h2>
-  <p class="sub">Esta es Bea, uno de los agentes de este repositorio: a las 7:15 entre semana clasifica el correo del día en cuatro etiquetas y redacta las respuestas. Leer y clasificar están permitidos, cada borrador te pregunta, y su servidor de Gmail no tiene ninguna herramienta para enviar.</p>
+  <p class="sub">Esta es Bea, uno de los agentes de este repositorio: a las 8:00 entre semana clasifica el correo del día en cuatro etiquetas y redacta las respuestas. Leer y clasificar están permitidos, cada borrador te pregunta, y su servidor de Gmail no tiene ninguna herramienta para enviar.</p>
   <div class="two">
 <pre class="code"><span class="k">name:</span> bea
 <span class="k">persona:</span> { <span class="k">kind:</span> bee, <span class="k">tagline:</span> <span class="s">"Sorts the inbox so you don't have to."</span> }
 <span class="k">model:</span> gemini/gemini-3.5-flash-lite
 <span class="k">triggers:</span>
-  - <span class="k">cron:</span> <span class="s">"15 7 * * 1-5"</span>
+  - <span class="k">cron:</span> <span class="s">"0 8 * * 1-5"</span>
 <span class="k">budget:</span> { <span class="k">maxCostUsd:</span> 0.05 }
 
 <span class="k">tools:</span>
