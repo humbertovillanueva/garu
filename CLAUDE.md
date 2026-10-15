@@ -164,6 +164,7 @@ since 2026-10-10. What they do, the rules learned on real mail, and the setup: `
 
 ## Launch video
 
-v7 (`docs/video/garu-v7-9x16.mp4`, `garu-v7-16x9.mp4`, 2026-10-10) tells it with Tomay and Bea; v6
+v7 (`docs/video/garu-v7-9x16.mp4`, `garu-v7-16x9.mp4`, 2026-10-10; end card re-rendered with
+garuagents.com on 2026-10-14) tells it with Tomay and Bea; v6
 had the old weather Tomay. Source, commands, scenes and rules: `docs/video/remotion/README.md`.
 Garu's own facts on screen are real; sample meetings and emails are made up (example.com).

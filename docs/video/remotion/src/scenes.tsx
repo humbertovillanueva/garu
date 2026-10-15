@@ -673,7 +673,7 @@ export const Logo: React.FC = () => {
       <div style={{ marginTop: 6, fontFamily: inter, fontWeight: 500, fontSize: land ? 38 : 46, letterSpacing: "-0.02em", color: C.fg2, opacity: tag, transform: `translateY(${(1 - tag) * 24}px)`, textAlign: "center", padding: "0 60px" }}>Always-on agents you can actually trust.</div>
       <div style={{ marginTop: land ? 40 : 60, fontFamily: inter, fontWeight: 600, fontSize: land ? 30 : 36, color: C.paper, opacity: sub, transform: `translateY(${(1 - sub) * 20}px)` }}>Free · Runs on your computer</div>
       <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 16, padding: land ? "16px 28px" : "20px 32px", borderRadius: 18, background: C.panel2, boxShadow: `inset 0 0 0 2px ${C.line2}`, fontFamily: mono, fontSize: land ? 24 : 23, color: C.fg, opacity: cta, transform: `translateY(${(1 - cta) * 24}px)` }}>
-        <span style={{ color: C.allow }}>$</span> git clone https://github.com/humbertovillanueva/garu
+        garuagents.com
       </div>
     </AbsoluteFill>
   );

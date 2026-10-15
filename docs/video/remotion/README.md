@@ -26,7 +26,7 @@ Written for people who aren't developers first, with the real UI and a little re
 | Ask | 14–18 | "Nothing goes out without your OK." Bea's draft to Lena; tap Approve. "One tap. Saved, not sent." |
 | Learn | 18–21 | "It learns what you trust." Three approved drafts, Garu's suggestion (`gmail.create_draft` → allow), Add to Garufile. |
 | Proof | 21–24 | Free and open source (Apache-2.0) · runs on your own computer (`npm run garu -- ui --up`) · Gemini, Claude, or fully local. |
-| Logo | 24–28 | Lands on the score's impact; tagline; "Free · Runs on your computer"; `git clone https://…`. |
+| Logo | 24–28 | Lands on the score's impact; tagline; "Free · Runs on your computer"; garuagents.com. |
 
 Garu's own facts are real: agent names, descriptions, schedules and rules from the Garufiles, tool names from `packages/mcp-google`, the suggestion card and the rule `suggest.ts` proposes for three drafts to different people (the whole tool), the startup lines `garu ui` prints, the models from the README. The meetings, people and emails are made up, the same ones `scripts/demo-data.mjs` seeds (example.com addresses). Bea's real Garufile keeps drafts on `ask`; the Learn scene shows what Garu offers after three approvals.
 
