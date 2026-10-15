@@ -113,8 +113,8 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   `ui/.../SuggestionCard.svelte`); "Add to Garufile" inserts it above the existing ask rule.
 - A Garufile may say `language: es`: the kernel then hands the model the date in that language and tells
   it to write to its owner in it; the owner's name reaches the model from `--as` / `GARU_USER`, so no
-  prompt names a person. Tomay and Bea ship a Spanish edition as `Garufile.es.yaml` beside the English
-  one (discovery ignores it; `docs/google.md` says how to switch). Spanish no-reply address words live
+  prompt names a person. Every agent and example ships a Spanish edition as `Garufile.es.yaml` beside the
+  English one (discovery ignores it; `docs/google.md` says how to switch; the Spanish demo runs on them). Spanish no-reply address words live
   in `mcp-google/src/google.ts` and in Bea's block rule, both editions.
 - Scheduler catch-up: a cron fire missed in the last 6 h (machine asleep/off) runs once on start,
   trigger `catch-up:<cron>`. Don't double-fire; don't run catch-ups in parallel.
@@ -159,8 +159,8 @@ on a real device and TestFlight, two-way Slack.
 
 ## The public demo
 
-A second Garu in `~/garu-demo` runs `garu ui --demo` as its own login service and is reachable
-through Tailscale Funnel; the app's "Try the demo" button pairs with it via `docs/demo.json`. How it
+Two more Garus, `~/garu-demo` (English) and `~/garu-demo-es` (Spanish), run `garu ui --demo` as their
+own login services behind Tailscale Funnel; the app's "Try the demo" button picks one via `docs/demo.json`. How it
 runs and how to reset or move it: `docs/demo.md`.
 
 ## The Google agents

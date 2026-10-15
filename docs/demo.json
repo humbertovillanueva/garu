@@ -1,4 +1,8 @@
 {
   "base": "https://humbertos-macbook-pro.tail905a32.ts.net:8443",
-  "token": "K_Ii_dH7crTytMLTeMDx9sq6EGrlOx9mTHhhmQbibCA"
+  "token": "K_Ii_dH7crTytMLTeMDx9sq6EGrlOx9mTHhhmQbibCA",
+  "es": {
+    "base": "https://humbertos-macbook-pro.tail905a32.ts.net:10000",
+    "token": "UUlMmPejTkytnfXk0hJ1ZAw6kD44vH3SEWmNOirfOmA"
+  }
 }

@@ -9,7 +9,7 @@
   import { connectLive, live } from "../lib/api.svelte";
   import { build, markIntroSeen, parsePairing, remember, server } from "../lib/server.svelte";
   import { canScan, haptic } from "../lib/native";
-  import { t, siteUrl } from "../lib/i18n.svelte";
+  import { t, siteUrl, locale } from "../lib/i18n.svelte";
 
   /** The button that had focus goes away when the scanner opens; Cancel takes it. */
   const takeFocus = (n: HTMLElement) => { n.focus(); };
@@ -33,7 +33,9 @@
     error = null; demoBusy = true;
     try {
       const res = await fetch(DEMO_INFO, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
-      const info = (await res.json()) as { base?: string; token?: string };
+      const all = (await res.json()) as { base?: string; token?: string; es?: { base?: string; token?: string } };
+      // The Spanish demo has Spanish agents, mail and briefs; the English one is the default.
+      const info = locale() === "es" && all.es ? all.es : all;
       if (!res.ok || typeof info.base !== "string" || typeof info.token !== "string") throw new Error("no demo");
       await connect(`${info.base}/?token=${info.token}`, true);
     } catch {
