@@ -157,6 +157,12 @@ key (`docs/android.md`) and twelve testers. The listing is `docs/launch/play-sto
 the video is done). Roadmap after that: push via a relay, hosted Garu, `garu install` registry, iPhone
 on a real device and TestFlight, two-way Slack.
 
+## The public demo
+
+A second Garu in `~/garu-demo` runs `garu ui --demo` as its own login service and is reachable
+through Tailscale Funnel; the app's "Try the demo" button pairs with it via `docs/demo.json`. How it
+runs and how to reset or move it: `docs/demo.md`.
+
 ## The Google agents
 
 Tomay ("Your day") and Bea (inbox sorter) run on Gmail and Google Calendar through `packages/mcp-google`,

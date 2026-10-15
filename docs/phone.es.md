@@ -34,6 +34,8 @@ Para que la otra mitad también sobreviva a un reinicio, ejecuta `garu service i
 
 HTTPS es lo que hace posible la instalación, una razón más para pasar por `tailscale serve` en vez de poner a Garu a escuchar en otra dirección.
 
+**¿Aún no tienes Garu en una computadora?** La pantalla de emparejar de la app tiene un botón *Probar la demo*: una sala de control con agentes y correos inventados, para mirar y responder una pregunta de muestra. Nada en ella es real, y no puede ejecutar nada.
+
 ## Notificaciones
 
 La app del teléfono muestra lo que está esperando cuando la abres. Para recibir un aviso push cuando un agente se pausa, ejecuta la sala de control con `--notify https://ntfy.sh/<your-topic>` y suscríbete a ese tema en la app de [ntfy](https://ntfy.sh). Cada notificación enlaza de vuelta a la sala de control, así que de la pantalla de bloqueo a la tarjeta de revisión hay un solo toque.

@@ -34,6 +34,8 @@ To make the other half survive a reboot too, run `garu service install` in your 
 
 HTTPS is what makes the install possible, which is one more reason to go through `tailscale serve` rather than binding Garu to another address.
 
+**No Garu on a computer yet?** The app's pairing screen has a *Try the demo* button: a control room with made-up agents and mail, to look around and answer a sample ask. Nothing in it is real, and it can't run anything.
+
 ## Notifications
 
 The phone app shows what is waiting when you open it. For a push when an agent pauses, run the control room with `--notify https://ntfy.sh/<your-topic>` and subscribe to the topic in the [ntfy](https://ntfy.sh) app. Each notification links back to the control room, so it's one tap from the lock screen to the review card.
