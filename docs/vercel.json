@@ -1,8 +1,24 @@
 {
   "redirects": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "garu-app.vercel.app"
+        }
+      ],
+      "destination": "https://garuagents.com/",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
-      "has": [{ "type": "host", "value": "garu-app.vercel.app" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "garu-app.vercel.app"
+        }
+      ],
       "destination": "https://garuagents.com/:path*",
       "permanent": true
     }
