@@ -49,8 +49,7 @@ app is a companion to software you run yourself; it is not a cloud service.
 >
 > WHAT YOU NEED
 >
-> • Garu installed on a computer: `npx garu new` to make your first agent, then
->   `garu ui --up`. The website has a five-minute start.
+> • Garu installed on a computer. The website has a five-minute start.
 > • A private connection between that computer and your phone. Tailscale's
 >   free plan works well and is what the guide uses.
 >
@@ -66,7 +65,7 @@ app is a companion to software you run yourself; it is not a cloud service.
 >
 > Everyone else is building the agent. Garu is the thing you can trust to run it.
 >
-> Source, docs and guides: github.com/humbertovillanueva/garu
+> Website and guides: garuagents.com · Source: github.com/humbertovillanueva/garu
 
 ## Store listing text, Spanish (es-419 / es-ES)
 
@@ -119,7 +118,7 @@ The app follows the phone's language (English or Spanish) and Settings can pin o
 > Todos los demás están construyendo el agente. Garu es lo que te permite
 > confiar en ejecutarlo.
 >
-> Código, documentación y guías: github.com/humbertovillanueva/garu
+> Sitio web y guías: garuagents.com · Código: github.com/humbertovillanueva/garu
 
 ## Graphics (ready in `docs/launch/play/`)
 
@@ -172,9 +171,11 @@ wired in Gradle, no cloud backup of the pairing token, the privacy page matching
 what the app stores. Done on Humberto's side: the developer account (identity
 verified 2026-10-14), the app created in the console with its content
 declarations (sign-in details, ads, content rating Everyone, 18+, data safety
-"no data collected"), and the support alias. Still to do: the upload key
-(Humberto), the store listing, the closed-testing track, twelve testers with
-Android phones, then upload the bundle.
+"no data collected"), the support alias (support@garuagents.com), the upload
+key and the signed bundle (`app-release.aab`, versionCode 1), and the store
+listing as a draft in English and Spanish (Latin America) with the icon, the
+feature graphic and the six screenshots. Still to do: the closed-testing track,
+twelve testers with Android phones, then upload the bundle.
 
 ## Version naming
 
