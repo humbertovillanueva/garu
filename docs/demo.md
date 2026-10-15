@@ -13,7 +13,7 @@ screen has a **Try the demo** button that pairs with it in one tap.
 - Run with `garu ui --demo` (installed as a login service with `garu service install --demo`):
   schedules off, and the control room refuses to run an agent, chat, edit a Garufile or rotate
   its key. Approving or declining the sample asks works; that is the point of the demo.
-- Put back every hour by `~/garu-demo/reseed.sh` (launchd job
+- Put back every twenty minutes by `~/garu-demo/reseed.sh` (launchd job
   `io.github.humbertovillanueva.garu-demo-reseed`): wipes runs, inbox, chat and grants, seeds
   again. The sign-in token is kept, so the published link keeps working.
 - Reached from the internet through Tailscale Funnel on port 8443 of the Mac's tailnet address,
