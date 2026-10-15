@@ -197,34 +197,29 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
         break;
       }
 
-      const results: ContentBlock[] = [];
-      for (const tu of toolUses) {
+      // Every call the model made in this step goes out together. When two of them need a yes,
+      // both cards reach the inbox at once instead of the second waiting on the first; the results
+      // still go back to the model in the order it asked.
+      const results: ContentBlock[] = await Promise.all(toolUses.map(async (tu): Promise<ContentBlock> => {
         const qualified = fromModelToolName(tu.name, known);
-        if (!qualified) {
-          results.push({ type: "tool_result", toolUseId: tu.id, content: `unknown tool ${tu.name}`, isError: true });
-          continue;
-        }
+        if (!qualified) return { type: "tool_result", toolUseId: tu.id, content: `unknown tool ${tu.name}`, isError: true };
         const out = await bus.call(qualified, tu.input);
         switch (out.status) {
           case "ok":
-            results.push({ type: "tool_result", toolUseId: tu.id, content: extractText(out.result) || JSON.stringify(out.result) });
-            break;
+            return { type: "tool_result", toolUseId: tu.id, content: extractText(out.result) || JSON.stringify(out.result) };
           case "blocked":
-            results.push({ type: "tool_result", toolUseId: tu.id, isError: true, content: `BLOCKED by policy: ${out.decision.reason}` });
-            break;
+            return { type: "tool_result", toolUseId: tu.id, isError: true, content: `BLOCKED by policy: ${out.decision.reason}` };
           case "denied":
-            results.push({
+            return {
               type: "tool_result",
               toolUseId: tu.id,
               isError: true,
               content: `DENIED by ${out.by}: ${out.decision.reason}` + (out.note ? `\nThe person who declined said: "${out.note}". Act on this before doing anything else — correct the mistake if there is one, and do not repeat it in later calls.` : ""),
-            });
-            break;
+            };
           case "error":
-            results.push({ type: "tool_result", toolUseId: tu.id, isError: true, content: `ERROR: ${out.error}` });
-            break;
+            return { type: "tool_result", toolUseId: tu.id, isError: true, content: `ERROR: ${out.error}` };
         }
-      }
+      }));
       messages.push({ role: "user", content: results });
     }
 

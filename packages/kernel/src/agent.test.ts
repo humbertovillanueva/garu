@@ -103,6 +103,38 @@ describe("runAgent", () => {
     expect(readRun(res.logPath).find((e) => e.event.type === "approval.resolved")!.event).toMatchObject({ approved: false, by: "test-human", note: "wrong target, use staging" });
   }, 30_000);
 
+  it("asks about every call of a step at once, not one after another", async () => {
+    const provider = new FakeProvider([
+      {
+        stopReason: "tool_use",
+        content: [
+          { type: "tool_use", id: "a", name: "echo__add", input: { a: 1, b: 2 } },
+          { type: "tool_use", id: "b", name: "echo__add", input: { a: 3, b: 4 } },
+        ],
+      },
+      { stopReason: "end_turn", content: [{ type: "text", text: "done" }] },
+    ]);
+    const asked: string[] = [];
+    let bothUp!: () => void;
+    const bothAsked = new Promise<void>((resolve) => { bothUp = resolve; });
+    const res = await runAgent({
+      garufile,
+      logRoot: mkdtempSync(join(tmpdir(), "garu-")),
+      provider,
+      approver: async (_req, _decision, ctx) => {
+        asked.push(ctx.callId);
+        if (asked.length === 2) bothUp();
+        // Each answer waits until both cards are up. A kernel that asks one at a time never gets the second card while the first waits, and fails here.
+        await Promise.race([bothAsked, new Promise((_, reject) => setTimeout(() => reject(new Error("the second ask never came while the first was waiting")), 5_000))]);
+        return { approved: true, by: "test-human" };
+      },
+    });
+    expect(res.status).toBe("ok");
+    expect(asked).toHaveLength(2);
+    const results = provider.calls[1]!.messages.at(-1)!.content as { type: string; toolUseId: string; isError?: boolean }[];
+    expect(results.map((r) => [r.type, r.toolUseId, r.isError ?? false])).toEqual([["tool_result", "a", false], ["tool_result", "b", false]]);
+  }, 30_000);
+
   it("stops at maxTurns and says so", async () => {
     const forever = Array.from({ length: 10 }, () => ({
       stopReason: "tool_use" as const,
