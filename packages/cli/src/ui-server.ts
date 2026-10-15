@@ -208,16 +208,17 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     const inFlight = live.get(name);
     const cron = g?.triggers.find((t) => t.cron)?.cron ?? null;
     let nextRun: string | null = null;
-    if (cron && opts.up) {
+    if (cron && (opts.up || opts.demo)) {
       try {
         nextRun = new Cron(cron, { paused: true }).nextRun()?.toISOString() ?? null;
       } catch {
         /* invalid cron already reported by validate */
       }
     }
-    const needs = g ? missingEnv(g.tools, process.env) : [];
-    const signIn = g ? g.tools.filter((t) => t.auth === "oauth" && !signInFor(t, authRoot).signedIn()).map((t) => t.name) : [];
-    const status = pending.length ? "waiting" : inFlight ? "working" : needs.length || signIn.length ? "needs-setup" : cron && opts.up ? "scheduled" : "idle";
+    // The demo has no keys or sign-ins and never will; it shows its agents as ready, not as waiting for setup.
+    const needs = g && !opts.demo ? missingEnv(g.tools, process.env) : [];
+    const signIn = g && !opts.demo ? g.tools.filter((t) => t.auth === "oauth" && !signInFor(t, authRoot).signedIn()).map((t) => t.name) : [];
+    const status = pending.length ? "waiting" : inFlight ? "working" : needs.length || signIn.length ? "needs-setup" : cron && (opts.up || opts.demo) ? "scheduled" : "idle";
     const price = g ? (g.budget.pricing ?? priceFor(g.model)) : null;
     return {
       name,
@@ -317,7 +318,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         return json(res, {
           agents: [...names].sort().map((n) => agentView(byName.get(n), n)),
           problems,
-          up: opts.up,
+          up: opts.up || Boolean(opts.demo),
           root: opts.root,
           demo: Boolean(opts.demo),
         });
@@ -504,7 +505,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         return json(res, {
           version: "0.1.0",
           root: opts.root,
-          up: opts.up,
+          up: opts.up || Boolean(opts.demo),
           demo: Boolean(opts.demo),
           user: opts.userName,
           host: opts.host,

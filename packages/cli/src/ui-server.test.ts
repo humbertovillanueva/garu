@@ -226,8 +226,10 @@ describe("the public demo", () => {
     const h = { authorization: `Bearer ${demo.token}`, "content-type": "application/json" };
     try {
       for (let i = 0; i < 40; i++) { try { if ((await fetch(`${b}/api/settings`, { headers: h })).ok) break; } catch { /* not listening yet */ } await new Promise((r) => setTimeout(r, 50)); }
-      const agents = (await (await fetch(`${b}/api/agents`, { headers: h })).json()) as { demo: boolean };
+      const agents = (await (await fetch(`${b}/api/agents`, { headers: h })).json()) as { demo: boolean; up: boolean; agents: { status: string }[] };
       expect(agents.demo).toBe(true);
+      expect(agents.up).toBe(true); // the demo looks alive, though nothing runs
+      expect(agents.agents.every((a) => a.status !== "needs-setup")).toBe(true);
       for (const path of ["/api/agents/pip/run", "/api/agents/pip/chat", "/api/suggestions/x/apply", "/api/pair"]) {
         const r = await fetch(`${b}${path}`, { method: "POST", headers: h, body: JSON.stringify({ text: "hi" }) });
         expect(r.status, path).toBe(403);
