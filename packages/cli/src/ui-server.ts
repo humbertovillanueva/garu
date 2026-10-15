@@ -65,6 +65,8 @@ export interface UiServerOptions {
   tokenPath: string;
   /** Make even the browser on this computer sign in. */
   requireLogin?: boolean;
+  /** A public demo: visitors may look around and answer the sample asks; nothing runs, nothing is edited, the key never rotates. */
+  demo?: boolean;
   log: (line: string) => void;
 }
 
@@ -290,6 +292,10 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         if (who !== "ok") return json(res, { error: who === "bad" ? t("wrong token") : t("sign in"), signIn: true }, 401);
         seen.note(req.headers); // an address that reached us with the right token is one a phone can use
       }
+      // The demo is read-only apart from the sample asks: no runs, no chat, no Garufile edits, no new key.
+      if (opts.demo && req.method === "POST" && (path === "/api/pair" || /^\/api\/agents\/[^/]+\/(run|chat)$/.test(path) || /^\/api\/suggestions\/[^/]+\/apply$/.test(path))) {
+        return json(res, { error: t("This is the demo: it can't do that. Garu on your own computer can.") }, 403);
+      }
       if (path === "/api/pair" && req.method === "POST") {
         // A new key. Whoever asked stays signed in (fresh cookie); every other device is out.
         token = rotateToken(opts.tokenPath);
@@ -313,6 +319,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           problems,
           up: opts.up,
           root: opts.root,
+          demo: Boolean(opts.demo),
         });
       }
 
@@ -498,6 +505,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           version: "0.1.0",
           root: opts.root,
           up: opts.up,
+          demo: Boolean(opts.demo),
           user: opts.userName,
           host: opts.host,
           port: opts.port,

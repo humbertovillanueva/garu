@@ -26,7 +26,24 @@
   // Once the link is in, its key is shown as dots (screenshots and screen recordings stay clean) and the address under it.
   const parsed = $derived(parsePairing(text));
 
-  async function connect(input: string) {
+  /** The public demo: a control room with made-up agents, so the app can be tried before Garu is on a computer. */
+  const DEMO_INFO = "https://garuagents.com/demo.json";
+  let demoBusy = $state(false);
+  async function tryDemo() {
+    error = null; demoBusy = true;
+    try {
+      const res = await fetch(DEMO_INFO, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
+      const info = (await res.json()) as { base?: string; token?: string };
+      if (!res.ok || typeof info.base !== "string" || typeof info.token !== "string") throw new Error("no demo");
+      await connect(`${info.base}/?token=${info.token}`, true);
+    } catch {
+      error = t("The demo isn't reachable right now. Try again in a little while.");
+    } finally {
+      demoBusy = false;
+    }
+  }
+
+  async function connect(input: string, demo = false) {
     const p = parsePairing(input);
     if (!p) { error = t("That doesn't look like a Garu sign-in link. It should start with https:// and contain ?token=…"); return; }
     // A code made for this computer itself can't be reached from a phone.
@@ -41,7 +58,7 @@
       connectLive(true);
       void haptic("success");
     } catch {
-      error = t("Couldn't reach {host}. Is Tailscale on for this phone, and is Garu running on your computer?", { host: p.base.replace(/^https?:\/\//, "") });
+      error = demo ? t("The demo isn't reachable right now. Try again in a little while.") : t("Couldn't reach {host}. Is Tailscale on for this phone, and is Garu running on your computer?", { host: p.base.replace(/^https?:\/\//, "") });
     } finally {
       busy = false;
     }
@@ -125,6 +142,12 @@
       </form>
     {/if}
 
+    {#if !problem}
+      <div class="mt-4 rounded-xl border hairline p-3.5">
+        <p class="text-[12.5px] leading-relaxed text-fg-2">{t("No Garu yet? Look around the demo: made-up agents, a decision waiting for you, runs to replay.")}</p>
+        <button class="btn mt-2.5 w-full" type="button" onclick={tryDemo} disabled={busy || demoBusy}>{demoBusy ? t("Connecting…") : t("Try the demo")}</button>
+      </div>
+    {/if}
     {#if error}<p class="mt-3 text-[12.5px] leading-relaxed" role="alert" style="color: var(--color-bad)">{error}</p>{/if}
     <p class="mt-4 text-[11.5px] leading-relaxed text-mute">{t("The link carries a key that lets this phone approve actions as you. It is stored only on this phone.")}</p>
     {#if !embedded && !problem}

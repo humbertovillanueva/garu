@@ -320,4 +320,8 @@ export const es: Record<string, string> = {
   "could not edit {file}: {error}": "no se pudo editar {file}: {error}",
   "not found": "no se encontró",
   "forbidden": "prohibido",
+  "a public demo: visitors can look around and answer the sample asks; nothing runs and nothing is edited": "una demo pública: los visitantes pueden mirar y responder las preguntas de muestra; nada se ejecuta y nada se edita",
+  "This is the demo: it can't do that. Garu on your own computer can.": "Esto es la demo: eso no se puede aquí. Garu en tu propia computadora sí.",
+  "demo mode: visitors can look around and answer the sample asks; nothing runs and nothing is edited": "modo demo: los visitantes pueden mirar y responder las preguntas de muestra; nada se ejecuta y nada se edita",
+  "install the public demo instead: no schedules, nothing runs, nothing is edited": "instalar la demo pública en su lugar: sin horarios, nada se ejecuta, nada se edita",
 };

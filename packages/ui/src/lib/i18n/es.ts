@@ -641,4 +641,9 @@ export const es: Record<string, string> = {
   "Day": "Día",
   "other": "otros",
   "Unanswered asks": "Preguntas sin respuesta",
+  "No Garu yet? Look around the demo: made-up agents, a decision waiting for you, runs to replay.": "¿Aún no tienes Garu? Mira la demo: agentes inventados, una decisión esperándote, ejecuciones para repasar.",
+  "Try the demo": "Probar la demo",
+  "The demo isn't reachable right now. Try again in a little while.": "La demo no responde ahora mismo. Inténtalo en un rato.",
+  "This is the demo. The agents, the mail and the people are made up; your own Garu runs on your computer.": "Esto es la demo. Los agentes, el correo y las personas son inventados; tu propio Garu corre en tu computadora.",
+  "Leave the demo": "Salir de la demo",
 };

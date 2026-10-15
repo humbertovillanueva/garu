@@ -213,3 +213,28 @@ describe("the rest", () => {
     expect((await get("/api/agents", { headers: { ...viaProxy, ...bearer() } })).status).toBe(200);
   });
 });
+
+describe("the public demo", () => {
+  it("lets people look around and answer asks, but nothing runs, nothing is edited, and the key stays", async () => {
+    const port = await freePort();
+    const demo = startUiServer({
+      port, host: "127.0.0.1", root, logRoot: join(root, ".garu", "runs"), inboxRoot, chatRoot: join(root, ".garu", "chat"),
+      grantsPath: join(root, ".garu", "grants.jsonl"), dismissedPath: join(root, ".garu", "dismissed.json"), staticDir: join(root, "ui"),
+      userName: "Test", decider: "Test (ui)", up: false, demo: true, askTimeoutMs: 60_000, tokenPath: join(root, ".garu", "ui-token"), log: () => {},
+    });
+    const b = `http://127.0.0.1:${port}`;
+    const h = { authorization: `Bearer ${demo.token}`, "content-type": "application/json" };
+    try {
+      for (let i = 0; i < 40; i++) { try { if ((await fetch(`${b}/api/settings`, { headers: h })).ok) break; } catch { /* not listening yet */ } await new Promise((r) => setTimeout(r, 50)); }
+      const agents = (await (await fetch(`${b}/api/agents`, { headers: h })).json()) as { demo: boolean };
+      expect(agents.demo).toBe(true);
+      for (const path of ["/api/agents/pip/run", "/api/agents/pip/chat", "/api/suggestions/x/apply", "/api/pair"]) {
+        const r = await fetch(`${b}${path}`, { method: "POST", headers: h, body: JSON.stringify({ text: "hi" }) });
+        expect(r.status, path).toBe(403);
+      }
+      const batch = await fetch(`${b}/api/inbox/batch`, { method: "POST", headers: h, body: JSON.stringify({ ids: [], approve: true }) });
+      expect(batch.status).toBe(200);
+      expect(readFileSync(join(root, ".garu", "ui-token"), "utf8").trim()).toBe(demo.token);
+    } finally { await demo.close(); }
+  });
+});

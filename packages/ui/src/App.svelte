@@ -13,7 +13,7 @@
   import SignIn from "./routes/SignIn.svelte";
   import Pair from "./routes/Pair.svelte";
   import Intro from "./routes/Intro.svelte";
-  import { isApp, paired, introSeen, markIntroSeen, server } from "./lib/server.svelte";
+  import { isApp, paired, introSeen, markIntroSeen, server, forget } from "./lib/server.svelte";
   import { route, startRouter, href } from "./lib/router.svelte";
   import { connectLive, live, refreshNow, unreachable as unreachableText, unreachableHint } from "./lib/api.svelte";
   import { setupNative } from "./lib/native";
@@ -121,6 +121,13 @@
         <span class="dot pulse" style="background: var(--color-ask)"></span>
         <span>{isApp ? t("Reconnecting to your computer…") : t("Reconnecting to your control room…")}</span>
         <button class="tap ml-auto underline" onclick={() => refreshNow()}>{t("Try now")}</button>
+      </div>
+    {/if}
+    {#if live.demo}
+      <div class="offline" role="note">
+        <span class="dot" style="background: var(--color-ask)"></span>
+        <span>{t("This is the demo. The agents, the mail and the people are made up; your own Garu runs on your computer.")}</span>
+        {#if isApp}<button class="tap ml-auto underline" onclick={() => { forget(); location.reload(); }}>{t("Leave the demo")}</button>{/if}
       </div>
     {/if}
     <div class="mx-auto max-w-5xl px-4 py-5 pb-24 sm:px-6 lg:px-10 lg:py-8 lg:pb-8">

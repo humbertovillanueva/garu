@@ -54,6 +54,8 @@ export interface AgentsResponse {
   problems: { source: string; error: string }[];
   up: boolean;
   root: string;
+  /** A public demo with made-up data: look around, answer the sample asks, nothing else. */
+  demo?: boolean;
 }
 
 export interface Envelope {

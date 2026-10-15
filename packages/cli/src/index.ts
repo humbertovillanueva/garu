@@ -286,12 +286,13 @@ service
   .option("--as <name>", t("your name"), process.env["GARU_USER"] ?? process.env["USER"] ?? "you")
   .option("--notify <url>", t("POST approval requests to this URL"))
   .option("--ask-timeout <minutes>", t("deny approvals nobody answers after this long"), "30")
+  .option("--demo", t("install the public demo instead: no schedules, nothing runs, nothing is edited"))
   .description(t("Start `garu ui --up` for this folder at every login, and now."))
-  .action(async (opts: { port: string; host: string; as: string; notify?: string; askTimeout: string }) => {
+  .action(async (opts: { port: string; host: string; as: string; notify?: string; askTimeout: string; demo?: boolean }) => {
     loadDotEnv();
     const root = process.cwd();
     const as = process.env["GARU_USER"] && opts.as === (process.env["USER"] ?? "you") ? process.env["GARU_USER"] : opts.as;
-    const args = ["--up", "--as", as, "--port", opts.port, "--host", opts.host, "--ask-timeout", opts.askTimeout, ...(opts.notify ? ["--notify", opts.notify] : [])];
+    const args = [opts.demo ? "--demo" : "--up", "--as", as, "--port", opts.port, "--host", opts.host, "--ask-timeout", opts.askTimeout, ...(opts.notify ? ["--notify", opts.notify] : [])];
     const spec = { root, node: stableNodePath(), entry: fileURLToPath(import.meta.url), args, path: servicePath(process.env["PATH"]) };
     mkdirSync(join(root, ".garu"), { recursive: true });
     if (process.platform === "darwin") {
@@ -405,8 +406,9 @@ program
   .option("--inbox-root <dir>", t("where approval requests live"), DEFAULT_INBOX_ROOT)
   .option("--as <name>", t("your name — how approvals are recorded and how agents address you"), process.env["GARU_USER"] ?? process.env["USER"] ?? "you")
   .option("--require-login", t("ask for the token even in the browser on this computer"))
+  .option("--demo", t("a public demo: visitors can look around and answer the sample asks; nothing runs and nothing is edited"))
   .description(t("Open the control room: your agents, live, in the browser. Add --up to run their schedules too."))
-  .action(async (opts: { port: string; host: string; up?: boolean; askTimeout: string; notify?: string; logRoot: string; inboxRoot: string; as: string; requireLogin?: boolean }) => {
+  .action(async (opts: { port: string; host: string; up?: boolean; askTimeout: string; notify?: string; logRoot: string; inboxRoot: string; as: string; requireLogin?: boolean; demo?: boolean }) => {
     loadDotEnv();
     const staticDir = uiStaticDir();
     const log = (msg: string) => stderr.write(`${new Date().toISOString().slice(11, 19)} ${msg}\n`);
@@ -422,7 +424,8 @@ program
       staticDir,
       userName: opts.as,
       decider: `${opts.as} (ui)`,
-      up: Boolean(opts.up),
+      up: Boolean(opts.up) && !opts.demo,
+      demo: Boolean(opts.demo),
       askTimeoutMs: Number(opts.askTimeout) * 60_000,
       ...(opts.notify ? { notify: opts.notify } : {}),
       tokenPath: DEFAULT_TOKEN_PATH,
@@ -436,7 +439,8 @@ program
       stderr.write(`  ${t("For your phone, `{command}` on the default host is simpler — HTTPS, your devices only. See docs/phone.md.", { command: `tailscale serve --bg ${opts.port}` })}\n`);
     }
     if (!existsSync(join(staticDir, "index.html"))) stderr.write(`  ${t("UI not built yet: run `npm run build` in the repo")}\n`);
-    if (opts.up) stderr.write(`  ${t("running {n} cron schedule(s) from Garufiles under {dir}", { n: srv.agents, dir: process.cwd() })}\n`);
+    if (opts.up && !opts.demo) stderr.write(`  ${t("running {n} cron schedule(s) from Garufiles under {dir}", { n: srv.agents, dir: process.cwd() })}\n`);
+    if (opts.demo) stderr.write(`  ${t("demo mode: visitors can look around and answer the sample asks; nothing runs and nothing is edited")}\n`);
     stderr.write(`${t("Ctrl-C to stop.")}\n`);
     const shutdown = () => {
       stderr.write(`\n${t("stopping…")}\n`);

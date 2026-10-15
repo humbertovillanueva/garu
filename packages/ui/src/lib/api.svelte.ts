@@ -95,6 +95,7 @@ export const live = $state({
   agents: [] as Agent[],
   up: false,
   root: "",
+  demo: false,
   problems: [] as { source: string; error: string }[],
   pending: [] as ApprovalRequest[],
   suggestions: [] as import("./types").Suggestion[],
@@ -137,6 +138,7 @@ export async function refreshCore(): Promise<void> {
   live.agents = a.agents;
   live.up = a.up;
   live.root = a.root;
+  live.demo = Boolean(a.demo);
   live.problems = a.problems;
   live.pending = i.pending;
   live.suggestions = i.suggestions ?? [];
