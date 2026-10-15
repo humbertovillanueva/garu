@@ -98,7 +98,7 @@ Si Garu corre como servicio de inicio de sesión, reinícialo para que los horar
 
 ## En español
 
-Tomay y Bea traen cada uno una edición en español junto a la inglesa: `agents/tomay/Garufile.es.yaml` y `agents/bea/Garufile.es.yaml`. Las mismas reglas, con las instrucciones en español y `language: es`, que hace que Garu les pase la fecha en español y les diga que escriban sus resúmenes y respuestas en ese idioma (una respuesta sigue el idioma del correo que contesta). Garu solo carga archivos llamados `Garufile.yaml`, así que para cambiar un agente, copia su edición en español encima de la inglesa:
+Cada agente y cada ejemplo trae una edición en español junto a la inglesa, `Garufile.es.yaml` al lado de `Garufile.yaml` (para Tomay y Bea: `agents/tomay/Garufile.es.yaml` y `agents/bea/Garufile.es.yaml`). Las mismas reglas, con las instrucciones en español y `language: es`, que hace que Garu les pase la fecha en español y les diga que escriban sus resúmenes y respuestas en ese idioma (una respuesta sigue el idioma del correo que contesta). Garu solo carga archivos llamados `Garufile.yaml`, así que para cambiar un agente, copia su edición en español encima de la inglesa:
 
 ```sh
 cp agents/tomay/Garufile.es.yaml agents/tomay/Garufile.yaml

@@ -1,0 +1,54 @@
+# Un agente siempre activo. Cada hora revisa el espacio de trabajo y agrega una
+# línea a tick.log diciendo qué hay. Diminuto a propósito: existe para mostrar a
+# `garu up` manteniendo vivo un agente con horario, con cada ejecución en el registro.
+#
+#   garu up examples/tick/Garufile.yaml
+#   garu log tick
+#
+# Su única escritura es todo su trabajo, así que es `allow`: un agente que te pregunta cada
+# hora es ruido, no seguridad. Todo lo que no sea tick.log está bloqueado.
+#
+# Esta es la edición en español de examples/tick/Garufile.yaml. Para usarla, cópiala encima
+# de Garufile.yaml.
+
+name: tick
+description: Agrega una línea de estado a tick.log según un horario.
+language: es
+persona:
+  kind: turtle
+  tagline: "Lenta, constante, nunca se salta un turno."
+model: gemini/gemini-3.5-flash-lite
+
+triggers:
+  - cron: "0 * * * *"
+
+budget:
+  maxCostUsd: 0.01          # por ejecución; cada hora son ~720 al mes, menos de $8 a precio de lista aunque todas tocaran el tope
+
+tools:
+  - name: fs
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "./examples/tick/workspace"]
+
+policy:
+  - tool: "fs.list_*"
+    action: allow
+  - tool: "fs.read_*"
+    action: allow
+  - tool: "fs.write_file"
+    action: allow
+    when:
+      path: { matches: "tick\\.log$" }
+  - tool: "*"
+    action: block
+
+maxTurns: 8
+
+prompt: |
+  Mira los archivos del directorio permitido. Si tick.log existe, léelo.
+  Luego escribe tick.log de nuevo con todas sus líneas anteriores más UNA línea nueva al final
+  con la forma "<marca de tiempo ISO> — <N> archivo(s): <nombres separados por comas>".
+  No hagas nada más.
+  Responde con una frase corta para una persona, comparando con la línea anterior: qué cambió, o que
+  nada cambió, por ejemplo "Nada nuevo: 2 archivos." o "1 archivo nuevo: notas.md". Sin marcas de tiempo:
+  la sala de control ya muestra cuándo corrió.

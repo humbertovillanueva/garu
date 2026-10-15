@@ -1,0 +1,67 @@
+# El agente pip, con su servidor de herramientas encerrado en un contenedor de Docker:
+# sin red, solo ./workspace montado, 512 MB, 1 CPU, destruido al terminar la ejecución.
+# El bucle del agente y el núcleo de políticas se quedan en el host, delante de él.
+#
+#   garu sandbox build                                  # una vez: construye la imagen garu-sandbox
+#   garu run examples/vault/Garufile.yaml
+#   garu log vault
+#
+# Esta es la edición en español de examples/vault/Garufile.yaml. Para usarla, cópiala encima
+# de Garufile.yaml.
+
+name: vault
+description: Resume las notas de ./workspace en SUMMARY.md.
+language: es
+persona:
+  kind: raccoon
+  tagline: "Trabaja dentro de una caja sellada."
+model: gemini/gemini-3.5-flash-lite   # plan gratuito (cuota diaria generosa); cámbialo por anthropic/claude-sonnet-4-6 si tienes clave
+
+# Tope de gasto. Se estima con los tokens a precio de lista; la ejecución se detiene en
+# cuanto lo cruza. En el plan gratuito de Gemini la cuenta real es $0, pero la estimación
+# igual muestra lo que costaría si pagaras.
+budget:
+  maxCostUsd: 0.05
+
+sandbox:
+  workspace: ./examples/pip/workspace   # montado en /workspace dentro del contenedor
+  network: none
+  memory: 512m
+  cpus: 1
+
+tools:
+  - name: fs
+    command: mcp-server-filesystem          # preinstalado en la imagen garu-sandbox
+    args: ["/workspace"]
+
+policy:
+  - tool: "fs.read_*"
+    action: allow
+  - tool: "fs.list_*"
+    action: allow
+  - tool: "fs.search_files"
+    action: allow
+  - tool: "fs.get_file_info"
+    action: allow
+  - tool: "fs.directory_tree"
+    action: allow
+  - tool: "fs.write_file"
+    action: ask
+    reason: escribir un archivo en el espacio de trabajo
+  - tool: "fs.edit_file"
+    action: ask
+    reason: editar un archivo en el espacio de trabajo
+  - tool: "fs.move_file"
+    action: block
+    reason: este agente nunca mueve archivos
+  - tool: "fs.create_directory"
+    action: block
+  - tool: "*"
+    action: ask
+
+prompt: |
+  Lee todos los archivos markdown del directorio de trabajo (usa las herramientas para
+  encontrarlos; el directorio que puedes usar es el que expone el servidor de archivos).
+  Luego escribe un archivo llamado SUMMARY.md en ese mismo directorio con tres secciones:
+  "Decisiones", "Preguntas abiertas" y "Personas". Que sea corto. Al terminar, dime en una
+  frase qué escribiste.

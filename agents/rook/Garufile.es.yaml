@@ -1,0 +1,113 @@
+# Rook — Cada lunes por la mañana, revisa el repositorio de Garu en busca de estrellas e issues nuevos.
+#
+# Hecho con `garu new`. La política empieza cerrada: solo las herramientas nombradas abajo,
+# las escrituras preguntan primero, todo lo demás bloqueado. Edítalo con libertad; `garu validate` lo revisa.
+#
+# Esta es la edición en español de agents/rook/Garufile.yaml. Para usarla, cópiala encima de
+# Garufile.yaml (docs/google.es.md explica cómo).
+
+name: rook
+description: "Cada lunes por la mañana, revisa el repositorio de Garu en busca de estrellas e issues nuevos."
+language: es
+persona:
+  kind: owl
+  tagline: "Vigila el repositorio para que tú no tengas que hacerlo."
+model: gemini/gemini-3.5-flash-lite
+
+triggers:
+  - cron: "0 8 * * 1"        # los lunes a las 8:00, hora local · cada hora era ruido con el repositorio tranquilo
+
+budget:
+  maxCostUsd: 0.05        # una ejecución se detiene antes de cruzar esto
+
+maxTurns: 10
+
+tools:
+  - name: github                                   # el servidor MCP alojado de GitHub, 46 herramientas; la política de abajo expone 3
+    url: https://api.githubcopilot.com/mcp/
+    headers: { Authorization: "Bearer ${GITHUB_TOKEN}" }
+  - name: web
+    command: node
+    args: ["packages/mcp-fetch/dist/index.js"]
+    env:
+      WEBHOOK_URL: "${REPO_WATCH_WEBHOOK_URL}"     # webhook entrante de Slack o Discord, guardado en .env
+  - name: fs
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "./agents/rook/workspace"]
+
+policy:
+  # GitHub: tres herramientas de solo lectura, y solo para este repositorio. Todo lo
+  # demás que ofrece el servidor (crear issues, subir archivos, hacer merge…) está
+  # bloqueado, así que el modelo ni siquiera lo ve.
+  - tool: "github.list_issues"
+    action: allow
+    when: { owner: { eq: humbertovillanueva }, repo: { eq: garu } }
+  - tool: "github.list_pull_requests"
+    action: allow
+    when: { owner: { eq: humbertovillanueva }, repo: { eq: garu } }
+  - tool: "github.list_commits"
+    action: allow
+    when: { owner: { eq: humbertovillanueva }, repo: { eq: garu } }
+  - tool: "github.*"
+    action: block
+    reason: rook solo lee humbertovillanueva/garu
+  # Leer: solo estos hosts, por URL. Agrega un host aquí para ampliarlo.
+  - tool: "web.fetch_*"
+    action: allow
+    when:
+      url: { matches: "^https://(api\\.github\\.com)(/|$)" }
+  # Publicar en tu canal: siempre pregunta. El modelo nunca ve ni elige la URL.
+  - tool: "web.post_message"
+    action: ask
+    reason: publicar en tu canal
+  - tool: "web.*"
+    action: block
+  # Archivos: el servidor solo ve ./agents/rook/workspace. Leer está bien. Su propio
+  # log.md es su diario, así que escribir ahí está permitido sin preguntar (fue `ask` la
+  # primera semana; todas las preguntas se aprobaron). Cualquier otra escritura se revisa.
+  - tool: "fs.write_file"
+    action: allow
+    when: { path: { matches: "(^|/)log\\.md$" } }
+  - tool: "fs.edit_file"
+    action: allow
+    when: { path: { matches: "(^|/)log\\.md$" } }
+  - tool: "fs.list_*"
+    action: allow
+  - tool: "fs.read_*"
+    action: allow
+  - tool: "fs.get_file_info"
+    action: allow
+  - tool: "fs.search_files"
+    action: allow
+  - tool: "fs.write_file"
+    action: ask
+    reason: escribir un archivo
+  - tool: "fs.edit_file"
+    action: ask
+    reason: editar un archivo
+  - tool: "fs.create_directory"
+    action: ask
+    reason: crear una carpeta
+  - tool: "*"
+    action: block
+    reason: no es parte del trabajo de Rook
+
+prompt: |
+  Eres Rook.
+
+  Cada lunes por la mañana, revisa el repositorio de Garu en busca de estrellas e issues nuevos. Lleva un registro con fecha en tu carpeta y dime qué cambió desde la semana pasada.
+
+  El repositorio es humbertovillanueva/garu. En cada ejecución, en los menos turnos posibles:
+  1. web.fetch_json https://api.github.com/repos/humbertovillanueva/garu → stargazers_count, forks_count, pushed_at.
+  2. github.list_issues con owner "humbertovillanueva", repo "garu", state "OPEN" → los issues abiertos (número, título).
+  3. github.list_pull_requests con owner "humbertovillanueva", repo "garu", state "open" → los PR abiertos (número, título).
+  4. Lee log.md en tu carpeta (fs.list_allowed_directories te da la carpeta; puede que aún no exista).
+  Luego agrega una línea a log.md: "<hora ISO> — <estrellas> estrellas, <forks> forks, <N> issues abiertos, <N> PR abiertos, último push <pushed_at>".
+  Compárala con la línea anterior. Publica en el canal cuando cambien las estrellas, los forks, los issues o los PR,
+  nombrando los issues y PR nuevos por número y título. Si nada cambió, no publiques: responde "sin cambios".
+
+  Puedes leer de api.github.com con las herramientas web; leer los issues, PR y commits de este repositorio con las herramientas github; leer archivos en tu carpeta con las herramientas fs (log.md es tuyo para escribir; cualquier otra escritura se revisa primero); publicar un mensaje en el canal con post_message (se revisa primero).
+
+  Trabaja solo con las herramientas que te dan. Si una llamada es bloqueada o rechazada, dilo en breve y sigue sin ella; nunca repitas la misma llamada bloqueada.
+  Usa la fecha y hora actuales de tu contexto. Nunca inventes hechos, URL ni contenidos de archivos.
+  Respuestas cortas y concretas: qué hiciste, qué encontraste, qué necesita a una persona.

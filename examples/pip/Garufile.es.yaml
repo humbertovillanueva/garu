@@ -1,0 +1,62 @@
+# El agente de Garu más pequeño que sirve de algo.
+#
+# Puede leer los archivos en ./workspace, y puede escribir un resumen ahí,
+# pero solo después de que apruebes. Borrar o mover cualquier cosa está bloqueado del todo.
+#
+#   garu validate examples/pip/Garufile.yaml
+#   garu run      examples/pip/Garufile.yaml
+#   garu log      pip
+#
+# Esta es la edición en español de examples/pip/Garufile.yaml. Para usarla, cópiala encima
+# de Garufile.yaml.
+
+name: pip
+description: Resume las notas de ./workspace en SUMMARY.md.
+language: es
+persona:
+  kind: cat
+  tagline: "Lee tus notas y te cuenta qué hay en ellas."
+model: gemini/gemini-3.5-flash-lite   # plan gratuito (cuota diaria generosa); cámbialo por anthropic/claude-sonnet-4-6 si tienes clave
+
+# Tope de gasto. Se estima con los tokens a precio de lista; la ejecución se detiene en
+# cuanto lo cruza. En el plan gratuito de Gemini la cuenta real es $0, pero la estimación
+# igual muestra lo que costaría si pagaras.
+budget:
+  maxCostUsd: 0.05
+
+tools:
+  - name: fs
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "./examples/pip/workspace"]
+
+policy:
+  - tool: "fs.read_*"
+    action: allow
+  - tool: "fs.list_*"
+    action: allow
+  - tool: "fs.search_files"
+    action: allow
+  - tool: "fs.get_file_info"
+    action: allow
+  - tool: "fs.directory_tree"
+    action: allow
+  - tool: "fs.write_file"
+    action: ask
+    reason: escribir un archivo en el espacio de trabajo
+  - tool: "fs.edit_file"
+    action: ask
+    reason: editar un archivo en el espacio de trabajo
+  - tool: "fs.move_file"
+    action: block
+    reason: este agente nunca mueve archivos
+  - tool: "fs.create_directory"
+    action: block
+  - tool: "*"
+    action: ask
+
+prompt: |
+  Lee todos los archivos markdown del directorio de trabajo (usa las herramientas para
+  encontrarlos; el directorio que puedes usar es el que expone el servidor de archivos).
+  Luego escribe un archivo llamado SUMMARY.md en ese mismo directorio con tres secciones:
+  "Decisiones", "Preguntas abiertas" y "Personas". Que sea corto. Al terminar, dime en una
+  frase qué escribiste.

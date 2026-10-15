@@ -1,0 +1,79 @@
+# Planner — la lista de pendientes de Garu, desde Linear.
+#
+# Linear es un servidor MCP remoto con OAuth: inicia sesión una vez con
+#   garu auth agents/atlas/Garufile.yaml linear
+# y las ejecuciones usan los tokens guardados. Leer está permitido; crear o cambiar
+# un issue siempre pregunta; todo lo demás que ofrece Linear está bloqueado y nunca se muestra.
+#
+# Esta es la edición en español de agents/atlas/Garufile.yaml. Para usarla, cópiala encima de
+# Garufile.yaml (docs/google.es.md explica cómo).
+
+name: atlas
+description: Lee la lista de pendientes de Garu en Linear y dice qué sigue; registra issues cuando se lo pides.
+language: es
+persona:
+  kind: octopus
+  tagline: "Lleva los pendientes con sus ocho manos."
+model: gemini/gemini-3.5-flash-lite
+
+triggers:
+  - manual: true          # pregúntale cosas; después: un cron entre semana que alimente la nota de la mañana
+
+budget:
+  maxCostUsd: 0.05
+
+maxTurns: 10
+
+tools:
+  - name: linear
+    url: https://mcp.linear.app/mcp
+    auth: oauth
+
+policy:
+  # Leer: solo el puñado que Planner necesita. Linear ofrece 68 herramientas; cada una
+  # que ve el modelo cuesta tokens en cada turno, así que el resto quedan ocultas.
+  - tool: "linear.list_teams"
+    action: allow
+  - tool: "linear.list_issues"
+    action: allow
+  - tool: "linear.get_issue"
+    action: allow
+  - tool: "linear.list_issue_statuses"
+    action: allow
+  - tool: "linear.list_issue_labels"
+    action: allow
+  - tool: "linear.list_projects"
+    action: allow
+  - tool: "linear.list_comments"
+    action: allow
+  - tool: "linear.list_users"
+    action: allow
+  # aprendida: aprobada 3× por humbertovillanueva (ui), 2026-10-13
+  - tool: linear.save_issue
+    action: allow
+  # Escribir: un issue o un comentario a la vez, y tú lo ves primero.
+  # (save_issue de Linear crea y también actualiza.)
+  - tool: "linear.save_issue"
+    action: ask
+    reason: crear o cambiar un issue en Linear
+  - tool: "linear.save_comment"
+    action: ask
+    reason: comentar en un issue de Linear
+  - tool: "*"
+    action: block
+    reason: no es parte del trabajo de Planner
+
+prompt: |
+  Eres Planner. Llevas la lista de pendientes de Garu en Linear para tu dueño, que construye Garu
+  (un runtime de código abierto para agentes siempre activos).
+
+  Cuando te pregunten qué sigue o cómo va: lista los issues abiertos del equipo Garu agrupados por estado y
+  luego por prioridad. De cada uno: identificador, título, una línea sobre por qué importa si la descripción
+  lo dice. Termina con lo único que harías primero y por qué. Menos de 200 palabras.
+
+  Cuando te pidan registrar algo: escribe un título claro y una descripción de 2 a 4 líneas, elige una
+  prioridad sensata y llama a save_issue una sola vez (crea cuando no se da un id). Si el equipo no está claro
+  en list_teams, pregunta en vez de adivinar. Nunca crees duplicados: primero list_issues y busca el mismo título.
+
+  Usa solo las herramientas que te dan. Si una llamada es bloqueada o rechazada, dilo y sigue. Nunca inventes
+  issues, identificadores ni enlaces.

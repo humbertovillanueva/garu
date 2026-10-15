@@ -1,0 +1,66 @@
+# El agente pip con un modelo local. Cero costo de API, nada sale de tu máquina.
+#
+#   ollama pull qwen3:8b          # una vez; ~5.2 GB
+#   garu run examples/nook/Garufile.yaml
+#
+# Lee las mismas notas que pip (examples/pip/workspace) y puede escribir un resumen
+# ahí, pero solo después de que apruebes. Borrar o mover cualquier cosa está bloqueado del todo.
+#
+#   garu log nook
+#
+# Esta es la edición en español de examples/nook/Garufile.yaml. Para usarla, cópiala encima
+# de Garufile.yaml.
+
+name: nook
+description: Resume las notas de ./workspace en SUMMARY.md.
+language: es
+persona:
+  kind: whale
+  tagline: "El mismo lector, corriendo en casa con tu propio modelo."
+model: ollama/qwen3:8b   # bueno con herramientas en varios pasos. llama3.1:8b también funciona; los modelos de 3B se saltan pasos y pierden argumentos.
+
+# Los modelos locales cuestan $0, así que no hace falta tope. maxTurns igual acota la ejecución.
+maxTurns: 12
+
+# Ajustes de Ollama. qwen3 "piensa" antes de cada respuesta; para una tarea con herramientas como
+# esta, eso duplica el tiempo por poca ganancia. Pon think: true para ver la diferencia.
+modelOptions:
+  think: false
+  temperature: 0.2
+
+tools:
+  - name: fs
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "./examples/pip/workspace"]
+
+policy:
+  - tool: "fs.read_*"
+    action: allow
+  - tool: "fs.list_*"
+    action: allow
+  - tool: "fs.search_files"
+    action: allow
+  - tool: "fs.get_file_info"
+    action: allow
+  - tool: "fs.directory_tree"
+    action: allow
+  - tool: "fs.write_file"
+    action: ask
+    reason: escribir un archivo en el espacio de trabajo
+  - tool: "fs.edit_file"
+    action: ask
+    reason: editar un archivo en el espacio de trabajo
+  - tool: "fs.move_file"
+    action: block
+    reason: este agente nunca mueve archivos
+  - tool: "fs.create_directory"
+    action: block
+  - tool: "*"
+    action: ask
+
+prompt: |
+  Primero llama a list_allowed_directories para saber el directorio exacto que puedes usar; pasa
+  siempre rutas absolutas desde ahí. Luego lee todos los archivos markdown de ese directorio.
+  Después escribe un archivo llamado SUMMARY.md en ese mismo directorio con tres secciones:
+  "Decisiones", "Preguntas abiertas" y "Personas". Que sea corto. Al terminar, dime en una
+  frase qué escribiste.

@@ -98,7 +98,7 @@ If you run Garu as a login service, restart it so the schedules pick the agents 
 
 ## In Spanish
 
-Tomay and Bea each ship a Spanish edition beside the English one: `agents/tomay/Garufile.es.yaml` and `agents/bea/Garufile.es.yaml`. Same rules, instructions in Spanish, and `language: es`, which makes Garu hand them the date in Spanish and tell them to write their briefs, summaries and replies in it (a reply follows the language of the email it answers). Garu only loads files named `Garufile.yaml`, so to switch an agent, copy its Spanish edition over the English one:
+Every agent and example ships a Spanish edition beside the English one, `Garufile.es.yaml` next to `Garufile.yaml` (for Tomay and Bea: `agents/tomay/Garufile.es.yaml` and `agents/bea/Garufile.es.yaml`). Same rules, instructions in Spanish, and `language: es`, which makes Garu hand them the date in Spanish and tell them to write their briefs, summaries and replies in it (a reply follows the language of the email it answers). Garu only loads files named `Garufile.yaml`, so to switch an agent, copy its Spanish edition over the English one:
 
 ```sh
 cp agents/tomay/Garufile.es.yaml agents/tomay/Garufile.yaml
