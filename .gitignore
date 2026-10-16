@@ -36,3 +36,6 @@ keystore.properties
 # the launch video's source clips and old cuts stay out; only the current renders are tracked
 docs/video/*.mp4
 !docs/video/garu-v7-*.mp4
+
+# editor settings stay personal
+.vscode/
