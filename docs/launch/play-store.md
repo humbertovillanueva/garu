@@ -177,6 +177,21 @@ listing as a draft in English and Spanish (Latin America) with the icon, the
 feature graphic and the six screenshots. Still to do: the closed-testing track,
 twelve testers with Android phones, then upload the bundle.
 
+## The closed test (status 2026-10-15)
+
+Build 4 (versionCode 4, with the Try-the-demo button) is published on the
+closed-testing track "Alpha" for 178 countries; the listing, the declarations
+and the earlier builds went through review the same day. The tester list is an
+email list called "Garu Testers" (family and friends, 14 addresses) with
+feedback to support@garuagents.com; both were submitted for review on
+2026-10-15. Testers join at
+https://play.google.com/apps/testing/io.github.humbertovillanueva.garu, signed in
+to the Google account on the list, and install from the Play Store afterwards.
+Only Google accounts count, one per person: a second address for the same
+person adds nothing to the twelve. Addresses can be added anytime (Testers →
+the list → Save → submit the change). The fourteen days start when the twelfth
+tester is in.
+
 ## Version naming
 
 `versionName` follows the repo (`0.1.0`), `versionCode` increments by 1 per
