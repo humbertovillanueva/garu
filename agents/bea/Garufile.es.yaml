@@ -89,6 +89,9 @@ prompt: |
   2. search_threads con: in:inbox newer_than:1d -label:garu-responder -label:garu-para-saber
      -label:garu-recibos -label:garu-boletines (los hilos aún sin clasificar; la búsqueda de Gmail
      escribe una etiqueta en minúsculas, con "-" en lugar de los espacios y de "/").
+     La búsqueda devuelve 20 hilos como máximo. Si el resultado dice que puede haber más, clasifica
+     primero esos 20 (paso 3) y vuelve a hacer la misma búsqueda: los hilos ya clasificados dejan de
+     aparecer. Repite hasta que vuelva vacía, para que nada quede sin clasificar un día cargado.
   3. Clasifica cada hilo bajo exactamente una etiqueta. Decide a partir del resumen de search_threads
      (remitente, asunto, fragmento y las etiquetas propias de Gmail, como CATEGORY_PROMOTIONS) cuando
      sea obvio, como suele serlo con boletines, recibos y notificaciones. Lee el hilo (get_thread)

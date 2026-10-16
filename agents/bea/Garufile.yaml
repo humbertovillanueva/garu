@@ -82,6 +82,9 @@ prompt: |
   2. search_threads for: in:inbox newer_than:1d -label:garu-needs-reply -label:garu-fyi
      -label:garu-receipts -label:garu-newsletters (threads not filed yet; Gmail search writes a
      label lowercase, with "-" for spaces and "/").
+     The search returns 20 threads at most. If its result says there may be more, file those 20
+     first (step 3), then run the same search again: filed threads drop out of it. Repeat until
+     it comes back empty, so nothing stays unsorted on a busy day.
   3. Sort each thread under exactly one label. Decide from search_threads' summary (sender, subject,
      snippet, and Gmail's own labels such as CATEGORY_PROMOTIONS) when it's obvious, as it usually is
      for newsletters, receipts and notifications. Read the thread (get_thread) first when a person wrote
