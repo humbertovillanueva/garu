@@ -189,8 +189,12 @@ https://play.google.com/apps/testing/io.github.humbertovillanueva.garu, signed i
 to the Google account on the list, and install from the Play Store afterwards.
 Only Google accounts count, one per person: a second address for the same
 person adds nothing to the twelve. Addresses can be added anytime (Testers →
-the list → Save → submit the change). The fourteen days start when the twelfth
-tester is in.
+the list → Save; adding to a list needs no review). The dashboard shows the
+opted-in count, never the names, and installs reach Statistics a day or two
+late. The twelfth tester opted in on 2026-10-16, so the fourteen days end on
+2026-10-30 if nobody leaves; the list has 15 addresses as a margin. Then
+"Apply for production" on the dashboard: Google asks about the test (how
+feedback came in, what changed because of it), so keep notes of both.
 
 ## Version naming
 

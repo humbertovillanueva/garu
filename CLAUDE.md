@@ -156,7 +156,8 @@ Play developer account is verified and the app exists in the console with its de
 (build 4, with the Try-the-demo button) is published on the Alpha track since 2026-10-15; the tester list
 ("Garu Testers", family, 14 addresses) and the feedback address went to review the same day. Opt-in link:
 https://play.google.com/apps/testing/io.github.humbertovillanueva.garu (works once that review clears). The upload
-key is `~/garu-upload.jks` (`docs/android.md`). Left on Humberto's side: twelve distinct Google accounts opted in. The listing is `docs/launch/play-store.md`. Then marketing (posts;
+key is `~/garu-upload.jks` (`docs/android.md`). Twelve testers were opted in on 2026-10-16, so the fourteen days end on 2026-10-30 if nobody
+leaves; then apply for production on the dashboard. The listing is `docs/launch/play-store.md`. Then marketing (posts;
 the video is done). Roadmap after that: push via a relay, hosted Garu, `garu install` registry, iPhone
 on a real device and TestFlight, two-way Slack.
 
