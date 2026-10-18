@@ -52,6 +52,9 @@ app is a companion to software you run yourself; it is not a cloud service.
 > • Garu installed on a computer. The website has a five-minute start.
 > • A private connection between that computer and your phone. Tailscale's
 >   free plan works well and is what the guide uses.
+> • No computer yet? Tap "Try the demo" on the first screen: a sample control
+>   room with made-up agents and data, in your language. It is the one thing
+>   the app reaches that isn't yours, and it stores nothing about you.
 >
 > WHY GARU
 >
@@ -103,6 +106,10 @@ The app follows the phone's language (English or Spanish) and Settings can pin o
 >   cinco minutos.
 > • Una conexión privada entre esa computadora y tu teléfono. El plan gratuito
 >   de Tailscale funciona bien y es el que usa la guía.
+> • ¿Todavía no tienes computadora? Toca "Probar la demo" en la primera
+>   pantalla: una sala de control de muestra con agentes y datos inventados,
+>   en tu idioma. Es lo único que la app toca que no es tuyo, y no guarda nada
+>   sobre ti.
 >
 > POR QUÉ GARU
 >
@@ -119,6 +126,20 @@ The app follows the phone's language (English or Spanish) and Settings can pin o
 > confiar en ejecutarlo.
 >
 > Sitio web y guías: garuagents.com · Código: github.com/humbertovillanueva/garu
+
+## Sign in details (was "App access")
+
+Declared as restricted, one entry, "No login (companion app)", username and
+password "none", with these instructions (500 characters max, English), updated
+2026-10-18 for the demo button:
+
+> Garu is the companion app for open-source software the user runs on their own
+> computer (github.com/humbertovillanueva/garu). It has no accounts and no
+> server of ours, so there are no credentials to provide. To review every screen
+> without a computer, open the app and tap "Try the demo" on the first screen:
+> it connects to a public demo with made-up agents and data, in the phone's
+> language (English or Spanish). With a real computer, the app pairs by scanning
+> a code shown there.
 
 ## Graphics (ready in `docs/launch/play/`)
 
