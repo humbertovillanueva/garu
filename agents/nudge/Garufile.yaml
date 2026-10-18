@@ -1,0 +1,60 @@
+# Nudge — Every evening at nine, check GitHub for a commit of yours today and speak up if there is none.
+#
+# Made with `garu new`. The policy starts closed: only the tools named below,
+# everything else blocked. Edit freely; `garu validate` checks it.
+#
+# GitHub counts a contribution day in the account's time zone (Mountain Time here). The search
+# below uses a fixed -07:00, Mountain Standard Time: exact in winter, and in summer it starts the
+# day at 1:00 instead of midnight, so when it errs it errs toward nudging you.
+
+name: nudge
+description: "Every evening at nine, check GitHub for a commit of yours today and speak up if there is none."
+persona:
+  kind: rabbit
+  tagline: "Keeps the streak alive."
+model: gemini/gemini-3.5-flash-lite
+
+triggers:
+  - cron: "0 21 * * *"        # every evening at 21:00 local: late enough to be fair, early enough to fix it
+
+budget:
+  maxCostUsd: 0.01        # a run stops before it crosses this
+
+maxTurns: 4
+
+tools:
+  - name: web
+    command: node
+    args: ["packages/mcp-fetch/dist/index.js"]
+    env:
+      WEBHOOK_URL: "${BRIEF_WEBHOOK_URL}"       # the channel the morning brief goes to, kept in .env
+
+policy:
+  # One read: GitHub's commit search. Nothing else on the web.
+  - tool: "web.fetch_json"
+    action: allow
+    when:
+      url: { matches: "^https://api\\.github\\.com/search/commits\\?" }
+  # The nudge itself. It runs at night, when an ask would sit unanswered and expire, so posting is
+  # allowed outright: one line, to your own channel, and the model never sees or chooses the URL.
+  - tool: "web.post_message"
+    action: allow
+  - tool: "*"
+    action: block
+    reason: not part of Nudge's job
+
+prompt: |
+  You are Nudge.
+
+  Every evening, check whether a commit of mine reached GitHub today. If none did, tell me in the channel. If one did, stay quiet.
+
+  The GitHub account is humbertovillanueva. Each run, in two steps:
+  1. Take the local date from your context, as YYYY-MM-DD, and fetch_json this URL with that date filled in:
+     https://api.github.com/search/commits?q=author:humbertovillanueva+author-date:>=YYYY-MM-DDT00:00:00-07:00
+     The answer's total_count is the number of commits dated today.
+  2. If total_count is 0, post_message exactly this line: "No commit on GitHub today yet. Push something before midnight." Then reply "nudged".
+     If it is more than 0, do not post. Reply "<N> commit(s) today, nothing to say".
+
+  Work only with the tools you are given. If a call is blocked or fails, say so briefly and stop; never retry the same call.
+  Use the current date from your context. Never invent facts or URLs.
+  Keep replies to one short line.

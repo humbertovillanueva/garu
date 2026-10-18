@@ -37,7 +37,8 @@ packages/app        Capacitor 8 wrapper of the UI: android/ and ios/ (appId io.g
 packages/mcp-fetch  tiny MCP server: fetch_json / fetch_text (GET only) + post_message to a webhook
 packages/mcp-google Gmail + Calendar MCP server (read, label, draft; no send); Garu signs in for it
 agents/             real agents: tomay (fox, your day from calendar + email), bea (bee, sorts the inbox,
-                    drafts replies), rook (owl, weekly repo check), atlas (octopus, Linear)
+                    drafts replies), rook (owl, weekly repo check), atlas (octopus, Linear), nudge (rabbit,
+                    9 PM check that a commit of his landed on GitHub today; posts to the brief channel if not)
 examples/           pip, nook (Ollama), tick (hourly heartbeat), vault (sandboxed)
 docs/               why.md, google.md (Google setup), phone.md, android.md, ios.md, privacy.html, brand/, launch/, video/
 docs/video/remotion the launch video's source (Remotion 4, React); see "Launch video" below

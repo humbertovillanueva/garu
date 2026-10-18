@@ -235,7 +235,7 @@ packages/ui         the control room (Svelte 5 + Tailwind 4)
 packages/app        the control room as a native Android and iPhone app (Capacitor), pairs with a running garu ui
 packages/mcp-fetch  a tiny MCP server: fetch_json / fetch_text (GET, open web only) + post_message to one webhook
 packages/mcp-google Gmail and Calendar MCP server: read, label, draft; no send, no delete
-agents/             real agents that run from this repo (tomay, bea, rook, atlas)
+agents/             real agents that run from this repo (tomay, bea, rook, atlas, nudge)
 examples/           Garufiles to learn from
 docker/sandbox      the default sandbox image
 ```

@@ -1,0 +1,64 @@
+# Nudge — Cada noche a las nueve, revisa en GitHub si hoy hubo un commit tuyo y avisa si no lo hay.
+#
+# Hecho con `garu new`. La política empieza cerrada: solo las herramientas nombradas abajo,
+# todo lo demás bloqueado. Edítalo con libertad; `garu validate` lo revisa.
+#
+# Esta es la edición en español de agents/nudge/Garufile.yaml. Para usarla, cópiala encima de
+# Garufile.yaml (docs/google.es.md explica cómo).
+#
+# GitHub cuenta el día de una contribución en la zona horaria de la cuenta (aquí, hora de la Montaña).
+# La búsqueda de abajo usa un -07:00 fijo, la hora estándar: exacto en invierno, y en verano el día
+# empieza a la 1:00 en vez de a medianoche, así que cuando se equivoca, se equivoca avisándote de más.
+
+name: nudge
+description: "Cada noche a las nueve, revisa en GitHub si hoy hubo un commit tuyo y avisa si no lo hay."
+language: es
+persona:
+  kind: rabbit
+  tagline: "Mantiene viva la racha."
+model: gemini/gemini-3.5-flash-lite
+
+triggers:
+  - cron: "0 21 * * *"        # cada noche a las 21:00 locales: tarde para ser justo, temprano para arreglarlo
+
+budget:
+  maxCostUsd: 0.01        # una corrida se detiene antes de pasar de aquí
+
+maxTurns: 4
+
+tools:
+  - name: web
+    command: node
+    args: ["packages/mcp-fetch/dist/index.js"]
+    env:
+      WEBHOOK_URL: "${BRIEF_WEBHOOK_URL}"       # el canal al que llega el resumen de la mañana, guardado en .env
+
+policy:
+  # Una sola lectura: la búsqueda de commits de GitHub. Nada más en la web.
+  - tool: "web.fetch_json"
+    action: allow
+    when:
+      url: { matches: "^https://api\\.github\\.com/search/commits\\?" }
+  # El aviso en sí. Corre de noche, cuando una pregunta se quedaría sin responder y caducaría, así que
+  # publicar está permitido sin más: una línea, a tu propio canal, y el modelo nunca ve ni elige la URL.
+  - tool: "web.post_message"
+    action: allow
+  - tool: "*"
+    action: block
+    reason: no es parte del trabajo de Nudge
+
+prompt: |
+  Eres Nudge.
+
+  Cada noche, revisa si hoy llegó a GitHub un commit mío. Si no llegó ninguno, dímelo en el canal. Si llegó alguno, quédate en silencio.
+
+  La cuenta de GitHub es humbertovillanueva. En cada corrida, en dos pasos:
+  1. Toma la fecha local de tu contexto, como AAAA-MM-DD, y haz fetch_json de esta URL con esa fecha puesta:
+     https://api.github.com/search/commits?q=author:humbertovillanueva+author-date:>=AAAA-MM-DDT00:00:00-07:00
+     El total_count de la respuesta es el número de commits con fecha de hoy.
+  2. Si total_count es 0, publica con post_message exactamente esta línea: "Hoy todavía no hay ningún commit en GitHub. Sube algo antes de medianoche." Luego responde "avisado".
+     Si es mayor que 0, no publiques. Responde "<N> commit(s) hoy, nada que decir".
+
+  Trabaja solo con las herramientas que te dan. Si una llamada está bloqueada o falla, dilo brevemente y detente; nunca repitas la misma llamada.
+  Usa la fecha actual de tu contexto. Nunca inventes datos ni URLs.
+  Responde en una sola línea corta.
