@@ -101,10 +101,22 @@ export function readRun(path: string): Envelope[] {
   });
 }
 
+/**
+ * A wall-clock stamp in this machine's time zone, for a terminal line: "15:30:27", or
+ * "2026-10-18 15:30" with `date`. Run ids and the stamps inside a log stay UTC; only what a
+ * person reads is local.
+ */
+export function localTime(at: Date | string = new Date(), opts: { date?: boolean; seconds?: boolean } = {}): string {
+  const d = typeof at === "string" ? new Date(at) : at;
+  const p = (n: number) => String(n).padStart(2, "0");
+  const clock = `${p(d.getHours())}:${p(d.getMinutes())}` + (opts.seconds === false ? "" : `:${p(d.getSeconds())}`);
+  return opts.date ? `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${clock}` : clock;
+}
+
 /** Human-readable one-liner for a log entry. */
 export function formatEvent(env: Envelope): string {
   const e = env.event;
-  const t = env.ts.slice(11, 19);
+  const t = localTime(env.ts);
   switch (e.type) {
     case "run.start":
       return `${t} ▶ run ${env.runId} (${e.agent}, ${e.model}, trigger=${e.trigger}${e.sandbox ? `, sandbox=${e.sandbox.image}/${e.sandbox.network}` : ""})`;

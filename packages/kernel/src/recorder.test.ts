@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Recorder, formatEvent, newRunId, readRun } from "./recorder.js";
+import { Recorder, formatEvent, newRunId, readRun, localTime } from "./recorder.js";
 
 describe("Recorder", () => {
   it("writes sequential envelopes and reads them back", () => {
@@ -40,6 +40,14 @@ describe("Recorder", () => {
     expect(a).toMatch(/^20260101-000000-[0-9a-f]{8}$/);
   });
 
+  it("stamps terminal lines in local time, with the date on request", () => {
+    const d = new Date("2026-01-01T12:34:56.000Z");
+    const p = (n: number) => String(n).padStart(2, "0");
+    expect(localTime(d)).toBe(`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);
+    expect(localTime(d.toISOString(), { seconds: false })).toBe(`${p(d.getHours())}:${p(d.getMinutes())}`);
+    expect(localTime(d, { date: true, seconds: false })).toBe(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`);
+  });
+
   it("formats every event type without throwing", () => {
     const base = { seq: 1, ts: "2026-01-01T12:34:56.000Z", runId: "r", agent: "a" } as const;
     const lines = [
@@ -47,7 +55,10 @@ describe("Recorder", () => {
       formatEvent({ ...base, event: { type: "policy.decision", callId: "c", decision: { action: "block", ruleIndex: 0, matched: "*", reason: "no" } } }),
       formatEvent({ ...base, event: { type: "tool.result", callId: "c", ok: false, durationMs: 5, error: "boom" } }),
     ];
-    expect(lines[0]).toContain("12:34:56");
+    const d = new Date(base.ts);
+    const p = (n: number) => String(n).padStart(2, "0");
+    expect(lines[0]).toContain(`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);
+    expect(lines[0]).not.toContain("Z");
     expect(lines[1]).toContain("BLOCK");
     expect(lines[2]).toContain("ERROR");
   });

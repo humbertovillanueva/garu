@@ -34,6 +34,7 @@ import {
   formatEvent,
   formatRequest,
   formatUsd,
+  localTime,
   parseGarufile,
   priceFor,
   readRun,
@@ -411,7 +412,7 @@ program
   .action(async (opts: { port: string; host: string; up?: boolean; askTimeout: string; notify?: string; logRoot: string; inboxRoot: string; as: string; requireLogin?: boolean; demo?: boolean }) => {
     loadDotEnv();
     const staticDir = uiStaticDir();
-    const log = (msg: string) => stderr.write(`${new Date().toISOString().slice(11, 19)} ${msg}\n`);
+    const log = (msg: string) => stderr.write(`${localTime()} ${msg}\n`);
     const srv = startUiServer({
       port: Number(opts.port),
       host: opts.host,
@@ -892,16 +893,16 @@ async function notify(url: string, r: ApprovalRequest): Promise<void> {
 }
 
 function printSchedulerEvent(e: SchedulerEvent): void {
-  const now = new Date().toISOString().slice(11, 19);
+  const now = localTime();
   switch (e.type) {
     case "scheduled":
-      stderr.write(`${now} ⏰ ${t("{agent}: \"{cron}\" next at {time}", { agent: e.agent, cron: e.cron, time: e.nextRun?.toISOString() ?? "?" })}\n`);
+      stderr.write(`${now} ⏰ ${t("{agent}: \"{cron}\" next at {time}", { agent: e.agent, cron: e.cron, time: e.nextRun ? localTime(e.nextRun, { date: true, seconds: false }) : "?" })}\n`);
       break;
     case "fire":
       stderr.write(`${now} ▶ ${t("{agent} (cron {cron})", { agent: e.agent, cron: e.cron })}\n`);
       break;
     case "catch-up":
-      stderr.write(`${now} ↺ ${t("{agent}: was due {time} UTC (cron {cron}) while garu was not running; catching up", { agent: e.agent, time: e.missedAt.toISOString().slice(11, 16), cron: e.cron })}\n`);
+      stderr.write(`${now} ↺ ${t("{agent}: was due {time} (cron {cron}) while garu was not running; catching up", { agent: e.agent, time: localTime(e.missedAt, { seconds: false }), cron: e.cron })}\n`);
       break;
     case "skip.overlap":
       stderr.write(`${now} ↷ ${t("{agent}: previous run still going, skipped this tick", { agent: e.agent })}\n`);

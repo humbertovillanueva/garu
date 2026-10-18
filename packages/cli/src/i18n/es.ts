@@ -249,7 +249,7 @@ export const es: Record<string, string> = {
   "notify: could not reach {url}: {error}": "notificación: no se pudo llegar a {url}: {error}",
   "{agent}: \"{cron}\" next at {time}": "{agent}: \"{cron}\", próxima a las {time}",
   "{agent} (cron {cron})": "{agent} (cron {cron})",
-  "{agent}: was due {time} UTC (cron {cron}) while garu was not running; catching up": "{agent}: tocaba a las {time} UTC (cron {cron}) mientras garu no estaba corriendo; recuperando",
+  "{agent}: was due {time} (cron {cron}) while garu was not running; catching up": "{agent}: tocaba a las {time} (cron {cron}) mientras garu no estaba corriendo; recuperando",
   "{agent}: previous run still going, skipped this tick": "{agent}: la ejecución anterior sigue en curso, se saltó este turno",
   "{agent}: no network, will catch up": "{agent}: sin red, se recuperará después",
   "unpriced": "sin precio",
