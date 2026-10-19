@@ -150,6 +150,12 @@ password "none", with these instructions (500 characters max, English), updated
   from the demo data (`scripts/demo-data.mjs`) by capturing each screen at phone
   size from the demo control room and framing it with its caption; retake after
   any big UI change.
+- The Spanish set, same six screens and captions in Spanish, is `es/` beside
+  them, made 2026-10-19 with `scripts/play-shots.mjs`: the phone build in a
+  browser (`GARU_APP=1 npm run dev -w @garu/ui -- --port 5174`) paired to the
+  Spanish demo, reseeded first so the inbox has a fresh ask, each screen shot at
+  390×844 at 3× and framed at 1080×1920. The script takes `--lang en` too, so
+  both sets come from the same place next time.
 
 ## Data safety form (answers)
 
