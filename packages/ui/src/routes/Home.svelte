@@ -30,6 +30,7 @@
   const spendToday = $derived(live.agents.reduce((s, a) => s + a.costTodayUsd, 0));
   const working = $derived(live.agents.filter((a) => a.status === "working"));
   const needsSetup = $derived(live.agents.filter((a) => a.status === "needs-setup"));
+  const signInSoon = $derived(live.agents.filter((a) => a.signInExpiring?.length));
   const totalRuns = $derived(live.agents.reduce((s, a) => s + a.runs, 0));
   const scheduled = $derived(live.agents.filter((a) => a.cron && a.status !== "needs-setup").length);
   // First week: show the way in until there's real history.
@@ -93,6 +94,21 @@
         <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">2</div><div class="font-medium">{t("Approve it")}</div><div class="mt-0.5 text-fg-2">{t("The pause is the product. Approve once, approve for 24h, or decline with a note it reads.")}</div></li>
         <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">3</div><div class="font-medium">{t("Make your own")}</div><div class="mt-0.5 text-fg-2"><span class="mono">npm run garu -- new</span> {t("asks what it should do and writes a Garufile with a closed policy.")}</div></li>
       </ol>
+    </div>
+  {/if}
+
+  {#if signInSoon.length}
+    <div>
+      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Sign in again soon")}</h2>
+      <div class="panel divide-y divide-line">
+        {#each signInSoon as a (a.name)}
+          <a href={href("agent", a.name)} class="card-hover flex items-center gap-3 px-3 py-2.5 first:rounded-t-xl last:rounded-b-xl">
+            <Mark name={a.name} size={26} status={a.status} />
+            <span class="font-medium">{a.name}</span>
+            <span class="min-w-0 text-[12.5px] [overflow-wrap:anywhere]" style="color: var(--color-ask)">{#each a.signInExpiring ?? [] as s, i}{i ? " · " : ""}{isApp ? t("Its {server} sign-in is {days} days old; Google ends it at 7. Sign in again on your computer.", { server: s.server, days: s.days }) : t("Its {server} sign-in is {days} days old; Google ends it at 7. Sign in again:", { server: s.server, days: s.days })}{#if !isApp} <span class="mono">npm run garu -- auth {a.source} {s.server}</span>{/if}{/each}</span>
+          </a>
+        {/each}
+      </div>
     </div>
   {/if}
 

@@ -39,6 +39,8 @@ interface Stored {
   tokens?: OAuthTokens | undefined;
   /** When the tokens were saved, to know when the access token runs out (expires_in is relative). */
   tokensSavedAt?: string | undefined;
+  /** When the person signed in. A refresh keeps it; a new refresh token is a new sign-in. */
+  signedInAt?: string | undefined;
   codeVerifier?: string;
   updatedAt: string;
 }
@@ -124,11 +126,16 @@ export class FileOAuthProvider implements OAuthClientProvider {
     return this.read().tokens;
   }
   saveTokens(tokens: OAuthTokens): void {
-    this.write({ tokens, tokensSavedAt: new Date().toISOString() });
+    const prev = this.read();
+    const now = new Date().toISOString();
+    // A new refresh token means the person signed in again; a refresh carries the old one and keeps the
+    // date. A file from before this field counts from the first save it can see.
+    const fresh = !prev.tokens?.refresh_token || (Boolean(tokens.refresh_token) && tokens.refresh_token !== prev.tokens.refresh_token);
+    this.write({ tokens, tokensSavedAt: now, signedInAt: fresh ? now : (prev.signedInAt ?? prev.tokensSavedAt) });
   }
   /** A refresh the issuer refused (sign-in revoked or expired) clears the tokens, so it shows as "needs sign-in". */
   invalidateCredentials(scope: "all" | "client" | "tokens" | "verifier" | "discovery"): void {
-    if (scope === "tokens" || scope === "all") this.write({ tokens: undefined, tokensSavedAt: undefined });
+    if (scope === "tokens" || scope === "all") this.write({ tokens: undefined, tokensSavedAt: undefined, signedInAt: undefined });
   }
   /** True when the access token has under five minutes left, or we can't tell. */
   expiresSoon(now = Date.now()): boolean {
@@ -167,6 +174,14 @@ export class FileOAuthProvider implements OAuthClientProvider {
   /** True when a sign-in has been completed for this server (tokens on disk). */
   signedIn(): boolean {
     return Boolean(this.read().tokens?.access_token);
+  }
+
+  /** When the person signed in, for issuers that end a sign-in after a while. Undefined when nobody has. */
+  signedInAt(): Date | undefined {
+    const st = this.read();
+    if (!st.tokens?.access_token) return undefined;
+    const at = st.signedInAt ?? st.tokensSavedAt;
+    return at ? new Date(at) : undefined;
   }
 
   /** Remove the stored sign-in. */

@@ -109,7 +109,7 @@ Las etiquetas de Bea también están en español: en el paso 7, anida `Responder
 
 ## Conviene saber
 
-- **El inicio de sesión dura 7 días en Prueba.** Google lo hace expirar en las apps que no están publicadas, porque el acceso a Gmail es delicado. El agente entonces muestra **falta iniciar sesión**; vuelve a ejecutar su comando `garu auth`.
+- **El inicio de sesión dura 7 días en Prueba.** Google lo hace expirar en las apps que no están publicadas, porque el acceso a Gmail es delicado. Desde el sexto día la pantalla de inicio dice **Vuelve a iniciar sesión pronto** con el comando; pasado el séptimo el agente muestra **falta iniciar sesión**. En ambos casos, vuelve a ejecutar su comando `garu auth`.
 - **Tu correo va al modelo que elegiste.** El texto de los hilos que leen los agentes se envía al modelo de su Garufile (Gemini de forma predeterminada). Un modelo local a través de Ollama lo mantiene en tu máquina.
 - **Los tokens se quedan en tu computadora**, en `.garu/auth/` (en el gitignore). `garu auth <Garufile> <server> --forget` elimina uno, y puedes revocar el acceso de Garu en cualquier momento en [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
 - **Los servidores MCP de Gmail y Calendar de Google** solo responden a proyectos inscritos en el Google Workspace Developer Preview Program. El servidor de Garu usa las APIs normales, así que funciona hoy con una cuenta personal.

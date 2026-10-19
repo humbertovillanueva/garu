@@ -14,6 +14,22 @@ const google = {
   authorizationParams: { access_type: "offline", prompt: "consent" },
 };
 
+describe("when the person signed in", () => {
+  it("is the first save, survives refreshes, and moves with a new refresh token", () => {
+    const p = new FileOAuthProvider({ root: root(), server: "gmail", url: "https://accounts.google.com" });
+    expect(p.signedInAt()).toBeUndefined();
+    p.saveTokens({ access_token: "a1", refresh_token: "r1", token_type: "bearer", expires_in: 3600 });
+    const first = p.signedInAt();
+    expect(first).toBeInstanceOf(Date);
+    p.saveTokens({ access_token: "a2", refresh_token: "r1", token_type: "bearer", expires_in: 3600 });
+    expect(p.signedInAt()?.getTime()).toBe(first?.getTime());
+    p.saveTokens({ access_token: "a3", refresh_token: "r2", token_type: "bearer", expires_in: 3600 });
+    expect(p.signedInAt()?.getTime()).toBeGreaterThanOrEqual(first!.getTime());
+    p.invalidateCredentials("tokens");
+    expect(p.signedInAt()).toBeUndefined();
+  });
+});
+
 describe("your own OAuth client", () => {
   it("is accepted on a remote server with auth: oauth, and refused without it", () => {
     expect(HttpServerSpec.safeParse({ name: "calendar", url: "https://calendarmcp.googleapis.com/mcp/v1", auth: "oauth", oauth: google }).success).toBe(true);

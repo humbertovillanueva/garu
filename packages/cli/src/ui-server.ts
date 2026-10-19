@@ -219,6 +219,18 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     // The demo has no keys or sign-ins and never will; it shows its agents as ready, not as waiting for setup.
     const needs = g && !opts.demo ? missingEnv(g.tools, process.env) : [];
     const signIn = g && !opts.demo ? g.tools.filter((t) => t.auth === "oauth" && !signInFor(t, authRoot).signedIn()).map((t) => t.name) : [];
+    // Google ends a sign-in after seven days while the OAuth app is in Testing (docs/google.md). From the
+    // sixth day the home screen says so, so the owner signs in again before a morning run fails.
+    const signInExpiring =
+      g && !opts.demo
+        ? g.tools.flatMap((tl) => {
+            if (tl.auth !== "oauth" || !/^https:\/\/accounts\.google\.com/.test(tl.oauth?.issuer ?? "")) return [];
+            const at = signInFor(tl, authRoot).signedInAt();
+            if (!at) return [];
+            const days = Math.floor((Date.now() - at.getTime()) / 86_400_000);
+            return days >= 6 ? [{ server: tl.name, days }] : [];
+          })
+        : [];
     const status = pending.length ? "waiting" : inFlight ? "working" : needs.length || signIn.length ? "needs-setup" : cron && (opts.up || opts.demo) ? "scheduled" : "idle";
     const price = g ? (g.budget.pricing ?? priceFor(g.model)) : null;
     return {
@@ -230,6 +242,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       configured: Boolean(g),
       needs,
       signIn,
+      signInExpiring,
       status,
       inFlight: inFlight ?? null,
       pending: pending.length,

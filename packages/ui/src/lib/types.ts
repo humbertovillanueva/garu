@@ -33,6 +33,8 @@ export interface Agent {
   needs: string[];
   /** Remote servers with auth: oauth that have no saved sign-in yet. */
   signIn: string[];
+  /** Google sign-ins six days old or more: Google ends them at seven while the OAuth app is in Testing. */
+  signInExpiring?: { server: string; days: number }[];
   status: AgentStatus;
   inFlight: { runId: string; startedAt: string; turn: number; trigger: string } | null;
   pending: number;

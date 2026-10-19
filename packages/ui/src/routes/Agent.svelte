@@ -126,6 +126,9 @@
         {#if a.persona?.tagline}<p class="mt-0.5 text-[14px] italic text-fg-2">“{a.persona.tagline}”</p>{/if}
         {#if a.description}<p class="mt-1 text-[14px] text-fg-2">{a.description}</p>{/if}
         <p class="mt-1 text-[13px] text-mute">{a.status === "needs-setup" ? (isApp ? t("Needs setup on your computer") : statusLine(a)) : statusLine(a)}</p>
+        {#each a.signInExpiring ?? [] as s (s.server)}
+          <p class="mt-1 text-[13px] [overflow-wrap:anywhere]" style="color: var(--color-ask)">{isApp ? t("Its {server} sign-in is {days} days old; Google ends it at 7. Sign in again on your computer.", { server: s.server, days: s.days }) : t("Its {server} sign-in is {days} days old; Google ends it at 7. Sign in again:", { server: s.server, days: s.days })}{#if !isApp} <span class="mono text-fg">npm run garu -- auth {a.source} {s.server}</span>{/if}</p>
+        {/each}
       </div>
     </div>
 
