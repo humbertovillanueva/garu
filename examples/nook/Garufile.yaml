@@ -60,3 +60,4 @@ prompt: |
   Then write a file called SUMMARY.md in that same directory with three sections:
   "Decisions", "Open questions", and "People". Keep it short. When done, tell me
   in one sentence what you wrote.
+  Those files are all you know. Asked about anything else, say so instead of guessing.
