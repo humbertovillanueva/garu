@@ -45,10 +45,10 @@ const post = (path: string, body: unknown, headers: Record<string, string> = {})
   fetch(base + path, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
 let n = 0;
 /** A paused tool call, as the kernel's inbox writes it. */
-function pending(tool: string, args: Record<string, unknown>): string {
+function pending(tool: string, args: Record<string, unknown>, agent = "pip"): string {
   const id = `t${String(++n).padStart(5, "0")}`;
   const now = new Date();
-  writeFileSync(join(inboxRoot, `${id}.json`), JSON.stringify({ id, agent: "pip", runId: "r1", callId: id, tool, args, reason: "writing", createdAt: now.toISOString(), expiresAt: new Date(now.getTime() + 60_000).toISOString() }));
+  writeFileSync(join(inboxRoot, `${id}.json`), JSON.stringify({ id, agent, runId: "r1", callId: id, tool, args, reason: "writing", createdAt: now.toISOString(), expiresAt: new Date(now.getTime() + 60_000).toISOString() }));
   return id;
 }
 
@@ -56,6 +56,11 @@ beforeAll(async () => {
   root = mkdtempSync(join(tmpdir(), "garu-ui-"));
   mkdirSync(join(root, "agents", "pip"), { recursive: true });
   writeFileSync(join(root, "agents", "pip", "Garufile.yaml"), GARUFILE);
+  // A sandboxed agent: its tool server sees ./ws as /workspace.
+  mkdirSync(join(root, "agents", "vault"), { recursive: true });
+  writeFileSync(join(root, "agents", "vault", "Garufile.yaml"), GARUFILE.replace("name: pip", "name: vault\nsandbox:\n  workspace: ./ws"));
+  mkdirSync(join(root, "ws"));
+  writeFileSync(join(root, "ws", "SUMMARY.md"), "old summary\n");
   mkdirSync(join(root, "ui"));
   writeFileSync(join(root, "ui", "index.html"), "<!doctype html><title>Garu test</title>");
   writeFileSync(join(root, "notes.md"), "old\n");
@@ -81,7 +86,7 @@ describe("who gets in", () => {
   it("a browser on this computer is let in; a page from another local origin, or anything behind a proxy, is not", async () => {
     const mine = await get("/api/agents");
     expect(mine.status).toBe(200);
-    expect(((await mine.json()) as { agents: { name: string }[] }).agents.map((a) => a.name)).toEqual(["pip"]);
+    expect(((await mine.json()) as { agents: { name: string }[] }).agents.map((a) => a.name)).toEqual(["pip", "vault"]);
     const other = await get("/api/pair", { headers: { origin: "http://localhost:5173" } });
     expect(other.status).toBe(401);
     expect(await other.json()).toMatchObject({ signIn: true });
@@ -155,6 +160,17 @@ describe("approvals", () => {
     const outside = pending("fs.write_file", { path: "../outside.txt", content: "x" });
     expect(await (await get(`/api/inbox/${outside}/diff`)).json()).toEqual({ outside: true });
     expect((await get("/api/inbox/nope99/diff")).status).toBe(404);
+  });
+
+  it("a sandboxed agent's /workspace path is shown from the folder mounted there", async () => {
+    const summary = pending("fs.write_file", { path: "/workspace/SUMMARY.md", content: "new summary\n" }, "vault");
+    const d = (await (await get(`/api/inbox/${summary}/diff`)).json()) as { path: string; isNew: boolean; lines: { t: string; s: string }[] };
+    expect(d.path.endsWith(join("ws", "SUMMARY.md"))).toBe(true);
+    expect(d.isNew).toBe(false);
+    expect(d.lines.some((l) => l.t === "-" && l.s === "old summary")).toBe(true);
+    // The mapping never reaches past the project folder or into a secret.
+    const sneaky = pending("fs.write_file", { path: "/workspace/../.env", content: "x" }, "vault");
+    expect(await (await get(`/api/inbox/${sneaky}/diff`)).json()).toEqual({ secret: true });
   });
 
   it("a batch decides many at once, and a malformed one decides nothing", async () => {

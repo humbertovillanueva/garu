@@ -34,6 +34,7 @@ import {
   missingEnv,
   isRemoteServer,
   signInFor,
+  WORKSPACE_MOUNT,
   lineDiff,
   diffStats,
   localDay,
@@ -394,9 +395,13 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         const p = inbox.pending().find((x) => x.id === diffM[1]);
         if (!p) return json(res, { error: t("not pending") }, 404);
         const args = p.args as Record<string, unknown>;
-        const target = typeof args["path"] === "string" ? args["path"] : typeof args["file"] === "string" ? args["file"] : null;
+        let target = typeof args["path"] === "string" ? args["path"] : typeof args["file"] === "string" ? args["file"] : null;
         const next = typeof args["content"] === "string" ? args["content"] : typeof args["text"] === "string" ? args["text"] : null;
         if (!target || next === null) return json(res, { error: t("not a file write") }, 400);
+        // A sandboxed agent names files as its container sees them, under /workspace; its Garufile says
+        // which folder of the project sits there, so the card can show the file that would change.
+        const workspace = discover().agents.find((x) => x.garufile.name === p.agent)?.garufile.sandbox?.workspace;
+        if (workspace && (target === WORKSPACE_MOUNT || target.startsWith(WORKSPACE_MOUNT + "/"))) target = join(workspace, target.slice(WORKSPACE_MOUNT.length));
         const abs = resolve(opts.root, target);
         if (!abs.startsWith(opts.root + "/") && abs !== opts.root) return json(res, { outside: true });
         // Secrets never go on a review card, not even as "the file this would replace".
