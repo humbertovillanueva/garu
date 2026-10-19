@@ -57,11 +57,13 @@ function safe(s: string): string {
 
 /** Turn a Docker spawn failure into advice a person can act on. */
 export function explainDockerError(message: string, image: string): string {
+  // Docker Desktop closed: the CLI is there but its socket isn't. Checked first, because Docker words
+  // that as "no such file or directory", which reads like a missing program.
+  if (/Cannot connect to the Docker daemon|docker\.sock|daemon is not running|connect to the docker API|Is the docker daemon running/i.test(message)) {
+    return `Docker Desktop isn't running. Open it, wait for the whale to settle, then try again.`;
+  }
   if (/ENOENT|not found|No such file/i.test(message) && /docker/i.test(message)) {
     return `Docker isn't installed or not on PATH. Install Docker Desktop (https://docker.com) and try again.`;
-  }
-  if (/Cannot connect to the Docker daemon|docker.sock|daemon is not running/i.test(message)) {
-    return `Docker is installed but not running. Start Docker Desktop and try again.`;
   }
   if (/Unable to find image|pull access denied|No such image/i.test(message)) {
     return `the sandbox image "${image}" doesn't exist yet. Build it with: garu sandbox build`;

@@ -57,7 +57,9 @@ describe("Sandbox schema", () => {
 describe("explainDockerError", () => {
   it("gives actionable advice", () => {
     expect(explainDockerError("spawn docker ENOENT", "img")).toMatch(/Docker isn't installed/);
-    expect(explainDockerError("Cannot connect to the Docker daemon at unix:///var/run/docker.sock", "img")).toMatch(/not running/);
+    expect(explainDockerError("Cannot connect to the Docker daemon at unix:///var/run/docker.sock", "img")).toMatch(/isn't running/);
+    // Docker 29 words a closed Docker Desktop as a missing file; that is still "not running", not "not installed".
+    expect(explainDockerError("failed to connect to the docker API at unix:///Users/h/.docker/run/docker.sock; check if the path is correct and if the daemon is running: dial unix /Users/h/.docker/run/docker.sock: connect: no such file or directory", "img")).toMatch(/isn't running/);
     expect(explainDockerError("Unable to find image 'img:latest' locally", "img")).toMatch(/garu sandbox build/);
     expect(explainDockerError("something else", "img")).toBe("something else");
   });
