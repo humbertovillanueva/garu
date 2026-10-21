@@ -10,6 +10,7 @@ import { ModelQuotaError } from "./providers/gemini.js";
  */
 import type { Garufile } from "./garufile.js";
 import { ToolBus, extractText, type Approver } from "./bus.js";
+import { holdAwake } from "./awake.js";
 import { PolicyEngine } from "./policy.js";
 import { Recorder, type Envelope } from "./recorder.js";
 import { fromModelToolName, splitModelId, toModelToolName, type ContentBlock, type ModelMessage, type ModelProvider, type ModelTool } from "./provider.js";
@@ -95,6 +96,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
   const recorder = new Recorder({ root: opts.logRoot, agent: g.name, ...(opts.sink ? { sink: opts.sink } : {}) });
   const policy = new PolicyEngine(g.policy);
   const bus = new ToolBus({ policy, recorder, approver: opts.approver, agent: g.name, ...(g.sandbox ? { sandbox: g.sandbox } : {}) });
+  const release = holdAwake();
 
   const trigger = opts.trigger ?? "manual";
   recorder.record({
@@ -232,6 +234,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     recorder.record({ type: "error", message: err.message, ...(err.stack ? { stack: err.stack } : {}) });
     output = offline ? `no network: ${err.message}` : err.message;
   } finally {
+    release();
     await bus.close();
     recorder.record({
       type: "run.end",
