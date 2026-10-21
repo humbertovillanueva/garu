@@ -216,6 +216,6 @@ describe("googleClient", () => {
 
   it("explains a refused sign-in in plain words", async () => {
     const call = googleClient("t", (async () => new Response(JSON.stringify({ error: { message: "Invalid Credentials" } }), { status: 401 })) as typeof fetch);
-    await expect(call(`${GMAIL}/labels`)).rejects.toThrow(/signing in again/);
+    await expect(call(`${GMAIL}/labels`)).rejects.toThrow(/sign in again/);
   });
 });

@@ -84,6 +84,7 @@
           {:else if e.type === "budget.exceeded"}<span style="color: var(--color-bad)">{t("budget cap hit: {cost} reached the cap of {cap} — {n} call(s) not executed", { cost: usd(e["costUsd"] as number), cap: usd(e["maxCostUsd"] as number), n: e["pendingToolCalls"] as number })}</span>
           {:else if e.type === "model.retry"}<span style="color: var(--color-ask)">{t("model busy ({reason}) — retrying in {s}s, attempt {attempt} of {max}", { reason: reasonLabel(String(e["reason"])), s: Math.round((e["waitMs"] as number) / 1000), attempt: e["attempt"] as number, max: e["maxAttempts"] as number })}</span>
           {:else if e.type === "tools.retry"}<span style="color: var(--color-ask)">{t("tool server \"{server}\" didn't start in time — retrying in {s}s", { server: String(e["server"]), s: Math.round((e["waitMs"] as number) / 1000) })}</span>
+          {:else if e.type === "tools.renew"}<span style="color: var(--color-ask)">{t("tool server \"{server}\" restarted with a renewed sign-in token ({reason})", { server: String(e["server"]), reason: String(e["reason"]) })}</span>
           {:else if e.type === "error"}<span style="color: var(--color-bad)">{e["message"]}</span>
           {:else}<span class="mono text-mute">{e.type}</span>{/if}
         </div>

@@ -24,6 +24,7 @@ export type GaruEvent =
   | { type: "tool.result"; callId: string; ok: boolean; durationMs: number; result?: unknown; error?: string }
   | { type: "model.retry"; attempt: number; maxAttempts: number; waitMs: number; reason: string }
   | { type: "tools.retry"; server: string; attempt: number; maxAttempts: number; waitMs: number; reason: string }
+  | { type: "tools.renew"; server: string; reason: string }
   | { type: "error"; message: string; stack?: string };
 
 export interface Envelope {
@@ -146,6 +147,8 @@ export function formatEvent(env: Envelope): string {
       return `${t}   model busy (${e.reason}) — retrying in ${Math.round(e.waitMs / 1000)}s, attempt ${e.attempt}/${e.maxAttempts}`;
     case "tools.retry":
       return `${t}   tool server "${e.server}" didn't start in time — retrying in ${Math.round(e.waitMs / 1000)}s`;
+    case "tools.renew":
+      return `${t}   tool server "${e.server}" restarted with a renewed sign-in token (${e.reason})`;
     case "error":
       return `${t} ✖ ${e.message}`;
   }

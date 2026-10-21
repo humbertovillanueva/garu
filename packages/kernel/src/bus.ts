@@ -14,7 +14,7 @@ import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js";
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { resolve } from "node:path";
-import { isRemoteServer, type McpServerSpec, type Sandbox } from "./garufile.js";
+import { isRemoteServer, type McpServerSpec, type Sandbox, type StdioServerSpec } from "./garufile.js";
 import { FileOAuthProvider, NeedsSignInError, localAccessToken, signInFor } from "./oauth.js";
 import { dockerArgs, explainDockerError } from "./sandbox.js";
 import type { Decision, PolicyEngine, ToolCallRequest } from "./policy.js";
@@ -66,12 +66,15 @@ interface Connected {
   spec: McpServerSpec;
   client: Client;
   transport: StdioClientTransport | StreamableHTTPClientTransport;
+  /** The server as the Garufile shows it, for messages. */
+  shownWhere: string;
   containerName?: string;
 }
 
 export class ToolBus {
   private readonly servers = new Map<string, Connected>();
   private tools: BusTool[] = [];
+  private authRoot = "";
 
   constructor(private readonly opts: BusOptions) {}
 
@@ -79,6 +82,7 @@ export class ToolBus {
   async connect(rawSpecs: readonly McpServerSpec[]): Promise<void> {
     const specs = rawSpecs.map((s) => expandSpec(s, process.env));
     const authRoot = this.opts.authRoot ?? resolve(process.cwd(), ".garu", "auth");
+    this.authRoot = authRoot;
     for (const [i, spec] of specs.entries()) {
       // Messages show the Garufile as written: a ${VAR} in an arg or URL is a secret, and it would land in the recorder.
       const shown = rawSpecs[i]!;
@@ -100,60 +104,86 @@ export class ToolBus {
           if (unauthorized) throw new Error(`tool server "${spec.name}" at ${shownWhere} rejected the credentials (401). Check the headers in its Garufile entry and the ${"$"}{VAR} values in .env, or set auth: oauth and run garu auth.`);
           throw new Error(`tool server "${spec.name}" at ${shownWhere} did not answer: ${msg || (e as Error).name || "connection failed"}`);
         }
-        this.servers.set(spec.name, { spec, client, transport });
+        this.servers.set(spec.name, { spec, client, transport, shownWhere });
         continue;
       }
-      // A server that signs in gets a current access token, and only that: never the client secret
-      // or the refresh token. It goes in through the environment (in a container, passed by name),
-      // so it isn't on any command line.
-      const signedIn = spec.auth === "oauth" ? { GARU_OAUTH_ACCESS_TOKEN: await localAccessToken(spec, authRoot) } : {};
-      const sb = this.opts.sandbox;
-      const wrapped = sb ? dockerArgs(spec, sb, this.opts.agent ?? "agent", process.cwd(), Object.keys(signedIn)) : undefined;
-      const makeTransport = () => new StdioClientTransport({
-        command: wrapped?.command ?? spec.command,
-        args: wrapped?.args ?? spec.args,
-        // the server's env goes into the process; in a container, docker passes each name on from there (never a value on a command line)
-        env: { ...getDefaultEnvironment(), ...spec.env, ...signedIn },
-        stderr: "pipe",
-        ...(spec.cwd && !wrapped ? { cwd: spec.cwd } : {}),
-      });
-      // A server that times out starting (npx fetching a package on a cold cache, Docker pulling an
-      // image, a busy machine) usually starts fine a moment later. One more try before giving up.
-      const MAX = 2;
-      let client: Client | undefined;
-      let transport = makeTransport();
-      for (let attempt = 1; attempt <= MAX; attempt++) {
-        const c = new Client({ name: "garu", version: "0.1.0" });
-        const connecting = c.connect(transport);
-        // The server's stderr is piped. Unread, a chatty one (Python servers log there) fills the pipe
-        // and blocks; read it as it comes, and keep the last lines for the "failed to start" message.
-        const stderrTail = drainStderr(transport);
-        try {
-          await connecting;
-          client = c;
-          break;
-        } catch (e) {
-          const raw = (e as Error).message + stderrTail.text();
-          // Timeouts and a process that died during the handshake are worth one more go; a command that
-          // doesn't exist (ENOENT) or Docker refusing are not.
-          const transient = /timed out|-32001|ETIMEDOUT|EAGAIN|ECONNRESET|connection closed/i.test(raw) && !/ENOENT/.test(raw);
-          if (transient && attempt < MAX) {
-            const waitMs = this.opts.startupRetryMs ?? 3000;
-            this.opts.recorder.record({ type: "tools.retry", server: spec.name, attempt, maxAttempts: MAX, waitMs, reason: raw.slice(0, 120) });
-            await transport.close().catch(() => {});
-            await new Promise((r) => setTimeout(r, waitMs));
-            transport = makeTransport();
-            continue;
-          }
-          const hint = wrapped ? explainDockerError(raw, sb!.image) : raw;
-          throw new Error(
-            `tool server "${spec.name}" failed to start${wrapped ? " in sandbox" : ""} (${shownWhere}): ${hint}`,
-          );
-        }
-      }
-      this.servers.set(spec.name, { spec, client: client!, transport, ...(wrapped ? { containerName: wrapped.containerName } : {}) });
+      this.servers.set(spec.name, await this.startLocal(spec, shownWhere, authRoot));
     }
     await this.refreshTools();
+  }
+
+  /** Start a local server, plain or in the sandbox. A signed-in one gets a current access token. */
+  private async startLocal(spec: StdioServerSpec, shownWhere: string, authRoot: string): Promise<Connected> {
+    // A server that signs in gets a current access token, and only that: never the client secret
+    // or the refresh token. It goes in through the environment (in a container, passed by name),
+    // so it isn't on any command line.
+    const signedIn = spec.auth === "oauth" ? { GARU_OAUTH_ACCESS_TOKEN: await localAccessToken(spec, authRoot) } : {};
+    const sb = this.opts.sandbox;
+    const wrapped = sb ? dockerArgs(spec, sb, this.opts.agent ?? "agent", process.cwd(), Object.keys(signedIn)) : undefined;
+    const makeTransport = () => new StdioClientTransport({
+      command: wrapped?.command ?? spec.command,
+      args: wrapped?.args ?? spec.args,
+      // the server's env goes into the process; in a container, docker passes each name on from there (never a value on a command line)
+      env: { ...getDefaultEnvironment(), ...spec.env, ...signedIn },
+      stderr: "pipe",
+      ...(spec.cwd && !wrapped ? { cwd: spec.cwd } : {}),
+    });
+    // A server that times out starting (npx fetching a package on a cold cache, Docker pulling an
+    // image, a busy machine) usually starts fine a moment later. One more try before giving up.
+    const MAX = 2;
+    let client: Client | undefined;
+    let transport = makeTransport();
+    for (let attempt = 1; attempt <= MAX; attempt++) {
+      const c = new Client({ name: "garu", version: "0.1.0" });
+      const connecting = c.connect(transport);
+      // The server's stderr is piped. Unread, a chatty one (Python servers log there) fills the pipe
+      // and blocks; read it as it comes, and keep the last lines for the "failed to start" message.
+      const stderrTail = drainStderr(transport);
+      try {
+        await connecting;
+        client = c;
+        break;
+      } catch (e) {
+        const raw = (e as Error).message + stderrTail.text();
+        // Timeouts and a process that died during the handshake are worth one more go; a command that
+        // doesn't exist (ENOENT) or Docker refusing are not.
+        const transient = /timed out|-32001|ETIMEDOUT|EAGAIN|ECONNRESET|connection closed/i.test(raw) && !/ENOENT/.test(raw);
+        if (transient && attempt < MAX) {
+          const waitMs = this.opts.startupRetryMs ?? 3000;
+          this.opts.recorder.record({ type: "tools.retry", server: spec.name, attempt, maxAttempts: MAX, waitMs, reason: raw.slice(0, 120) });
+          await transport.close().catch(() => {});
+          await new Promise((r) => setTimeout(r, waitMs));
+          transport = makeTransport();
+          continue;
+        }
+        const hint = wrapped ? explainDockerError(raw, sb!.image) : raw;
+        throw new Error(
+          `tool server "${spec.name}" failed to start${wrapped ? " in sandbox" : ""} (${shownWhere}): ${hint}`,
+        );
+      }
+    }
+    return { spec, client: client!, transport, shownWhere, ...(wrapped ? { containerName: wrapped.containerName } : {}) };
+  }
+
+  /** A local server that signs in: its access token is Garu's to renew. */
+  private signsIn(c: Connected): c is Connected & { spec: StdioServerSpec } {
+    return !isRemoteServer(c.spec) && c.spec.auth === "oauth";
+  }
+
+  /** Renew the sign-in token and restart the server with it. The tools are the same; the token isn't. */
+  private async renew(server: string, reason: string): Promise<Connected> {
+    const old = this.servers.get(server)!;
+    if (!this.signsIn(old)) return old;
+    this.opts.recorder.record({ type: "tools.renew", server, reason });
+    try {
+      await old.client.close();
+    } catch {
+      /* already gone */
+    }
+    if (old.containerName) await dockerRmForce(old.containerName);
+    const fresh = await this.startLocal(old.spec, old.shownWhere, this.authRoot);
+    this.servers.set(server, fresh);
+    return fresh;
   }
 
   async refreshTools(): Promise<BusTool[]> {
@@ -214,14 +244,19 @@ export class ToolBus {
       if (!approved) return { status: "denied", decision, by, callId, ...(note ? { note } : {}) };
     }
 
+    // A run can outlive its hour-long access token (the computer slept, or it was just long). The
+    // token is renewed and the server restarted before a call when it is about to run out, and once
+    // more when Google refuses it anyway, so a stale token never reads as a lost sign-in.
+    let c = this.servers.get(target.server)!;
+    if (this.signsIn(c) && signInFor(c.spec, this.authRoot).expiresSoon()) c = await this.renew(target.server, "the access token was about to run out");
     const started = Date.now();
-    const c = this.servers.get(target.server)!;
     try {
-      const result = await c.client.callTool(
-        { name: target.tool, arguments: args },
-        undefined,
-        { timeout: this.opts.callTimeoutMs ?? 60_000 },
-      );
+      const callOnce = (conn: Connected) => conn.client.callTool({ name: target.tool, arguments: args }, undefined, { timeout: this.opts.callTimeoutMs ?? 60_000 });
+      let result = await callOnce(c);
+      if (result.isError && this.signsIn(c) && /refused the (access token|sign-in)/i.test(extractText(result.content))) {
+        c = await this.renew(target.server, "Google refused the access token");
+        result = await callOnce(c);
+      }
       const durationMs = Date.now() - started;
       if (result.isError) {
         const error = extractText(result.content) || "tool reported an error";

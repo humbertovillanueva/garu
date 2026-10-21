@@ -52,7 +52,7 @@ function explain(status: number, body: string): string {
   } catch {
     /* not JSON */
   }
-  if (status === 401) return "Google refused the sign-in (it expired or was removed); it needs signing in again on the computer running Garu";
+  if (status === 401) return "Google refused the access token (over an hour old, or the sign-in was removed). Garu renews it and tries once more; if that fails too, sign in again on the computer running Garu";
   if (status === 403 && /insufficient|scope|permission/i.test(msg)) return `this sign-in doesn't include permission for that (${msg})`;
   if (status === 404) return `not found (${msg})`;
   return `Google answered ${status}: ${msg}`;

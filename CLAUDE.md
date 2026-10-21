@@ -119,6 +119,8 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   in `mcp-google/src/google.ts` and in Bea's block rule, both editions.
 - Scheduler catch-up: a cron fire missed in the last 6 h (machine asleep/off) runs once on start,
   trigger `catch-up:<cron>`. Don't double-fire; don't run catch-ups in parallel.
+- On macOS a run holds the Mac out of idle sleep while it works (`kernel/src/awake.ts`, caffeinate), and a
+  local server that signs in gets its access token renewed mid-run when it's about to run out (`bus.ts`).
 - UI: black and white, no orange, in a dark and a light theme: every color is a token in `app.css`
   (the light theme flips them under `[data-theme="light"]`), never a hex in a component. Agent avatar
   colors come from `packages/ui/src/lib/colors.ts` (KIND_COLOR) and are used everywhere an agent is

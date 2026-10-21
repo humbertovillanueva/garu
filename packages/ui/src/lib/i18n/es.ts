@@ -632,6 +632,7 @@ export const es: Record<string, string> = {
   "budget cap hit: {cost} reached the cap of {cap} — {n} call(s) not executed": "tope de presupuesto alcanzado: {cost} llegó al tope de {cap} — {n} llamada(s) sin ejecutar",
   "model busy ({reason}) — retrying in {s}s, attempt {attempt} of {max}": "modelo ocupado ({reason}) — reintentando en {s}s, intento {attempt} de {max}",
   "tool server \"{server}\" didn't start in time — retrying in {s}s": "el servidor de herramientas \"{server}\" no arrancó a tiempo — reintentando en {s}s",
+  "tool server \"{server}\" restarted with a renewed sign-in token ({reason})": "el servidor de herramientas \"{server}\" se reinició con un token de sesión renovado ({reason})",
 
   // ---- cost
   "Daily spend by agent": "Gasto diario por agente",

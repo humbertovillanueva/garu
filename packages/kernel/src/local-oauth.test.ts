@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer, type Server } from "node:http";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -154,6 +154,28 @@ describe("ToolBus with a local server that signs in", () => {
     expect(JSON.stringify(out)).toContain("token=tok-123");
     expect(JSON.stringify(out)).not.toContain("never-handed-out");
     await bus.close();
+  }, 30_000);
+
+  it("renews a token that ran out during the run, and restarts the server with it", async () => {
+    const issuer = await startIssuer();
+    try {
+      const r = root();
+      const spec = local(issuer.url, readonly);
+      signInFor(spec, r).saveTokens({ access_token: "tok-old", token_type: "Bearer", expires_in: 3599, refresh_token: "rt" });
+      const bus = new ToolBus({ policy, recorder: rec(), approver: async () => ({ approved: true, by: "t" }), authRoot: r });
+      await bus.connect([spec]);
+      expect(JSON.stringify(await bus.call("gmail.whoami", {}))).toContain("token=tok-old");
+      // Two hours pass mid-run (the computer slept): the token on disk is stale now.
+      const file = join(r, readdirSync(r).find((n) => n.endsWith(".json"))!);
+      const stored = JSON.parse(readFileSync(file, "utf8")) as { tokensSavedAt: string };
+      stored.tokensSavedAt = new Date(Date.now() - 2 * 3600_000).toISOString();
+      writeFileSync(file, JSON.stringify(stored));
+      expect(JSON.stringify(await bus.call("gmail.whoami", {}))).toContain("token=fresh-1");
+      expect(issuer.refreshes()).toBe(1);
+      await bus.close();
+    } finally {
+      await issuer.close();
+    }
   }, 30_000);
 
   it("won't start it without a sign-in", async () => {
