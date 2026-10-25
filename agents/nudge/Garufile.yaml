@@ -1,4 +1,4 @@
-# Nudge — Every evening at nine, check GitHub for a commit of yours today and speak up if there is none.
+# Nudge — Every evening at nine, and again at eleven, check GitHub for a commit of yours today and speak up if there is none.
 #
 # Made with `garu new`. The policy starts closed: only the tools named below,
 # everything else blocked. Edit freely; `garu validate` checks it.
@@ -8,7 +8,7 @@
 # day at 1:00 instead of midnight, so when it errs it errs toward nudging you.
 
 name: nudge
-description: "Every evening at nine, check GitHub for a commit of yours today and speak up if there is none."
+description: "Every evening at nine, and again at eleven, check GitHub for a commit of yours today and speak up if there is none."
 persona:
   kind: rabbit
   tagline: "Keeps the streak alive."
@@ -16,6 +16,7 @@ model: gemini/gemini-3.5-flash-lite
 
 triggers:
   - cron: "0 21 * * *"        # every evening at 21:00 local: late enough to be fair, early enough to fix it
+  - cron: "0 23 * * *"        # and a last call at 23:00, for the night the first one was missed or ignored
 
 budget:
   maxCostUsd: 0.01        # a run stops before it crosses this

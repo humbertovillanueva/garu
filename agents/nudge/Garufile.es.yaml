@@ -1,4 +1,4 @@
-# Nudge — Cada noche a las nueve, revisa en GitHub si hoy hubo un commit tuyo y avisa si no lo hay.
+# Nudge — Cada noche a las nueve, y otra vez a las once, revisa en GitHub si hoy hubo un commit tuyo y avisa si no lo hay.
 #
 # Hecho con `garu new`. La política empieza cerrada: solo las herramientas nombradas abajo,
 # todo lo demás bloqueado. Edítalo con libertad; `garu validate` lo revisa.
@@ -11,7 +11,7 @@
 # empieza a la 1:00 en vez de a medianoche, así que cuando se equivoca, se equivoca avisándote de más.
 
 name: nudge
-description: "Cada noche a las nueve, revisa en GitHub si hoy hubo un commit tuyo y avisa si no lo hay."
+description: "Cada noche a las nueve, y otra vez a las once, revisa en GitHub si hoy hubo un commit tuyo y avisa si no lo hay."
 language: es
 persona:
   kind: rabbit
@@ -20,6 +20,7 @@ model: gemini/gemini-3.5-flash-lite
 
 triggers:
   - cron: "0 21 * * *"        # cada noche a las 21:00 locales: tarde para ser justo, temprano para arreglarlo
+  - cron: "0 23 * * *"        # y un último aviso a las 23:00, para la noche en que el primero se perdió o se ignoró
 
 budget:
   maxCostUsd: 0.01        # una corrida se detiene antes de pasar de aquí
