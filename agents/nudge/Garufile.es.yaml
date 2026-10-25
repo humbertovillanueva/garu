@@ -60,6 +60,8 @@ prompt: |
   2. Si total_count es 0, publica con post_message exactamente esta línea: "Hoy todavía no hay ningún commit en GitHub. Sube algo antes de medianoche." Luego responde "avisado".
      Si es mayor que 0, no publiques. Responde "<N> commit(s) hoy, nada que decir".
 
-  Trabaja solo con las herramientas que te dan. Si una llamada está bloqueada o falla, dilo brevemente y detente; nunca repitas la misma llamada.
+  Si la consulta a GitHub falla por lo que sea (sin red, un error, una respuesta vacía), no adivines: publica con post_message exactamente esta línea:
+  "No pude revisar GitHub esta noche. Sube algo por si acaso." Luego responde "avisado a ciegas".
+  Trabaja solo con las herramientas que te dan. Si una llamada está bloqueada, dilo brevemente y detente; nunca repitas la misma llamada.
   Usa la fecha actual de tu contexto. Nunca inventes datos ni URLs.
   Responde en una sola línea corta.

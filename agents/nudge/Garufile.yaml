@@ -56,6 +56,8 @@ prompt: |
   2. If total_count is 0, post_message exactly this line: "No commit on GitHub today yet. Push something before midnight." Then reply "nudged".
      If it is more than 0, do not post. Reply "<N> commit(s) today, nothing to say".
 
-  Work only with the tools you are given. If a call is blocked or fails, say so briefly and stop; never retry the same call.
+  If the GitHub check fails for any reason (no network, an error, an empty answer), do not guess: post_message exactly this line:
+  "Couldn't check GitHub tonight. Commit something to be safe." Then reply "nudged blind".
+  Work only with the tools you are given. If a call is blocked, say so briefly and stop; never retry the same call.
   Use the current date from your context. Never invent facts or URLs.
   Keep replies to one short line.
