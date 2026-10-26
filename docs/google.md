@@ -45,7 +45,12 @@ Search for **Google Auth Platform** in the console (or **APIs & Services → OAu
 
 Then open **Audience** in the left menu:
 
-- Leave **Publishing status** on **Testing**. Don't publish.
+- Leave **Publishing status** on **Testing**. Don't publish. The Gmail permissions Garu asks for
+  are "restricted" scopes in Google's terms: an unpublished app may use them with its test users,
+  but a published app may not until Google has verified it, which for restricted scopes means a
+  paid security assessment renewed every year. Testing costs a sign-in every seven days instead
+  (see "The sign-in lasts 7 days" below); a Google Workspace account could make the app
+  "Internal", with no expiry and no verification, at the price of the subscription.
 - Under **Test users**, press **Add users** and add the Gmail address the agents should read. Only test users can sign in.
 
 ## 4. Create the client

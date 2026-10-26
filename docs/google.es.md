@@ -45,7 +45,13 @@ Busca **Google Auth Platform** en la consola (o **APIs y servicios → Pantalla 
 
 Luego abre **Público** en el menú de la izquierda:
 
-- Deja el **Estado de publicación** en **Prueba** ("Testing"). No lo publiques.
+- Deja el **Estado de publicación** en **Prueba** ("Testing"). No lo publiques. Los permisos de
+  Gmail que Garu pide son ámbitos "restringidos" en términos de Google: una app sin publicar puede
+  usarlos con sus usuarios de prueba, pero una publicada no puede hasta que Google la verifique, lo
+  que para ámbitos restringidos significa una evaluación de seguridad de pago que se renueva cada
+  año. Prueba cuesta, a cambio, iniciar sesión cada siete días (ver "El inicio de sesión dura 7
+  días" más abajo); una cuenta de Google Workspace permitiría una app "Interna", sin caducidad ni
+  verificación, al precio de la suscripción.
 - En **Usuarios de prueba**, pulsa **Agregar usuarios** y agrega la dirección de Gmail que los agentes deben leer. Solo los usuarios de prueba pueden iniciar sesión.
 
 ## 4. Crea el cliente
