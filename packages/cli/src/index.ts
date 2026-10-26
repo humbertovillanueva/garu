@@ -787,13 +787,18 @@ program
       if (!isRemoteServer(spec)) {
         // A local server has nothing to connect to yet: sign in with the issuer directly. Garu keeps
         // the tokens and hands the server a current access token at the start of each run.
+        // Already signed in: running this again signs in again, which is what the "sign in again soon"
+        // warning asks for (Google ends a Testing-mode sign-in after seven days). The old tokens go
+        // first; with them in place the flow would only refresh them.
         if (provider.signedIn()) {
-          stdout.write(`✔ ${t("already signed in for {server} ({where})", { server: spec.name, where })}\n`);
-        } else {
-          if ((await auth(interactive, { serverUrl: where })) === "REDIRECT") await auth(interactive, { serverUrl: where, authorizationCode: await waitForCode() });
-          if (!provider.signedIn()) fail(t("the sign-in for {server} didn't finish; run this again", { server: spec.name }));
-          stdout.write(`✔ ${t("signed in for {server} with {host} — {n} permission(s) asked for", { server: spec.name, host: new URL(where).host, n: spec.oauth?.scopes?.length ?? 0 })}\n`);
+          const at = provider.signedInAt();
+          const days = at ? Math.floor((Date.now() - at.getTime()) / 86_400_000) : 0;
+          stdout.write(`${days === 0 ? t("signed in today; signing in again replaces it") : days === 1 ? t("signed in yesterday; signing in again replaces it") : t("signed in {days} days ago; signing in again replaces it", { days })}\n`);
+          provider.invalidateCredentials("tokens");
         }
+        if ((await auth(interactive, { serverUrl: where })) === "REDIRECT") await auth(interactive, { serverUrl: where, authorizationCode: await waitForCode() });
+        if (!provider.signedIn()) fail(t("the sign-in for {server} didn't finish; run this again", { server: spec.name }));
+        stdout.write(`✔ ${t("signed in for {server} with {host} — {n} permission(s) asked for", { server: spec.name, host: new URL(where).host, n: spec.oauth?.scopes?.length ?? 0 })}\n`);
         stdout.write(`  ${t("tokens: {dir}/ (shared by every agent asking {where} for the same permissions)", { dir: opts.authRoot, where })}\n`);
         return;
       }

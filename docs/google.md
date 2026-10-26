@@ -109,7 +109,7 @@ Bea's labels are Spanish too: in step 7, nest `Responder`, `Para saber`, `Recibo
 
 ## Good to know
 
-- **The sign-in lasts 7 days in Testing.** Google expires it for apps that aren't published, because Gmail access is sensitive. From the sixth day the home screen says **Sign in again soon** with the command; after the seventh the agent shows **needs sign-in**. Either way, run its `garu auth` command again.
+- **The sign-in lasts 7 days in Testing.** Google expires it for apps that aren't published, because Gmail access is sensitive. From the sixth day the home screen says **Sign in again soon** with the command; after the seventh the agent shows **needs sign-in**. Either way, run its `garu auth` command again: it replaces the old sign-in.
 - **Your email goes to the model you chose.** The text of the threads the agents read is sent to the model in their Garufile (Gemini by default). A local model through Ollama keeps it on your machine.
 - **Tokens stay on your computer**, in `.garu/auth/` (gitignored). `garu auth <Garufile> <server> --forget` removes one, and you can revoke Garu's access at any time at [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
 - **Google's own Gmail and Calendar MCP servers** answer only projects enrolled in the Google Workspace Developer Preview Program. Garu's server uses the regular APIs instead, so it works with a personal account today.
