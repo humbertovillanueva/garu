@@ -223,6 +223,65 @@ late. The twelfth tester opted in on 2026-10-16, so the fourteen days end on
 "Apply for production" on the dashboard: Google asks about the test (how
 feedback came in, what changed because of it), so keep notes of both.
 
+## Applying for production (draft answers, 2026-10-26)
+
+Google's form (Dashboard → Apply for production, from 2026-10-30) has three parts;
+the questions are in the Play Console help article "App testing requirements for
+new personal developer accounts". Answers below are true as of the 26th; the
+lines marked [confirm] need Humberto's word before they go in.
+
+**Part 1 — About your closed test**
+
+- *How easy was it to recruit testers?* Easy. Family and friends, asked in one
+  WhatsApp message with the opt-in link and three steps; twelve were opted in
+  the same morning the tester list went live (2026-10-16), fifteen on the list.
+- *Did testers use all features? Did usage match production users?* Not all,
+  and no, by design. The app is a companion to Garu on a computer; production
+  users are developers who pair it with their own Garu. The testers were
+  family: three on Android installed it and used "Try the demo", which walks
+  every screen (home, inbox with a decision to approve or decline, an agent's
+  page and chat, the agents list, cost, pairing) on made-up data in their
+  language; the rest opted in from iPhones and could not install. Nobody paired
+  with a real Garu. [confirm: what the three Android testers tried and said]
+- *Feedback and how it was collected.* WhatsApp messages and screenshots to the
+  developer, plus support@garuagents.com as the listed channel. What came in:
+  the first tester to open the link saw "App not available" because the
+  tester list was still in review (timing, fixed by waiting); a Spanish-speaking
+  tester saw agent descriptions in English, which led to a fully Spanish demo
+  (agents, sample mail, labels) chosen by the phone's language; the Spanish
+  listing showed English screenshots, replaced with Spanish ones on
+  2026-10-19. [confirm: anything else the family said]
+
+**Part 2 — About your app**
+
+- *Target audience.* Developers and technical hobbyists, 18+, who run AI agents
+  on their own computer with the open-source Garu runtime and want to approve
+  their actions, watch their runs and see their cost from a phone. English and
+  Spanish speakers; the app follows the phone's language.
+- *Value.* The control room in your pocket. An agent that wants to do something
+  the owner's policy marks "ask" pauses until the owner approves or declines on
+  the phone; every run is replayable; every run has a price. No cloud, no
+  account: the app talks only to the owner's own computer.
+- *Install range, first year.* The smallest bucket offered. It's a companion to
+  a developer tool with a small audience at launch.
+
+**Part 3 — About your production readiness**
+
+- *Changes made from the closed test.* A "Try the demo" button on the first
+  screen, so a reviewer or a tester without a computer can see every screen;
+  a Spanish demo beside the English one, picked by the phone's language; Spanish
+  screenshots for the Spanish listing; the listing text and the reviewer
+  instructions now say what the demo is and that it is the one thing the app
+  reaches that isn't the user's own. [confirm: whether a build 5 goes out
+  before applying; build 4 already has the demo button]
+- *How readiness was decided.* Twelve testers opted in for the full fourteen
+  days with no crash reports; the app shows a crash screen instead of a blank
+  page if anything fails; it has a dark and a light theme, an accessibility
+  pass (screen-reader names, 44 px targets, reduced motion), fits a 240 pt
+  phone without sideways scroll; the policy declarations (data safety "no data
+  collected", content rating Everyone, 18+, sign-in details) are complete; the
+  demo exercises every screen and is what a reviewer will use.
+
 ## Version naming
 
 `versionName` follows the repo (`0.1.0`), `versionCode` increments by 1 per
