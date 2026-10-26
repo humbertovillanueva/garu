@@ -5,13 +5,15 @@ import { spawn as nodeSpawn, type ChildProcess } from "node:child_process";
  * a minute opens its eyes for a couple of seconds every quarter hour; a run that starts in one of
  * those windows would otherwise freeze mid-step and finish hours later, with its network calls timed
  * out and its hour-long access tokens gone stale. macOS only (`caffeinate`); elsewhere a no-op.
- * The hold ends with the run, and with this process if it dies first (`-w`).
+ * `-i` holds off idle sleep; `-s` also holds a dark wake open, which macOS honours on power only,
+ * so a run that fires while a plugged-in Mac is napping keeps it up. The hold ends with the run,
+ * and with this process if it dies first (`-w`).
  */
 export function holdAwake(opts: { platform?: string; spawn?: typeof nodeSpawn } = {}): () => void {
   if ((opts.platform ?? process.platform) !== "darwin") return () => {};
   let child: ChildProcess | undefined;
   try {
-    child = (opts.spawn ?? nodeSpawn)("caffeinate", ["-i", "-w", String(process.pid)], { stdio: "ignore" });
+    child = (opts.spawn ?? nodeSpawn)("caffeinate", ["-i", "-s", "-w", String(process.pid)], { stdio: "ignore" });
     // No caffeinate (an unusual Mac): the run goes on without the hold.
     child.on("error", () => (child = undefined));
   } catch {

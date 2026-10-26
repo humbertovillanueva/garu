@@ -10,7 +10,7 @@ describe("holdAwake", () => {
       return { kill: () => (killed++, true), on: () => undefined };
     }) as unknown as typeof import("node:child_process").spawn;
     const release = holdAwake({ platform: "darwin", spawn });
-    expect(calls).toEqual([{ cmd: "caffeinate", args: ["-i", "-w", String(process.pid)] }]);
+    expect(calls).toEqual([{ cmd: "caffeinate", args: ["-i", "-s", "-w", String(process.pid)] }]);
     release();
     expect(killed).toBe(1);
     const none = holdAwake({ platform: "linux", spawn });
