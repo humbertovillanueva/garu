@@ -1,12 +1,12 @@
-# Un agente siempre activo. Cada hora revisa el espacio de trabajo y agrega una
+# Un agente siempre activo. Cada tres horas revisa el espacio de trabajo y agrega una
 # línea a tick.log diciendo qué hay. Diminuto a propósito: existe para mostrar a
 # `garu up` manteniendo vivo un agente con horario, con cada ejecución en el registro.
 #
 #   garu up examples/tick/Garufile.yaml
 #   garu log tick
 #
-# Su única escritura es todo su trabajo, así que es `allow`: un agente que te pregunta cada
-# hora es ruido, no seguridad. Todo lo que no sea tick.log está bloqueado.
+# Su única escritura es todo su trabajo, así que es `allow`: un agente que te pregunta ocho
+# veces al día es ruido, no seguridad. Todo lo que no sea tick.log está bloqueado.
 #
 # Esta es la edición en español de examples/tick/Garufile.yaml. Para usarla, cópiala encima
 # de Garufile.yaml.
@@ -20,10 +20,10 @@ persona:
 model: gemini/gemini-3.5-flash-lite
 
 triggers:
-  - cron: "0 * * * *"
+  - cron: "0 */3 * * *"      # ocho latidos al día prueban el horario igual que 24, con un tercio del registro
 
 budget:
-  maxCostUsd: 0.01          # por ejecución; cada hora son ~720 al mes, menos de $8 a precio de lista aunque todas tocaran el tope
+  maxCostUsd: 0.01          # por ejecución; cada tres horas son ~240 al mes, menos de $3 a precio de lista aunque todas tocaran el tope
 
 tools:
   - name: fs

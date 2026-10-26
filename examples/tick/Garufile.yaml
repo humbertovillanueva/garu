@@ -1,12 +1,12 @@
-# An always-on agent. Every hour it checks the workspace and appends one
+# An always-on agent. Every three hours it checks the workspace and appends one
 # line to tick.log saying what's there. Tiny on purpose: it exists to show
 # `garu up` keeping an agent alive on a schedule, with every run in the log.
 #
 #   garu up examples/tick/Garufile.yaml
 #   garu log tick
 #
-# Its one write is its whole job, so it's `allow` — an agent that asks you every
-# hour is noise, not safety. Anything outside tick.log is blocked.
+# Its one write is its whole job, so it's `allow` — an agent that asks you eight
+# times a day is noise, not safety. Anything outside tick.log is blocked.
 
 name: tick
 description: Appends a one-line status to tick.log on a schedule.
@@ -16,10 +16,10 @@ persona:
 model: gemini/gemini-3.5-flash-lite
 
 triggers:
-  - cron: "0 * * * *"
+  - cron: "0 */3 * * *"      # eight beats a day prove the schedule as well as 24 did, with a third of the log
 
 budget:
-  maxCostUsd: 0.01          # per run; hourly is ~720 runs a month, under $8 at list price even if every run hit the cap
+  maxCostUsd: 0.01          # per run; every three hours is ~240 runs a month, under $3 at list price even if every run hit the cap
 
 tools:
   - name: fs
