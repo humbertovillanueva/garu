@@ -28,5 +28,12 @@ server.registerTool(
   { description: "Always errors", inputSchema: {} },
   async () => ({ isError: true, content: [{ type: "text", text: "nope" }] }),
 );
+// A call that is cut off once (a timeout, a Mac that slept through it) and works the second time:
+// one that only reads, one that writes.
+const cuts = { cut_read: 0, cut_write: 0 };
+const cutOnce = (name) => async () =>
+  cuts[name]++ === 0 ? { isError: true, content: [{ type: "text", text: "This operation was aborted" }] } : { content: [{ type: "text", text: "fine" }] };
+server.registerTool("cut_read", { description: "Cut off once, then answers", inputSchema: {}, annotations: { readOnlyHint: true } }, cutOnce("cut_read"));
+server.registerTool("cut_write", { description: "Cut off once, then answers; a write", inputSchema: {} }, cutOnce("cut_write"));
 
 await server.connect(new StdioServerTransport());

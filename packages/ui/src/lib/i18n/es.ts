@@ -633,6 +633,7 @@ export const es: Record<string, string> = {
   "model busy ({reason}) — retrying in {s}s, attempt {attempt} of {max}": "modelo ocupado ({reason}) — reintentando en {s}s, intento {attempt} de {max}",
   "tool server \"{server}\" didn't start in time — retrying in {s}s": "el servidor de herramientas \"{server}\" no arrancó a tiempo — reintentando en {s}s",
   "tool server \"{server}\" restarted with a renewed sign-in token ({reason})": "el servidor de herramientas \"{server}\" se reinició con un token de sesión renovado ({reason})",
+  "call cut off, trying once more ({reason})": "llamada cortada, se intenta una vez más ({reason})",
 
   // ---- cost
   "Daily spend by agent": "Gasto diario por agente",

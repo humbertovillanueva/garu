@@ -40,7 +40,7 @@ describe("ToolBus (real MCP server over stdio)", () => {
 
   it("discovers tools under <server>.<tool>", () => {
     const names = bus.listTools().map((t) => t.qualified).sort();
-    expect(names).toEqual(["echo.add", "echo.danger", "echo.echo", "echo.fail"]);
+    expect(names).toEqual(["echo.add", "echo.cut_read", "echo.cut_write", "echo.danger", "echo.echo", "echo.fail"]);
   });
 
   it("allow → calls the server and returns content", async () => {
@@ -92,6 +92,15 @@ describe("ToolBus (real MCP server over stdio)", () => {
     expect(blockIdx).toBeGreaterThan(0);
     const after = readRun(rec.path)[blockIdx + 1];
     expect(after?.event.type).toBe("tool.request"); // next call, not a tool.result for the blocked one
+  });
+
+  it("tries a call that only reads once more when it was cut off, and leaves a write alone", async () => {
+    const read = await bus.call("echo.cut_read", {});
+    expect(read.status).toBe("ok");
+    expect(readRun(rec.path).some((e) => e.event.type === "tool.retry")).toBe(true);
+    const write = await bus.call("echo.cut_write", {});
+    expect(write.status).toBe("error");
+    expect((write as { error: string }).error).toMatch(/aborted .*cut off after \d+ s/);
   });
 });
 

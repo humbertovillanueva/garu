@@ -39,6 +39,9 @@ export function googleClient(token: string | undefined, fetchFn: typeof fetch = 
       const text = await res.text();
       if (!res.ok) throw new GoogleError(res.status, explain(res.status, text));
       return (text ? JSON.parse(text) : {}) as T;
+    } catch (e) {
+      if ((e as Error).name === "AbortError") throw new GoogleError(0, `no answer from Google within ${Math.round(TIMEOUT_MS / 1000)} s`);
+      throw e;
     } finally {
       clearTimeout(timer);
     }

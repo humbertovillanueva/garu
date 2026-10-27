@@ -27,6 +27,8 @@ export interface BusTool {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  /** The server says the tool only reads (MCP readOnlyHint): safe to try again when a call is cut off. */
+  readOnly: boolean;
 }
 
 export interface ApprovalContext {
@@ -197,6 +199,7 @@ export class ToolBus {
           name: t.name,
           description: t.description ?? "",
           inputSchema: (t.inputSchema as Record<string, unknown>) ?? { type: "object" },
+          readOnly: t.annotations?.readOnlyHint === true,
         });
       }
     }
@@ -250,23 +253,48 @@ export class ToolBus {
     let c = this.servers.get(target.server)!;
     if (this.signsIn(c) && signInFor(c.spec, this.authRoot).expiresSoon()) c = await this.renew(target.server, "the access token was about to run out");
     const started = Date.now();
+    const timeoutMs = this.opts.callTimeoutMs ?? 60_000;
+    const readOnly = this.tools.find((t) => t.qualified === qualified)?.readOnly === true;
+    // A call that was cut off: a timeout, or an abort because the machine slept through it. The
+    // message says how long it really took, so a model doesn't invent a reason for the gap.
+    const cutOff = (text: string) => /aborted|timed out|timeout|no answer/i.test(text);
+    const cutOffReason = (text: string) => {
+      const s = Math.round((Date.now() - started) / 1000);
+      return s > (2 * timeoutMs) / 1000
+        ? `${text} (the call was cut off after ${s} s, far past its ${Math.round(timeoutMs / 1000)} s limit: the computer probably slept)`
+        : `${text} (the call was cut off after ${s} s)`;
+    };
     try {
-      const callOnce = (conn: Connected) => conn.client.callTool({ name: target.tool, arguments: args }, undefined, { timeout: this.opts.callTimeoutMs ?? 60_000 });
-      let result = await callOnce(c);
+      const callOnce = (conn: Connected) => conn.client.callTool({ name: target.tool, arguments: args }, undefined, { timeout: timeoutMs });
+      let result: Awaited<ReturnType<typeof callOnce>>;
+      try {
+        result = await callOnce(c);
+      } catch (e) {
+        // The SDK's own timeout arrives as an exception. A call that only reads is safe to try once more.
+        if (!(readOnly && cutOff((e as Error).message))) throw e;
+        rec.record({ type: "tool.retry", callId, reason: cutOffReason((e as Error).message) });
+        result = await callOnce(c);
+      }
       if (result.isError && this.signsIn(c) && /refused the (access token|sign-in)/i.test(extractText(result.content))) {
         c = await this.renew(target.server, "Google refused the access token");
         result = await callOnce(c);
       }
+      if (result.isError && readOnly && cutOff(extractText(result.content))) {
+        rec.record({ type: "tool.retry", callId, reason: cutOffReason(extractText(result.content)) });
+        result = await callOnce(c);
+      }
       const durationMs = Date.now() - started;
       if (result.isError) {
-        const error = extractText(result.content) || "tool reported an error";
+        const text = extractText(result.content) || "tool reported an error";
+        const error = cutOff(text) ? cutOffReason(text) : text;
         rec.record({ type: "tool.result", callId, ok: false, durationMs, error });
         return { status: "error", error, callId };
       }
       rec.record({ type: "tool.result", callId, ok: true, durationMs, result: result.content });
       return { status: "ok", result: result.content, callId };
     } catch (e) {
-      const error = (e as Error).message;
+      const text = (e as Error).message;
+      const error = cutOff(text) ? cutOffReason(text) : text;
       rec.record({ type: "tool.result", callId, ok: false, durationMs: Date.now() - started, error });
       return { status: "error", error, callId };
     }
