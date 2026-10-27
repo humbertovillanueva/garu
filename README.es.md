@@ -3,7 +3,7 @@
 <p align="center">
   <img src="docs/demo.gif" alt="Bea, un agente para la bandeja de entrada, y sus reglas en palabras simples: leer y clasificar el correo está permitido, no puede enviar correo en absoluto, y redactar una respuesta pregunta primero. La regla de redactar una respuesta se convierte en una tarjeta de aprobación para una respuesta a Lena; un toque la aprueba y se guarda en Borradores, no se envía." width="900">
 </p>
-<p align="center"><sub>Del <a href="docs/video/garu-v7-16x9.mp4">video de lanzamiento de 45 segundos</a>: las reglas reales de Bea, un borrador que espera tu toque, guardado y nunca enviado. Las pantallas de la sala de control se reconstruyeron para el video; el correo es un ejemplo.</sub></p>
+<p align="center"><sub>Del <a href="docs/video/garu-v8-16x9.mp4">video de lanzamiento de 45 segundos</a>: las reglas reales de Bea, un borrador que espera tu toque, guardado y nunca enviado. Las pantallas de la sala de control se reconstruyeron para el video; el correo es un ejemplo.</sub></p>
 
 <p align="center"><img src="docs/brand/logo.png" alt="Garu" width="180"></p>
 

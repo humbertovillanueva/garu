@@ -3,7 +3,7 @@
 <p align="center">
   <img src="docs/demo.gif" alt="Bea, an inbox agent, and her rules in plain words: reading and filing mail are allowed, she can't send email at all, and drafting a reply asks first. The draft-a-reply rule grows into an approval card for a reply to Lena; one tap approves it and it's saved in Drafts, not sent." width="900">
 </p>
-<p align="center"><sub>From the <a href="docs/video/garu-v7-16x9.mp4">45-second launch video</a>: Bea's real rules, a draft that waits for your tap, saved and never sent. The control room's surfaces rebuilt for video; the email is an example.</sub></p>
+<p align="center"><sub>From the <a href="docs/video/garu-v8-16x9.mp4">45-second launch video</a>: Bea's real rules, a draft that waits for your tap, saved and never sent. The control room's surfaces rebuilt for video; the email is an example.</sub></p>
 
 <p align="center"><img src="docs/brand/logo.png" alt="Garu" width="180"></p>
 
