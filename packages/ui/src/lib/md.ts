@@ -5,13 +5,18 @@
  */
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+/** The note a screen reader hears after an outside link. English here; the app points it at the current language (i18n.svelte.ts). */
+let newTabNote = () => "(opens in a new tab)";
+export function setNewTabNote(f: () => string): void { newTabNote = f; }
+const link = (href: string, text: string) => `<a class="underline decoration-mute underline-offset-2 hover:text-fg" href="${href}" target="_blank" rel="noopener noreferrer">${text}<span class="sr-only"> ${esc(newTabNote())}</span></a>`;
+
 function inline(s: string): string {
   return esc(s)
     .replace(/`([^`]+)`/g, '<code class="mono rounded bg-bg/60 px-1 py-0.5 text-[0.92em]">$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>")
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a class="underline decoration-mute underline-offset-2 hover:text-fg" href="$2" target="_blank" rel="noopener noreferrer">$1<span class="sr-only"> (opens in a new tab)</span></a>')
-    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a class="underline decoration-mute underline-offset-2 hover:text-fg" href="$2" target="_blank" rel="noopener noreferrer">$2<span class="sr-only"> (opens in a new tab)</span></a>');
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_m, text: string, href: string) => link(href, text))
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, (_m, before: string, href: string) => before + link(href, href));
 }
 
 /** `breaks`: a single newline is a line break, for short summaries written one item per line. */

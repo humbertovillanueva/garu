@@ -5,6 +5,7 @@
  */
 import { prefs } from "./prefs.svelte";
 import { es } from "./i18n/es";
+import { setNewTabNote } from "./md";
 
 export type Locale = "en" | "es";
 const fromDevice = (): Locale => (typeof navigator !== "undefined" && /^es\b/i.test(navigator.language) ? "es" : "en");
@@ -29,6 +30,8 @@ export function t(key: string, vars?: Record<string, string | number>): string {
   const text = locale() === "es" ? (es[key] ?? key) : key;
   return vars ? text.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : text;
 }
+// Links inside an agent's Markdown get their screen-reader note in the same language as the page.
+setNewTabNote(() => t("(opens in a new tab)"));
 
 /**
  * A whole sentence in pieces, for one that carries a path, a command, a link or a name that needs
