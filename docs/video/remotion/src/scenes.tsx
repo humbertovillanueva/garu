@@ -114,7 +114,7 @@ export const Hook: React.FC = () => {
 // ================================================================= 2 · meet
 const AGENTS: { kind: Kind; name: string; what: string; when: string }[] = [
   { kind: "fox", name: "Tomay", what: "Reads your calendar and preps every meeting from your email.", when: "Weekdays · 7:00" },
-  { kind: "bee", name: "Bea", what: "Sorts your inbox and drafts the replies. Never sends.", when: "Weekdays · 7:15" },
+  { kind: "bee", name: "Bea", what: "Sorts your inbox and drafts the replies. Never sends.", when: "Weekdays · 8:00" },
   { kind: "owl", name: "Rook", what: "Checks your GitHub repo for new stars and issues.", when: "Mondays · 8:00" },
   { kind: "octopus", name: "Atlas", what: "Reads your backlog in Linear and says what's next.", when: "When you ask" },
 ];
@@ -214,7 +214,7 @@ export const Brief: React.FC = () => {
           </div>
           <span style={{ fontSize: 12 * u, color: C.mute, fontVariantNumeric: "tabular-nums" }}>7:00 AM</span>
         </div>
-        <div style={{ marginTop: 16 * u, fontSize: 19 * u, fontWeight: 600, letterSpacing: "-0.02em" }}>Your day — Monday, October 12</div>
+        <div style={{ marginTop: 16 * u, fontSize: 19 * u, fontWeight: 600, letterSpacing: "-0.02em" }}>Your day — Monday</div>
         {BRIEF.map((b, i) => (
           <Section key={i} at={22 + i * 9} u={u} k={b.k} v={b.v} />
         ))}
@@ -532,7 +532,9 @@ export const Learn: React.FC = () => {
                 <Btn u={u}>Not now</Btn>
               </>
             ) : (
-              <span style={{ fontSize: 14 * u, color: C.allow, opacity: added, transform: `translateY(${(1 - added) * 10}px)` }}>✓ Drafts now save without asking. Never sent.</span>
+              <span style={{ fontSize: 13.5 * u, color: C.allow, opacity: added, transform: `translateY(${(1 - added) * 10}px)` }}>
+                Added to <Mono style={{ fontSize: 12.5 * u }}>agents/bea/Garufile.yaml</Mono>. It applies from the next run.
+              </span>
             )}
           </div>
         </Panel>
@@ -601,7 +603,7 @@ export const Proof: React.FC = () => {
             <div style={{ opacity: l1 >= 20 ? 1 : 0 }}>
               <span style={{ color: C.fg }}>garu control room</span> → <span style={{ color: C.paper, textDecoration: "underline" }}>http://127.0.0.1:4000</span>
             </div>
-            <div style={{ opacity: l1 >= 24 ? 1 : 0 }}>running 4 cron schedule(s)</div>
+            <div style={{ opacity: l1 >= 24 ? 1 : 0 }}>&nbsp;&nbsp;running 3 cron schedule(s) from Garufiles under ~/garu</div>
           </div>
         </Panel>
       </ProofBeat>

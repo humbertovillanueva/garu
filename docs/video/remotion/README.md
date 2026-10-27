@@ -1,6 +1,6 @@
 # Garu launch video
 
-Remotion project for `docs/video/garu-v7-9x16.mp4` (1080×1920) and `garu-v7-16x9.mp4` (1920×1080, for the README). v6 told the same story with the old weather-brief Tomay.
+Remotion project for `docs/video/garu-v7-9x16.mp4` (1080×1920) and `garu-v7-16x9.mp4` (1920×1080, for the README). v6 told the same story with the old weather-brief Tomay. v7 was re-rendered in place on 2026-10-14 (end card says garuagents.com) and on 2026-10-27 (Bea's time, the startup line, the suggestion card's confirmation and the brief's date made true).
 
 ```
 npm install
