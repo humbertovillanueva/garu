@@ -1,3 +1,5 @@
+*En español: [why.es.md](why.es.md)*
+
 # Garu, explained
 
 This is the document to read before you explain Garu to anyone else. It covers where the idea came from, what each piece is and why it exists, what we're trying to achieve, how Garu differs from everything near it, and the hard questions people will ask. Read it twice. The last section gives you the one-sentence, one-paragraph and one-minute versions to say out loud.

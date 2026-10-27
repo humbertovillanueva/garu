@@ -12,7 +12,7 @@ Cualquier modelo. Cualquier herramienta MCP. Cada acción pasa por una política
 
 <p align="center">
   <a href="https://garuagents.com/index.es.html">Sitio web</a> ·
-  <a href="docs/why.md">Por qué Garu</a> ·
+  <a href="docs/why.es.md">Por qué Garu</a> ·
   <a href="#pruébalo-en-cinco-minutos-gratis">Inicio rápido</a> ·
   <a href="#cómo-funciona">Cómo funciona</a> ·
   <a href="#el-garufile">Garufile</a> ·
