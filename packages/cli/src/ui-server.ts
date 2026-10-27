@@ -73,7 +73,8 @@ export interface UiServerOptions {
 }
 
 interface LiveRun {
-  runId: string;
+  /** Known once the recorder writes run.start; the agent is busy from the moment the run is asked for. */
+  runId: string | null;
   startedAt: string;
   turn: number;
   trigger: string;
@@ -138,10 +139,14 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
   const startRun = async (a: DiscoveredAgent, trigger: string, input?: string): Promise<RunResult> => {
     const name = a.garufile.name;
     const started = new Date().toISOString();
+    // Busy from this very moment, before the first await: a second start in the same instant sees it
+    // and is refused, instead of two runs of the same agent racing each other.
+    live.set(name, { runId: null, startedAt: started, turn: 0, trigger });
     const sink = (e: Envelope) => {
       const l = live.get(name);
-      if (e.event.type === "run.start") live.set(name, { runId: e.runId, startedAt: started, turn: 0, trigger });
-      else if (e.event.type === "model.turn" && l) l.turn = e.event.turn;
+      if (!l) return;
+      if (e.event.type === "run.start") l.runId = e.runId;
+      else if (e.event.type === "model.turn") l.turn = e.event.turn;
     };
     let result: RunResult | undefined;
     try {
@@ -345,9 +350,11 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         const name = decodeURIComponent(run[1]!);
         const a = discover().agents.find((x) => x.garufile.name === name);
         if (!a) return json(res, { error: t("no Garufile for agent \"{name}\"", { name }) }, 404);
-        if (live.has(name)) return json(res, { error: t("{name} is already running", { name }) }, 409);
         const body = (await readBody(req)) as { note?: string };
         const note = body.note?.trim();
+        // Checked after the body is read, with nothing to wait on between here and startRun marking the
+        // agent busy, so two "Run now" taps in the same instant start one run and the other is refused.
+        if (live.has(name)) return json(res, { error: t("{name} is already running", { name }) }, 409);
         opts.log(`▶ ${name} (from the control room${note ? ", with a note" : ""})`);
         void startRun(a, "ui", note || undefined)
           .then((r) => opts.log(`■ ${name}: ${r.status} in ${r.turns} turn(s)`))
@@ -364,10 +371,11 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         if (req.method === "POST") {
           const a = discover().agents.find((x) => x.garufile.name === name);
           if (!a) return json(res, { error: t("no Garufile for agent \"{name}\"", { name }) }, 404);
-          if (live.has(name)) return json(res, { error: t("{name} is still working on the last message", { name }) }, 409);
           const body = (await readBody(req)) as { text?: string };
           const text = body.text?.trim();
           if (!text) return json(res, { error: t("empty message") }, 400);
+          // Same as Run now: the busy check comes after the body, right before the run is started.
+          if (live.has(name)) return json(res, { error: t("{name} is still working on the last message", { name }) }, 409);
           const displayName = name.charAt(0).toUpperCase() + name.slice(1);
           const view = agentView(a, name);
           const input = chat.transcript(name, opts.userName, displayName, text, 20, {

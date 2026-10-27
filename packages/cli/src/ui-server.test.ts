@@ -61,6 +61,10 @@ beforeAll(async () => {
   writeFileSync(join(root, "agents", "vault", "Garufile.yaml"), GARUFILE.replace("name: pip", "name: vault\nsandbox:\n  workspace: ./ws"));
   mkdirSync(join(root, "ws"));
   writeFileSync(join(root, "ws", "SUMMARY.md"), "old summary\n");
+  // An agent whose run takes a moment to fail: a known provider, and a tool server that sits silent for
+  // half a second before exiting (the bus gives it one more try after three seconds, then the run fails).
+  mkdirSync(join(root, "agents", "slow"), { recursive: true });
+  writeFileSync(join(root, "agents", "slow", "Garufile.yaml"), GARUFILE.replace("name: pip", "name: slow").replace("model: fake/any", "model: ollama/test").replace('args: ["-e", "0"]', 'args: ["-e", "setTimeout(() => {}, 500)"]'));
   mkdirSync(join(root, "ui"));
   writeFileSync(join(root, "ui", "index.html"), "<!doctype html><title>Garu test</title>");
   writeFileSync(join(root, "notes.md"), "old\n");
@@ -86,7 +90,7 @@ describe("who gets in", () => {
   it("a browser on this computer is let in; a page from another local origin, or anything behind a proxy, is not", async () => {
     const mine = await get("/api/agents");
     expect(mine.status).toBe(200);
-    expect(((await mine.json()) as { agents: { name: string }[] }).agents.map((a) => a.name)).toEqual(["pip", "vault"]);
+    expect(((await mine.json()) as { agents: { name: string }[] }).agents.map((a) => a.name)).toEqual(["pip", "slow", "vault"]);
     const other = await get("/api/pair", { headers: { origin: "http://localhost:5173" } });
     expect(other.status).toBe(401);
     expect(await other.json()).toMatchObject({ signIn: true });
@@ -217,6 +221,20 @@ describe("the rest", () => {
     expect((await get("/api/agents")).status).toBe(200);
     expect(logLines.some((l) => /✖ pip: unknown model provider "fake"/.test(l))).toBe(true);
   });
+
+  it("two Run now taps in the same instant start one run; the other is refused", async () => {
+    const [a, b] = await Promise.all([post("/api/agents/slow/run", {}), post("/api/agents/slow/run", {})]);
+    expect([a.status, b.status].sort()).toEqual([202, 409]);
+    const agents = (await (await get("/api/agents")).json()) as { agents: { name: string; status: string }[] };
+    expect(agents.agents.find((x) => x.name === "slow")?.status).toBe("working");
+    // The tool server exits and the run fails; wait for it so nothing is left running at the end.
+    for (let i = 0; i < 100; i++) {
+      const now = (await (await get("/api/agents")).json()) as { agents: { name: string; status: string }[] };
+      if (now.agents.find((x) => x.name === "slow")?.status !== "working") break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    expect((await get("/api/agents")).status).toBe(200);
+  }, 15_000);
 
   it("feed, cost and settings answer, and settings never carries a value", async () => {
     expect(Array.isArray(await (await get("/api/feed")).json())).toBe(true);
