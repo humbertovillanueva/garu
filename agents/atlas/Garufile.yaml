@@ -2,8 +2,9 @@
 #
 # Linear is a remote MCP server with OAuth: sign in once with
 #   garu auth agents/atlas/Garufile.yaml linear
-# and runs use the saved tokens. Reading is allowed; creating or changing an
-# issue always asks; everything else Linear offers is blocked and never shown.
+# and runs use the saved tokens. Reading is allowed; filing an issue no longer asks,
+# since Garu learned that rule from three approvals and no declines; a comment still
+# asks; everything else Linear offers is blocked and never shown.
 
 name: atlas
 description: Reads the Garu backlog in Linear and says what's next; files issues when asked.
@@ -47,11 +48,7 @@ policy:
   # learned: approved 3× by humbertovillanueva (ui), 2026-10-13
   - tool: linear.save_issue
     action: allow
-  # Writing: one issue or comment at a time, and you see it first.
-  # (Linear's save_issue both creates and updates.)
-  - tool: "linear.save_issue"
-    action: ask
-    reason: creating or changing a Linear issue
+  # (Linear's save_issue both creates and updates.) A comment still asks.
   - tool: "linear.save_comment"
     action: ask
     reason: commenting on a Linear issue

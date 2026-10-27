@@ -2,8 +2,9 @@
 #
 # Linear es un servidor MCP remoto con OAuth: inicia sesión una vez con
 #   garu auth agents/atlas/Garufile.yaml linear
-# y las ejecuciones usan los tokens guardados. Leer está permitido; crear o cambiar
-# un issue siempre pregunta; todo lo demás que ofrece Linear está bloqueado y nunca se muestra.
+# y las ejecuciones usan los tokens guardados. Leer está permitido; registrar un issue ya
+# no pregunta, porque Garu aprendió esa regla de tres aprobaciones sin ningún rechazo; un
+# comentario sigue preguntando; todo lo demás que ofrece Linear está bloqueado y nunca se muestra.
 #
 # Esta es la edición en español de agents/atlas/Garufile.yaml. Para usarla, cópiala encima de
 # Garufile.yaml (docs/google.es.md explica cómo).
@@ -51,11 +52,7 @@ policy:
   # aprendida: aprobada 3× por humbertovillanueva (ui), 2026-10-13
   - tool: linear.save_issue
     action: allow
-  # Escribir: un issue o un comentario a la vez, y tú lo ves primero.
-  # (save_issue de Linear crea y también actualiza.)
-  - tool: "linear.save_issue"
-    action: ask
-    reason: crear o cambiar un issue en Linear
+  # (save_issue de Linear crea y también actualiza.) Un comentario sigue preguntando.
   - tool: "linear.save_comment"
     action: ask
     reason: comentar en un issue de Linear
