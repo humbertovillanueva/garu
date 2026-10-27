@@ -1,10 +1,11 @@
 <script lang="ts">
   /**
-   * Every run, newest first, grouped by day. An agent that ran several times in a row with the same
-   * outcome takes one row ("tick × 5 · all done · 1:00 – 6:00 PM") that opens on tap, so a heartbeat
-   * agent doesn't bury the runs that matter.
+   * The runs, newest first, grouped by day, a page of 200 at a time with older ones a tap away. An
+   * agent that ran several times in a row with the same outcome takes one row ("tick × 5 · all done ·
+   * 1:00 – 6:00 PM") that opens on tap, so a heartbeat agent doesn't bury the runs that matter.
    */
-  import { api, live, loader } from "../lib/api.svelte";
+  import { untrack } from "svelte";
+  import { api, live, loader, errorText } from "../lib/api.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
   import { usd, clock, dayLabel, duration, statusLabel, triggerLabel, plainTimes } from "../lib/format";
@@ -15,10 +16,27 @@
   import type { RunSummary } from "../lib/types";
   import { t } from "../lib/i18n.svelte";
 
+  const PAGE = 200;
   let runs = $state<RunSummary[] | null>(null);
   let error = $state<string | null>(null);
+  // How many the page holds grows with "Show older runs"; a refresh reloads that many, so the view is kept.
+  let shown = $state(PAGE);
+  let older = $state(false);
   const load = loader();
-  $effect(() => { live.tick; load(api.runs(), (r) => { runs = r; error = null; }, (m) => (error = m)); });
+  $effect(() => { live.tick; const n = untrack(() => shown); load(api.runs(undefined, { limit: n }), (r) => { runs = r; error = null; }, (m) => (error = m)); });
+  // Fewer than asked for means the list ends here; a full page may have more behind it.
+  const maybeMore = $derived(runs !== null && runs.length >= shown);
+  async function showOlder() {
+    if (older || !runs) return;
+    older = true;
+    try {
+      const more = await api.runs(undefined, { offset: runs.length, limit: PAGE });
+      const seen = new Set(runs.map((r) => r.runId));
+      runs = [...runs, ...more.filter((r) => !seen.has(r.runId))];
+      // A short page means the list ends here, so the button goes away until new runs land.
+      shown = more.length >= PAGE ? runs.length : runs.length + 1;
+    } catch (e) { error = errorText(e); } finally { older = false; }
+  }
 
   type Row = { agent: string; status: string; runs: RunSummary[] };
   const days = $derived.by(() => {
@@ -107,5 +125,14 @@
         </div>
       </div>
     {/each}
+    <div class="flex flex-wrap items-center gap-3 text-[12.5px] text-mute">
+      {#if maybeMore}
+        <span>{t("Showing the newest {n} runs.", { n: runs.length })}</span>
+        <button class="btn" disabled={older} onclick={showOlder}>{older ? t("Loading…") : t("Show older runs")}</button>
+      {:else}
+        <span>{runs.length === 1 ? t("That's the only run.") : t("All {n} runs are shown.", { n: runs.length })}</span>
+      {/if}
+      {#if error}<span role="alert" style="color: var(--color-bad)">{error}</span>{/if}
+    </div>
   {/if}
 </section>

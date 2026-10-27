@@ -65,7 +65,15 @@ export function loader() {
 
 export const api = {
   agents: () => get<AgentsResponse>("/api/agents"),
-  runs: (agent?: string) => get<RunSummary[]>(agent ? `/api/runs?agent=${encodeURIComponent(agent)}` : "/api/runs"),
+  /** Newest first. `limit` caps the page (the server's own cap is 200 across agents); `offset` skips the newest, for older pages. */
+  runs: (agent?: string, page: { limit?: number; offset?: number } = {}) => {
+    const q = new URLSearchParams();
+    if (agent) q.set("agent", agent);
+    if (page.limit) q.set("limit", String(page.limit));
+    if (page.offset) q.set("offset", String(page.offset));
+    const s = q.toString();
+    return get<RunSummary[]>(s ? `/api/runs?${s}` : "/api/runs");
+  },
   run: (agent: string, runId: string) => get<Envelope[]>(`/api/runs/${encodeURIComponent(agent)}/${encodeURIComponent(runId)}`),
   inbox: () => get<InboxResponse>("/api/inbox"),
   feed: (limit = 80) => get<FeedItem[]>(`/api/feed?limit=${limit}`),

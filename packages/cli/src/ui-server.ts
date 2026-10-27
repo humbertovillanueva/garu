@@ -386,7 +386,13 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       if (path === "/api/runs") {
         const agent = url.searchParams.get("agent");
         if (agent !== null && !/^[A-Za-z0-9._-]+$/.test(agent)) return json(res, { error: t("bad agent name") }, 400);
-        return json(res, agent ? store.runs(agent) : store.allRuns().slice(0, 200));
+        // Newest first, a page at a time: `offset` skips the newest, `limit` caps the page. Without a
+        // limit, one agent's history comes whole and everyone's is capped at 200, as before.
+        const offset = Math.max(0, Math.floor(Number(url.searchParams.get("offset")) || 0));
+        const limitParam = url.searchParams.get("limit");
+        const limit = limitParam !== null && Number(limitParam) > 0 ? Math.floor(Number(limitParam)) : agent ? Infinity : 200;
+        const all = agent ? store.runs(agent) : store.allRuns();
+        return json(res, all.slice(offset, offset + limit));
       }
       const m = /^\/api\/runs\/([^/]+)\/([^/]+)$/.exec(path);
       if (m) {

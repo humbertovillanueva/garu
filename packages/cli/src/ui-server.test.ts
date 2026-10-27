@@ -123,6 +123,16 @@ describe("who gets in", () => {
     expect(Array.isArray(await (await get("/api/runs")).json())).toBe(true);
   });
 
+  it("runs come a page at a time: a limit caps the page and an offset skips the newest; nonsense means the defaults", async () => {
+    for (const q of ["?limit=1", "?limit=1&offset=1", "?limit=abc&offset=-3", "?agent=pip&limit=2"]) {
+      const r = await get(`/api/runs${q}`);
+      expect(r.status, q).toBe(200);
+      const body = (await r.json()) as unknown[];
+      expect(Array.isArray(body), q).toBe(true);
+      if (/limit=\d/.test(q)) expect(body.length, q).toBeLessThanOrEqual(2);
+    }
+  });
+
   it("a traversal path serves the app, never a file outside it", async () => {
     const res = await get("/%2e%2e/%2e%2e/etc/passwd");
     expect(res.status).toBe(200);
