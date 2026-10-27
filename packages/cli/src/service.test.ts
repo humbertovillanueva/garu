@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { launchdLabel, launchdPlist, serviceName, servicePath, systemdUnit } from "./service.js";
+import { launchdLabel, launchdPlist, serviceEnv, serviceName, servicePath, systemdUnit } from "./service.js";
 
 const spec = { root: "/Users/h/garu", node: "/opt/homebrew/bin/node", entry: "/Users/h/garu/packages/cli/dist/index.js", args: ["--up", "--as", "Humberto V", "--port", "4000"], path: "/opt/homebrew/bin:/usr/bin:/bin" };
 
@@ -28,6 +28,17 @@ describe("garu service", () => {
     expect(u).toContain('ExecStart=/opt/homebrew/bin/node /Users/h/garu/packages/cli/dist/index.js ui --up --as "Humberto V" --port 4000');
     expect(u).toContain("Restart=always");
     expect(u).toContain("WantedBy=default.target");
+  });
+
+  it("carries the installer's language into the service, so its log reads the same", () => {
+    expect(serviceEnv({ GARU_LANG: "es", LANG: "es_MX.UTF-8", PATH: "/x", GEMINI_API_KEY: "never" })).toEqual({ GARU_LANG: "es", LANG: "es_MX.UTF-8" });
+    expect(serviceEnv({})).toEqual({});
+    const es = { ...spec, env: { LANG: "es_MX.UTF-8" } };
+    expect(launchdPlist(es)).toContain("<key>LANG</key><string>es_MX.UTF-8</string>");
+    expect(systemdUnit(es)).toContain("\nEnvironment=LANG=es_MX.UTF-8\n");
+    // Without one, the files look as they always did.
+    expect(launchdPlist(spec)).not.toContain("LANG");
+    expect(systemdUnit(spec).match(/^Environment=/gm)).toHaveLength(1);
   });
 
   it("builds a PATH that still finds homebrew and docker from an empty environment", () => {

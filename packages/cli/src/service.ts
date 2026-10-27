@@ -17,6 +17,15 @@ export interface ServiceSpec {
   args: string[];
   /** PATH for the service: launchd gives almost nothing, and agents need docker/ollama/npx. */
   path: string;
+  /** Other variables the service needs from the installer's shell, such as the language (serviceEnv). */
+  env?: Record<string, string>;
+}
+
+/** The language settings of the shell that installs the service, so its log reads in the same language. A login service gets none of them on its own. */
+export function serviceEnv(current: NodeJS.ProcessEnv): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const k of ["GARU_LANG", "LC_ALL", "LANG"]) if (current[k]) out[k] = current[k]!;
+  return out;
 }
 
 export function serviceName(root: string): string {
@@ -56,7 +65,7 @@ ${argv.map((a) => `    <string>${xml(a)}</string>`).join("\n")}
   <key>EnvironmentVariables</key>
   <dict>
     <key>PATH</key><string>${xml(spec.path)}</string>
-    <key>HOME</key><string>${xml(homedir())}</string>
+    <key>HOME</key><string>${xml(homedir())}</string>${Object.entries(spec.env ?? {}).map(([k, v]) => `\n    <key>${xml(k)}</key><string>${xml(v)}</string>`).join("")}
   </dict>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
@@ -79,7 +88,7 @@ After=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=${spec.root}
-Environment=PATH=${spec.path}
+Environment=PATH=${spec.path}${Object.entries(spec.env ?? {}).map(([k, v]) => `\nEnvironment=${k}=${sh(v)}`).join("")}
 ExecStart=${exec}
 Restart=always
 RestartSec=5

@@ -47,9 +47,9 @@ import {
 } from "@garu/kernel";
 
 import { startUiServer } from "./ui-server.js";
-import { t } from "./i18n.js";
+import { detectLocale, setLocale, t } from "./i18n.js";
 import { KINDS, SCHEDULES, cronFor, isFreeModel, renderGarufile, suggestModel, type Kind, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
-import { launchdLabel, launchdPlist, launchdPlistPath, logPath, servicePath, serviceName, systemdUnit, systemdUnitPath } from "./service.js";
+import { launchdLabel, launchdPlist, launchdPlistPath, logPath, serviceEnv, servicePath, serviceName, systemdUnit, systemdUnitPath } from "./service.js";
 
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
 const DEFAULT_INBOX_ROOT = resolve(process.cwd(), ".garu", "inbox");
@@ -63,6 +63,11 @@ stdout.on("error", (e: NodeJS.ErrnoException) => {
   if (e.code === "EPIPE") process.exit(0);
   throw e;
 });
+
+// The language is decided before any sentence is built: .env may set GARU_LANG, and the help text and
+// option descriptions below are written at this point, not when a command runs.
+loadDotEnv();
+setLocale(detectLocale());
 
 const program = new Command()
   .name("garu")
@@ -305,7 +310,7 @@ service
     const root = process.cwd();
     const as = process.env["GARU_USER"] && opts.as === (process.env["USER"] ?? "you") ? process.env["GARU_USER"] : opts.as;
     const args = [opts.demo ? "--demo" : "--up", "--as", as, "--port", opts.port, "--host", opts.host, "--ask-timeout", opts.askTimeout, ...(opts.notify ? ["--notify", opts.notify] : [])];
-    const spec = { root, node: stableNodePath(), entry: fileURLToPath(import.meta.url), args, path: servicePath(process.env["PATH"]) };
+    const spec = { root, node: stableNodePath(), entry: fileURLToPath(import.meta.url), args, path: servicePath(process.env["PATH"]), env: serviceEnv(process.env) };
     mkdirSync(join(root, ".garu"), { recursive: true });
     if (process.platform === "darwin") {
       const plist = launchdPlistPath(root);
