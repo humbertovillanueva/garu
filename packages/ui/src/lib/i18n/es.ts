@@ -47,7 +47,6 @@ export const es: Record<string, string> = {
   "working": "trabajando",
   "next run {when}": "próxima {when}",
   "live": "en vivo",
-  "reconnecting": "reconectando",
   "offline": "sin conexión",
   "connecting": "conectando",
   "waiting": "en espera",

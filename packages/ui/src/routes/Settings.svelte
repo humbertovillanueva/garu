@@ -92,7 +92,7 @@
         {:else if s}
           <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">{t("Signed in")}</span><span class="flex-1 text-right">{t("with the pairing token")}</span></div>
         {/if}
-        <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">{t("Connection")}</span><span class="flex flex-1 items-center justify-end gap-2"><span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-ask)'}"></span>{live.connected ? t("live") : t("reconnecting")}</span></div>
+        <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">{t("Connection")}</span><span class="flex flex-1 items-center justify-end gap-2"><span class="dot" style="background: {live.connected ? 'var(--color-ok)' : live.disconnectedAt ? 'var(--color-ask)' : 'var(--color-mute)'}"></span>{live.connected ? t("live") : live.disconnectedAt ? t("offline") : t("connecting")}</span></div>
         <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">{t("Schedules")}</span>{#if s}<span class="flex flex-1 items-center justify-end gap-2"><span class="dot" style="background: {s.up ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{s.up ? t("running") : t("off")}</span>{:else}<span class="flex-1 text-right text-mute">{error ? t("can't check right now") : t("checking…")}</span>{/if}</div>
         {#if isApp}
           <button class="card-hover w-full px-4 py-3 text-left" onclick={unpair}>{t("Forget this computer")}<span class="block text-[12.5px] text-mute">{t("You'll pair again by scanning a code there.")}</span></button>

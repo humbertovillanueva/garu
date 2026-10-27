@@ -27,7 +27,8 @@
     <Logo size={26} />
     <span class="text-[16px] font-semibold tracking-tight">Garu</span>
     <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute" role="status">
-      <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{live.connected ? t("live") : t("reconnecting")}
+      <!-- "connecting" until the first connection or a drop, like the phone bar: a fresh page isn't reconnecting -->
+      <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : live.disconnectedAt ? 'var(--color-ask)' : 'var(--color-mute)'}"></span>{live.connected ? t("live") : live.disconnectedAt ? t("offline") : t("connecting")}
     </span>
   </a>
 
