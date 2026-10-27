@@ -75,6 +75,9 @@
 
   .shot { margin: 44px auto 0; max-width: 1000px; border: 1px solid var(--line-2); border-radius: 14px; overflow: hidden; background: var(--panel); box-shadow: 0 30px 80px -30px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.02) inset; }
   .shot img, .shot video { display: block; width: 100%; height: auto; }
+  .shot { position: relative; }
+  .play { position: absolute; inset: 0; margin: auto; width: 72px; height: 72px; border-radius: 50%; border: 0; background: var(--accent); color: #141008; display: grid; place-items: center; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+  .play[hidden] { display: none; }
   .caption { margin-top: 14px; text-align: center; color: var(--mute); font-size: 13.5px; }
   .caption code { color: var(--fg-2); font-size: 12.5px; }
 
@@ -161,7 +164,20 @@
   </div>
   <div class="install"><span>$</span> git clone https://github.com/humbertovillanueva/garu &amp;&amp; cd garu &amp;&amp; npm install &amp;&amp; npm run build</div>
 
-  <div class="shot"><video src="video/garu-v7-16x9.mp4" poster="screenshots/video-poster.jpg" width="1000" height="563" autoplay muted loop playsinline controls preload="metadata" aria-label="Garu's launch video: Tomay prepares your day from your calendar, Bea sorts your inbox and drafts replies that wait for your approval, and Garu learns which approvals you'd rather skip."></video></div>
+  <div class="shot"><video id="hero" src="video/garu-v7-16x9.mp4" poster="screenshots/video-poster.jpg" width="1000" height="563" muted loop playsinline controls preload="none" aria-label="Garu's launch video: Tomay prepares your day from your calendar, Bea sorts your inbox and drafts replies that wait for your approval, and Garu learns which approvals you'd rather skip."></video><button id="hero-play" class="play" type="button" aria-label="Play the video" hidden><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button></div>
+<script>
+(function () {
+  var v = document.getElementById("hero"), b = document.getElementById("hero-play");
+  if (matchMedia("(max-width: 800px)").matches) {
+    b.hidden = false;
+    b.addEventListener("click", function () { v.preload = "auto"; v.play(); });
+    v.addEventListener("play", function () { b.hidden = true; }, { once: true });
+  } else {
+    v.preload = "metadata"; v.autoplay = true;
+    v.play().catch(function () {});
+  }
+})();
+</script>
   <p class="caption">The 45-second launch video (sound off here). Tomay preps your day; Bea files your mail and drafts replies that wait for one tap, and can't send. The control room's surfaces rebuilt for video; the meetings and emails are examples.</p>
 </header>
 
@@ -318,7 +334,7 @@
       <p class="sub" style="margin-top:14px;font-size:14.5px">The web app works on Android and iPhone today. An Android app is in closed testing on Google Play (<a href="https://play.google.com/apps/testing/io.github.humbertovillanueva.garu" style="color:var(--fg)">join the test</a>), and an iPhone app runs in the Simulator so far.</p>
       <p class="sub" style="margin-top:14px;font-size:14.5px"><a href="https://github.com/humbertovillanueva/garu/blob/main/docs/phone.md" style="color:var(--fg)">Read the phone guide →</a></p>
     </div>
-    <img src="screenshots/phone-approve.png" alt="The control room on a phone: Bea's draft reply to Lena shown as an email, with To, Subject and the text, and Approve, Approve for 24h and Decline buttons above a four-tab bar." width="390" height="844" loading="eager">
+    <img src="screenshots/phone-approve.png" alt="The control room on a phone: Bea's draft reply to Lena shown as an email, with To, Subject and the text, and Approve, Approve for 24h and Decline buttons above a four-tab bar." width="390" height="844" loading="lazy">
   </div>
 </section>
 
