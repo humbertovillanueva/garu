@@ -14,8 +14,31 @@ import { toSlackMrkdwn } from "./format.js";
 
 export const MAX_CHARS_DEFAULT = 20_000;
 const MAX_CHARS_HARD = 200_000;
+/** How much of a body is read off the wire at all: past this the download stops, so a huge file can't fill memory. */
+export const MAX_BODY_BYTES = 1_000_000;
 const TIMEOUT_MS = 20_000;
 const MAX_REDIRECTS = 5;
+
+/** Read a response body up to `max` bytes and stop there, saying so, instead of buffering whatever the server sends. */
+async function readBody(res: Response, max: number): Promise<{ body: string; cut: boolean }> {
+  if (!res.body) return { body: await res.text(), cut: false };
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  let cut = false;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    size += value.byteLength;
+    if (size >= max) {
+      cut = true;
+      await reader.cancel().catch(() => {});
+      break;
+    }
+  }
+  return { body: new TextDecoder().decode(Buffer.concat(chunks).subarray(0, max)), cut };
+}
 
 /** This machine, the LAN, link-local, Tailscale's range: places a model-chosen URL must never reach. */
 export function isPrivateAddress(ip: string): boolean {
@@ -58,6 +81,8 @@ const clipped = (s: string, max: number) => {
   const c = clip(s, max);
   return c.text + (c.truncated ? `\n…[truncated to ${c.text.length} chars]` : "");
 };
+/** Said after the clipped text when the download itself was stopped, so the model knows the page goes on. */
+const cutNote = (cut: boolean) => (cut ? `\n…[the download was stopped at ${MAX_BODY_BYTES.toLocaleString("en-US")} bytes; the page is longer than that]` : "");
 
 /** Very small HTML → text: drop scripts/styles/tags, collapse whitespace. Good enough for articles and APIs. */
 export function htmlToText(html: string): string {
@@ -92,7 +117,15 @@ export function fetchTools(opts: FetchToolsOptions = {}): Record<string, ToolDef
   const fetchFn = opts.fetchFn ?? fetch;
   const lookupFn = opts.lookupFn ?? defaultLookup;
 
-  /** Only the open web: not this machine (where the control room answers), not the LAN, whatever name a host hides behind. */
+  /**
+   * Only the open web: not this machine (where the control room answers), not the LAN, whatever name a host hides behind.
+   *
+   * The name is resolved here and again by fetch, so a server that answers the first lookup with a public
+   * address and the second with a private one (DNS rebinding) could slip past; Node's fetch has no public
+   * way to pin the address it connects to without taking on undici directly. The agent's policy is the
+   * real guard: `when: { url: { matches: "^https://api\\.github\\.com/" } }` names the hosts an agent may
+   * reach, and an attacker's name is not among them.
+   */
   async function assertPublic(u: URL): Promise<void> {
     if (u.protocol !== "https:" && u.protocol !== "http:") throw new Error(`only http(s) URLs are allowed, got ${u.protocol}`);
     const host = u.hostname.replace(/^\[|\]$/g, "");
@@ -101,7 +134,7 @@ export function fetchTools(opts: FetchToolsOptions = {}): Record<string, ToolDef
     if (addrs.some(isPrivateAddress)) throw new Error(`${u.hostname} points at this machine or a private network; fetch reaches only the open web`);
   }
 
-  async function get(url: string, accept: string): Promise<{ status: number; body: string; contentType: string }> {
+  async function get(url: string, accept: string): Promise<{ status: number; body: string; contentType: string; cut: boolean }> {
     let u = new URL(url);
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
@@ -121,8 +154,8 @@ export function fetchTools(opts: FetchToolsOptions = {}): Record<string, ToolDef
           u = new URL(location, u);
           continue;
         }
-        const body = await res.text();
-        return { status: res.status, body, contentType: res.headers.get("content-type") ?? "" };
+        const { body, cut } = await readBody(res, MAX_BODY_BYTES);
+        return { status: res.status, body, contentType: res.headers.get("content-type") ?? "", cut };
       }
     } finally {
       clearTimeout(timer);
@@ -143,7 +176,7 @@ export function fetchTools(opts: FetchToolsOptions = {}): Record<string, ToolDef
         } catch {
           /* not JSON after all; return as-is */
         }
-        return text(clipped(body, maxChars ?? MAX_CHARS_DEFAULT));
+        return text(clipped(body, maxChars ?? MAX_CHARS_DEFAULT) + cutNote(r.cut));
       },
     ),
 
@@ -154,7 +187,7 @@ export function fetchTools(opts: FetchToolsOptions = {}): Record<string, ToolDef
       async ({ url, maxChars }) => {
         const r = await get(url, "text/html, text/plain;q=0.9, */*;q=0.5");
         if (r.status >= 400) return text(`HTTP ${r.status} from ${url}`, true);
-        return text(clipped(/html/i.test(r.contentType) ? htmlToText(r.body) : r.body, maxChars ?? MAX_CHARS_DEFAULT));
+        return text(clipped(/html/i.test(r.contentType) ? htmlToText(r.body) : r.body, maxChars ?? MAX_CHARS_DEFAULT) + cutNote(r.cut));
       },
     ),
   };

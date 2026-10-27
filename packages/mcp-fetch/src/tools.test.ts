@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fetchTools, htmlToText } from "./tools.js";
+import { MAX_BODY_BYTES, fetchTools, htmlToText } from "./tools.js";
 
 /** A fake web: answers by URL, remembers what was asked. */
 function fakeWeb(routes: Record<string, { status?: number; body: string; type?: string; location?: string }>) {
@@ -31,6 +31,20 @@ describe("fetch_json", () => {
     const web = fakeWeb({ "https://api.example.com/big": { body: JSON.stringify({ text: "x".repeat(500) }) } });
     const r = await run(tools({ fetchFn: web.fetchFn }).fetch_json, { url: "https://api.example.com/big", maxChars: 40 });
     expect(r.content[0]!.text).toMatch(/^.{40}\n…\[truncated to 40 chars\]$/s);
+  });
+
+  it("stops downloading an oversized body at the byte cap and says so", async () => {
+    // A 3 MB answer: the tool reads a megabyte and stops; the clip to maxChars still applies on top.
+    const web = fakeWeb({ "https://api.example.com/huge": { type: "text/plain", body: "y".repeat(3 * MAX_BODY_BYTES) } });
+    const r = await run(tools({ fetchFn: web.fetchFn }).fetch_text, { url: "https://api.example.com/huge", maxChars: 50 });
+    expect(r.isError).toBeUndefined();
+    expect(r.content[0]!.text).toMatch(/^y{50}\n…\[truncated to 50 chars\]\n…\[the download was stopped at 1,000,000 bytes; the page is longer than that\]$/);
+    const json = await run(tools({ fetchFn: web.fetchFn }).fetch_json, { url: "https://api.example.com/huge", maxChars: 10 });
+    expect(json.content[0]!.text).toContain("the download was stopped at 1,000,000 bytes");
+    // A body under the cap is read whole and carries no such note.
+    const small = fakeWeb({ "https://api.example.com/ok": { type: "text/plain", body: "z".repeat(1000) } });
+    const s = await run(tools({ fetchFn: small.fetchFn }).fetch_text, { url: "https://api.example.com/ok" });
+    expect(s.content[0]!.text).toBe("z".repeat(1000));
   });
 
   it("reports an error page as an error, with the start of its body", async () => {
