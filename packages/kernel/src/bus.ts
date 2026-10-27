@@ -261,11 +261,6 @@ export class ToolBus {
       if (!approved) return { status: "denied", decision, by, callId, ...(note ? { note } : {}) };
     }
 
-    // A run can outlive its hour-long access token (the computer slept, or it was just long). The
-    // token is renewed and the server restarted before a call when it is about to run out, and once
-    // more when Google refuses it anyway, so a stale token never reads as a lost sign-in.
-    let c = this.servers.get(target.server)!;
-    if (this.signsIn(c) && signInFor(c.spec, this.authRoot).expiresSoon()) c = await this.renew(target.server, "the access token was about to run out");
     const started = Date.now();
     const timeoutMs = this.opts.callTimeoutMs ?? 60_000;
     const readOnly = this.tools.find((t) => t.qualified === qualified)?.readOnly === true;
@@ -279,6 +274,13 @@ export class ToolBus {
         : `${text} (the call was cut off after ${s} s)`;
     };
     try {
+      // A run can outlive its hour-long access token (the computer slept, or it was just long). The
+      // token is renewed and the server restarted before a call when it is about to run out, and once
+      // more when Google refuses it anyway, so a stale token never reads as a lost sign-in. A renewal
+      // that fails (the issuer unreachable, the sign-in revoked) is this call's error, recorded like any
+      // other, not the end of the run.
+      let c = this.servers.get(target.server)!;
+      if (this.signsIn(c) && signInFor(c.spec, this.authRoot).expiresSoon()) c = await this.renew(target.server, "the access token was about to run out");
       const callOnce = (conn: Connected) => conn.client.callTool({ name: target.tool, arguments: args }, undefined, { timeout: timeoutMs });
       let result: Awaited<ReturnType<typeof callOnce>>;
       try {

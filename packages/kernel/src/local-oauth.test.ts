@@ -203,6 +203,32 @@ describe("ToolBus with a local server that signs in", () => {
     }
   }, 30_000);
 
+  it("a renewal the issuer refuses is that call's error, recorded, and the run goes on", async () => {
+    const issuer = await startIssuer();
+    try {
+      const r = root();
+      const spec = local(issuer.url, readonly);
+      signInFor(spec, r).saveTokens({ access_token: "tok-old", token_type: "Bearer", expires_in: 3599, refresh_token: "revoked" });
+      const recorder = rec();
+      const bus = new ToolBus({ policy, recorder, approver: async () => ({ approved: true, by: "t" }), authRoot: r });
+      await bus.connect([spec]);
+      const file = join(r, readdirSync(r).find((n) => n.endsWith(".json"))!);
+      const stored = JSON.parse(readFileSync(file, "utf8")) as { tokensSavedAt: string };
+      stored.tokensSavedAt = new Date(Date.now() - 2 * 3600_000).toISOString();
+      writeFileSync(file, JSON.stringify(stored));
+      issuer.refuse(true);
+      const out = await bus.call("gmail.whoami", {});
+      expect(out.status).toBe("error");
+      expect((out as { error: string }).error).toMatch(/sign in/);
+      const events = readRun(recorder.path).map((e) => e.event);
+      const result = events.find((e) => e.type === "tool.result" && e.callId === out.callId);
+      expect(result).toMatchObject({ type: "tool.result", ok: false, error: expect.stringMatching(/sign in/) });
+      await bus.close();
+    } finally {
+      await issuer.close();
+    }
+  }, 30_000);
+
   it("won't start it without a sign-in", async () => {
     const bus = new ToolBus({ policy, recorder: rec(), approver: async () => ({ approved: true, by: "t" }), authRoot: root() });
     await expect(bus.connect([local("https://accounts.google.com", readonly)])).rejects.toBeInstanceOf(NeedsSignInError);
