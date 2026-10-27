@@ -68,6 +68,18 @@ describe("OllamaProvider", () => {
     expect(res.content[0]).toMatchObject({ type: "tool_use", input: { a: 1, b: 2 } });
   });
 
+  it("gives up on a request after the model timeout and says it was cut off", async () => {
+    let signal: AbortSignal | null | undefined;
+    const slow = (async (_u: string | URL | Request, init?: RequestInit) => {
+      signal = init?.signal;
+      throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+    }) as typeof fetch;
+    const err = await new OllamaProvider("http://127.0.0.1:11434", slow).complete({ model: "m", system: "", messages: [], tools: [] }).then(() => null, (e) => e as Error);
+    expect(err?.message).toMatch(/ollama m: no answer from http:\/\/127\.0\.0\.1:11434 in 120 s; the request was cut off/);
+    expect((err?.cause as Error).name).toBe("TimeoutError");
+    expect(signal).toBeInstanceOf(AbortSignal);
+  });
+
   it("explains when Ollama isn't running", async () => {
     const down = (async () => { throw new Error("ECONNREFUSED"); }) as typeof fetch;
     await expect(new OllamaProvider("http://127.0.0.1:11434", down).complete({ model: "m", system: "", messages: [], tools: [] }))

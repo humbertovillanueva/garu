@@ -5,7 +5,7 @@
  * another machine with OLLAMA_HOST. Errors are written for the two things
  * that really go wrong: Ollama isn't running, or the model isn't pulled.
  */
-import type { CompleteRequest, CompleteResponse, ContentBlock, ModelProvider } from "../provider.js";
+import { MODEL_REQUEST_TIMEOUT_MS, type CompleteRequest, type CompleteResponse, type ContentBlock, type ModelProvider } from "../provider.js";
 
 interface OllamaToolCall {
   id?: string;
@@ -92,10 +92,20 @@ export class OllamaProvider implements ModelProvider {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
+        // A request the machine slept through would otherwise hang until the next wake, hours later.
+        signal: AbortSignal.timeout(MODEL_REQUEST_TIMEOUT_MS),
       });
     } catch (e) {
+      // The cause rides along so the loop can tell a cut-off or a dead socket from the model's own errors.
+      if ((e as Error).name === "TimeoutError") {
+        throw new Error(
+          `ollama ${req.model}: no answer from ${this.host} in ${Math.round(MODEL_REQUEST_TIMEOUT_MS / 1000)} s; the request was cut off (the model is too slow for this computer, or the computer slept)`,
+          { cause: e },
+        );
+      }
       throw new Error(
         `ollama: can't reach ${this.host} (${(e as Error).message}). Is Ollama running? Start the app or run \`ollama serve\`; set OLLAMA_HOST if it lives elsewhere.`,
+        { cause: e },
       );
     }
     const json = (await res.json().catch(() => ({}))) as OllamaChatResponse;

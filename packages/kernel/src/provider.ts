@@ -4,6 +4,12 @@
  * Garu is vendor-neutral by design: the agent loop only speaks this small
  * dialect, and each provider adapter translates to its own API.
  */
+/**
+ * How long one request to a model may take. A request cut off by the machine going to sleep would
+ * otherwise hang until the next wake, hours later. Every provider that talks HTTP uses this one number.
+ */
+export const MODEL_REQUEST_TIMEOUT_MS = 120_000;
+
 export interface ModelTool {
   /** Provider-safe name (letters, digits, _ and -). The loop maps this back to "<server>.<tool>". */
   name: string;

@@ -3,9 +3,8 @@
  * No SDK dependency: the surface Garu needs is small, and this keeps the
  * kernel light. Function calling maps 1:1 onto our ContentBlock dialect.
  */
-import type { CompleteRequest, CompleteResponse, ContentBlock, ModelProvider } from "../provider.js";
+import { MODEL_REQUEST_TIMEOUT_MS as REQUEST_TIMEOUT_MS, type CompleteRequest, type CompleteResponse, type ContentBlock, type ModelProvider } from "../provider.js";
 
-const REQUEST_TIMEOUT_MS = 120_000;
 /** A request that took this much longer than its timeout means the machine slept through it (timers pause in sleep). */
 const SLEPT_MS = 30_000;
 /** How many wakes a request may straddle before giving up; a laptop dozing with its lid closed wakes for a minute at a time. */
