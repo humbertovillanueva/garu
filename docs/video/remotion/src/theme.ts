@@ -37,8 +37,10 @@ export const XF = 12;
 /** One bar of the score: 1.6 s. Scene boundaries sit on bar lines. */
 export const BAR = 48;
 
-// Scene boundaries in bars (see tools/score.py for the arrangement).
-const B = { hook: 0, meet: 3, brief: 7, control: 10, ask: 14, learn: 18, proof: 21, logo: 24, end: 28 };
+// Scene boundaries in bars. The score (tools/score.py) is arranged with the clock ticks in bar 0,
+// the groove from bar 10, the build from bar 21 and the impact on bar 24; v8 keeps the hook, the
+// drop and the length, and gives proof the two bars that meet and brief gave up.
+const B = { hook: 0, meet: 3, brief: 6, control: 8, ask: 12, learn: 16, proof: 19, logo: 24, end: 28 };
 const span = (a: number, b: number, first = false) => ({ from: a * BAR - (first ? 0 : XF / 2), dur: (b - a) * BAR + (first ? XF / 2 : XF) });
 export const S = {
   hook: span(B.hook, B.meet, true),
@@ -51,3 +53,15 @@ export const S = {
   logo: { from: B.logo * BAR, dur: (B.end - B.logo) * BAR }, // lands on the impact
 };
 export const TOTAL = B.end * BAR;
+
+/**
+ * The 15-second cut (hook, control, ask, end card): 450 frames. The score is spliced on bar
+ * lines, see Garu.tsx: bars 0–2 under the hook, 11–17 under control and ask, 24– under the card.
+ */
+export const SHORT_TOTAL = 450;
+export const SH = {
+  hook: { from: 0, dur: 2 * BAR + XF / 2 },
+  control: { from: 2 * BAR - XF / 2, dur: 4 * BAR + XF / 2 },
+  ask: { from: 6 * BAR, dur: 2 * BAR - XF / 2 }, // out to black half a beat before the drop
+  logo: { from: 8 * BAR, dur: SHORT_TOTAL - 8 * BAR },
+};

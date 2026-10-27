@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 import { AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { C, inter, mono, rgba } from "./theme";
 
@@ -193,6 +193,46 @@ export const Cam: React.FC<{ keys: [number, number, number, number][]; children:
   const fr = keys.map((k) => k[0]);
   const v = (i: number) => interpolate(f, fr, keys.map((k) => k[i]), { ...clamp, easing: easeInOut });
   return <AbsoluteFill style={{ transform: `translate(${v(2)}px, ${v(3)}px) scale(${v(1)})`, ...style }}>{children}</AbsoluteFill>;
+};
+
+/**
+ * The Garu mark (docs/brand): the cat inside an open ring. `ring` draws the ring 0→1, `cat`
+ * scales the face in 0→1; both default to drawn.
+ */
+export const GaruMark: React.FC<{ size: number; ring?: number; cat?: number; style?: React.CSSProperties }> = ({ size, ring = 1, cat = 1, style }) => {
+  const id = useId();
+  return (
+    <svg viewBox="0 0 100 100" width={size} height={size} fill="none" style={{ color: C.paper, ...style }}>
+      <defs>
+        <mask id={id}>
+          <g fill="#fff">
+            <ellipse cx="48.5" cy="52.0" rx="23.0" ry="20.70" />
+            <polygon points="44.82,42.34 29.64,40.96 27.80,19.34" />
+            <polygon points="52.18,42.34 67.36,40.96 69.20,19.34" />
+          </g>
+          <g fill="#000">
+            <rect x="25.04" y="41.42" width="46.92" height="4.60" rx="2.30" transform="rotate(6 48.5 43.72)" />
+            <ellipse cx="39.30" cy="53.38" rx="5.98" ry="2.07" transform="rotate(12 39.30 53.38)" />
+            <ellipse cx="57.70" cy="53.38" rx="5.98" ry="2.07" transform="rotate(-12 57.70 53.38)" />
+            <polygon points="46.66,60.28 50.34,60.28 48.5,62.58" />
+          </g>
+          <g fill="#fff">
+            <rect x="38.61" y="51.66" width="1.38" height="3.45" rx="0.69" />
+            <rect x="57.01" y="51.66" width="1.38" height="3.45" rx="0.69" />
+          </g>
+        </mask>
+      </defs>
+      <path d="M 91.77 54.39 A 42 42 0 1 1 84.82 26.51" stroke="currentColor" strokeWidth="5.5" strokeLinecap="round" pathLength={1} strokeDasharray="1 1" strokeDashoffset={1 - ring} />
+      <g style={{ transformOrigin: "48.5px 48px", transform: `scale(${0.6 + 0.4 * cat})`, opacity: Math.min(1, cat * 1.3) }}>
+        <rect width="100" height="100" fill="currentColor" mask={`url(#${id})`} />
+        <g stroke="currentColor" strokeWidth="3.91" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="71.04,44.18 83.98,36.13 98.35,39.01" />
+          <polyline points="71.04,44.18 83.11,47.63 96.34,53.95" />
+        </g>
+        <circle cx="71.04" cy="44.18" r="3.22" fill="currentColor" />
+      </g>
+    </svg>
+  );
 };
 
 /** Flat near-black with one quiet pool of light; no texture, no drift. */

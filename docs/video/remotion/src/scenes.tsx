@@ -1,10 +1,15 @@
 import React from "react";
 import { AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { BAR, C, inter, mono, rgba, S, XF } from "./theme";
-import { Avatar, Cam, Chip, clamp, Decision, Headline, Kind, lerp, Mono, Panel, raise, useLand, useSnap, useU } from "./ui";
+import { Avatar, Cam, Chip, clamp, Decision, GaruMark, Headline, Kind, lerp, Mono, Panel, raise, useLand, useSnap, useU } from "./ui";
 
-/** The content panel's width in video px: 920 on 9:16; 900 on 16:9, or 860 for the two panels that read better narrower. */
-const usePanelW = (narrow = false) => (useLand() ? (narrow ? 860 : 900) : 920);
+/**
+ * 9:16 safe zones: Shorts, Reels and TikTok lay their controls over the bottom 300 px and the
+ * right 120 px, so nothing that has to be read goes there.
+ */
+export const SAFE = { bottom: 300, right: 120, left: 80 };
+/** The content panel's width in video px: 880 on 9:16 (between the safe margins); 900 on 16:9, or 860 for the two panels that read better narrower. */
+const usePanelW = (narrow = false) => (useLand() ? (narrow ? 860 : 900) : 1080 - SAFE.left - SAFE.right);
 
 /** Headline above / content below on 9:16; headline left / content right on 16:9. */
 const Layout: React.FC<{ head?: React.ReactNode; children: React.ReactNode; cam?: [number, number, number, number][] }> = ({ head, children, cam }) => {
@@ -14,12 +19,12 @@ const Layout: React.FC<{ head?: React.ReactNode; children: React.ReactNode; cam?
       <div style={{ transform: "scale(0.9)" }}>{children}</div>
     </div>
   ) : (
-    <div style={{ position: "absolute", left: 0, right: 0, top: 520, bottom: 110, display: "flex", alignItems: "center", justifyContent: "center" }}>{children}</div>
+    <div style={{ position: "absolute", left: SAFE.left, right: SAFE.right, top: 520, bottom: SAFE.bottom, display: "flex", alignItems: "center", justifyContent: "center" }}>{children}</div>
   );
   return (
     <AbsoluteFill>
-      {cam ? <Cam keys={cam} style={{ transformOrigin: land ? "68% 50%" : "50% 62%" }}>{content}</Cam> : content}
-      {land ? <div style={{ position: "absolute", left: 110, top: 0, bottom: 0, width: 760, display: "flex", alignItems: "center" }}>{head}</div> : <div style={{ position: "absolute", left: 84, right: 84, top: 170 }}>{head}</div>}
+      {cam ? <Cam keys={cam} style={{ transformOrigin: land ? "68% 50%" : "50% 60%" }}>{content}</Cam> : content}
+      {land ? <div style={{ position: "absolute", left: 110, top: 0, bottom: 0, width: 760, display: "flex", alignItems: "center" }}>{head}</div> : <div style={{ position: "absolute", left: 84, right: SAFE.right, top: 170 }}>{head}</div>}
     </AbsoluteFill>
   );
 };
@@ -69,16 +74,17 @@ const DOTS = (() => {
 })();
 const QUESTION = BAR * 2; // "But would you trust one?" lands on bar 2
 
-export const Hook: React.FC = () => {
+/** The clock and the first line are there from frame 0, so the first frame (the thumbnail) is never an empty backdrop. */
+export const Hook: React.FC<{ question?: number }> = ({ question = QUESTION }) => {
   const f = useCurrentFrame();
   const land = useLand();
-  const mins = interpolate(f, [4, 80], [-2, 420], { ...clamp, easing: Easing.bezier(0.7, 0, 0.25, 1) });
+  const mins = interpolate(f, [4, question - 16], [-2, 420], { ...clamp, easing: Easing.bezier(0.7, 0, 0.25, 1) });
   const m = Math.round(mins);
   const hh = ((Math.floor((m + 24 * 60) / 60) % 24) + 24) % 24;
   const h12 = hh % 12 === 0 ? 12 : hh % 12;
   const mm = String(((m % 60) + 60) % 60).padStart(2, "0");
   const ampm = hh < 12 ? "AM" : "PM";
-  const doubt = lerp(f, QUESTION - 6, QUESTION + 10, 0, 1);
+  const doubt = lerp(f, question - 6, question + 10, 0, 1);
   const W = land ? 1920 : 1080;
   const H = land ? 1080 : 1920;
   const size = land ? 230 : 240;
@@ -97,7 +103,7 @@ export const Hook: React.FC = () => {
         return <div key={i} style={{ position: "absolute", left: x - r, top: y - r, width: r * 2, height: r * 2, borderRadius: 99, background: col, opacity: (0.25 + 0.75 * (1 - born)) * (1 - doubt * 0.5), boxShadow: doubt < 0.5 ? `0 0 20px ${C.allow}` : undefined }} />;
       })}
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", paddingTop: land ? 220 : 300, opacity: 1 - doubt * 0.82, filter: doubt > 0.01 ? `blur(${doubt * 6}px)` : undefined }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 22, fontFamily: inter, fontWeight: 700, fontSize: size, letterSpacing: "-0.05em", color: C.paper, fontVariantNumeric: "tabular-nums", opacity: lerp(f, 0, 8, 0, 1) }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 22, fontFamily: inter, fontWeight: 700, fontSize: size, letterSpacing: "-0.05em", color: C.paper, fontVariantNumeric: "tabular-nums" }}>
           <span>
             {h12}:{mm}
           </span>
@@ -105,10 +111,10 @@ export const Hook: React.FC = () => {
         </div>
       </AbsoluteFill>
       <AbsoluteFill style={{ alignItems: "center", padding: land ? "130px 120px 0" : "260px 70px 0" }}>
-        <Headline text="AI agents can work|while you sleep." at={6} outAt={QUESTION - 10} size={land ? 92 : 104} align="center" />
+        <Headline text="AI agents can work|while you sleep." at={-40} outAt={question - 10} size={land ? 92 : 104} align="center" />
       </AbsoluteFill>
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", padding: 70 }}>
-        <Headline text="But would you|trust one?" at={QUESTION + 2} size={132} align="center" accent={{ trust: C.ask, one: C.ask }} />
+        <Headline text="But would you|trust one?" at={question + 2} size={132} align="center" accent={{ trust: C.ask, one: C.ask }} />
       </AbsoluteFill>
     </AbsoluteFill>
   );
@@ -116,10 +122,10 @@ export const Hook: React.FC = () => {
 
 // ================================================================= 2 · meet
 const AGENTS: { kind: Kind; name: string; what: string; when: string }[] = [
-  { kind: "fox", name: "Tomay", what: "Reads your calendar and preps every meeting from your email.", when: "Weekdays · 7:00" },
-  { kind: "bee", name: "Bea", what: "Sorts your inbox and drafts the replies. Never sends.", when: "Weekdays · 8:00" },
-  { kind: "owl", name: "Rook", what: "Checks your GitHub repo for new stars and issues.", when: "Mondays · 8:00" },
-  { kind: "octopus", name: "Atlas", what: "Reads your backlog in Linear and says what's next.", when: "When you ask" },
+  { kind: "fox", name: "Tomay", what: "Preps your meetings from your email.", when: "Weekdays · 7:00" },
+  { kind: "bee", name: "Bea", what: "Sorts your inbox, drafts replies.", when: "Weekdays · 8:00" },
+  { kind: "owl", name: "Rook", what: "New stars and issues on GitHub.", when: "Mondays · 8:00" },
+  { kind: "octopus", name: "Atlas", what: "What's next in your Linear backlog.", when: "When you ask" },
 ];
 
 export const Meet: React.FC = () => {
@@ -144,8 +150,8 @@ export const Meet: React.FC = () => {
       <div style={{ width: w, display: "flex", flexDirection: "column", gap: 12 * u }}>
         {AGENTS.map((a, i) => {
           const s = spring({ frame: f - (20 + i * 9), fps, config: { damping: 20, mass: 0.7, stiffness: 160 } });
-          const lead = i === 0 ? lerp(f, 150, 170, 0, 1) : 0;
-          const dim = i ? lerp(f, 150, 170, 0, 0.45) : 0;
+          const lead = i === 0 ? lerp(f, 108, 128, 0, 1) : 0;
+          const dim = i ? lerp(f, 108, 128, 0, 0.45) : 0;
           return (
             <Panel key={a.name} u={u} raised style={{ display: "flex", alignItems: "center", gap: 14 * u, padding: `${16 * u}px ${18 * u}px`, opacity: s * (1 - dim), transform: `translateY(${(1 - s) * 50 * u}px)`, borderColor: lead ? `color-mix(in oklab, ${C.paper} ${30 * lead}%, ${C.line2})` : undefined }}>
               <Avatar kind={a.kind} size={44 * u} />
@@ -168,10 +174,11 @@ export const Meet: React.FC = () => {
 // Tomay's "Your day" format (agents/tomay/Garufile.yaml); the people and meetings are made up.
 const BRIEF = [
   { k: "Schedule", v: "10:00\u2003Design review with Lena and Sam|12:30\u2003Lunch with Priya|3:00\u2003Weekly 1:1 with Jordan|4:30\u2003Focus: write the launch post" },
-  { k: "Free blocks", v: "8:00–10:00 · 11:00–12:30 · 1:30–3:00 · 3:30–4:30" },
   { k: "10:00 · Design review", v: "Last time: Lena sent the homepage draft.|Still open: the pricing copy she's waiting on." },
-  { k: "3:00 · 1:1 with Jordan", v: "Still open: your comments on the Q4 plan." },
 ];
+/** When each section of the brief lands (scene frames); the ticks in Garu.tsx follow it. */
+export const BRIEF_AT = (i: number) => 18 + i * 9;
+export const BRIEF_N = BRIEF.length;
 
 const Section: React.FC<{ at: number; u: number; k: string; v: string }> = ({ at, u, k, v }) => {
   const f = useCurrentFrame();
@@ -218,7 +225,7 @@ export const Brief: React.FC = () => {
         </div>
         <div style={{ marginTop: 16 * u, fontSize: 19 * u, fontWeight: 600, letterSpacing: "-0.02em" }}>Your day — Monday</div>
         {BRIEF.map((b, i) => (
-          <Section key={i} at={22 + i * 9} u={u} k={b.k} v={b.v} />
+          <Section key={i} at={BRIEF_AT(i)} u={u} k={b.k} v={b.v} />
         ))}
       </Panel>
     </Layout>
@@ -230,7 +237,7 @@ export const Brief: React.FC = () => {
 const CAN: { d: Decision; text: string; chip: string }[] = [
   { d: "allow", text: "Read your email", chip: "allowed" },
   { d: "allow", text: "File it under your labels", chip: "allowed" },
-  { d: "ask", text: "Draft a reply in your name", chip: "asks you first" },
+  { d: "ask", text: "Draft a reply for you", chip: "asks you first" },
   { d: "block", text: "Anything else", chip: "blocked" },
 ];
 // Attempts in plain words; the tools underneath are the real ones. Garu's Gmail server has no
@@ -334,7 +341,7 @@ export const Control: React.FC = () => {
             <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: G.row * u, display: "flex", alignItems: "center", gap: 12 * u, padding: `0 ${16 * u}px`, fontFamily: inter, opacity: 1 - lerp(f, MORPH.start + 4, MORPH.start + 14, 0, 1) }}>
               <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4 * u, background: C.ask }} />
               <span style={{ width: 22 * u, height: 22 * u, borderRadius: 99, display: "grid", placeItems: "center", fontSize: 13 * u, fontWeight: 700, color: C.bg, background: C.ask }}>?</span>
-              <span style={{ flex: 1, fontSize: 15 * u, color: C.fg }}>Draft a reply in your name</span>
+              <span style={{ flex: 1, fontSize: 15 * u, color: C.fg }}>{CAN[ASK_ROW].text}</span>
               <Chip d="ask" u={u} label="asks you first" />
             </div>
             <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: CARD_H * u, opacity: lerp(f, MORPH.start + 6, MORPH.start + 20, 0, 1) }}>
@@ -403,33 +410,35 @@ const ReviewBody: React.FC<{ u: number; done?: number; tapAt?: number }> = ({ u,
   );
 };
 
-const ASK = { tap: 74, swap: 92 };
-export const ASK_TAP = ASK.tap;
+export const ASK_TAP = 74;
 
-export const Ask: React.FC = () => {
+/** `short`: the 15-second cut has no room for two headlines, so the second one is there from the start. */
+export const Ask: React.FC<{ tap?: number; short?: boolean }> = ({ tap = ASK_TAP, short }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const land = useLand();
   const u = useU();
   const w = usePanelW();
   const hs = useHeadSize();
-  const done = spring({ frame: f - (ASK.tap + 2), fps, config: { damping: 16, mass: 0.5, stiffness: 220 } });
-  const flash = f >= ASK.tap ? Math.max(0, 1 - (f - ASK.tap) / 16) : 0;
-  const logIn = useSnap(ASK.tap + 22);
+  const swap = tap + 18;
+  const done = spring({ frame: f - (tap + 2), fps, config: { damping: 16, mass: 0.5, stiffness: 220 } });
+  const flash = f >= tap ? Math.max(0, 1 - (f - tap) / 16) : 0;
+  const logIn = useSnap(tap + 22);
+  const after = <Headline text="One tap on|your phone.|Saved, not sent." at={short ? 4 : swap + 10} size={hs} accent={{ Saved: C.fg2, not: C.fg2, sent: C.fg2 }} />;
   return (
     <Layout
-      head={<Swap a={<Headline text="Nothing goes out|without your OK." at={4} outAt={ASK.swap} size={hs} accent={{ OK: C.allow }} />} b={<Headline text="One tap.|Saved, not sent." at={ASK.swap + 10} size={hs} accent={{ Saved: C.fg2, not: C.fg2, sent: C.fg2 }} />} />}
+      head={short ? after : <Swap a={<Headline text="Nothing goes out|without your OK." at={4} outAt={swap} size={hs} accent={{ OK: C.allow }} />} b={after} />}
       cam={[
         [0, 1, 0, 0],
-        [ASK.tap - 24, 1.05, 0, land ? -20 : -70],
-        [ASK.tap, 1.09, 0, land ? -20 : -70],
-        [ASK.tap + 6, 1.12, 0, land ? -20 : -70],
-        [ASK.tap + 44, 1.02, 0, 0],
+        [tap - 24, 1.05, 0, land ? -20 : -70],
+        [tap, 1.09, 0, land ? -20 : -70],
+        [tap + 6, 1.12, 0, land ? -20 : -70],
+        [tap + 44, 1.02, 0, 0],
       ]}
     >
       <div style={{ width: w, position: "relative" }}>
         <div style={{ position: "relative", height: CARD_H * u, borderRadius: 14 * u, overflow: "hidden", background: C.panel2, boxShadow: `inset 0 0 0 ${u * 0.7}px ${done > 0.01 ? `color-mix(in oklab, ${C.allow} ${35 + 30 * done}%, ${C.line2})` : `color-mix(in oklab, ${C.ask} 35%, ${C.line2})`}, ${raise(u)}, 0 0 ${120 * flash}px ${rgba(C.allow, 0.45 * flash)}` }}>
-          <ReviewBody u={u} done={done} tapAt={ASK.tap} />
+          <ReviewBody u={u} done={done} tapAt={tap} />
         </div>
         <Panel u={u} style={{ position: "absolute", left: 0, right: 0, top: "100%", marginTop: 14 * u, opacity: logIn, transform: `translateY(${(1 - logIn) * 30 * u}px)`, display: "flex", alignItems: "center", gap: 11 * u, padding: `${12 * u}px ${14 * u}px` }}>
           <Avatar kind="bee" size={26 * u} />
@@ -446,24 +455,28 @@ export const Ask: React.FC = () => {
 };
 
 // ================================================================= 6 · it learns
+// Three approved drafts to the same address: suggest.ts then narrows the rule to that address
+// (narrowestRule), and the card is the quiet one. Drafts to three different people would give
+// the whole tool and the card's amber warning instead.
 const HIST = [
-  { day: "Wed", at: 10, to: "Priya" },
-  { day: "Thu", at: 16, to: "Jordan" },
-  { day: "Fri", at: 22, to: "Lena" },
+  { day: "Wed", at: 6, to: "Lena" },
+  { day: "Thu", at: 11, to: "Lena" },
+  { day: "Fri", at: 16, to: "Lena" },
 ];
-const LEARN = { card: 34, tap: 100 };
+export const LEARN_AT = HIST.map((h) => h.at);
+const LEARN = { card: 26, tap: 118 };
 export const LEARN_TAP = LEARN.tap;
+const RULE_YAML = '- tool: "gmail.create_draft"\n  action: allow\n  when:\n    to: {"eq":["lena@example.com"]}';
 
 export const Learn: React.FC = () => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const land = useLand();
-  const u = useU();
+  const u = useU() * (land ? 0.95 : 0.93); // the history plus the card with its four-line rule is the tallest stack in the film
   const w = usePanelW();
   const card = useSnap(LEARN.card, { damping: 20 });
   const added = spring({ frame: f - (LEARN.tap + 2), fps, config: { damping: 16, mass: 0.5, stiffness: 220 } });
-  const yamlChars = Math.floor(lerp(f, LEARN.card + 10, LEARN.card + 34, 0, 60, Easing.linear));
-  const yaml = '- tool: "gmail.create_draft"\n  action: allow';
+  const yamlChars = Math.floor(lerp(f, LEARN.card + 10, LEARN.card + 40, 0, RULE_YAML.length, Easing.linear));
   const count = HIST.filter((h) => f >= h.at).length;
   return (
     <Layout
@@ -500,12 +513,13 @@ export const Learn: React.FC = () => {
             <Avatar kind="bee" size={30 * u} />
             <div style={{ flex: 1, fontSize: 14 * u, lineHeight: 1.45 }}>
               You've approved <span style={{ whiteSpace: "nowrap" }}><b style={{ fontWeight: 600 }}>bea</b> → <Mono style={{ fontSize: 13 * u }}>gmail.create_draft</Mono></span> <b style={{ fontWeight: 600, whiteSpace: "nowrap" }}>3 times</b> and never declined it.
-              <div style={{ marginTop: 3 * u, fontSize: 13 * u, color: C.fg2 }}>Stop asking? This is the rule Garu would add.</div>
+              <div style={{ marginTop: 3 * u, fontSize: 13 * u, color: C.fg2 }}>
+                Stop asking? This is the rule Garu would add, scoped to what you actually approved: <span style={{ color: C.fg }}>allow gmail.create_draft when to is exactly ["lena@example.com"]</span>.
+              </div>
             </div>
           </div>
-          <pre style={{ margin: `${12 * u}px ${16 * u}px 0`, padding: `${9 * u}px ${12 * u}px`, borderRadius: 9 * u, border: `${u * 0.6}px solid ${C.line}`, background: rgba(C.bg, 0.6), fontFamily: mono, fontSize: 13 * u, lineHeight: 1.55, color: C.fg2, minHeight: 2 * 13 * u * 1.55 }}>
-            {yaml
-              .slice(0, yamlChars)
+          <pre style={{ margin: `${12 * u}px ${16 * u}px 0`, padding: `${9 * u}px ${12 * u}px`, borderRadius: 9 * u, border: `${u * 0.6}px solid ${C.line}`, background: rgba(C.bg, 0.6), fontFamily: mono, fontSize: 13 * u, lineHeight: 1.55, color: C.fg2, minHeight: 4 * 13 * u * 1.55 }}>
+            {RULE_YAML.slice(0, yamlChars)
               .split("\n")
               .map((l, i) => (
                 <div key={i}>
@@ -545,8 +559,9 @@ export const Learn: React.FC = () => {
   );
 };
 
-// ================================================================= 7 · proof (three one-bar beats)
-const PROOF = BAR;
+// ================================================================= 7 · proof (three equal beats over five bars)
+const PROOF = Math.floor(S.proof.dur / 3);
+export const PROOF_BEAT = PROOF;
 const ProofBeat: React.FC<{ i: number; head: string; accent?: Record<string, string>; children: React.ReactNode }> = ({ i, head, accent, children }) => {
   const f = useCurrentFrame();
   const hs = useHeadSize();
@@ -591,14 +606,15 @@ export const Proof: React.FC = () => {
         </div>
       </ProofBeat>
       <ProofBeat i={1} head="Runs on your|own computer.">
-        <Panel u={u} raised style={{ width: w, overflow: "hidden" }}>
+        {/* on 9:16 the terminal sits up under the headline instead of in the middle of the empty lower half */}
+        <Panel u={u} raised style={{ width: w, overflow: "hidden", transform: land ? undefined : "translateY(-120px)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 * u, height: 36 * u, padding: `0 ${14 * u}px`, borderBottom: `${u * 0.6}px solid ${C.line}` }}>
             {[0, 1, 2].map((i) => (
               <span key={i} style={{ width: 9 * u, height: 9 * u, borderRadius: 9, background: rgba(C.paper, 0.14) }} />
             ))}
             <Mono style={{ marginLeft: 8 * u, fontSize: 11.5 * u, color: C.mute }}>~/garu</Mono>
           </div>
-          <div style={{ padding: `${14 * u}px ${16 * u}px ${16 * u}px`, fontFamily: mono, fontSize: (land ? 14 : 12.5) * u, lineHeight: 1.75, color: C.fg2 }}>
+          <div style={{ padding: `${16 * u}px ${16 * u}px ${18 * u}px`, fontFamily: mono, fontSize: (land ? 14 : 13) * u, lineHeight: 1.85, color: C.fg2 }}>
             <div>
               <span style={{ color: C.allow }}>$</span> <span style={{ color: C.fg }}>{typed}</span>
             </div>
@@ -606,18 +622,19 @@ export const Proof: React.FC = () => {
               <span style={{ color: C.fg }}>garu control room</span> → <span style={{ color: C.paper, textDecoration: "underline" }}>http://127.0.0.1:4000</span>
             </div>
             <div style={{ opacity: l1 >= 24 ? 1 : 0 }}>&nbsp;&nbsp;running 3 cron schedule(s) from Garufiles under ~/garu</div>
+            <div style={{ opacity: l1 >= 28 ? 1 : 0 }}>Ctrl-C to stop.</div>
           </div>
         </Panel>
       </ProofBeat>
       <ProofBeat i={2} head="Gemini, Claude,|or fully local." accent={{ or: C.fg2, fully: C.fg2, local: C.fg2 }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 * u }}>
-          <Pill u={u} at={2 * PROOF + o + 6}>
+          <Pill u={u} at={2 * PROOF + o + 4}>
             Gemini <span style={{ color: C.mute, fontWeight: 500 }}>· free tier</span>
           </Pill>
-          <Pill u={u} at={2 * PROOF + o + 11}>
+          <Pill u={u} at={2 * PROOF + o + 8}>
             Claude <span style={{ color: C.mute, fontWeight: 500 }}>· your key</span>
           </Pill>
-          <Pill u={u} at={2 * PROOF + o + 16}>
+          <Pill u={u} at={2 * PROOF + o + 12}>
             Ollama <span style={{ color: C.mute, fontWeight: 500 }}>· $0, offline</span>
           </Pill>
         </div>
@@ -627,58 +644,30 @@ export const Proof: React.FC = () => {
 };
 
 // ================================================================= 8 · logo + call to action
-export const Logo: React.FC = () => {
+/** `fast`: the 15-second cut's card has two seconds, so everything lands sooner. */
+export const Logo: React.FC<{ dur?: number; fast?: boolean }> = ({ dur = S.logo.dur, fast }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const land = useLand();
-  const ring = lerp(f, 0, 18, 0, 1, Easing.bezier(0.3, 0, 0.2, 1));
-  const cat = spring({ frame: f - 8, fps, config: { damping: 13, mass: 0.6 } });
-  const word = spring({ frame: f - 18, fps, config: { damping: 22, mass: 0.6 } });
-  const tag = spring({ frame: f - 26, fps, config: { damping: 22, mass: 0.6 } });
-  const sub = spring({ frame: f - 40, fps, config: { damping: 22, mass: 0.6 } });
-  const cta = spring({ frame: f - 50, fps, config: { damping: 20, mass: 0.6 } });
+  const k = fast ? 0.5 : 1;
+  const ring = lerp(f, 0, 18 * k, 0, 1, Easing.bezier(0.3, 0, 0.2, 1));
+  const cat = spring({ frame: f - 8 * k, fps, config: { damping: 13, mass: 0.6 } });
+  const word = spring({ frame: f - 18 * k, fps, config: { damping: 22, mass: 0.6 } });
+  const tag = spring({ frame: f - 26 * k, fps, config: { damping: 22, mass: 0.6 } });
+  const sub = spring({ frame: f - 40 * k, fps, config: { damping: 22, mass: 0.6 } });
+  const cta = spring({ frame: f - 50 * k, fps, config: { damping: 20, mass: 0.6 } });
   const flash = Math.max(0, 1 - f / 14);
-  const end = lerp(f, S.logo.dur - 16, S.logo.dur, 1, 0);
+  const end = lerp(f, dur - 16, dur, 1, 0);
   const size = land ? 190 : 240;
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", flexDirection: "column", opacity: end }}>
       <AbsoluteFill style={{ background: `radial-gradient(circle at 50% ${land ? 38 : 40}%, ${rgba(C.paper, 0.16 * flash)}, ${rgba(C.paper, 0)} 45%)` }} />
-      <svg viewBox="0 0 100 100" width={size} height={size} fill="none" style={{ color: C.paper, transform: `scale(${1.15 - 0.15 * ring})` }}>
-        <defs>
-          <mask id="garu-cat">
-            <g fill="#fff">
-              <ellipse cx="48.5" cy="52.0" rx="23.0" ry="20.70" />
-              <polygon points="44.82,42.34 29.64,40.96 27.80,19.34" />
-              <polygon points="52.18,42.34 67.36,40.96 69.20,19.34" />
-            </g>
-            <g fill="#000">
-              <rect x="25.04" y="41.42" width="46.92" height="4.60" rx="2.30" transform="rotate(6 48.5 43.72)" />
-              <ellipse cx="39.30" cy="53.38" rx="5.98" ry="2.07" transform="rotate(12 39.30 53.38)" />
-              <ellipse cx="57.70" cy="53.38" rx="5.98" ry="2.07" transform="rotate(-12 57.70 53.38)" />
-              <polygon points="46.66,60.28 50.34,60.28 48.5,62.58" />
-            </g>
-            <g fill="#fff">
-              <rect x="38.61" y="51.66" width="1.38" height="3.45" rx="0.69" />
-              <rect x="57.01" y="51.66" width="1.38" height="3.45" rx="0.69" />
-            </g>
-          </mask>
-        </defs>
-        <path d="M 91.77 54.39 A 42 42 0 1 1 84.82 26.51" stroke="currentColor" strokeWidth="5.5" strokeLinecap="round" pathLength={1} strokeDasharray="1 1" strokeDashoffset={1 - ring} />
-        <g style={{ transformOrigin: "48.5px 48px", transform: `scale(${0.6 + 0.4 * cat})`, opacity: Math.min(1, cat * 1.3) }}>
-          <rect width="100" height="100" fill="currentColor" mask="url(#garu-cat)" />
-          <g stroke="currentColor" strokeWidth="3.91" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="71.04,44.18 83.98,36.13 98.35,39.01" />
-            <polyline points="71.04,44.18 83.11,47.63 96.34,53.95" />
-          </g>
-          <circle cx="71.04" cy="44.18" r="3.22" fill="currentColor" />
-        </g>
-      </svg>
+      <GaruMark size={size} ring={ring} cat={cat} style={{ transform: `scale(${1.15 - 0.15 * ring})` }} />
       <div style={{ marginTop: 32, fontFamily: inter, fontWeight: 700, fontSize: land ? 88 : 112, letterSpacing: "-0.045em", color: C.paper, opacity: word, transform: `translateY(${(1 - word) * 30}px)` }}>Garu</div>
       <div style={{ marginTop: 6, fontFamily: inter, fontWeight: 500, fontSize: land ? 38 : 46, letterSpacing: "-0.02em", color: C.fg2, opacity: tag, transform: `translateY(${(1 - tag) * 24}px)`, textAlign: "center", padding: "0 60px" }}>Always-on agents you can actually trust.</div>
-      <div style={{ marginTop: land ? 40 : 60, fontFamily: inter, fontWeight: 600, fontSize: land ? 30 : 36, color: C.paper, opacity: sub, transform: `translateY(${(1 - sub) * 20}px)` }}>Free · Runs on your computer</div>
-      <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 16, padding: land ? "16px 28px" : "20px 32px", borderRadius: 18, background: C.panel2, boxShadow: `inset 0 0 0 2px ${C.line2}`, fontFamily: mono, fontSize: land ? 24 : 23, color: C.fg, opacity: cta, transform: `translateY(${(1 - cta) * 24}px)` }}>
-        garuagents.com
-      </div>
+      <div style={{ marginTop: land ? 40 : 60, fontFamily: inter, fontWeight: 600, fontSize: land ? 30 : 36, color: C.fg2, opacity: sub, transform: `translateY(${(1 - sub) * 20}px)` }}>Free · Runs on your computer</div>
+      {/* the address is the one thing to take away: second only to the wordmark */}
+      <div style={{ marginTop: land ? 22 : 28, fontFamily: inter, fontWeight: 600, fontSize: land ? 48 : 56, letterSpacing: "-0.03em", color: C.paper, opacity: cta, transform: `translateY(${(1 - cta) * 24}px)` }}>garuagents.com</div>
     </AbsoluteFill>
   );
 };
