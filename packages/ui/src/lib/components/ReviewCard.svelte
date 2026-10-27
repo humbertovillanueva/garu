@@ -70,7 +70,8 @@
   const content = $derived(str("content") ?? str("text") ?? "");
   const postText = $derived(str("text") ?? str("message") ?? str("content") ?? "");
   const postTo = $derived(str("channel") ?? str("room") ?? str("chat_id") ?? str("recipient"));
-  const object = $derived(shape === "file" ? fileName : shape === "email" ? t("an email") : shape === "post" ? (postTo ? t("a message to {to}", { to: postTo }) : t("a message")) : t("a command"));
+  // What the card is about, for the header and the spoken "Approved: bea, …". A call with no better name is named by its tool id, never "a command".
+  const object = $derived(shape === "file" ? fileName : shape === "email" ? t("an email") : shape === "post" ? (postTo ? t("a message to {to}", { to: postTo }) : t("a message")) : shape === "command" ? t("a command") : req.tool);
   // A draft only waits in Drafts; saying "send" would promise more than happens.
   const verb = $derived(shape === "email" ? (/draft/i.test(tool) ? t("wants to draft") : t("wants to send")) : shape === "post" ? t("wants to post") : shape === "file" ? t("wants to write") : shape === "command" ? t("wants to run") : t("wants to call"));
 
