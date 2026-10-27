@@ -925,6 +925,9 @@ function printSchedulerEvent(e: SchedulerEvent): void {
     case "run.failed":
       stderr.write(`${now} ✖ ${e.agent}: ${e.error}\n`);
       break;
+    case "error":
+      stderr.write(`${now} ✖ ${t("schedule: {message} (still running)", { message: e.message })}\n`);
+      break;
     case "stopping":
       if (e.inFlight > 0) stderr.write(`${now} ${t("waiting for {n} run(s) to finish…", { n: e.inFlight })}\n`);
       break;

@@ -258,6 +258,7 @@ export const es: Record<string, string> = {
   "{agent}: {status} in {turns} turn(s), {cost} — {path}": "{agent}: {status} en {turns} turno(s), {cost} — {path}",
   "waiting for {n} run(s) to finish…": "esperando a que terminen {n} ejecución(es)…",
   "garu up: stopped": "garu up: detenido",
+  "schedule: {message} (still running)": "programación: {message} (sigue en marcha)",
   "approval needed: {tool}": "aprobación necesaria: {tool}",
   "args:": "argumentos:",
   "allow?": "¿permitir?",

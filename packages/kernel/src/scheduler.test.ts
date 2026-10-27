@@ -86,6 +86,34 @@ describe("Scheduler", () => {
     expect(events.filter((e) => e.type === "run.done")).toHaveLength(1);
   });
 
+  it("a reachability check or a listener that throws on a tick is reported, and never a loose rejection", async () => {
+    const m = manualCron();
+    const events: SchedulerEvent[] = [];
+    let ran = 0;
+    let dnsBroken = true;
+    const s = new Scheduler({
+      runner: async (a) => { ran++; return ok(a.garufile.name); },
+      // The listener itself misbehaves once: the "fire" line can't be written.
+      onEvent: (e) => { events.push(e); if (e.type === "fire" && ran === 0) throw new Error("log write failed"); },
+      cronFactory: m.factory,
+      online: async () => { if (dnsBroken) throw new Error("dns broke"); return true; },
+      catchUp: { lastRunAt: () => null, now: () => local(9, 9, 30), everyMs: 0 },
+    });
+    s.start([agentA]);
+    // vitest fails the file on an unhandled rejection, so reaching the assertions is the test.
+    m.tick("*/5 * * * *");
+    await new Promise((r) => setTimeout(r, 10));
+    expect(events.at(-1)).toEqual({ type: "run.failed", agent: "a", error: "dns broke" });
+    expect(ran).toBe(0);
+    // The catch-up chain is intact after a failure in it: the next check still queues and runs.
+    dnsBroken = false;
+    expect(s.checkMissed()).toBe(1);
+    await new Promise((r) => setTimeout(r, 10));
+    await s.stop();
+    expect(ran).toBe(1);
+    expect(events.some((e) => e.type === "run.done")).toBe(true);
+  });
+
   it("a throwing runner is reported, not fatal", async () => {
     const m = manualCron();
     const events: SchedulerEvent[] = [];

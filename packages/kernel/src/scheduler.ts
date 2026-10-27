@@ -25,6 +25,8 @@ export type SchedulerEvent =
   | { type: "offline"; agent: string; cron: string }
   | { type: "run.done"; agent: string; result: RunResult }
   | { type: "run.failed"; agent: string; error: string }
+  /** The schedule itself hit an error outside any one run (the catch-up check, say); the service keeps going. */
+  | { type: "error"; message: string }
   | { type: "stopping"; inFlight: number }
   | { type: "stopped" };
 
@@ -148,7 +150,11 @@ export class Scheduler {
         if (!t.cron) continue;
         assertValidCron(t.cron);
         const cron = t.cron;
-        const handle = (this.opts.cronFactory ?? defaultCronFactory)(cron, () => void this.fire(a, cron));
+        // Nothing a tick throws (a reachability check, a listener) may escape: an unhandled rejection
+        // would take the whole service down with it. It is reported as that agent's failed run instead.
+        const handle = (this.opts.cronFactory ?? defaultCronFactory)(cron, () => {
+          this.fire(a, cron).catch((e: unknown) => this.emit({ type: "run.failed", agent: a.garufile.name, error: (e as Error).message }));
+        });
         this.handles.push(handle);
         this.jobs.push({ agent: a, cron, handle });
         this.emit({ type: "scheduled", agent: a.garufile.name, cron, nextRun: handle.nextRun() });
@@ -159,7 +165,13 @@ export class Scheduler {
       this.checkMissed();
       const every = this.opts.catchUp.everyMs ?? 60_000;
       if (every > 0) {
-        this.timer = setInterval(() => this.checkMissed(), every);
+        this.timer = setInterval(() => {
+          try {
+            this.checkMissed();
+          } catch (e) {
+            this.emit({ type: "error", message: `catch-up check: ${(e as Error).message}` });
+          }
+        }, every);
         this.timer.unref?.();
       }
     }
@@ -182,13 +194,16 @@ export class Scheduler {
       const last = cu.lastRunAt(name);
       if (last && last.getTime() >= due.getTime()) continue;
       this.catchUpPending.add(name);
-      this.catchUpQueue = this.catchUpQueue.then(() => {
-        this.catchUpPending.delete(name);
-        // While it waited its turn, its own cron may have fired and run: check again before firing.
-        const lastNow = cu.lastRunAt(name);
-        if (this.inFlight.has(name) || this.starting.has(name) || (lastNow && lastNow.getTime() >= due.getTime())) return;
-        return this.fire(j.agent, j.cron, "catch-up", due);
-      });
+      this.catchUpQueue = this.catchUpQueue
+        .then(() => {
+          this.catchUpPending.delete(name);
+          // While it waited its turn, its own cron may have fired and run: check again before firing.
+          const lastNow = cu.lastRunAt(name);
+          if (this.inFlight.has(name) || this.starting.has(name) || (lastNow && lastNow.getTime() >= due.getTime())) return;
+          return this.fire(j.agent, j.cron, "catch-up", due);
+        })
+        // One agent's failure must not break the chain for the agents queued behind it.
+        .catch((e: unknown) => this.emit({ type: "run.failed", agent: name, error: (e as Error).message }));
       queued++;
     }
     return queued;
@@ -257,6 +272,11 @@ export class Scheduler {
   }
 
   private emit(e: SchedulerEvent): void {
-    this.opts.onEvent?.(e);
+    // A listener that throws (a log line that can't be written) is its own problem, not the schedule's.
+    try {
+      this.opts.onEvent?.(e);
+    } catch {
+      /* the run and the schedule go on */
+    }
   }
 }
