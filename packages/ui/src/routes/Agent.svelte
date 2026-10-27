@@ -46,7 +46,10 @@
 
   let loadError = $state<string | null>(null);
   const loadRuns = loader(), loadChat = loader();
-  $effect(() => { live.tick; name; loadRuns(api.runs(name), (r) => (runs = r), (m) => (loadError = m)); });
+  // The history shows five rows, so five (plus one in case the current run is among them) is all that
+  // is fetched on every tick; "show all" asks for the whole history once.
+  const RECENT = 5;
+  $effect(() => { live.tick; name; loadRuns(api.runs(name, showAllRuns ? {} : { limit: RECENT + 1 }), (r) => (runs = r), (m) => (loadError = m)); });
   $effect(() => {
     live.tick; name;
     loadChat(api.chat(name), async (m) => {
@@ -215,7 +218,7 @@
     <div>
       <div class="mb-2 flex items-center justify-between">
         <h2 class="text-[11px] uppercase tracking-wider text-mute">{t("Runs")}</h2>
-        {#if (runs?.length ?? 0) > 5}<button class="tap text-[11.5px] text-mute hover:text-fg" onclick={() => (showAllRuns = !showAllRuns)}>{showAllRuns ? t("show fewer") : t("show all {n}", { n: runs!.length })}</button>{/if}
+        {#if a.runs > RECENT}<button class="tap text-[11.5px] text-mute hover:text-fg" onclick={() => (showAllRuns = !showAllRuns)}>{showAllRuns ? t("show fewer") : t("show all {n}", { n: a.runs })}</button>{/if}
       </div>
       {#if runs === null}
         {#if loadError}<LoadError message={loadError} />{:else}<Skeleton rows={3} h={48} />{/if}
@@ -223,7 +226,7 @@
         <div class="text-[13px] text-mute">{t("No runs yet.")}</div>
       {:else}
         <div class="panel divide-y divide-line">
-          {#each (showAllRuns ? runs : runs.slice(0, 5)).filter((r) => r.runId !== currentRunId) as r (r.runId)}
+          {#each runs.filter((r) => r.runId !== currentRunId).slice(0, showAllRuns ? undefined : RECENT) as r (r.runId)}
             <a href={href("run", r.agent, r.runId)} class="card-hover flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2.5 first:rounded-t-xl last:rounded-b-xl">
               <Status status={r.status} />
               <span class="text-[12.5px] text-fg-2">{humanTime(r.startedAt)}</span>
