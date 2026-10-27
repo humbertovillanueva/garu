@@ -4,7 +4,11 @@ import { loadFont as loadMono } from "@remotion/google-fonts/JetBrainsMono";
 export const { fontFamily: inter } = loadFont("normal", { weights: ["400", "500", "600", "700"], subsets: ["latin"] });
 export const { fontFamily: mono } = loadMono("normal", { weights: ["400", "500", "700"], subsets: ["latin"] });
 
-/** The control room's own tokens (packages/ui/src/app.css), plus the brand off-white. */
+/**
+ * The control room's own tokens, copied by hand from the dark theme in packages/ui/src/app.css
+ * (--color-bg … --color-bad; `paper` is --color-accent, `allow` is --color-ok, `block` is --color-bad).
+ * Keep the values identical to that file.
+ */
 export const C = {
   bg: "#0a0c0f",
   panel: "#11141a",
@@ -19,6 +23,12 @@ export const C = {
   allow: "#43c979",
   ask: "#d9b24c",
   block: "#ef5350",
+};
+
+/** A token at some opacity: rgba(C.allow, 0.4). */
+export const rgba = (hex: string, a: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`;
 };
 
 export const FPS = 30;

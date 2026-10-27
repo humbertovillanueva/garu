@@ -1,7 +1,10 @@
 import React from "react";
 import { AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { BAR, C, inter, mono, S, XF } from "./theme";
-import { Avatar, Cam, Chip, clamp, Decision, Headline, Kind, lerp, Mono, Panel, useLand, useSnap, useU } from "./ui";
+import { BAR, C, inter, mono, rgba, S, XF } from "./theme";
+import { Avatar, Cam, Chip, clamp, Decision, Headline, Kind, lerp, Mono, Panel, raise, useLand, useSnap, useU } from "./ui";
+
+/** The content panel's width in video px: 920 on 9:16; 900 on 16:9, or 860 for the two panels that read better narrower. */
+const usePanelW = (narrow = false) => (useLand() ? (narrow ? 860 : 900) : 920);
 
 /** Headline above / content below on 9:16; headline left / content right on 16:9. */
 const Layout: React.FC<{ head?: React.ReactNode; children: React.ReactNode; cam?: [number, number, number, number][] }> = ({ head, children, cam }) => {
@@ -42,7 +45,7 @@ const Finger: React.FC<{ at: number; u: number; ripple?: string }> = ({ at, u, r
   return (
     <>
       <div style={{ position: "absolute", width: 170 * u, height: 170 * u, left: -85 * u, top: -85 * u, borderRadius: 999, border: `${3 * u}px solid ${ripple}`, transform: `scale(${0.15 + rip})`, opacity: f >= at ? 1 - rip : 0 }} />
-      <div style={{ position: "absolute", width: 44 * u, height: 44 * u, left: -22 * u, top: -22 * u, borderRadius: 999, background: "rgba(244,241,234,0.26)", boxShadow: `0 0 0 ${2 * u}px rgba(244,241,234,0.6), 0 ${8 * u}px ${24 * u}px rgba(0,0,0,0.5)`, transform: `translate(${(1 - fin) * 70 * u}px, ${(1 - fin) * 110 * u}px) scale(${press})`, opacity: fin * out }} />
+      <div style={{ position: "absolute", width: 44 * u, height: 44 * u, left: -22 * u, top: -22 * u, borderRadius: 999, background: rgba(C.paper, 0.26), boxShadow: `0 0 0 ${2 * u}px ${rgba(C.paper, 0.6)}, 0 ${8 * u}px ${24 * u}px rgba(0,0,0,0.5)`, transform: `translate(${(1 - fin) * 70 * u}px, ${(1 - fin) * 110 * u}px) scale(${press})`, opacity: fin * out }} />
     </>
   );
 };
@@ -124,7 +127,7 @@ export const Meet: React.FC = () => {
   const { fps } = useVideoConfig();
   const land = useLand();
   const u = useU() * (land ? 0.82 : 1);
-  const w = land ? 900 : 920;
+  const w = usePanelW();
   return (
     <Layout
       head={
@@ -193,10 +196,9 @@ const Section: React.FC<{ at: number; u: number; k: string; v: string }> = ({ at
 };
 
 export const Brief: React.FC = () => {
-  const land = useLand();
   const u = useU();
   const enter = useSnap(8, { damping: 20 });
-  const w = land ? 860 : 920;
+  const w = usePanelW(true);
   return (
     <Layout
       head={<Headline text="Wake up to|your day, ready." at={6} size={useHeadSize()} accent={{ Wake: C.fg2, up: C.fg2, to: C.fg2 }} />}
@@ -251,7 +253,7 @@ export const Control: React.FC = () => {
   const { fps } = useVideoConfig();
   const land = useLand();
   const u = useU();
-  const w = land ? 900 : 920;
+  const w = usePanelW();
   const enter = useSnap(6, { damping: 20 });
   const cur = TRIES.map((_, i) => i).filter((i) => f >= TRIES[i].at).pop();
   const m = lerp(f, MORPH.start, MORPH.end, 0, 1, Easing.bezier(0.7, 0, 0.2, 1));
@@ -328,7 +330,7 @@ export const Control: React.FC = () => {
           </div>
         </div>
         {morphing ? (
-          <div style={{ position: "absolute", left: 0, right: 0, top: (STACK / 2 + top) * u, height: h * u, borderRadius: 14 * u * m, overflow: "hidden", background: `color-mix(in oklab, rgba(217,178,76,0.14) ${(1 - m) * 100}%, ${C.panel2})`, boxShadow: `inset 0 0 0 ${u * 0.7}px color-mix(in oklab, ${C.ask} ${35 + 30 * (1 - m)}%, ${C.line2}), 0 ${30 * u * m}px ${70 * u * m}px -${24 * u}px rgba(0,0,0,.9)` }}>
+          <div style={{ position: "absolute", left: 0, right: 0, top: (STACK / 2 + top) * u, height: h * u, borderRadius: 14 * u * m, overflow: "hidden", background: `color-mix(in oklab, ${rgba(C.ask, 0.14)} ${(1 - m) * 100}%, ${C.panel2})`, boxShadow: `inset 0 0 0 ${u * 0.7}px color-mix(in oklab, ${C.ask} ${35 + 30 * (1 - m)}%, ${C.line2}), ${raise(u, m)}` }}>
             <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: G.row * u, display: "flex", alignItems: "center", gap: 12 * u, padding: `0 ${16 * u}px`, fontFamily: inter, opacity: 1 - lerp(f, MORPH.start + 4, MORPH.start + 14, 0, 1) }}>
               <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4 * u, background: C.ask }} />
               <span style={{ width: 22 * u, height: 22 * u, borderRadius: 99, display: "grid", placeItems: "center", fontSize: 13 * u, fontWeight: 700, color: C.bg, background: C.ask }}>?</span>
@@ -355,7 +357,7 @@ const ReviewBody: React.FC<{ u: number; done?: number; tapAt?: number }> = ({ u,
     <div style={{ fontFamily: inter, color: C.fg, height: "100%", display: "flex", flexDirection: "column" }}>
       <div style={{ padding: `${18 * u}px ${18 * u}px 0` }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 11 * u }}>
-          <Avatar kind="bee" size={34 * u} ring={ok ? `rgba(67,201,121,${0.35 * done})` : "rgba(217,178,76,0.35)"} />
+          <Avatar kind="bee" size={34 * u} ring={ok ? rgba(C.allow, 0.35 * done) : rgba(C.ask, 0.35)} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15 * u }}>
               <b style={{ fontWeight: 600 }}>bea</b> <span style={{ color: C.fg2 }}>wants to draft</span> <b style={{ fontWeight: 600 }}>an email</b>{" "}
@@ -372,7 +374,7 @@ const ReviewBody: React.FC<{ u: number; done?: number; tapAt?: number }> = ({ u,
             </div>
           </div>
         </div>
-        <div style={{ marginTop: 14 * u, borderRadius: 9 * u, border: `${u * 0.6}px solid ${C.line}`, background: "rgba(10,12,15,0.6)", overflow: "hidden" }}>
+        <div style={{ marginTop: 14 * u, borderRadius: 9 * u, border: `${u * 0.6}px solid ${C.line}`, background: rgba(C.bg, 0.6), overflow: "hidden" }}>
           <div style={{ display: "flex", padding: `${6 * u}px ${12 * u}px`, borderBottom: `${u * 0.6}px solid ${C.line}`, fontFamily: mono, fontSize: 11.5 * u, color: C.mute }}>
             <span>To  Lena Ortiz</span>
             <span style={{ marginLeft: "auto" }}>Re: Homepage draft</span>
@@ -383,7 +385,7 @@ const ReviewBody: React.FC<{ u: number; done?: number; tapAt?: number }> = ({ u,
           </div>
         </div>
       </div>
-      <div style={{ marginTop: "auto", display: "flex", gap: 8 * u, padding: `${12 * u}px ${18 * u}px`, borderTop: `${u * 0.6}px solid ${C.line}`, background: "rgba(10,12,15,0.3)" }}>
+      <div style={{ marginTop: "auto", display: "flex", gap: 8 * u, padding: `${12 * u}px ${18 * u}px`, borderTop: `${u * 0.6}px solid ${C.line}`, background: rgba(C.bg, 0.3) }}>
         <div style={{ position: "relative" }}>
           <Btn u={u} tone="ok" fill={Math.min(1, done)} scale={press}>
             {ok ? "✓ Approved" : "Approve"}
@@ -409,7 +411,7 @@ export const Ask: React.FC = () => {
   const { fps } = useVideoConfig();
   const land = useLand();
   const u = useU();
-  const w = land ? 900 : 920;
+  const w = usePanelW();
   const hs = useHeadSize();
   const done = spring({ frame: f - (ASK.tap + 2), fps, config: { damping: 16, mass: 0.5, stiffness: 220 } });
   const flash = f >= ASK.tap ? Math.max(0, 1 - (f - ASK.tap) / 16) : 0;
@@ -426,7 +428,7 @@ export const Ask: React.FC = () => {
       ]}
     >
       <div style={{ width: w, position: "relative" }}>
-        <div style={{ position: "relative", height: CARD_H * u, borderRadius: 14 * u, overflow: "hidden", background: C.panel2, boxShadow: `inset 0 0 0 ${u * 0.7}px ${done > 0.01 ? `color-mix(in oklab, ${C.allow} ${35 + 30 * done}%, ${C.line2})` : `color-mix(in oklab, ${C.ask} 35%, ${C.line2})`}, 0 ${30 * u}px ${70 * u}px -${24 * u}px rgba(0,0,0,.9), 0 0 ${120 * flash}px rgba(67,201,121,${0.45 * flash})` }}>
+        <div style={{ position: "relative", height: CARD_H * u, borderRadius: 14 * u, overflow: "hidden", background: C.panel2, boxShadow: `inset 0 0 0 ${u * 0.7}px ${done > 0.01 ? `color-mix(in oklab, ${C.allow} ${35 + 30 * done}%, ${C.line2})` : `color-mix(in oklab, ${C.ask} 35%, ${C.line2})`}, ${raise(u)}, 0 0 ${120 * flash}px ${rgba(C.allow, 0.45 * flash)}` }}>
           <ReviewBody u={u} done={done} tapAt={ASK.tap} />
         </div>
         <Panel u={u} style={{ position: "absolute", left: 0, right: 0, top: "100%", marginTop: 14 * u, opacity: logIn, transform: `translateY(${(1 - logIn) * 30 * u}px)`, display: "flex", alignItems: "center", gap: 11 * u, padding: `${12 * u}px ${14 * u}px` }}>
@@ -457,7 +459,7 @@ export const Learn: React.FC = () => {
   const { fps } = useVideoConfig();
   const land = useLand();
   const u = useU();
-  const w = land ? 900 : 920;
+  const w = usePanelW();
   const card = useSnap(LEARN.card, { damping: 20 });
   const added = spring({ frame: f - (LEARN.tap + 2), fps, config: { damping: 16, mass: 0.5, stiffness: 220 } });
   const yamlChars = Math.floor(lerp(f, LEARN.card + 10, LEARN.card + 34, 0, 60, Easing.linear));
@@ -493,7 +495,7 @@ export const Learn: React.FC = () => {
           <div style={{ height: (3 - count) * 44 * u }} />
         </Panel>
         <div style={{ height: 16 * u }} />
-        <Panel u={u} raised style={{ overflow: "hidden", borderColor: `color-mix(in oklab, ${C.allow} ${30 + 30 * added}%, ${C.line2})`, opacity: card, transform: `translateY(${(1 - card) * 70}px) scale(${0.97 + 0.03 * card})`, boxShadow: `0 ${30 * u}px ${70 * u}px -${24 * u}px rgba(0,0,0,.9), 0 0 ${100 * Math.max(0, 1 - (f - LEARN.tap) / 18) * (f >= LEARN.tap ? 1 : 0)}px rgba(67,201,121,0.4)` }}>
+        <Panel u={u} raised style={{ overflow: "hidden", borderColor: `color-mix(in oklab, ${C.allow} ${30 + 30 * added}%, ${C.line2})`, opacity: card, transform: `translateY(${(1 - card) * 70}px) scale(${0.97 + 0.03 * card})`, boxShadow: `${raise(u)}, 0 0 ${100 * Math.max(0, 1 - (f - LEARN.tap) / 18) * (f >= LEARN.tap ? 1 : 0)}px ${rgba(C.allow, 0.4)}` }}>
           <div style={{ display: "flex", gap: 11 * u, padding: `${16 * u}px ${16 * u}px 0` }}>
             <Avatar kind="bee" size={30 * u} />
             <div style={{ flex: 1, fontSize: 14 * u, lineHeight: 1.45 }}>
@@ -501,7 +503,7 @@ export const Learn: React.FC = () => {
               <div style={{ marginTop: 3 * u, fontSize: 13 * u, color: C.fg2 }}>Stop asking? This is the rule Garu would add.</div>
             </div>
           </div>
-          <pre style={{ margin: `${12 * u}px ${16 * u}px 0`, padding: `${9 * u}px ${12 * u}px`, borderRadius: 9 * u, border: `${u * 0.6}px solid ${C.line}`, background: "rgba(10,12,15,0.6)", fontFamily: mono, fontSize: 13 * u, lineHeight: 1.55, color: C.fg2, minHeight: 2 * 13 * u * 1.55 }}>
+          <pre style={{ margin: `${12 * u}px ${16 * u}px 0`, padding: `${9 * u}px ${12 * u}px`, borderRadius: 9 * u, border: `${u * 0.6}px solid ${C.line}`, background: rgba(C.bg, 0.6), fontFamily: mono, fontSize: 13 * u, lineHeight: 1.55, color: C.fg2, minHeight: 2 * 13 * u * 1.55 }}>
             {yaml
               .slice(0, yamlChars)
               .split("\n")
@@ -518,7 +520,7 @@ export const Learn: React.FC = () => {
                 </div>
               ))}
           </pre>
-          <div style={{ marginTop: 12 * u, display: "flex", alignItems: "center", gap: 8 * u, padding: `${12 * u}px ${16 * u}px`, borderTop: `${u * 0.6}px solid ${C.line}`, background: "rgba(10,12,15,0.3)", minHeight: 60 * u }}>
+          <div style={{ marginTop: 12 * u, display: "flex", alignItems: "center", gap: 8 * u, padding: `${12 * u}px ${16 * u}px`, borderTop: `${u * 0.6}px solid ${C.line}`, background: rgba(C.bg, 0.3), minHeight: 60 * u }}>
             {added < 0.5 ? (
               <>
                 <div style={{ position: "relative" }}>
@@ -573,7 +575,7 @@ export const Proof: React.FC = () => {
   const f = useCurrentFrame();
   const land = useLand();
   const u = useU();
-  const w = land ? 860 : 920;
+  const w = usePanelW(true);
   const o = XF / 2;
   const cmd = "npm run garu -- ui --up";
   const l1 = f - PROOF - o;
@@ -592,7 +594,7 @@ export const Proof: React.FC = () => {
         <Panel u={u} raised style={{ width: w, overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 * u, height: 36 * u, padding: `0 ${14 * u}px`, borderBottom: `${u * 0.6}px solid ${C.line}` }}>
             {[0, 1, 2].map((i) => (
-              <span key={i} style={{ width: 9 * u, height: 9 * u, borderRadius: 9, background: "rgba(244,241,234,0.14)" }} />
+              <span key={i} style={{ width: 9 * u, height: 9 * u, borderRadius: 9, background: rgba(C.paper, 0.14) }} />
             ))}
             <Mono style={{ marginLeft: 8 * u, fontSize: 11.5 * u, color: C.mute }}>~/garu</Mono>
           </div>
@@ -640,7 +642,7 @@ export const Logo: React.FC = () => {
   const size = land ? 190 : 240;
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", flexDirection: "column", opacity: end }}>
-      <AbsoluteFill style={{ background: `radial-gradient(circle at 50% ${land ? 38 : 40}%, rgba(244,241,234,${0.16 * flash}), rgba(244,241,234,0) 45%)` }} />
+      <AbsoluteFill style={{ background: `radial-gradient(circle at 50% ${land ? 38 : 40}%, ${rgba(C.paper, 0.16 * flash)}, ${rgba(C.paper, 0)} 45%)` }} />
       <svg viewBox="0 0 100 100" width={size} height={size} fill="none" style={{ color: C.paper, transform: `scale(${1.15 - 0.15 * ring})` }}>
         <defs>
           <mask id="garu-cat">

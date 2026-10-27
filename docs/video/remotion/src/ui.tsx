@@ -1,6 +1,6 @@
 import React from "react";
 import { AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { C, inter, mono } from "./theme";
+import { C, inter, mono, rgba } from "./theme";
 
 export const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 export const easeOut = Easing.bezier(0.16, 1, 0.3, 1);
@@ -22,6 +22,7 @@ export const useSnap = (at: number, cfg: { damping?: number; mass?: number; stif
 };
 
 // ---------------------------------------------------------------- agent faces (ported from Creature.svelte / Mark.svelte)
+// The six kinds the video uses, copied by hand from KIND_COLOR in packages/ui/src/lib/colors.ts; keep the values identical.
 const KIND_COLOR = { fox: "#d0663a", turtle: "#2a9d78", owl: "#4f8fd9", bee: "#c9a227", cat: "#9a6fd0", octopus: "#d05a8a" } as const;
 export type Kind = keyof typeof KIND_COLOR;
 
@@ -114,13 +115,16 @@ export const Avatar: React.FC<{ kind: Kind; size: number; ring?: string }> = ({ 
 };
 
 // ---------------------------------------------------------------- surfaces
+/** The raised panel's drop shadow at UI scale u; `k` scales its reach (0 = none) for a panel that is still rising. */
+export const raise = (u: number, k = 1) => `0 ${30 * u * k}px ${70 * u * k}px -${24 * u}px rgba(0,0,0,.9)`;
+
 export const Panel: React.FC<{ u: number; style?: React.CSSProperties; raised?: boolean; children: React.ReactNode }> = ({ u, style, raised, children }) => (
   <div
     style={{
       background: raised ? `linear-gradient(180deg, color-mix(in oklab, ${C.panel2} 100%, white 2%) 0%, ${C.panel} 100%)` : C.panel,
       border: `${Math.max(1.5, u * 0.7)}px solid ${raised ? C.line2 : C.line}`,
       borderRadius: 14 * u,
-      boxShadow: raised ? `0 1px 0 rgba(255,255,255,.03) inset, 0 ${30 * u}px ${70 * u}px -${24 * u}px rgba(0,0,0,.9)` : undefined,
+      boxShadow: raised ? `0 1px 0 rgba(255,255,255,.03) inset, ${raise(u)}` : undefined,
       fontFamily: inter,
       color: C.fg,
       ...style,
@@ -196,7 +200,7 @@ export const Backdrop: React.FC = () => {
   const land = useLand();
   return (
     <AbsoluteFill style={{ background: C.bg }}>
-      <AbsoluteFill style={{ background: `radial-gradient(ellipse ${land ? "45% 70% at 70% 50%" : "80% 45% at 50% 62%"}, rgba(244,241,234,0.045), rgba(244,241,234,0) 70%)` }} />
+      <AbsoluteFill style={{ background: `radial-gradient(ellipse ${land ? "45% 70% at 70% 50%" : "80% 45% at 50% 62%"}, ${rgba(C.paper, 0.045)}, ${rgba(C.paper, 0)} 70%)` }} />
     </AbsoluteFill>
   );
 };
