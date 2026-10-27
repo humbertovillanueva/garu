@@ -45,7 +45,9 @@
   async function render() {
     if (!pairToken) return;
     pairLink = `${chosen}?token=${pairToken}`;
-    pairSvg = await QRCode.toString(pairLink, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#0a0c0f", light: "#f4f1ea" } });
+    // A camera needs fixed contrast, so the code is always ink on paper whatever the theme; the two values come from the tokens.
+    const css = getComputedStyle(document.documentElement);
+    pairSvg = await QRCode.toString(pairLink, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: css.getPropertyValue("--color-ink").trim(), light: css.getPropertyValue("--color-paper").trim() } });
   }
   async function openPair() {
     pairOpen = true; pairError = null;
@@ -169,7 +171,7 @@
               </div>
             {/if}
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-              <div class="qr w-[180px] flex-none rounded-xl p-2" style="background:#f4f1ea" role="img" aria-label={t("Pairing code")}>{@html pairSvg}</div>
+              <div class="qr w-[180px] flex-none rounded-xl p-2" style="background: var(--color-paper)" role="img" aria-label={t("Pairing code")}>{@html pairSvg}</div>
               <div class="min-w-0 flex-1 text-[13px] text-fg-2">
                 {#if chosenIsLocal}
                   <p style="color: var(--color-ask)">{#each parts("This code points at {host}, which a phone can't reach. Put the control room on your private network first: {command} on this computer, then come back here and the code will point there by itself.", { host: new URL(chosen).host, command: `tailscale serve --bg ${s?.port ?? 4000}` }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}</p>
