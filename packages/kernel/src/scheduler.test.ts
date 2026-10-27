@@ -282,6 +282,31 @@ triggers:
     expect(triggers).toEqual(["catch-up:0 7 * * 1-5"]);
   });
 
+  it("a run that ends offline (the model never answered) pauses the agent like a failed lookup does", async () => {
+    const m = manualCron();
+    const events: SchedulerEvent[] = [];
+    let t = local(9, 9, 30);
+    let runs = 0;
+    const s = new Scheduler({
+      runner: async (a) => { runs++; return { ...ok(a.garufile.name), status: "error", output: "no network: fetch failed", turns: 0, offline: true }; },
+      onEvent: (e) => events.push(e),
+      cronFactory: m.factory,
+      online: async () => true,
+      catchUp: { lastRunAt: () => null, now: () => t, everyMs: 0 },
+    });
+    s.start([brief]);
+    await new Promise((r) => setTimeout(r, 5));
+    expect(runs).toBe(1);
+    expect(events.map((e) => e.type).slice(-3)).toEqual(["fire", "run.done", "offline"]);
+    // The store never counts an offline run, so without the pause this would queue the same catch-up every minute.
+    expect(s.checkMissed()).toBe(0);
+    t = new Date(t.getTime() + 11 * 60_000);
+    expect(s.checkMissed()).toBe(1);
+    await new Promise((r) => setTimeout(r, 5));
+    await s.stop();
+    expect(runs).toBe(2);
+  });
+
   it("a run started elsewhere (the control room, chat) blocks a cron fire like one of its own", async () => {
     const m = manualCron();
     const events: SchedulerEvent[] = [];

@@ -208,9 +208,7 @@ export class Scheduler {
     }
     if (!online) {
       // A laptop waking in the dark, or no Wi-Fi: a run now could only fail. Catch-up retries once the network is back.
-      const now = (this.opts.catchUp?.now ?? (() => new Date()))();
-      this.offlineUntil.set(name, now.getTime() + OFFLINE_RETRY_MS);
-      this.emit({ type: "offline", agent: name, cron });
+      this.backOff(name, cron);
       return;
     }
     if (this.stopping || this.inFlight.has(name)) return;
@@ -219,11 +217,23 @@ export class Scheduler {
     this.emit({ type: "fire", agent: name, cron });
     const p = this.opts
       .runner(a, `${kind}:${cron}`)
-      .then((result) => this.emit({ type: "run.done", agent: name, result }))
+      .then((result) => {
+        this.emit({ type: "run.done", agent: name, result });
+        // The lookup passed but the model never answered (a provider down, a token refresh that couldn't
+        // reach its issuer): the run doesn't count, so without a pause catch-up would try again every minute.
+        if (result.offline) this.backOff(name, cron);
+      })
       .catch((e: unknown) => this.emit({ type: "run.failed", agent: name, error: (e as Error).message }))
       .finally(() => this.inFlight.delete(name));
     this.inFlight.set(name, p);
     await p;
+  }
+
+  /** No network for this agent right now: leave it alone for a while, then let catch-up try again. */
+  private backOff(name: string, cron: string): void {
+    const now = (this.opts.catchUp?.now ?? (() => new Date()))();
+    this.offlineUntil.set(name, now.getTime() + OFFLINE_RETRY_MS);
+    this.emit({ type: "offline", agent: name, cron });
   }
 
   /** Stop scheduling new runs and wait for in-flight ones: forever by default, or up to `deadlineMs`. */
