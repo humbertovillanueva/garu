@@ -25,6 +25,7 @@
     "build": "remotion bundle",
     "render:9x16": "remotion render src/index.ts Garu-9x16 ../garu-v8-9x16.mp4 --crf=16",
     "render:16x9": "remotion render src/index.ts Garu-16x9 ../garu-v8-16x9.mp4 --crf=16",
+    "render:15s": "remotion render src/index.ts Garu-15s-9x16 ../garu-v8-15s-9x16.mp4 --crf=16",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc"
   }
