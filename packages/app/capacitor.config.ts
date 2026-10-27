@@ -11,9 +11,6 @@ const config: CapacitorConfig = {
   // The app's own origin is https://localhost; the control room allows exactly that for CORS.
   server: { androidScheme: "https" },
   android: { allowMixedContent: false, backgroundColor: "#0a0c0f" },
-  plugins: {
-    SplashScreen: { launchShowDuration: 0, backgroundColor: "#0a0c0f" },
-  },
 };
 
 export default config;
