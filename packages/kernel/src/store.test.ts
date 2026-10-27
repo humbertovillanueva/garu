@@ -1,10 +1,17 @@
-import { describe, expect, it } from "vitest";
-import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
+import { describe, expect, it, vi } from "vitest";
+import { mkdtempSync, writeFileSync, mkdirSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Recorder } from "./recorder.js";
 import { RunStore, localDay, summarizeRun } from "./store.js";
 import { readRun } from "./recorder.js";
+
+// readRun counts its calls here, so a test can tell a log read from disk from one answered from memory.
+vi.mock("./recorder.js", async (importOriginal) => {
+  const real = await importOriginal<typeof import("./recorder.js")>();
+  return { ...real, readRun: vi.fn(real.readRun) };
+});
+const reads = () => vi.mocked(readRun).mock.calls.length;
 
 function makeRun(root: string, agent: string, opts: { status?: "ok" | "error"; cost?: number; day?: string } = {}) {
   const r = new Recorder({ root, agent });
@@ -108,6 +115,41 @@ describe("RunStore", () => {
     expect(summarizeRun(w.path, readRun(w.path), later)!.status).toBe("running");
     // …but an ask expires within the hour, so a run still "waiting" hours later was killed mid-wait.
     expect(summarizeRun(w.path, readRun(w.path), Date.now() + 3 * 60 * 60_000)!.status).toBe("interrupted");
+  });
+
+  it("reads a finished run's log once, a changed one again, and a running one every time", () => {
+    const root = mkdtempSync(join(tmpdir(), "store-"));
+    const done = makeRun(root, "a");
+    const live = new Recorder({ root, agent: "a" });
+    live.record({ type: "run.start", agent: "a", model: "m", trigger: "manual" });
+    const store = new RunStore(root);
+    const before = reads();
+    expect(store.runs("a")).toHaveLength(2);
+    expect(reads() - before).toBe(2); // both read the first time
+    const again = reads();
+    expect(store.runs("a").map((r) => r.status).sort()).toEqual(["ok", "running"]);
+    expect(reads() - again).toBe(1); // the finished one came from memory; the running one was read again
+    // The running one ends: its file changed, so it is read once more, and then kept.
+    live.record({ type: "run.end", status: "ok", costUsd: 0, priced: true, summary: "finished" });
+    const ended = reads();
+    expect(store.runs("a").find((r) => r.runId === live.runId)).toMatchObject({ status: "ok", summary: "finished" });
+    expect(reads() - ended).toBe(1);
+    const settled = reads();
+    store.runs("a");
+    store.allRuns();
+    store.lastScheduledRun("a");
+    expect(reads() - settled).toBe(0);
+    // A finished log that changes on disk (a line appended by hand) is read again.
+    done.record({ type: "error", message: "late note" });
+    store.runs("a");
+    expect(reads() - settled).toBe(1);
+    // A log that is deleted disappears from the listing, and a new file is read.
+    unlinkSync(done.path);
+    expect(store.runs("a").map((r) => r.runId)).toEqual([live.runId]);
+    // The same store, asked for one run's events, still reads the file: only the summaries are kept.
+    const events = reads();
+    expect(store.run("a", live.runId)).toHaveLength(2);
+    expect(reads() - events).toBe(1);
   });
 
   it("skips corrupt logs instead of failing the listing", () => {

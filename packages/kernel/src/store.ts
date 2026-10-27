@@ -2,11 +2,12 @@
  * Read-side store over the flight recorder on disk.
  *
  * The control room, `garu log` and anything else that wants to look at what
- * agents did reads through here. Nothing is cached beyond a call: the log
- * files are the source of truth, and they are cheap to read.
+ * agents did reads through here. The log files are the source of truth; a
+ * finished run's summary is kept in memory until its file changes, since the
+ * control room asks every two seconds while an agent works.
  */
 import { existsSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { readRun, type Envelope } from "./recorder.js";
 
 export interface RunSummary {
@@ -134,21 +135,46 @@ export class RunStore {
       .sort();
   }
 
+  /**
+   * One summary per log file, kept while the file's size and mtime stay the same. A run still going
+   * is not kept: its status depends on the clock (quiet too long means interrupted), and its file is
+   * about to change anyway. A corrupt log is kept as null, so it isn't parsed again until it changes.
+   */
+  private readonly summaries = new Map<string, { mtimeMs: number; size: number; summary: RunSummary | null }>();
+
   /** Runs for one agent, newest first. Corrupt logs are skipped, not fatal. */
   runs(agent: string): RunSummary[] {
     const dir = join(this.root, agent);
     if (!existsSync(dir)) return [];
     const out: RunSummary[] = [];
+    const seen = new Set<string>();
     for (const f of readdirSync(dir)) {
       if (!f.endsWith(".jsonl")) continue;
       const path = join(dir, f);
+      seen.add(path);
+      let st: { mtimeMs: number; size: number };
       try {
-        const s = summarizeRun(path, readRun(path));
-        if (s) out.push(s);
+        st = statSync(path);
       } catch {
-        /* skip corrupt or half-written log */
+        continue; // gone between the listing and now
       }
+      const kept = this.summaries.get(path);
+      let s: RunSummary | null;
+      if (kept && kept.mtimeMs === st.mtimeMs && kept.size === st.size) {
+        s = kept.summary;
+      } else {
+        try {
+          s = summarizeRun(path, readRun(path));
+        } catch {
+          s = null; // corrupt or half-written log
+        }
+        if (!s || s.endedAt) this.summaries.set(path, { mtimeMs: st.mtimeMs, size: st.size, summary: s });
+        else this.summaries.delete(path);
+      }
+      if (s) out.push(s);
     }
+    // Logs that were deleted leave the memory too.
+    for (const key of this.summaries.keys()) if (key.startsWith(dir + sep) && !seen.has(key)) this.summaries.delete(key);
     return out.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   }
 
