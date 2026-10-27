@@ -18,7 +18,7 @@ Any model. Any MCP tool. Every action through a policy you wrote, recorded, capp
   <a href="#the-garufile">Garufile</a> ·
   <a href="#approvals-that-get-smarter">Approvals</a> ·
   <a href="#where-garu-fits">Where Garu fits</a> ·
-  <a href="#roadmap">Roadmap</a>
+  <a href="#status-and-roadmap">Roadmap</a>
 </p>
 
 ---
