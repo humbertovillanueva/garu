@@ -12,6 +12,7 @@
   import { isApp } from "../lib/server.svelte";
   import { renderMarkdown } from "../lib/md";
   import { t } from "../lib/i18n.svelte";
+  import { ticker } from "../lib/clock.svelte";
 
   let feed = $state<FeedItem[] | null>(null);
   let feedError = $state<string | null>(null);
@@ -22,10 +23,8 @@
   $effect(() => { live.tick; load(api.feed(60), (f) => { feed = f; feedError = null; }, (m) => (feedError = m)); });
   $effect(() => { live.tick; loadToday(api.today(), (r) => (today = r), () => {}); });
 
-  // Follows the clock: a page left open overnight says good morning in the morning.
-  let now = $state(new Date());
-  $effect(() => { const timer = setInterval(() => (now = new Date()), 60_000); return () => clearInterval(timer); });
-  const greeting = $derived.by(() => { const hour = now.getHours(); return hour < 5 ? t("Still up") : hour < 12 ? t("Good morning") : hour < 18 ? t("Good afternoon") : t("Good evening"); });
+  // Follows the shared clock: a page left open overnight says good morning in the morning.
+  const greeting = $derived.by(() => { const hour = new Date(ticker.now).getHours(); return hour < 5 ? t("Still up") : hour < 12 ? t("Good morning") : hour < 18 ? t("Good afternoon") : t("Good evening"); });
   const runsToday = $derived(live.agents.reduce((s, a) => s + a.runsToday, 0));
   const spendToday = $derived(live.agents.reduce((s, a) => s + a.costTodayUsd, 0));
   const working = $derived(live.agents.filter((a) => a.status === "working"));

@@ -1,5 +1,6 @@
 import { isApp } from "./server.svelte";
 import { t, dateLocale } from "./i18n.svelte";
+import { ticker } from "./clock.svelte";
 export function usd(n: number | null | undefined, priced = true): string {
   if (!priced) return t("unpriced");
   if (n === null || n === undefined) return "—";
@@ -8,7 +9,8 @@ export function usd(n: number | null | undefined, priced = true): string {
   if (n < 1) return `$${n.toFixed(3)}`;
   return `$${n.toFixed(2)}`;
 }
-/* Times read the way a person says them: "3:42 PM", "Yesterday 3:42 PM", "Tue 3:42 PM", "Oct 8, 3:42 PM". Never seconds, never a Z. */
+/* Times read the way a person says them: "3:42 PM", "Yesterday 3:42 PM", "Tue 3:42 PM", "Oct 8, 3:42 PM". Never seconds, never a Z.
+   The relative ones read the shared clock (clock.svelte.ts), so what they say is redrawn as the minutes pass. */
 const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 const daysBetween = (a: Date, b: Date) => Math.round((new Date(b.toDateString()).getTime() - new Date(a.toDateString()).getTime()) / 86_400_000);
 /** "3:42 PM" in the reader's locale, no seconds. */
@@ -20,7 +22,7 @@ export function clockExact(iso: string | Date): string {
   return new Date(iso).toLocaleTimeString(dateLocale(), { hour: "numeric", minute: "2-digit", second: "2-digit" });
 }
 /** Day + time, as short as the distance allows. */
-export function humanTime(iso: string | null | undefined, now = new Date()): string {
+export function humanTime(iso: string | null | undefined, now = new Date(ticker.now)): string {
   if (!iso) return "—";
   const d = new Date(iso);
   const time = clock(d);
@@ -36,7 +38,7 @@ export function humanTime(iso: string | null | undefined, now = new Date()): str
 export function when(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
-  const diff = Date.now() - d.getTime();
+  const diff = ticker.now - d.getTime();
   if (diff < 45_000) return t("just now");
   if (diff < 3_600_000) return t("{n} min ago", { n: Math.max(1, Math.floor(diff / 60_000)) });
   if (diff < 6 * 3_600_000) return t("{n} h ago", { n: Math.floor(diff / 3_600_000) });
@@ -45,7 +47,7 @@ export function when(iso: string | null | undefined): string {
 /** How long until, in words: "in 12 min", "in 2 h 10 min", or the day and time when it is further out. */
 export function until(iso: string | null | undefined): string {
   if (!iso) return "—";
-  const diff = new Date(iso).getTime() - Date.now();
+  const diff = new Date(iso).getTime() - ticker.now;
   if (diff <= 0) return t("now");
   if (diff < 60_000) return t("in under a minute");
   if (diff >= 12 * 3_600_000) return humanTime(iso);
@@ -69,7 +71,7 @@ export function triggerLabel(trigger: string): string {
   return trigger;
 }
 export function dayLabel(iso: string): string {
-  const d = new Date(iso); const today = new Date();
+  const d = new Date(iso); const today = new Date(ticker.now);
   const y = new Date(today); y.setDate(today.getDate() - 1);
   const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
   if (same(d, today)) return t("Today");
