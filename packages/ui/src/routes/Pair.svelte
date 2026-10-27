@@ -137,7 +137,7 @@
       <form onsubmit={(e) => { e.preventDefault(); void connect(text); }}>
         <label class="block">
           <span class="text-[11px] uppercase tracking-wider text-mute">{t("Sign-in link")}</span>
-          <input class="mono mt-1.5 w-full rounded-lg border field-border bg-bg px-3 py-2.5 text-[12.5px] outline-none focus:border-accent/60" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://your-mac.tail…ts.net/?token=…" style={parsed ? "-webkit-text-security: disc" : undefined} bind:value={text} />
+          <input class="field mono mt-1.5" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://your-mac.tail…ts.net/?token=…" style={parsed ? "-webkit-text-security: disc" : undefined} bind:value={text} />
         </label>
         {#if parsed}<p class="mt-1.5 text-[11.5px] text-mute">{#each parts("A link to {host}. Its key stays hidden.", { host: parsed.base.replace(/^https?:\/\//, "") }) as p}{#if p.name}<span class="mono [overflow-wrap:anywhere]">{p.text}</span>{:else}{p.text}{/if}{/each}</p>{/if}
         <button class="btn mt-3 w-full" class:btn-primary={!canScan} type="submit" disabled={busy || !text.trim()}>{busy ? t("Connecting…") : t("Connect")}</button>
