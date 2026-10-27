@@ -138,9 +138,9 @@
     <div class="foot">
       <div class="dots" aria-hidden="true">{#each Array(LAST + 1) as _, d}<i class:on={d === i}></i>{/each}</div>
       {#if i < LAST}
-        <button class="cta" onclick={next}>{i === 0 ? t("How does it work?") : t("Next")}</button>
+        <button class="btn btn-primary cta" onclick={next}>{i === 0 ? t("How does it work?") : t("Next")}</button>
       {:else if alreadyPaired}
-        <button class="cta" onclick={onDone}>{t("Done")}</button>
+        <button class="btn btn-primary cta" onclick={onDone}>{t("Done")}</button>
       {:else}
         <button class="min-h-11 px-4 text-[13px] text-mute" onclick={onDone}>{t("Close the tour")}</button>
       {/if}
@@ -190,7 +190,8 @@
   .tag { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; color: var(--color-mute); border: 1px solid var(--color-line); border-radius: 4px; padding: 0 5px; margin-left: 4px; white-space: nowrap; }
   .foot { padding: 8px 24px 28px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
   .dots { display: flex; gap: 6px; } .dots i { width: 6px; height: 6px; border-radius: 3px; background: var(--color-line-2); transition: all .25s; } .dots i.on { width: 18px; background: var(--color-fg); }
-  .cta { width: 100%; padding: 14px; border-radius: 12px; background: var(--color-fg); color: var(--color-bg); font-weight: 600; font-size: 15px; }
+  /* The tour's one big button is the app's primary button (same radius, padding and colors as Connect on the next screen), only full width and a size up. */
+  .cta { width: 100%; font-size: 15px; }
   @media (prefers-reduced-motion: reduce) {
     .slides, .dots i { transition: none; }
     .word { animation: none; opacity: 1; }
