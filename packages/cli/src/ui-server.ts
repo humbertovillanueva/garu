@@ -136,7 +136,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
   // --- agents: discovered Garufiles (re-read on each request so edits show up) ---
   const discover = () => discoverGarufiles(opts.root);
 
-  const startRun = async (a: DiscoveredAgent, trigger: string, input?: string): Promise<RunResult> => {
+  const startRun = async (a: DiscoveredAgent, trigger: string, input?: string, dueAt?: Date): Promise<RunResult> => {
     const name = a.garufile.name;
     const started = new Date().toISOString();
     // Busy from this very moment, before the first await: a second start in the same instant sees it
@@ -150,7 +150,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     };
     let result: RunResult | undefined;
     try {
-      result = await runAgent({ garufile: a.garufile, logRoot: opts.logRoot, approver, trigger, sink, ...(input ? { input } : {}), ...(opts.userName && opts.userName !== "you" ? { owner: opts.userName } : {}) });
+      result = await runAgent({ garufile: a.garufile, logRoot: opts.logRoot, approver, trigger, sink, ...(input ? { input } : {}), ...(dueAt ? { dueAt } : {}), ...(opts.userName && opts.userName !== "you" ? { owner: opts.userName } : {}) });
       return result;
     } catch (e) {
       chat.append(name, { role: "agent", kind: "error", text: (e as Error).message });
@@ -172,9 +172,9 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
   if (opts.up) {
     scheduler = new Scheduler({
       // Re-read the Garufile at fire time so policy edits apply without a restart.
-      runner: (a, trigger) => {
+      runner: (a, trigger, dueAt) => {
         const fresh = discover().agents.find((x) => x.garufile.name === a.garufile.name) ?? (a as DiscoveredAgent);
-        return startRun(fresh, trigger);
+        return startRun(fresh, trigger, undefined, dueAt);
       },
       // A Mac that was asleep or off at fire time still gets its run, once, labelled catch-up.
       catchUp: {
