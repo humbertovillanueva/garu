@@ -92,17 +92,18 @@ export class ToolBus {
       if (isRemoteServer(spec)) {
         // Don't wait for a 401: some servers (Google's) list their tools without a sign-in and refuse
         // only the calls, so the run would start and then fail on every tool.
-        if (spec.auth === "oauth" && !signInFor(spec, authRoot).signedIn()) throw new NeedsSignInError(spec.name, spec.url);
+        if (spec.auth === "oauth" && !signInFor(spec, authRoot).signedIn()) throw new NeedsSignInError(spec.name, shownWhere);
         const client = new Client({ name: "garu", version: "0.1.0" });
         const transport = remoteTransport(spec, authRoot);
         try {
           // The SDK's own Transport type trips exactOptionalPropertyTypes on sessionId; the object is fine.
           await client.connect(transport as unknown as Parameters<Client["connect"]>[0]);
         } catch (e) {
-          if (e instanceof NeedsSignInError) throw e;
+          // The transport's own sign-in error names the expanded URL; say it as the Garufile does.
+          if (e instanceof NeedsSignInError) throw new NeedsSignInError(spec.name, shownWhere);
           const msg = (e as Error).message;
           const unauthorized = e instanceof UnauthorizedError || /\b401\b|unauthori[sz]ed/i.test(msg);
-          if (unauthorized && spec.auth === "oauth") throw new NeedsSignInError(spec.name, spec.url);
+          if (unauthorized && spec.auth === "oauth") throw new NeedsSignInError(spec.name, shownWhere);
           if (unauthorized) throw new Error(`tool server "${spec.name}" at ${shownWhere} rejected the credentials (401). Check the headers in its Garufile entry and the ${"$"}{VAR} values in .env, or set auth: oauth and run garu auth.`);
           throw new Error(`tool server "${spec.name}" at ${shownWhere} did not answer: ${msg || (e as Error).name || "connection failed"}`);
         }

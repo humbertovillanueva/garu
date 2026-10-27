@@ -102,6 +102,30 @@ describe("remote MCP servers over Streamable HTTP", () => {
     await expect(bus.connect([{ name: "locked", url: locked.url, headers: {}, auth: "oauth" }])).rejects.toThrow(/garu auth <Garufile> locked/);
   });
 
+  it("a sign-in error shows the url as the Garufile writes it, never a ${VAR} filled in", async () => {
+    // The url itself can hold a secret (a tenant, a token in the path): the message must keep the placeholder.
+    process.env["GARU_TEST_REMOTE"] = locked.url;
+    try {
+      const spec = { name: "locked", url: "${GARU_TEST_REMOTE}", headers: {}, auth: "oauth" as const };
+      const authRoot = mkdtempSync(join(tmpdir(), "garu-auth-"));
+      const fresh = () => new ToolBus({ policy, recorder: rec(), approver: async () => ({ approved: true, by: "t" }), authRoot });
+      // No sign-in on disk: refused before any request.
+      const e1 = await fresh().connect([spec]).then(() => null, (e) => e as NeedsSignInError);
+      expect(e1).toBeInstanceOf(NeedsSignInError);
+      expect(e1!.message).toContain("${GARU_TEST_REMOTE}");
+      expect(e1!.message).not.toContain("127.0.0.1");
+      expect(e1!.url).toBe("${GARU_TEST_REMOTE}");
+      // A stale sign-in the server refuses: the 401 path says the same.
+      new FileOAuthProvider({ root: authRoot, server: "locked", url: locked.url }).saveTokens({ access_token: "stale", token_type: "Bearer" });
+      const e2 = await fresh().connect([spec]).then(() => null, (e) => e as Error);
+      expect(e2).toBeInstanceOf(NeedsSignInError);
+      expect(e2!.message).toContain("${GARU_TEST_REMOTE}");
+      expect(e2!.message).not.toContain("127.0.0.1");
+    } finally {
+      delete process.env["GARU_TEST_REMOTE"];
+    }
+  });
+
   it("asks for a sign-in even when the server lists its tools without one (as Google's do)", async () => {
     const bus = new ToolBus({ policy, recorder: rec(), approver: async () => ({ approved: true, by: "t" }), authRoot: mkdtempSync(join(tmpdir(), "garu-auth-")) });
     await expect(bus.connect([{ name: "calendar", url: open.url, headers: {}, auth: "oauth" }])).rejects.toBeInstanceOf(NeedsSignInError);
