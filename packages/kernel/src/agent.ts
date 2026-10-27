@@ -194,6 +194,15 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
 
       const toolUses = res.content.filter((b): b is Extract<ContentBlock, { type: "tool_use" }> => b.type === "tool_use");
       if (toolUses.length === 0) {
+        // No tools and no words: only a proper end of turn makes that a finished run. A reply cut off
+        // before its first word, or stopped for a reason the provider doesn't name, is an error that says so.
+        if (!text && res.stopReason !== "end_turn") {
+          throw new Error(
+            res.stopReason === "max_tokens"
+              ? "the model ran out of room before writing anything (max_tokens): the answer was cut off at its start"
+              : `the model stopped without an answer (${res.stopReason})`,
+          );
+        }
         output = text;
         break;
       }

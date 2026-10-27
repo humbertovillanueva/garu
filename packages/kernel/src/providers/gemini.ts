@@ -107,7 +107,12 @@ export class GeminiProvider implements ModelProvider {
     const { res, json } = await this.postWithRetry(req.model, body, req.onRetry);
 
     void res;
+    // A 200 with nothing in it is not an answer. Google blocks a prompt outright (promptFeedback)
+    // or sends no candidate at all; either way the run must say so instead of ending "ok" with no summary.
+    const blocked = json.promptFeedback?.blockReason;
+    if (blocked) throw new Error(`gemini ${req.model}: the request was blocked (${blocked}${json.promptFeedback?.blockReasonMessage ? `: ${json.promptFeedback.blockReasonMessage}` : ""}). Nothing was answered.`);
     const cand = json.candidates?.[0];
+    if (!cand) throw new Error(`gemini ${req.model}: the model sent no answer (an empty reply from the API)`);
     const content: ContentBlock[] = [];
     let n = 0;
     for (const p of cand?.content?.parts ?? []) {
@@ -201,6 +206,8 @@ export class GeminiProvider implements ModelProvider {
 
 interface GeminiResponse {
   error?: { message?: string };
+  /** Set, with no candidates, when the prompt itself was refused. */
+  promptFeedback?: { blockReason?: string; blockReasonMessage?: string };
   candidates?: { content?: { parts?: GeminiPart[] }; finishReason?: string }[];
   usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
 }

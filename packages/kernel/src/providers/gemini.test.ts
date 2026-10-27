@@ -74,6 +74,15 @@ describe("GeminiProvider (mocked fetch)", () => {
     expect(res.usage).toEqual({ inputTokens: 10, outputTokens: 4 });
   });
 
+  it("a blocked prompt or an empty reply is an error that says so, never an empty answer", async () => {
+    const blocked = (async () => new Response(JSON.stringify({ promptFeedback: { blockReason: "PROHIBITED_CONTENT" } }), { status: 200 })) as typeof fetch;
+    await expect(new GeminiProvider("k", blocked).complete({ model: "m", system: "", messages: [], tools: [] })).rejects.toThrow(/gemini m: the request was blocked \(PROHIBITED_CONTENT\)/);
+    const empty = (async () => new Response("not json at all", { status: 200 })) as typeof fetch;
+    await expect(new GeminiProvider("k", empty).complete({ model: "m", system: "", messages: [], tools: [] })).rejects.toThrow(/gemini m: the model sent no answer/);
+    const noCandidates = (async () => new Response(JSON.stringify({ usageMetadata: { promptTokenCount: 3 } }), { status: 200 })) as typeof fetch;
+    await expect(new GeminiProvider("k", noCandidates).complete({ model: "m", system: "", messages: [], tools: [] })).rejects.toThrow(/sent no answer/);
+  });
+
   it("surfaces API errors with the model name", async () => {
     const fakeFetch = (async () => new Response(JSON.stringify({ error: { message: "invalid argument" } }), { status: 400 })) as typeof fetch;
     const p = new GeminiProvider("k", fakeFetch);

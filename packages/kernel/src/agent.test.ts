@@ -274,6 +274,25 @@ budget:
     expect(end).toMatchObject({ type: "run.end", status: "error", offline: true });
   });
 
+  it("a turn with no words and no tools is an error unless the model really finished", async () => {
+    const cut = new FakeProvider([{ stopReason: "max_tokens", content: [], usage: { inputTokens: 10, outputTokens: 0 } }]);
+    const res = await runAgent({ garufile, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider: cut, approver: async () => ({ approved: false, by: "t" }) });
+    expect(res.status).toBe("error");
+    expect(res.output).toMatch(/ran out of room before writing anything \(max_tokens\)/);
+    expect(res.offline).toBeUndefined();
+    const end = readRun(res.logPath).find((e) => e.event.type === "run.end")!.event;
+    expect(end).toMatchObject({ type: "run.end", status: "error", summary: expect.stringMatching(/max_tokens/) });
+
+    const odd = new FakeProvider([{ stopReason: "other", content: [] }]);
+    const res2 = await runAgent({ garufile, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider: odd, approver: async () => ({ approved: false, by: "t" }) });
+    expect(res2).toMatchObject({ status: "error", output: "the model stopped without an answer (other)" });
+
+    // A proper end of turn with nothing to say is still a finished run (nothing to report).
+    const quiet = new FakeProvider([{ stopReason: "end_turn", content: [] }]);
+    const res3 = await runAgent({ garufile, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider: quiet, approver: async () => ({ approved: false, by: "t" }) });
+    expect(res3.status).toBe("ok");
+  }, 30_000);
+
   it("a priced model whose provider reports no usage is not claimed as priced", async () => {
     const logRoot = mkdtempSync(join(tmpdir(), "garu-"));
     const quiet = parseGarufile(`
