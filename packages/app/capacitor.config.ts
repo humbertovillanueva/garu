@@ -10,6 +10,9 @@ const config: CapacitorConfig = {
   webDir: "../ui/dist-app",
   // The app's own origin is https://localhost; the control room allows exactly that for CORS.
   server: { androidScheme: "https" },
+  // The bridge would print every event it hands the page, and the pairing link arrives as one with the
+  // token in it; so no bridge logging, in debug builds too. Chrome's and Safari's inspectors still work.
+  loggingBehavior: "none",
   android: { allowMixedContent: false, backgroundColor: "#0a0c0f" },
 };
 

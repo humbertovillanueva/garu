@@ -6,9 +6,10 @@
    * Scan the code from Settings → Your phone, or paste the link it carries.
    */
   import { onDestroy } from "svelte";
-  import { connectLive, live } from "../lib/api.svelte";
-  import { build, markIntroSeen, parsePairing, remember, server } from "../lib/server.svelte";
-  import { canScan, haptic, isIOS } from "../lib/native";
+  import { build, markIntroSeen, server } from "../lib/server.svelte";
+  import { parsePairing } from "../lib/pairlink";
+  import { pair, pairing } from "../lib/pairing.svelte";
+  import { canScan, isIOS } from "../lib/native";
   import { t, parts, siteUrl, locale } from "../lib/i18n.svelte";
 
   /** The button that had focus goes away when the scanner opens; Cancel takes it. */
@@ -16,7 +17,8 @@
   let { problem = null, embedded = false, title }: { problem?: string | null; embedded?: boolean; title?: string } = $props();
 
   let text = $state("");
-  let busy = $state(false);
+  // Connecting, from here or from a link the phone opened the app with.
+  const busy = $derived(pairing.busy);
   // svelte-ignore state_referenced_locally
   let error = $state<string | null>(problem);
   let scanning = $state(false);
@@ -46,24 +48,9 @@
   }
 
   async function connect(input: string, demo = false) {
-    const p = parsePairing(input);
-    if (!p) { error = t("That doesn't look like a Garu sign-in link. It should start with https:// and contain ?token=…"); return; }
-    // A code made for this computer itself can't be reached from a phone.
-    if (/^https?:\/\/(localhost|127\.|\[::1\])/.test(p.base)) { error = t("This code points at the computer itself, which a phone can't reach. Garu has to be shared over Tailscale first; that needs setup on your computer (Settings → Your phone & other devices shows how)."); return; }
-    busy = true; error = null;
-    try {
-      const res = await fetch(`${p.base}/api/agents`, { headers: { authorization: `Bearer ${p.token}` }, cache: "no-store", signal: AbortSignal.timeout(10_000) });
-      if (res.status === 401) { error = t("The control room answered, but the token is not right. Get a fresh code on your computer: Settings → Your phone & other devices."); return; }
-      if (!res.ok) { error = t("The control room had a problem answering. Try again in a moment."); return; }
-      remember(p.base, p.token);
-      live.signIn = false;
-      void connectLive(true).catch(() => {});
-      void haptic("success");
-    } catch {
-      error = demo ? t("The demo isn't reachable right now. Try again in a little while.") : t("Couldn't reach {host}. Is Tailscale on for this phone, and is Garu running on your computer?", { host: p.base.replace(/^https?:\/\//, "") });
-    } finally {
-      busy = false;
-    }
+    if (busy) return;
+    error = null; pairing.error = null;
+    error = await pair(input, demo);
   }
 
   async function startScan() {
@@ -150,7 +137,7 @@
         <button class="btn mt-2.5 w-full" type="button" onclick={tryDemo} disabled={busy || demoBusy}>{demoBusy ? t("Connecting…") : t("Try the demo")}</button>
       </div>
     {/if}
-    {#if error}<p class="mt-3 text-[12.5px] leading-relaxed" role="alert" style="color: var(--color-bad)">{error}</p>{/if}
+    {#if error ?? pairing.error}<p class="mt-3 text-[12.5px] leading-relaxed" role="alert" style="color: var(--color-bad)">{error ?? pairing.error}</p>{/if}
     <p class="mt-4 text-[11.5px] leading-relaxed text-mute">{t("The link carries a key that lets this phone approve actions as you. It is stored only on this phone.")}</p>
     {#if !embedded && !problem}
       <div class="mt-4 flex flex-wrap gap-x-4 text-[12.5px]">

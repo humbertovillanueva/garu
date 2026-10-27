@@ -44,18 +44,3 @@ export function forget(): void {
   try { localStorage.removeItem(KEY); } catch { /* ignore */ }
 }
 
-/** Turn what a scan or a paste gives us into an address and a token. Accepts the sign-in link, or "address token". */
-export function parsePairing(input: string): { base: string; token: string } | null {
-  const text = input.trim();
-  const m = /^(https?:\/\/[^\s/?#]+)[^\s?#]*\?(?:[^\s#&]*&)?token=([A-Za-z0-9_-]{32,})/.exec(text);
-  if (m) return { base: m[1]!, token: m[2]! };
-  const parts = text.split(/\s+/);
-  if (parts.length === 2) {
-    const [a, b] = parts as [string, string];
-    const [addr, tok] = /^[A-Za-z0-9_-]{32,}$/.test(b) ? [a, b] : [b, a];
-    if (!/^[A-Za-z0-9_-]{32,}$/.test(tok)) return null;
-    const base = /^https?:\/\//.test(addr) ? addr : `https://${addr}`;
-    try { return { base: new URL(base).origin, token: tok }; } catch { return null; }
-  }
-  return null;
-}

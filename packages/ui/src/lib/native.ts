@@ -8,7 +8,7 @@ import { prefs } from "./prefs.svelte";
 
 /** Whether this webview can scan a QR code itself: Android's can (BarcodeDetector), an iPhone's can't. */
 export const canScan = typeof window !== "undefined" && "BarcodeDetector" in window && Boolean(navigator.mediaDevices?.getUserMedia);
-/** An iPhone or iPad: the one place the app can't scan, so the screens say to paste the link instead of promising a scan. */
+/** An iPhone or iPad: the app can't scan there, so the screens say to scan with the phone's own camera (the code made for the app opens it) or paste the link. */
 export const isIOS = typeof navigator !== "undefined" && /iPhone|iPad|iPod/.test(navigator.userAgent);
 
 type Hap = typeof import("@capacitor/haptics");
@@ -27,13 +27,15 @@ export async function haptic(kind: "success" | "warning" | "light" = "light"): P
 
 /**
  * Wire the app to the phone: status bar in our colours, the back gesture walks
- * our own history instead of closing the app, and `onResume` fires when the app
- * comes back to the front (to reconnect and refresh).
+ * our own history instead of closing the app, `onResume` fires when the app
+ * comes back to the front (to reconnect and refresh), and `onLink` gets every
+ * link the phone opens the app with (a `garu://pair` code read by the camera),
+ * whether the app was running or the link started it.
  */
 /** Screens that handle Android's back gesture themselves (the intro steps back a slide). Return true when handled. */
 export const backHandlers: (() => boolean)[] = [];
 
-export async function setupNative(onResume: () => void): Promise<void> {
+export async function setupNative(onResume: () => void, onLink: (url: string) => void): Promise<void> {
   if (!isApp) return;
   // The status bar's style and color follow the theme: lib/theme.svelte.ts sets them.
   try {
@@ -45,5 +47,7 @@ export async function setupNative(onResume: () => void): Promise<void> {
       else void App.minimizeApp();
     });
     await App.addListener("appStateChange", ({ isActive }) => { if (isActive) onResume(); });
+    // The link carries the token: it goes to the handler and nowhere else (not the location, not a log).
+    await App.addListener("appUrlOpen", ({ url }) => onLink(url));
   } catch { /* plugin missing */ }
 }

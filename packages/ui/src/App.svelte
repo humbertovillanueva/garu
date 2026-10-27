@@ -17,6 +17,7 @@
   import { route, startRouter, href } from "./lib/router.svelte";
   import { connectLive, live, refreshNow, unreachable as unreachableText, unreachableHint } from "./lib/api.svelte";
   import { setupNative } from "./lib/native";
+  import { openedLink } from "./lib/pairing.svelte";
   import { pullToRefresh } from "./lib/pull";
   import { prefs } from "./lib/prefs.svelte";
   import Help from "./routes/Help.svelte";
@@ -53,7 +54,7 @@
     if (isApp) document.documentElement.classList.add("app");
     startRouter();
     if (paired()) void connectLive().catch(() => {});
-    void setupNative(resume);
+    void setupNative(resume, (url) => void openedLink(url));
     // The app ships its own copy of the page; only the browser version wants the service worker.
     if (import.meta.env.PROD && !isApp && "serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js").catch(() => {});
   });
