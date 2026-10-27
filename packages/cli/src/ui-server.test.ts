@@ -242,7 +242,7 @@ describe("the rest", () => {
 });
 
 describe("the public demo", () => {
-  it("lets people look around and answer asks, but nothing runs, nothing is edited, and the key stays", async () => {
+  it("lets people look around and answer asks, but nothing else writes: no runs, edits, grants, dismissals or new key", async () => {
     const port = await freePort();
     const demo = startUiServer({
       port, host: "127.0.0.1", root, logRoot: join(root, ".garu", "runs"), inboxRoot, chatRoot: join(root, ".garu", "chat"),
@@ -257,12 +257,16 @@ describe("the public demo", () => {
       expect(agents.demo).toBe(true);
       expect(agents.up).toBe(true); // the demo looks alive, though nothing runs
       expect(agents.agents.every((a) => a.status !== "needs-setup")).toBe(true);
-      for (const path of ["/api/agents/pip/run", "/api/agents/pip/chat", "/api/suggestions/x/apply", "/api/pair"]) {
-        const r = await fetch(`${b}${path}`, { method: "POST", headers: h, body: JSON.stringify({ text: "hi" }) });
+      for (const path of ["/api/agents/pip/run", "/api/agents/pip/chat", "/api/suggestions/x/apply", "/api/suggestions/x/dismiss", "/api/grants/x/revoke", "/api/inbox/batch", "/api/pair"]) {
+        const r = await fetch(`${b}${path}`, { method: "POST", headers: h, body: JSON.stringify({ text: "hi", ids: [], approve: true }) });
         expect(r.status, path).toBe(403);
       }
-      const batch = await fetch(`${b}/api/inbox/batch`, { method: "POST", headers: h, body: JSON.stringify({ ids: [], approve: true }) });
-      expect(batch.status).toBe(200);
+      // A plain answer to a sample ask is the one write a visitor may make; a 24h approve would leave a grant, so it isn't.
+      const plain = pending("fs.write_file", { path: "docs/demo.md", content: "x" });
+      const timed = pending("fs.write_file", { path: "docs/demo2.md", content: "x" });
+      expect((await fetch(`${b}/api/inbox/${timed}/approve`, { method: "POST", headers: h, body: JSON.stringify({ for: "24h" }) })).status).toBe(403);
+      expect((await fetch(`${b}/api/inbox/${plain}/approve`, { method: "POST", headers: h, body: JSON.stringify({}) })).status).toBe(200);
+      expect((await fetch(`${b}/api/inbox/${timed}/deny`, { method: "POST", headers: h, body: JSON.stringify({ note: "no" }) })).status).toBe(200);
       expect(readFileSync(join(root, ".garu", "ui-token"), "utf8").trim()).toBe(demo.token);
     } finally { await demo.close(); }
   });

@@ -308,8 +308,9 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         if (who !== "ok") return json(res, { error: who === "bad" ? t("wrong token") : t("sign in"), signIn: true }, 401);
         seen.note(req.headers); // an address that reached us with the right token is one a phone can use
       }
-      // The demo is read-only apart from the sample asks: no runs, no chat, no Garufile edits, no new key.
-      if (opts.demo && req.method === "POST" && (path === "/api/pair" || /^\/api\/agents\/[^/]+\/(run|chat)$/.test(path) || /^\/api\/suggestions\/[^/]+\/apply$/.test(path))) {
+      // The demo is read-only apart from a plain approve or deny of a sample ask: no runs, no chat, no
+      // Garufile edits, no grants (a 24h approve is refused below), no dismissals, no bulk decisions, no new key.
+      if (opts.demo && req.method === "POST" && !/^\/api\/inbox\/[a-z0-9]+\/(approve|deny)$/.test(path)) {
         return json(res, { error: t("This is the demo: it can't do that. Garu on your own computer can.") }, 403);
       }
       if (path === "/api/pair" && req.method === "POST") {
@@ -444,6 +445,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       const d = /^\/api\/inbox\/([a-z0-9]+)\/(approve|deny)$/.exec(path);
       if (d && req.method === "POST") {
         const body = (await readBody(req)) as { for?: string; note?: string };
+        // An approve with a duration makes a grant, which is a write any visitor could leave behind.
+        if (opts.demo && body.for) return json(res, { error: t("This is the demo: it can't do that. Garu on your own computer can.") }, 403);
         try {
           // The duration is checked before anything is decided: a bad one changes nothing.
           const durationMs = d[2] === "approve" && body.for ? parseDuration(body.for) : null;
