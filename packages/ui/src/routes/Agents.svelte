@@ -37,7 +37,7 @@
   {#if live.problems.length}
     <div class="panel p-3 text-[12.5px]" style="border-color: color-mix(in oklab, var(--color-bad) 40%, var(--color-line))">
       <div class="mb-1 font-medium" style="color: var(--color-bad)">{t("Garufiles with problems")}</div>
-      {#each live.problems as p}<div class="mono text-fg-2">{p.source}: {p.error}</div>{/each}
+      {#each live.problems as p}<div class="text-fg-2 [overflow-wrap:anywhere]"><span class="mono">{p.source}</span>: {p.error}</div>{/each}
     </div>
   {/if}
 </section>
