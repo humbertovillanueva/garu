@@ -221,8 +221,9 @@ describe("the rest", () => {
   it("feed, cost and settings answer, and settings never carries a value", async () => {
     expect(Array.isArray(await (await get("/api/feed")).json())).toBe(true);
     expect(Array.isArray(await (await get("/api/cost")).json())).toBe(true);
-    const s = (await (await get("/api/settings")).json()) as { login: { required: boolean; direct: boolean }; env: unknown[] };
+    const s = (await (await get("/api/settings")).json()) as { version: string; login: { required: boolean; direct: boolean }; env: unknown[] };
     expect(s.login).toMatchObject({ required: false, direct: true });
+    expect(s.version).toBe((JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version);
     expect(JSON.stringify(s)).not.toContain("hunter2");
     expect((await get("/api/nothing-here")).status).toBe(404);
   });

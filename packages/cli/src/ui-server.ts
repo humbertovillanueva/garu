@@ -40,6 +40,7 @@ import {
   localDay,
 } from "@garu/kernel";
 import { t } from "./i18n.js";
+import { VERSION } from "./version.js";
 import { authenticate, clearSessionCookie, corsHeaders, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, rotateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
 import { SeenHosts, tailscaleAddresses, type Address } from "./ui-addresses.js";
 
@@ -527,7 +528,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         // Remote servers, plus local ones that sign in (shown with who they sign in with).
         const remotes = agents.flatMap((a) => a.garufile.tools.filter((t) => isRemoteServer(t) || t.auth === "oauth").map((t) => ({ agent: a.garufile.name, source: a.source, server: t.name, url: isRemoteServer(t) ? t.url : (t.oauth?.issuer ?? ""), local: !isRemoteServer(t), auth: t.auth ?? "none", signedIn: t.auth === "oauth" ? signInFor(t, authRoot).signedIn() : null })));
         return json(res, {
-          version: "0.1.0",
+          version: VERSION,
           root: opts.root,
           up: opts.up || Boolean(opts.demo),
           demo: Boolean(opts.demo),

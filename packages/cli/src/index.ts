@@ -50,6 +50,7 @@ import {
 import { startUiServer } from "./ui-server.js";
 import { tailscaleAddresses } from "./ui-addresses.js";
 import { detectLocale, locale, setLocale, t } from "./i18n.js";
+import { VERSION } from "./version.js";
 import { KINDS, SCHEDULES, cronFor, isFreeModel, renderGarufile, suggestModel, type Kind, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
 import { launchdLabel, launchdPlist, launchdPlistPath, logPath, serviceEnv, servicePath, serviceName, systemdUnit, systemdUnitPath } from "./service.js";
 
@@ -76,7 +77,7 @@ setLocale(detectLocale());
 const program = new Command()
   .name("garu")
   .description(t("Garu — the open personal agent cloud. Run agents that can only act through policy you wrote."))
-  .version("0.1.0", "-V, --version", t("show the version"))
+  .version(VERSION, "-V, --version", t("show the version"))
   .helpOption("-h, --help", t("show help for a command"))
   .helpCommand("help [command]", t("show help for a command"));
 
@@ -830,7 +831,7 @@ program
       }
 
       const transport = remoteTransport(spec, opts.authRoot, { redirectUrl: AUTH_REDIRECT_URL, onAuthorize: openBrowser });
-      const client = new Client({ name: "garu", version: "0.1.0" });
+      const client = new Client({ name: "garu", version: VERSION });
       // Nothing saved yet: start the sign-in now rather than waiting for a 401. Some servers
       // (Google's) list their tools to anyone and refuse only a real call, so a clean connect
       // would look like a sign-in that never happened.
@@ -848,7 +849,7 @@ program
         await transport.close().catch(() => {});
         // Prove it: connect again with the saved tokens and list the tools.
         const t2 = remoteTransport(spec, opts.authRoot);
-        const c2 = new Client({ name: "garu", version: "0.1.0" });
+        const c2 = new Client({ name: "garu", version: VERSION });
         await c2.connect(t2 as unknown as Parameters<Client["connect"]>[0]);
         const { tools } = await c2.listTools();
         await c2.close();
