@@ -12,7 +12,7 @@ import type { Decision, ToolCallRequest } from "./policy.js";
 import { formatUsd } from "./pricing.js";
 
 export type GaruEvent =
-  | { type: "run.start"; agent: string; model: string; trigger: string; sandbox?: { image: string; network: string } }
+  | { type: "run.start"; agent: string; model: string; trigger: string; sandbox?: { image: string; network: string }; /** A catch-up: when the schedule meant it to run (ISO). */ dueAt?: string }
   | { type: "tools.offered"; offered: string[]; hidden: string[] }
   | { type: "run.end"; status: "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded"; summary?: string; costUsd?: number; priced?: boolean; offline?: boolean; quota?: { model: string; retryAt: string; limit?: number } }
   | { type: "model.turn"; turn: number; inputTokens?: number; outputTokens?: number; text?: string; costUsd?: number; totalCostUsd?: number }

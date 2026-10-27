@@ -155,22 +155,27 @@ triggers:
 `) };
   const now = () => local(9, 9, 30); // 2.5h after the 07:00 fire
 
-  it("fires a trigger that was due in the window with no run since, labelled catch-up", async () => {
+  it("fires a trigger that was due in the window with no run since, labelled catch-up and told when it was due", async () => {
     const m = manualCron();
     const events: SchedulerEvent[] = [];
     const triggers: string[] = [];
+    const dues: (Date | undefined)[] = [];
     const s = new Scheduler({
-      runner: async (a, trigger) => { triggers.push(trigger); return ok(a.garufile.name); },
+      runner: async (a, trigger, dueAt) => { triggers.push(trigger); dues.push(dueAt); return ok(a.garufile.name); },
       onEvent: (e) => events.push(e),
       cronFactory: m.factory,
       catchUp: { lastRunAt: () => local(8, 7, 0), now, everyMs: 0 },
     });
     s.start([brief]);
     await new Promise((r) => setTimeout(r, 5)); // the queued catch-up starts on the next tick
+    // A fire on time carries no due time: it is running when it was meant to.
+    m.tick("0 7 * * 1-5");
+    await new Promise((r) => setTimeout(r, 5));
     await s.stop();
     const cu = events.find((e) => e.type === "catch-up") as { missedAt: Date } | undefined;
     expect(cu?.missedAt.getTime()).toBe(local(9, 7).getTime());
-    expect(triggers).toEqual(["catch-up:0 7 * * 1-5"]);
+    expect(triggers).toEqual(["catch-up:0 7 * * 1-5", "cron:0 7 * * 1-5"]);
+    expect(dues.map((d) => d?.getTime())).toEqual([local(9, 7).getTime(), undefined]);
   });
 
   it("does nothing when a run already started at or after the due time", async () => {

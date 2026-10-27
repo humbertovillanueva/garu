@@ -33,6 +33,8 @@ export interface RunOptions {
   now?: () => Date;
   /** The person the agent works for, by name, so it can address them; the Garufile's prompt says "your owner". */
   owner?: string;
+  /** A catch-up: when the schedule meant this run to happen. The model is told, so "today" means that day. */
+  dueAt?: Date;
 }
 
 /** "es" → "Spanish", for the one line that tells the model which language to write in. */
@@ -105,6 +107,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     model: g.model,
     trigger,
     ...(g.sandbox ? { sandbox: { image: g.sandbox.image, network: g.sandbox.network } } : {}),
+    ...(opts.dueAt ? { dueAt: opts.dueAt.toISOString() } : {}),
   });
 
   let status: RunResult["status"] = "ok";
@@ -144,8 +147,12 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     // Spelled out in local time: given only a UTC timestamp, models get the weekday wrong, and after
     // 6 PM in Denver the UTC date is already tomorrow's. In the agent's language, so a brief's title
     // ("martes, 13 de octubre") is copied, not translated.
-    const local = now.toLocaleString(g.language ?? "en-US", { timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
-    const localDate = now.toLocaleDateString("en-CA", { timeZone: tz });
+    const spell = (d: Date) => d.toLocaleString(g.language ?? "en-US", { timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
+    const dayOf = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: tz });
+    const local = spell(now);
+    const localDate = dayOf(now);
+    // A catch-up after midnight for a run due the evening before: without this, "today" is the wrong day.
+    const due = opts.dueAt;
     const system = [
       SYSTEM_PREAMBLE,
       `Agent: ${g.name}${g.description ? ` — ${g.description}` : ""}`,
@@ -153,6 +160,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
       ...(g.language ? [`Language: write everything meant for your owner (summaries, documents, notes, chat replies) in ${languageName(g.language)}. Answer an email in the language it was written in.`] : []),
       `Trigger: ${trigger}`,
       `Current time: ${local}, ${tz} (local date ${localDate}; UTC ${now.toISOString()}). Use this for any date, day of the week or timestamp; never work them out or guess.`,
+      ...(due ? [`This run was due at ${spell(due)} (local date ${dayOf(due)}; UTC ${due.toISOString()}) and is running late: the computer was asleep or off. "Today", "tonight" and the local date your instructions refer to mean the due time's day, not the current one.`] : []),
       `Your standing instructions:\n${g.prompt.trim()}`,
       `The user message that follows is what this run is about. If it asks a question, answer it. If it asks for work, do it. If it only says to carry out your standing instructions, do exactly that. Never do work the message asked you not to do.`,
     ].join("\n\n");

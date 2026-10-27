@@ -49,6 +49,33 @@ describe("runAgent", () => {
     expect(system).toContain("in Spanish. Answer an email in the language it was written in.");
   });
 
+  it("a catch-up tells the model when the run was due, in its language, and records it", async () => {
+    const provider = new FakeProvider([{ stopReason: "end_turn", content: [{ type: "text", text: "listo" }] }]);
+    // Due at 23:00 on the 27th in Denver (05:00 UTC on the 28th); running at 00:30 on the 28th after a sleep.
+    const due = new Date("2026-10-28T05:00:00.000Z");
+    const res = await runAgent({
+      garufile: { ...garufile, language: "es" },
+      logRoot: mkdtempSync(join(tmpdir(), "garu-")),
+      provider,
+      approver: async () => ({ approved: false, by: "test-human" }),
+      trigger: "catch-up:0 23 * * *",
+      dueAt: due,
+      now: () => new Date("2026-10-28T06:30:00.000Z"),
+    });
+    expect(res.status).toBe("ok");
+    const system = provider.calls[0]?.system ?? "";
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    expect(system).toContain(`This run was due at ${due.toLocaleString("es", { timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" })} (local date ${due.toLocaleDateString("en-CA", { timeZone: tz })}; UTC 2026-10-28T05:00:00.000Z)`);
+    expect(system).toContain("mean the due time's day, not the current one");
+    const start = readRun(res.logPath).find((e) => e.event.type === "run.start")!.event;
+    expect(start).toMatchObject({ type: "run.start", trigger: "catch-up:0 23 * * *", dueAt: "2026-10-28T05:00:00.000Z" });
+    // A run on time says nothing about a due time.
+    const onTime = new FakeProvider([{ stopReason: "end_turn", content: [{ type: "text", text: "ok" }] }]);
+    const plain = await runAgent({ garufile, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider: onTime, approver: async () => ({ approved: false, by: "t" }) });
+    expect(onTime.calls[0]?.system).not.toContain("This run was due");
+    expect(readRun(plain.logPath).find((e) => e.event.type === "run.start")!.event).not.toHaveProperty("dueAt");
+  }, 30_000);
+
   it("runs tools through policy and feeds results back to the model", async () => {
     const provider = new FakeProvider([
       {

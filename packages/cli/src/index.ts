@@ -194,12 +194,13 @@ program
           return r ? new Date(r.startedAt) : null;
         },
       },
-      runner: (a, trigger) =>
+      runner: (a, trigger, dueAt) =>
         runAgent({
           garufile: a.garufile,
           logRoot: opts.logRoot,
           approver,
           trigger,
+          ...(dueAt ? { dueAt } : {}),
           ...(opts.quiet ? {} : { sink: (e) => stderr.write(`  [${a.garufile.name}] ${formatEvent(e)}\n`) }),
           ...(process.env["GARU_USER"] ? { owner: process.env["GARU_USER"] } : {}),
         }),

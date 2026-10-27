@@ -28,8 +28,11 @@ export type SchedulerEvent =
   | { type: "stopping"; inFlight: number }
   | { type: "stopped" };
 
-/** Runs one agent once. Injected so the scheduler can be tested without models or MCP servers. */
-export type Runner = (agent: ScheduledAgent, trigger: string) => Promise<RunResult>;
+/**
+ * Runs one agent once. Injected so the scheduler can be tested without models or MCP servers.
+ * A catch-up also says when the run was due, so the agent knows which day it is working on.
+ */
+export type Runner = (agent: ScheduledAgent, trigger: string, dueAt?: Date) => Promise<RunResult>;
 
 /** Cron engine abstraction: schedule `cb` on `pattern`; returns a handle. Injected for tests. */
 export interface CronHandle {
@@ -216,7 +219,7 @@ export class Scheduler {
     if (kind === "catch-up" && missedAt) this.emit({ type: "catch-up", agent: name, cron, missedAt });
     this.emit({ type: "fire", agent: name, cron });
     const p = this.opts
-      .runner(a, `${kind}:${cron}`)
+      .runner(a, `${kind}:${cron}`, kind === "catch-up" ? missedAt : undefined)
       .then((result) => {
         this.emit({ type: "run.done", agent: name, result });
         // The lookup passed but the model never answered (a provider down, a token refresh that couldn't
