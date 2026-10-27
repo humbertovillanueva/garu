@@ -45,6 +45,8 @@
   // The same color as the agent's avatar, so the legend needs no decoding; "other" (everyone past the
   // first six) and a faceless agent are grey, never a color a creature wears.
   const colorFor = (agent: string) => { const k = agent === "other" ? undefined : live.agents.find((a) => a.name === agent)?.persona?.kind; return k ? KIND_COLOR[k] : NO_FACE_COLOR; };
+  // One bar, in words: what the legend line shows on hover, and what a keyboard or a screen reader gets from the bar itself.
+  const barLabel = (r: CostRow) => `${dayWord(r.day)} · ${r.agent} · ${usd(r.costUsd)} · ${r.runs === 1 ? t("1 run") : t("{n} runs", { n: r.runs })}`;
 </script>
 
 <section class="space-y-5">
@@ -78,17 +80,20 @@
         {/each}
         {#if hover}<span class="ml-auto text-mute">{dayWord(hover.day)} · {hover.agent} · {usd(hover.cost)} · {hover.runs === 1 ? t("1 run") : t("{n} runs", { n: hover.runs })}</span>{/if}
       </div>
-      <div class="flex h-44 items-end gap-[3px]" role="img" aria-label={t("Daily spend by agent")}>
+      <!-- Each bar can take focus and says its value, so the chart reads without a mouse. -->
+      <div class="flex h-44 items-end gap-[3px]" role="group" aria-label={t("Daily spend by agent")}>
         {#each daysList as day}
           {@const items = byDay.get(day) ?? []}
           {@const sum = items.reduce((s, r) => s + r.costUsd, 0)}
           <div class="group flex h-full flex-1 flex-col justify-end" title="{dayWord(day)} · {usd(sum)}">
             {#each items.slice().sort((a, b) => agentOrder.indexOf(a.agent) - agentOrder.indexOf(b.agent)).reverse() as r}
-              <div class="w-full"
+              <button type="button" class="block w-full border-0 p-0 outline-none focus-visible:ring-2 focus-visible:ring-accent"
                    style="height: {(r.costUsd / maxDay) * 100}%; min-height: {r.costUsd > 0 ? 3 : 0}px; background: {colorFor(r.agent)}; margin-top: 2px; border-radius: 4px 4px 0 0"
                    onmouseenter={() => (hover = { day, agent: r.agent, cost: r.costUsd, runs: r.runs })}
                    onmouseleave={() => (hover = null)}
-                   role="presentation"></div>
+                   onfocus={() => (hover = { day, agent: r.agent, cost: r.costUsd, runs: r.runs })}
+                   onblur={() => (hover = null)}
+                   aria-label={barLabel(r)} title={barLabel(r)}></button>
             {/each}
           </div>
         {/each}
