@@ -104,7 +104,10 @@
 
   /* flow diagram */
   .flow { background: var(--panel); border: 1px solid var(--line-2); border-radius: 14px; padding: 22px 20px; overflow-x: auto; max-width: 100%; }
-  .flow svg { display: block; width: 100%; height: auto; min-width: 640px; font-family: var(--mono); font-size: 12.5px; }
+  .flow svg { display: block; width: 100%; height: auto; font-family: var(--mono); font-size: 12.5px; }
+  .flow svg.wide { min-width: 640px; }
+  .flow svg.vert { display: none; max-width: 420px; margin: 0 auto; }
+  @media (max-width: 640px) { .flow { overflow-x: visible; padding: 18px 12px; } .flow svg.wide { display: none; } .flow svg.vert { display: block; } }
 
   /* phone */
   .phone { display: grid; grid-template-columns: 1fr 300px; gap: 40px; align-items: center; }
@@ -181,7 +184,7 @@
   <h2>Un bucle, una puerta, un registro.</h2>
   <p class="sub">Un agente solo toca el mundo a través del <a href="https://modelcontextprotocol.io" style="color:var(--fg)">Model Context Protocol</a>. El núcleo de política se sienta entre el modelo y cada servidor MCP. La caja negra ve todo lo que ve el núcleo. La sala de control es una vista sobre esos archivos. No hay base de datos.</p>
   <div class="flow">
-    <svg viewBox="0 0 1050 300" role="img" aria-label="Tú hablas con la sala de control o la CLI, que mueve el bucle del agente y un modelo. Cada llamada a una herramienta que hace el modelo va al núcleo de política, que la permite hacia el servidor de herramientas MCP, te pregunta por la bandeja, o la bloquea. Todo se escribe en la caja negra.">
+    <svg class="wide" viewBox="0 0 1050 300" role="img" aria-label="Tú hablas con la sala de control o la CLI, que mueve el bucle del agente y un modelo. Cada llamada a una herramienta que hace el modelo va al núcleo de política, que la permite hacia el servidor de herramientas MCP, te pregunta por la bandeja, o la bloquea. Todo se escribe en la caja negra.">
       <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#7f8899"/></marker></defs>
       <g stroke="#2a303b" stroke-width="1" fill="#171b22">
         <rect x="20" y="30" width="110" height="44" rx="9"/>
@@ -219,6 +222,39 @@
         <path d="M490 174V232"/>
       </g>
       <g stroke="#2a303b" stroke-width="1" stroke-dasharray="3 4" fill="none"><path d="M490 232H560" /></g>
+    </svg>
+    <svg class="vert" viewBox="0 0 360 500" role="img" aria-label="Tú hablas con la sala de control o la CLI, que mueve el bucle del agente y un modelo. Cada llamada a una herramienta que hace el modelo va al núcleo de política, que la permite hacia el servidor de herramientas MCP, te pregunta por la bandeja, o la bloquea. Todo se escribe en la caja negra.">
+      <defs><marker id="arv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#7f8899"/></marker></defs>
+      <g stroke="#2a303b" stroke-width="1" fill="#171b22">
+        <rect x="120" y="8" width="120" height="40" rx="9"/>
+        <rect x="70" y="72" width="220" height="40" rx="9"/>
+        <rect x="14" y="136" width="156" height="40" rx="9"/>
+        <rect x="190" y="136" width="156" height="40" rx="9"/>
+        <rect x="100" y="222" width="160" height="40" rx="9" stroke="#d9b24c" stroke-opacity=".6"/>
+        <rect x="14" y="298" width="332" height="36" rx="9"/>
+        <rect x="14" y="344" width="332" height="36" rx="9"/>
+        <rect x="14" y="390" width="332" height="36" rx="9"/>
+        <rect x="14" y="452" width="332" height="40" rx="9"/>
+      </g>
+      <g fill="#e6eaf0" text-anchor="middle">
+        <text x="180" y="33">tú</text>
+        <text x="180" y="97">sala de control · CLI</text>
+        <text x="92" y="161">bucle del agente</text>
+        <text x="268" y="161">modelo</text>
+        <text x="180" y="247" fill="#d9b24c">política</text>
+        <text x="180" y="477">caja negra · .garu/runs/*.jsonl</text>
+      </g>
+      <g fill="#7f8899" font-size="10.5"><text x="268" y="194" text-anchor="middle">Gemini · Claude · Ollama</text></g>
+      <g fill="#aeb6c2" text-anchor="start" font-size="11">
+        <text x="26" y="320"><tspan fill="#43c979">permitir</tspan> → servidor MCP (Docker opcional)</text>
+        <text x="26" y="366"><tspan fill="#d9b24c">preguntar</tspan> → bandeja → tú · web · teléfono · CLI</text>
+        <text x="26" y="412"><tspan fill="#ef5350">bloquear</tspan> → nunca se ejecuta, nunca se ofrece</text>
+      </g>
+      <g stroke="#7f8899" stroke-width="1.2" fill="none" marker-end="url(#arv)">
+        <path d="M180 48V72"/><path d="M180 112V136"/><path d="M170 156H190"/>
+        <path d="M92 176V222"/><path d="M180 262V298"/>
+      </g>
+      <g stroke="#2a303b" stroke-width="1" stroke-dasharray="3 4" fill="none"><path d="M100 242H6V472H14"/></g>
     </svg>
   </div>
 </section>
