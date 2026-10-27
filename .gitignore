@@ -39,3 +39,6 @@ docs/video/*.mp4
 
 # editor settings stay personal
 .vscode/
+
+# the desktop app's own folder (previews, worktrees)
+.claude/
