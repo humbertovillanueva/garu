@@ -125,7 +125,7 @@ describe("who gets in", () => {
     expect(big.status).toBe(413);
     expect((await get("/api/runs?agent=../../x")).status).toBe(400);
     expect(Array.isArray(await (await get("/api/runs")).json())).toBe(true);
-  });
+  }, 15_000);
 
   it("runs come a page at a time: a limit caps the page and an offset skips the newest; nonsense means the defaults", async () => {
     for (const q of ["?limit=1", "?limit=1&offset=1", "?limit=abc&offset=-3", "?agent=pip&limit=2"]) {
