@@ -17,7 +17,7 @@ https://github.com/humbertovillanueva/garu
 
 ## First comment (post it right after submitting)
 
-I built this because I wanted an agent that runs all day and acts for me, and I wanted to know exactly what it could touch while I slept.
+I built this because I wanted what Dots and Muse promise, agents that run all day and act for me, but I wanted to know exactly what they could touch while I slept.
 
 Garu is a small runtime: an agent is a YAML file with a model, some MCP tool servers, a schedule, and a policy. Every tool call goes through the policy first: allow, ask, or block, by tool name and by argument. "Ask" pauses the run and puts a review card in an inbox (browser, phone, or terminal). Silence is a deny. Approve the same thing three times and it proposes the exact rule, scoped to what you approved.
 

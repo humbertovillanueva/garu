@@ -5,7 +5,7 @@ tags: ai, opensource, typescript, agents
 cover_image: https://garuagents.com/screenshots/og.png
 ---
 
-The big labs are shipping agents that run all day on a computer of their own and act for you. I wanted that. I also wanted to know exactly what the thing could touch while I slept, and none of them gives you that. They're closed, tied to one vendor, and not available where a lot of people live.
+OpenAI shipped [Dots](https://openai.com/index/introducing-dots/) and Meta shipped [Muse](https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/): agents that run all day on a computer of their own and act for you. I wanted that. I also wanted to know exactly what the thing could touch while I slept, and neither of those gives you that. They're closed, tied to one vendor, and not available where a lot of people live.
 
 So I built the open version, and I built it around the part they treat as an afterthought: control.
 
