@@ -33,6 +33,8 @@
 :root {
   --color-s-other: #5b6472;
   --shadow-panel: 0 1px 0 rgba(255,255,255,.03) inset, 0 12px 40px -20px rgba(0,0,0,.8);
+  /* The light that sweeps a loading skeleton: a touch of white on dark panels, a touch of black on light ones. */
+  --shimmer: rgba(255,255,255,.04);
   color-scheme: dark;
 }
 
@@ -53,6 +55,7 @@
   --color-bad: #c62828;
   --color-s-other: #6b7280;
   --shadow-panel: 0 1px 0 rgba(255,255,255,.7) inset, 0 8px 24px -16px rgba(20,20,30,.28);
+  --shimmer: rgba(0,0,0,.05);
   color-scheme: light;
 }
 
@@ -95,7 +98,7 @@ body {
 
 /* Skeletons */
 .skel { position: relative; overflow: hidden; background: var(--color-panel-2); border-radius: 6px; }
-.skel::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.04), transparent); animation: shimmer 1.4s infinite; }
+.skel::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, var(--shimmer), transparent); animation: shimmer 1.4s infinite; }
 @keyframes shimmer { to { transform: translateX(100%) } }
 
 /* Controls */
