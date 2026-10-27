@@ -55,7 +55,7 @@
         <div class="rise flex items-start gap-3 text-[13px] text-fg-2">
           <Mark name={agent} size={22} />
           <div class="min-w-0 flex-1">
-            <button class="flex w-full items-start gap-2 py-1.5 text-left" onclick={() => (open[k] = !open[k])} aria-expanded={Boolean(open[k])}>
+            <button class="flex min-h-11 w-full items-start gap-2 py-1.5 text-left" onclick={() => (open[k] = !open[k])} aria-expanded={Boolean(open[k])}>
               <span class="min-w-0 flex-1">
                 <span class="block text-[12px] text-mute">{headline(runs)}</span>
                 {#if !open[k] && !allQuiet}<span class="mt-0.5 line-clamp-2 block text-[13px] text-fg-2">{plainTimes(oneLine(([...runs].reverse().find((r) => !quiet(r.text)) ?? latest).text))}</span>{/if}
