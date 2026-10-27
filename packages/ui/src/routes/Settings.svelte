@@ -11,10 +11,12 @@
   import { buildText } from "../lib/format";
   import { haptic } from "../lib/native";
   import { t, parts } from "../lib/i18n.svelte";
+  // The two things that can't be undone ask inline, in the page's own style, instead of with the browser's dialog.
+  let confirmForget = $state(false);
   function unpair() {
-    if (!confirm(t("Forget this control room? You'll pair again by scanning a code on your computer."))) return;
     forget(); location.reload();
   }
+  let confirmRotate = $state(false);
 
   let s = $state<Settings | null>(null);
   let error = $state<string | null>(null);
@@ -60,7 +62,7 @@
   }
   async function choose(url: string) { chosen = url; await render(); }
   async function rotate() {
-    if (!confirm(t("Make a new token? Every phone or computer signed in with the current one will have to scan again."))) return;
+    confirmRotate = false;
     showToken = false; pairError = null;
     try {
       const p = await api.rotateToken();
@@ -95,7 +97,17 @@
         <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">{t("Connection")}</span><span class="flex flex-1 items-center justify-end gap-2"><span class="dot" style="background: {live.connected ? 'var(--color-ok)' : live.disconnectedAt ? 'var(--color-ask)' : 'var(--color-mute)'}"></span>{live.connected ? t("live") : live.disconnectedAt ? t("offline") : t("connecting")}</span></div>
         <div class="flex items-center gap-3 px-4 py-3"><span class="text-mute">{t("Schedules")}</span>{#if s}<span class="flex flex-1 items-center justify-end gap-2"><span class="dot" style="background: {s.up ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>{s.up ? t("running") : t("off")}</span>{:else}<span class="flex-1 text-right text-mute">{error ? t("can't check right now") : t("checking…")}</span>{/if}</div>
         {#if isApp}
-          <button class="card-hover w-full px-4 py-3 text-left" onclick={unpair}>{t("Forget this computer")}<span class="block text-[12.5px] text-mute">{t("You'll pair again by scanning a code there.")}</span></button>
+          {#if confirmForget}
+            <div class="space-y-3 px-4 py-3">
+              <p class="text-fg-2">{t("Forget this control room? You'll pair again by scanning a code on your computer.")}</p>
+              <div class="flex flex-wrap gap-2">
+                <button class="btn btn-bad" onclick={unpair}>{t("Forget it")}</button>
+                <button class="btn" onclick={() => (confirmForget = false)}>{t("Cancel")}</button>
+              </div>
+            </div>
+          {:else}
+            <button class="card-hover w-full px-4 py-3 text-left" onclick={() => (confirmForget = true)}>{t("Forget this computer")}<span class="block text-[12.5px] text-mute">{t("You'll pair again by scanning a code there.")}</span></button>
+          {/if}
         {:else if s && !s.login.direct}
           <button class="card-hover w-full px-4 py-3 text-left" onclick={() => api.logout()}>{t("Sign out")}</button>
         {/if}
@@ -185,7 +197,16 @@
                   <button class="btn" onclick={() => (showToken = !showToken)}>{showToken ? t("Hide token") : t("Show token")}</button>
                 </div>
                 {#if showToken}<div class="mono mt-2 break-all rounded-lg border hairline bg-bg px-2.5 py-2 text-[12px] select-all">{pairLink?.split("token=")[1]}</div>{/if}
-                <p class="mt-2 text-[12px] text-mute">{t("Someone else saw it?")} <button class="tap underline hover:text-fg" onclick={rotate}>{t("Make a new token")}</button>{#if rotated}<span class="ml-2" style="color: var(--color-ok)">{t("done — other devices are signed out")}</span>{/if}{#if pairError}<span class="ml-2" style="color: var(--color-bad)">{pairError}</span>{/if} {#if s}{#each parts("It lives in {path}.", { path: shortRoot(s.login.tokenPath) }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}{/if}</p>
+                <p class="mt-2 text-[12px] text-mute">{t("Someone else saw it?")} <button class="tap underline hover:text-fg" onclick={() => (confirmRotate = true)} aria-expanded={confirmRotate}>{t("Make a new token")}</button>{#if rotated}<span class="ml-2" style="color: var(--color-ok)">{t("done — other devices are signed out")}</span>{/if}{#if pairError}<span class="ml-2" style="color: var(--color-bad)">{pairError}</span>{/if} {#if s}{#each parts("It lives in {path}.", { path: shortRoot(s.login.tokenPath) }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}{/if}</p>
+                {#if confirmRotate}
+                  <div class="mt-3 rounded-lg border hairline bg-bg/40 p-3 text-[13px]">
+                    <p class="text-fg-2">{t("Make a new token? Every phone or computer signed in with the current one will have to scan again.")}</p>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                      <button class="btn btn-bad" onclick={rotate}>{t("Make a new token")}</button>
+                      <button class="btn" onclick={() => (confirmRotate = false)}>{t("Cancel")}</button>
+                    </div>
+                  </div>
+                {/if}
               </div>
             </div>
           {/if}

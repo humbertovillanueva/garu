@@ -518,6 +518,7 @@ export const es: Record<string, string> = {
   "Couldn't make a new token: {error}. The old one still works.": "No se pudo crear un token nuevo: {error}. El anterior sigue funcionando.",
   "Couldn't make a pairing code: {error}": "No se pudo crear un código de vinculación: {error}",
   "Forget this computer": "Olvidar esta computadora",
+  "Forget it": "Olvidarla",
   "Forget this control room? You'll pair again by scanning a code on your computer.": "¿Olvidar esta sala de control? Volverás a vincular escaneando un código en tu computadora.",
   "You'll pair again by scanning a code there.": "Volverás a vincular escaneando un código ahí.",
   "Sign out": "Cerrar sesión",
