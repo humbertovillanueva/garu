@@ -13,6 +13,7 @@
   import { renderMarkdown } from "../lib/md";
   import { t, parts } from "../lib/i18n.svelte";
   import { ticker } from "../lib/clock.svelte";
+  import { announce } from "../lib/a11y.svelte";
 
   let feed = $state<FeedItem[] | null>(null);
   let feedError = $state<string | null>(null);
@@ -58,19 +59,30 @@
   });
   const oneLine = (s: string) => plainTimes(s).replace(/[#*_`>]/g, "").replace(/\s+/g, " ").trim();
   const kindColor = (k: string) => k === "run.ok" ? "var(--color-ok)" : k.startsWith("run.") ? "var(--color-bad)" : "var(--color-mute)";
+
+  // The status line under the greeting, as plain words. A screen reader hears it when it changes, and
+  // only then: every refresh recomputes it, and a live region would have read the same sentence each tick.
+  const active = $derived(live.agents.filter((a) => a.runsToday).length);
+  const statusText = $derived.by(() => {
+    if (!live.loaded) return t("Loading your agents…");
+    if (live.pending.length === 1) return t("{n} decision is waiting for you.", { n: 1 });
+    if (live.pending.length) return t("{n} decisions are waiting for you.", { n: live.pending.length });
+    if (working.length) return working.length === 1 ? t("{names} is working right now.", { names: working[0]!.name }) : t("{names} are working right now.", { names: working.map((a) => a.name).join(", ") });
+    if (runsToday) return runsToday === 1 ? t("1 run today from {active} of your {total} agents, {cost} estimated. Nothing needs you.", { active, total: live.agents.length, cost: usd(spendToday) }) : t("{n} runs today from {active} of your {total} agents, {cost} estimated. Nothing needs you.", { n: runsToday, active, total: live.agents.length, cost: usd(spendToday) });
+    if (!live.up && scheduled) return t("Nothing has run today, and nothing will: schedules are off.");
+    return t("Quiet so far today. Nothing needs you.");
+  });
+  let lastStatus: string | null = null;
+  $effect(() => { const s = statusText; if (lastStatus !== null && s !== lastStatus) announce(s); lastStatus = s; });
 </script>
 
 <section class="space-y-8">
   <div class="rise">
     <h1 class="title">{greeting}.</h1>
-    <p class="mt-1 text-[14px] text-fg-2" aria-live="polite">
-      {#if !live.loaded}{t("Loading your agents…")}
-      {:else if live.pending.length === 1}{#each parts("{n} decision is waiting for you.", { n: 1 }) as p}{#if p.name}<span class="font-medium text-fg">{p.text}</span>{:else}{p.text}{/if}{/each}
-      {:else if live.pending.length}{#each parts("{n} decisions are waiting for you.", { n: live.pending.length }) as p}{#if p.name}<span class="font-medium text-fg">{p.text}</span>{:else}{p.text}{/if}{/each}
-      {:else if working.length}{working.length === 1 ? t("{names} is working right now.", { names: working[0]!.name }) : t("{names} are working right now.", { names: working.map((a) => a.name).join(", ") })}
-      {:else if runsToday}{runsToday === 1 ? t("1 run today from {active} of your {total} agents, {cost} estimated. Nothing needs you.", { active: live.agents.filter((a) => a.runsToday).length, total: live.agents.length, cost: usd(spendToday) }) : t("{n} runs today from {active} of your {total} agents, {cost} estimated. Nothing needs you.", { n: runsToday, active: live.agents.filter((a) => a.runsToday).length, total: live.agents.length, cost: usd(spendToday) })}
-      {:else if !live.up && scheduled}{t("Nothing has run today, and nothing will: schedules are off.")}
-      {:else}{t("Quiet so far today. Nothing needs you.")}{/if}
+    <p class="mt-1 text-[14px] text-fg-2">
+      {#if live.loaded && live.pending.length === 1}{#each parts("{n} decision is waiting for you.", { n: 1 }) as p}{#if p.name}<span class="font-medium text-fg">{p.text}</span>{:else}{p.text}{/if}{/each}
+      {:else if live.loaded && live.pending.length}{#each parts("{n} decisions are waiting for you.", { n: live.pending.length }) as p}{#if p.name}<span class="font-medium text-fg">{p.text}</span>{:else}{p.text}{/if}{/each}
+      {:else}{statusText}{/if}
     </p>
   </div>
 
