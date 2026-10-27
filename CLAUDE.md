@@ -48,7 +48,7 @@ docs/video/remotion the launch video's source (Remotion 4, React); see "Launch v
 
 ```
 npm install && npm run build          # all workspaces
-npm run typecheck && npm test         # tsc -b, vitest (265 tests); run before every commit
+npm run typecheck && npm test         # tsc -b, vitest (283 tests); run before every commit
 npx svelte-check --workspace packages/ui
 npm run garu -- <cmd>                 # the CLI from the repo (no global install yet)
 npm run garu -- service install|status|logs|restart|uninstall   # Garu as a login service (launchd)
@@ -148,7 +148,11 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 
 Built and running: kernel, CLI, control room, Android app (debug and the signed Play build), iPhone app
 in the Simulator, login service with catch-up, the Google agents, Nudge, the public demos, brand, Owner's
-Guide, launch video v7, Spanish end to end. Open: the rest of `docs/audit-2026-10-12.md`.
+Guide, launch video v8, Spanish end to end. Both audits are done (`docs/audit-2026-10-12.md`,
+`docs/audit-2026-10-27.md`) except the two decisions at the end of the second: whether the v6 videos
+and the score WAV leave the tree, and the iPhone scanner (a native plugin or a URL scheme, after launch).
+On 2026-10-27 Tailscale was found stopped on the Mac, which takes both demos and the phone offline:
+check its menu-bar icon before the Play application and before posting.
 
 Play: build 4 is on the closed-testing track "Alpha" since 2026-10-15 with the Spanish listing and
 Spanish screenshots; the opt-in link is https://play.google.com/apps/testing/io.github.humbertovillanueva.garu;
@@ -180,7 +184,9 @@ since 2026-10-10. What they do, the rules learned on real mail, and the setup: `
 
 ## Launch video
 
-v7 (`docs/video/garu-v7-9x16.mp4`, `garu-v7-16x9.mp4`, 2026-10-10; end card re-rendered with
-garuagents.com on 2026-10-14) tells it with Tomay and Bea; v6
-had the old weather Tomay. Source, commands, scenes and rules: `docs/video/remotion/README.md`.
+v8 (`docs/video/garu-v8-9x16.mp4`, `garu-v8-16x9.mp4`, 2026-10-27) tells it with Tomay and Bea, with
+room to read and nothing under the Shorts and Reels buttons; beside it a 15-second cut
+(`garu-v8-15s-9x16.mp4`), two posters and a 1.7 MB web encode (`garu-v8-16x9-web.mp4`) that the site
+plays. v7 (2026-10-10, re-rendered 2026-10-27 with Bea at 8:00) and v6 (the old weather Tomay) are
+still in the tree. Source, commands, scenes and rules: `docs/video/remotion/README.md`.
 Garu's own facts on screen are real; sample meetings and emails are made up (example.com).
