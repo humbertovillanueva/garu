@@ -14,7 +14,7 @@
 #
 # Esta es la edición en español de agents/bea/Garufile.yaml: las mismas reglas, etiquetas en
 # español y borradores en el idioma de cada correo. Para usarla, cópiala encima de Garufile.yaml
-# (docs/google.md explica cómo).
+# (docs/google.es.md explica cómo).
 #
 # Necesita: GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en .env y, una sola vez:
 #   garu auth agents/bea/Garufile.yaml gmail

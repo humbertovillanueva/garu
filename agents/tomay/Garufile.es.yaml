@@ -11,7 +11,7 @@
 # en esta computadora y en el hilo de Tomay en tu teléfono.
 #
 # Esta es la edición en español de agents/tomay/Garufile.yaml: las mismas reglas, y escribe en
-# español. Para usarla, cópiala encima de Garufile.yaml (docs/google.md explica cómo).
+# español. Para usarla, cópiala encima de Garufile.yaml (docs/google.es.md explica cómo).
 #
 # Necesita: GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en .env (el cliente OAuth de tu proyecto de
 # Google Cloud) y, una sola vez: garu auth agents/tomay/Garufile.yaml calendar
