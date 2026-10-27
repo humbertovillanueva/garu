@@ -163,27 +163,35 @@ program
   .description(t("Run agents on their schedules until stopped (Ctrl-C)"))
   .action(async (files: string[], opts: { onAsk: string; askTimeout: string; notify?: string; inboxRoot: string; logRoot: string; quiet?: boolean; once?: boolean }) => {
     loadDotEnv();
+    const authRoot = resolve(process.cwd(), ".garu", "auth");
     const agents = files.map((f) => ({ source: f, garufile: loadGarufile(f) })).filter((a) => {
       const needs = missingEnv(a.garufile.tools, process.env);
       if (needs.length) stderr.write(`${t("{agent}: not scheduled — needs {vars} in .env", { agent: a.garufile.name, vars: needs.join(", ") })}\n`);
-      return needs.length === 0;
+      // Same as the control room: a server nobody has signed in for would fail every run at its first call.
+      const signIn = a.garufile.tools.filter((tl) => tl.auth === "oauth" && !signInFor(tl, authRoot).signedIn()).map((tl) => tl.name);
+      if (signIn.length) stderr.write(`${t("{agent}: not scheduled — sign in first: {command}", { agent: a.garufile.name, command: `garu auth ${a.source} ${signIn[0]}` })}\n`);
+      return needs.length === 0 && signIn.length === 0;
     });
-    if (agents.length === 0) fail(t("nothing to run: every agent given is missing something in .env"));
+    if (agents.length === 0) fail(t("nothing to run: every agent given is missing something in .env or a sign-in"));
     if (!["inbox", "deny", "allow", "terminal"].includes(opts.onAsk)) fail(t("--on-ask must be inbox, deny, allow or terminal (got \"{mode}\")", { mode: opts.onAsk }));
     const timeoutMin = Number(opts.askTimeout);
     if (!Number.isFinite(timeoutMin) || timeoutMin <= 0) fail(t("--ask-timeout must be a positive number of minutes"));
-    const approver: Approver =
-      opts.onAsk === "allow" ? autoApprove
-      : opts.onAsk === "terminal" ? terminalApprover
-      : opts.onAsk === "deny" ? unattendedDeny
-      : new Inbox({
+    // Kept by name so a stop can end its paused asks instead of waiting out their half hour.
+    const inbox = opts.onAsk === "inbox"
+      ? new Inbox({
           root: opts.inboxRoot,
           timeoutMs: timeoutMin * 60_000,
           onRequest: async (r) => {
             stderr.write(`\n┌ ${t("APPROVAL NEEDED  (expires {time})", { time: localTime(r.expiresAt, { seconds: false }) })}\n│ ${formatRequest(r)}\n└ garu approve ${r.id}   ·   garu deny ${r.id}\n\n`);
             if (opts.notify) await notify(opts.notify, r);
           },
-        }).approver();
+        })
+      : undefined;
+    const approver: Approver =
+      opts.onAsk === "allow" ? autoApprove
+      : opts.onAsk === "terminal" ? terminalApprover
+      : opts.onAsk === "deny" ? unattendedDeny
+      : inbox!.approver();
 
     const upStore = new RunStore(opts.logRoot);
     const scheduler = new Scheduler({
@@ -217,8 +225,10 @@ program
     }
 
     const shutdown = (sig: string) => {
-      stderr.write(`\n${t("{signal}: finishing in-flight runs…", { signal: sig })}\n`);
-      void scheduler.stop().then(() => process.exit(0));
+      stderr.write(`\n${t("{signal}: paused asks are declined; in-flight runs get 10 s to finish…", { signal: sig })}\n`);
+      // Like the control room: a Ctrl-C shouldn't wait half an hour on an ask nobody is answering.
+      inbox?.close();
+      void scheduler.stop(10_000).then(() => process.exit(0));
     };
     process.once("SIGINT", () => shutdown("SIGINT"));
     process.once("SIGTERM", () => shutdown("SIGTERM"));

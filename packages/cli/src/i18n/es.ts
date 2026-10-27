@@ -50,13 +50,14 @@ export const es: Record<string, string> = {
   "fire every cron agent once right now, then exit (for testing)": "disparar cada agente con cron una vez ahora mismo y salir (para probar)",
   "Run agents on their schedules until stopped (Ctrl-C)": "Ejecuta los agentes según sus horarios hasta que lo detengas (Ctrl-C)",
   "{agent}: not scheduled — needs {vars} in .env": "{agent}: sin programar — necesita {vars} en .env",
-  "nothing to run: every agent given is missing something in .env": "nada que ejecutar: a cada agente indicado le falta algo en .env",
+  "{agent}: not scheduled — sign in first: {command}": "{agent}: sin programar — inicia sesión primero: {command}",
+  "nothing to run: every agent given is missing something in .env or a sign-in": "nada que ejecutar: a cada agente indicado le falta algo en .env o una sesión iniciada",
   "--on-ask must be inbox, deny, allow or terminal (got \"{mode}\")": "--on-ask debe ser inbox, deny, allow o terminal (recibí \"{mode}\")",
   "--ask-timeout must be a positive number of minutes": "--ask-timeout debe ser un número positivo de minutos",
   "APPROVAL NEEDED  (expires {time})": "APROBACIÓN NECESARIA  (vence {time})",
   "none of these Garufiles has a cron trigger; use `garu run` for one-off agents": "ninguno de estos Garufiles tiene un disparador cron; usa `garu run` para agentes de una sola vez",
   "garu up: {schedules} schedule(s) across {agents} agent(s); ask → {mode}. Ctrl-C to stop.": "garu up: {schedules} horario(s) en {agents} agente(s); ask → {mode}. Ctrl-C para detener.",
-  "{signal}: finishing in-flight runs…": "{signal}: terminando las ejecuciones en curso…",
+  "{signal}: paused asks are declined; in-flight runs get 10 s to finish…": "{signal}: las peticiones en pausa quedan rechazadas; las ejecuciones en curso tienen 10 s para terminar…",
 
   // ---- garu sandbox
   "Manage the Docker image tool servers run in": "Administra la imagen de Docker en la que corren los servidores de herramientas",
