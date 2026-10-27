@@ -91,7 +91,7 @@ export const api = {
   logs: (n = 200) => get<{ lines: string[]; path: string }>(`/api/logs?n=${n}`),
   pair: () => get<import("./types").Pair>("/api/pair"),
   rotateToken: () => post<import("./types").Pair>("/api/pair"),
-  login: async (token: string) => { await post<{ ok: true }>("/api/login", { token }); live.signIn = false; connectLive(true); },
+  login: async (token: string) => { await post<{ ok: true }>("/api/login", { token }); live.signIn = false; void connectLive(true).catch(() => {}); },
   logout: async () => { if (!server.token) await post<{ ok: true }>("/api/logout"); location.reload(); },
   send: (agent: string, text: string) => post<{ started: boolean; runId: string | null }>(`/api/agents/${encodeURIComponent(agent)}/chat`, { text }),
 };
@@ -108,6 +108,8 @@ export const live = $state({
   pending: [] as ApprovalRequest[],
   suggestions: [] as import("./types").Suggestion[],
   grants: [] as import("./types").Grant[],
+  /** The asks already decided, newest first, as the inbox answers them: the Inbox page reads these instead of asking again. */
+  recent: [] as ApprovalRequest[],
   loaded: false,
   /** Why the first load failed, until one succeeds. Views show this instead of an endless skeleton. */
   loadError: null as string | null,
@@ -119,22 +121,37 @@ export const live = $state({
   refreshing: false,
 });
 
-/** Refresh everything now: what pull-to-refresh and coming back to the app do. */
+/** Refresh everything now: what pull-to-refresh and coming back to the app do. One round of requests, whoever asks. */
 export async function refreshNow(): Promise<void> {
   live.refreshing = true;
   try {
-    if (!live.connected) connectLive(true);
-    await refreshCore();
+    // Reconnecting refreshes on its own; connected, one refresh is all it takes.
+    await (live.connected ? refreshCore() : connectLive(true));
     live.tick++;
   } catch { /* the banner says it */ } finally {
     live.refreshing = false;
   }
 }
 
-let refreshSeq = 0;
-export async function refreshCore(): Promise<void> {
-  // The newest refresh wins: an older answer that lands late can't bring back a card you just decided.
-  const mine = ++refreshSeq;
+/**
+ * The two requests behind every view. Callers that overlap share one round: while a refresh is on
+ * its way, an ask means something changed since it left, so its answer is dropped and one more
+ * goes out after it, shared by everyone who asked meanwhile. A pull-to-refresh is one round, and a
+ * card you just decided can't come back from an answer that left before you decided.
+ */
+let gen = 0;
+let running: Promise<void> | null = null;
+let queued: Promise<void> | null = null;
+export function refreshCore(): Promise<void> {
+  if (!running) {
+    const mine = ++gen;
+    running = fetchCore(() => mine === gen).finally(() => { running = null; });
+    return running;
+  }
+  gen++;
+  return (queued ??= running.catch(() => {}).then(() => { queued = null; return refreshCore(); }));
+}
+async function fetchCore(current: () => boolean): Promise<void> {
   let a: AgentsResponse, i: InboxResponse;
   try {
     [a, i] = await Promise.all([api.agents(), api.inbox()]);
@@ -142,7 +159,7 @@ export async function refreshCore(): Promise<void> {
     if (!live.loaded) live.loadError = errorText(e);
     throw e;
   }
-  if (mine !== refreshSeq) return;
+  if (!current()) return;
   live.agents = a.agents;
   live.up = a.up;
   live.root = a.root;
@@ -151,6 +168,7 @@ export async function refreshCore(): Promise<void> {
   live.pending = i.pending;
   live.suggestions = i.suggestions ?? [];
   live.grants = i.grants ?? [];
+  live.recent = i.recent ?? [];
   live.loaded = true;
   live.loadError = null;
 }
@@ -161,19 +179,21 @@ let listening = false;
 // When the stream closes for good (a proxy answering 502 during a restart does that), try again on a widening interval.
 let retry: ReturnType<typeof setTimeout> | undefined;
 let backoff = 2000;
-export function connectLive(again = false): void {
-  if (source && !again) return;
+/** Open (or reopen) the live stream. Owns the refresh that goes with it; the promise is that refresh, for a caller that wants to wait. */
+export function connectLive(again = false): Promise<void> {
+  if (source && !again) return Promise.resolve();
   clearTimeout(retry);
   source?.close();
-  void refreshCore().catch(() => {});
+  // The refresh that comes with connecting: it is also what tells a browser with no session to sign in.
+  const refreshed = refreshCore();
   // EventSource can't carry a header, so the app passes its token in the query; a browser session uses its cookie.
   source = new EventSource(url("/api/events") + (server.token ? `?token=${encodeURIComponent(server.token)}` : ""));
   source.addEventListener("hello", () => {
     const wasDown = live.disconnectedAt > 0;
     live.connected = true; live.disconnectedAt = 0; backoff = 2000;
-    void refreshCore().catch(() => {});
-    // Back after a drop: the open page may have missed changes, so it reloads too.
-    if (wasDown) live.tick++;
+    // Back after a drop (the browser reconnects a dropped stream by itself): what changed meanwhile was
+    // missed, so everything reloads. A first hello comes right after the refresh above and needs nothing.
+    if (wasDown) { void refreshCore().catch(() => {}); live.tick++; }
   });
   source.addEventListener("changed", () => { live.tick++; void refreshCore().catch(() => {}); });
   const mine = source;
@@ -183,18 +203,19 @@ export function connectLive(again = false): void {
     // The browser retries a dropped stream by itself, but not one that was refused; that one is ours to retry.
     if (mine.readyState === EventSource.CLOSED && !live.signIn) {
       clearTimeout(retry);
-      retry = setTimeout(() => connectLive(true), backoff);
+      retry = setTimeout(() => { void connectLive(true).catch(() => {}); }, backoff);
       backoff = Math.min(backoff * 2, 30_000);
     }
   };
   if (!listening) {
     listening = true;
     // Coming back from the background, or the network returning, is the moment to try again rather than waiting for the browser's backoff.
-    addEventListener("online", () => connectLive(true));
-    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !live.connected) connectLive(true); });
+    addEventListener("online", () => { void connectLive(true).catch(() => {}); });
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !live.connected) void connectLive(true).catch(() => {}); });
   }
   // in-flight turn counters change without a file event sometimes; a slow heartbeat keeps "working" fresh
   heartbeat ??= setInterval(() => { if (!live.signIn && live.agents.some((a) => a.status === "working")) void refreshCore().catch(() => {}); }, 2000);
+  return refreshed;
 }
 
 export const agentByName = (name: string) => live.agents.find((a) => a.name === name);

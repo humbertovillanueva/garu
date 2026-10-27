@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api, live, loader, refreshCore, errorText } from "../lib/api.svelte";
+  import { api, live, refreshCore, errorText } from "../lib/api.svelte";
   import { announce } from "../lib/a11y.svelte";
   import { href } from "../lib/router.svelte";
   import { when, until, decidedBy, expired } from "../lib/format";
@@ -8,14 +8,11 @@
   import Mark from "../lib/components/Mark.svelte";
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
-  import type { ApprovalRequest } from "../lib/types";
   import { t } from "../lib/i18n.svelte";
 
-  let recent = $state<ApprovalRequest[] | null>(null);
+  // The decided ones come with every refresh (live.recent), so this page sends no request of its own.
+  const recent = $derived(live.recent.filter((x) => x.decision));
   let busy = $state(false);
-  const load = loader();
-  // the history is secondary: if it doesn't come, the pending cards above still work
-  $effect(() => { live.tick; load(api.inbox(), (r) => (recent = r.recent.filter((x) => x.decision))); });
   // What the last bulk action or revoke couldn't do, in a sentence.
   let notice = $state<string | null>(null);
   async function batch(approve: boolean) {
@@ -95,7 +92,7 @@
     </div>
   {/if}
 
-  {#if recent && recent.length}
+  {#if recent.length}
     <div>
       <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Recently decided")}</h2>
       <div class="panel divide-y divide-line">

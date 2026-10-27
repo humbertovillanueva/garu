@@ -57,7 +57,7 @@
       if (!res.ok) { error = t("The control room had a problem answering. Try again in a moment."); return; }
       remember(p.base, p.token);
       live.signIn = false;
-      connectLive(true);
+      void connectLive(true).catch(() => {});
       void haptic("success");
     } catch {
       error = demo ? t("The demo isn't reachable right now. Try again in a little while.") : t("Couldn't reach {host}. Is Tailscale on for this phone, and is Garu running on your computer?", { host: p.base.replace(/^https?:\/\//, "") });

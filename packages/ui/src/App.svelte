@@ -52,7 +52,7 @@
   onMount(() => {
     if (isApp) document.documentElement.classList.add("app");
     startRouter();
-    if (paired()) connectLive();
+    if (paired()) void connectLive().catch(() => {});
     void setupNative(resume);
     // The app ships its own copy of the page; only the browser version wants the service worker.
     if (import.meta.env.PROD && !isApp && "serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js").catch(() => {});
