@@ -10,6 +10,7 @@
   import { prefs, setPref } from "../lib/prefs.svelte";
   import { buildText } from "../lib/format";
   import { haptic } from "../lib/native";
+  import { appPairLink } from "../lib/pairlink";
   import { t, parts } from "../lib/i18n.svelte";
   // The two things that can't be undone ask inline, in the page's own style, instead of with the browser's dialog.
   let confirmForget = $state(false);
@@ -37,6 +38,11 @@
   // Where the code points. Tailscale's address first when it is serving us; this page's own address is always an option.
   let options = $state<{ url: string; label: string }[]>([]);
   let chosen = $state<string>("");
+  // What the code is for. The sign-in link opens in any phone's browser and the Android app scans it; the
+  // iPhone app can't scan, and its camera would send the https link to Safari, so the code can carry the
+  // app's own link (garu://pair) instead, which the camera hands to the app. Copy link always copies the
+  // sign-in link: pasted, it works in the app and in a browser alike.
+  let forApp = $state(false);
   function setOptions(p: import("../lib/types").Pair) {
     const here = `${location.origin}/`;
     const list = p.addresses.map((a) => ({ url: a.url, label: a.via === "tailscale" ? "Tailscale" : new URL(a.url).host }));
@@ -47,10 +53,12 @@
   async function render() {
     if (!pairToken) return;
     pairLink = `${chosen}?token=${pairToken}`;
+    const payload = forApp ? appPairLink(chosen, pairToken) : pairLink;
     // A camera needs fixed contrast, so the code is always ink on paper whatever the theme; the two values come from the tokens.
     const css = getComputedStyle(document.documentElement);
-    pairSvg = await QRCode.toString(pairLink, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: css.getPropertyValue("--color-ink").trim(), light: css.getPropertyValue("--color-paper").trim() } });
+    pairSvg = await QRCode.toString(payload, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: css.getPropertyValue("--color-ink").trim(), light: css.getPropertyValue("--color-paper").trim() } });
   }
+  async function chooseFor(app: boolean) { forApp = app; await render(); }
   async function openPair() {
     pairOpen = true; pairError = null;
     if (pairSvg) return;
@@ -175,20 +183,30 @@
             <Skeleton rows={1} h={180} />
           {:else}
             {#if options.length > 1}
-              <div class="mb-3 flex flex-wrap items-center gap-1.5 text-[12px]">
+              <div class="mb-2 flex flex-wrap items-center gap-1.5 text-[12px]">
                 <span class="text-mute">{t("Code points to")}</span>
                 {#each options as o (o.url)}
                   <button class="rounded-full border px-2.5 py-0.5 transition-colors" class:border-accent={chosen === o.url} class:text-fg={chosen === o.url} class:hairline={chosen !== o.url} class:text-mute={chosen !== o.url} aria-pressed={chosen === o.url} onclick={() => choose(o.url)} title={o.url}>{o.label}</button>
                 {/each}
               </div>
             {/if}
+            <div class="mb-3 flex flex-wrap items-center gap-1.5 text-[12px]">
+              <span class="text-mute">{t("Code is for")}</span>
+              {#each [{ app: false, label: t("a browser or the Android app") }, { app: true, label: t("the iPhone app") }] as o (o.app)}
+                <button class="rounded-full border px-2.5 py-0.5 transition-colors" class:border-accent={forApp === o.app} class:text-fg={forApp === o.app} class:hairline={forApp !== o.app} class:text-mute={forApp !== o.app} aria-pressed={forApp === o.app} onclick={() => chooseFor(o.app)}>{o.label}</button>
+              {/each}
+            </div>
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
               <div class="qr w-[180px] flex-none rounded-xl p-2" style="background: var(--color-paper)" role="img" aria-label={t("Pairing code")}>{@html pairSvg}</div>
               <div class="min-w-0 flex-1 text-[13px] text-fg-2">
                 {#if chosenIsLocal}
                   <p style="color: var(--color-ask)">{#each parts("This code points at {host}, which a phone can't reach. Put the control room on your private network first: {command} on this computer, then come back here and the code will point there by itself.", { host: new URL(chosen).host, command: `tailscale serve --bg ${s?.port ?? 4000}` }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}</p>
                 {:else}
-                  <p>{#each parts("Scan it with the Garu app on Android, or with any phone's camera to open {host} in its browser, signed in.", { host: new URL(chosen).host }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each} {t("On iPhone the app can't scan the code yet: press Copy link and paste the link in the app.")}</p>
+                  {#if forApp}
+                    <p>{#each parts("Point the iPhone's camera at it: the Garu app opens, paired with {host}. The Android app can scan this one too.", { host: new URL(chosen).host }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}</p>
+                  {:else}
+                    <p>{#each parts("Scan it with the Garu app on Android, or with any phone's camera to open {host} in its browser, signed in.", { host: new URL(chosen).host }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each} {t("For the iPhone app, switch the code above: its camera then opens the app instead of Safari.")}</p>
+                  {/if}
                 {/if}
                 <p class="mt-2 text-[12px] text-mute">{t("This code is a key. Anyone who scans it can approve actions as you.")}</p>
                 <div class="mt-3 flex flex-wrap gap-2">
@@ -196,7 +214,7 @@
                   <span class="sr-only" role="status">{copied ? t("Link copied to the clipboard") : ""}</span>
                   <button class="btn" onclick={() => (showToken = !showToken)}>{showToken ? t("Hide token") : t("Show token")}</button>
                 </div>
-                {#if showToken}<div class="mono mt-2 break-all rounded-lg border hairline bg-bg px-2.5 py-2 text-[12px] select-all">{pairLink?.split("token=")[1]}</div>{/if}
+                {#if showToken}<div class="mono mt-2 break-all rounded-lg border hairline bg-bg px-2.5 py-2 text-[12px] select-all">{pairToken}</div>{/if}
                 <p class="mt-2 text-[12px] text-mute">{t("Someone else saw it?")} <button class="tap underline hover:text-fg" onclick={() => (confirmRotate = true)} aria-expanded={confirmRotate}>{t("Make a new token")}</button>{#if rotated}<span class="ml-2" style="color: var(--color-ok)">{t("done — other devices are signed out")}</span>{/if}{#if pairError}<span class="ml-2" style="color: var(--color-bad)">{pairError}</span>{/if} {#if s}{#each parts("It lives in {path}.", { path: shortRoot(s.login.tokenPath) }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}{/if}</p>
                 {#if confirmRotate}
                   <div class="mt-3 rounded-lg border hairline bg-bg/40 p-3 text-[13px]">
