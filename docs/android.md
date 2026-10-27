@@ -91,8 +91,11 @@ key only proves the upload came from you.
   push today, run the control room with `--notify https://ntfy.sh/<topic>` and the
   ntfy app. A Garu relay for proper push is on the roadmap.
 - **iOS.** Set up, and runs in the iOS Simulator: see [ios.md](ios.md).
-- **Play Store listing.** Needs a developer account, a privacy policy page, store
-  graphics and the closed-testing period Google requires for new accounts.
+- **Play Store, in production.** Build 4 has been on the closed-testing track since
+  October 15 with the English and Spanish listings; anyone can opt in at
+  https://play.google.com/apps/testing/io.github.humbertovillanueva.garu. The
+  production application opens when the fourteen-day test ends; the notes for it
+  are in [launch/play-store.md](launch/play-store.md).
 
 ## Installing a build without dragging
 
