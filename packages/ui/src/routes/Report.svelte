@@ -6,7 +6,7 @@
    */
   import { api } from "../lib/api.svelte";
   import { build, isApp, server } from "../lib/server.svelte";
-  import { t } from "../lib/i18n.svelte";
+  import { t, locale } from "../lib/i18n.svelte";
   let what = $state("");
   let includeLog = $state(true);
   let lines = $state<string[] | null>(null);
@@ -56,6 +56,7 @@
   {#if logPart && !linkHasLog}<p class="text-[12.5px] text-mute">{t("The log is too long for the GitHub link: press Copy the report and paste it into the issue.")}</p>{/if}
   <details class="panel rise">
     <summary class="cursor-pointer px-4 py-3 text-[13.5px] text-fg-2">{t("What the report contains")}</summary>
+    {#if locale() !== "en"}<p class="border-t hairline px-4 py-2 text-[12px] text-mute">{t("The report is written in English, because issues on GitHub are filed in English.")}</p>{/if}
     <pre class="mono max-h-80 overflow-auto whitespace-pre-wrap break-words border-t hairline px-4 py-3 text-[12px] text-fg-2 select-all">{report}</pre>
   </details>
 </section>

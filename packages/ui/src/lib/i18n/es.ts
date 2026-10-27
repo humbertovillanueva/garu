@@ -428,6 +428,7 @@ export const es: Record<string, string> = {
   "Copied to the clipboard": "Copiado al portapapeles",
   "The log is too long for the GitHub link: press Copy the report and paste it into the issue.": "El registro es demasiado largo para el enlace de GitHub: pulsa Copiar el reporte y pégalo en el issue.",
   "What the report contains": "Qué contiene el reporte",
+  "The report is written in English, because issues on GitHub are filed in English.": "El reporte está escrito en inglés, porque los problemas en GitHub se reportan en inglés.",
 
   // ---- sign in (browser)
   "That token is not right.": "Ese token no es correcto.",
