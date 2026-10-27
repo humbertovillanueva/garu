@@ -13,6 +13,8 @@ export const es: Record<string, string> = {
   "Parse a Garufile and lint its policy": "Lee un Garufile y revisa su política",
   "agent \"{name}\", model {model}, {tools} tool server(s), {rules} policy rule(s)": "agente \"{name}\", modelo {model}, {tools} servidor(es) de herramientas, {rules} regla(s) de política",
   "needs {vars} — not set in .env, so this agent cannot run here yet": "necesita {vars} — no está en .env, así que este agente aún no puede ejecutarse aquí",
+  "language: {name} ({code})": "idioma: {name} ({code})",
+  "language \"{code}\" is not a code this computer knows (es, pt-BR, fr…); the date and the instruction to the model would fall back to English": "el idioma \"{code}\" no es un código que esta computadora conozca (es, pt-BR, fr…); la fecha y la instrucción al modelo caerían al inglés",
   "signed in": "sesión iniciada",
   "not signed in — run: {command}": "sin sesión — ejecuta: {command}",
   "remote: {server} → {url}": "remoto: {server} → {url}",

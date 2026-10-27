@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseGarufile, GarufileError } from "./garufile.js";
+import { knownLanguage, parseGarufile, GarufileError } from "./garufile.js";
 
 const minimal = `
 name: hello
@@ -110,5 +110,15 @@ prompt: triage
 
   it("reports invalid YAML plainly", () => {
     expect(() => parseGarufile("name: [unclosed")).toThrow(/invalid YAML/);
+  });
+
+  it("names a language code it knows, and says nothing for one it doesn't", () => {
+    // The schema only checks the shape; "xx" passes it, and Intl would quietly hand the agent English dates.
+    expect(parseGarufile(minimal + "\nlanguage: xx\n").language).toBe("xx");
+    expect(knownLanguage("es")).toBe("Spanish");
+    expect(knownLanguage("pt-BR")).toBe("Brazilian Portuguese");
+    expect(knownLanguage("xx")).toBeNull();
+    expect(knownLanguage("zz-ZZ")).toBeNull();
+    expect(knownLanguage("")).toBeNull();
   });
 });

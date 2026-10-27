@@ -217,6 +217,20 @@ export const Garufile = z
   .strict();
 export type Garufile = z.infer<typeof Garufile>;
 
+/**
+ * "es" → "Spanish", "pt-BR" → "Brazilian Portuguese"; null for a code this computer has no name for.
+ * The schema only checks the shape of a code, and Intl falls back to English for one it doesn't know
+ * without saying so, so `garu validate` warns on a null here.
+ */
+export function knownLanguage(code: string, inLanguage = "en"): string | null {
+  try {
+    const name = new Intl.DisplayNames([inLanguage], { type: "language", fallback: "none" }).of(code);
+    return name && name.toLowerCase() !== code.toLowerCase() ? name : null;
+  } catch {
+    return null;
+  }
+}
+
 export class GarufileError extends Error {
   constructor(message: string, public readonly issues: string[] = []) {
     super(message);

@@ -34,6 +34,7 @@ import {
   formatEvent,
   formatRequest,
   formatUsd,
+  knownLanguage,
   localTime,
   parseGarufile,
   priceFor,
@@ -48,7 +49,7 @@ import {
 
 import { startUiServer } from "./ui-server.js";
 import { tailscaleAddresses } from "./ui-addresses.js";
-import { detectLocale, setLocale, t } from "./i18n.js";
+import { detectLocale, locale, setLocale, t } from "./i18n.js";
 import { KINDS, SCHEDULES, cronFor, isFreeModel, renderGarufile, suggestModel, type Kind, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
 import { launchdLabel, launchdPlist, launchdPlistPath, logPath, serviceEnv, servicePath, serviceName, systemdUnit, systemdUnitPath } from "./service.js";
 
@@ -91,6 +92,11 @@ program
     stdout.write(`✔ ${file}: ${t("agent \"{name}\", model {model}, {tools} tool server(s), {rules} policy rule(s)", { name: g.name, model: g.model, tools: g.tools.length, rules: g.policy.length })}\n`);
     const needs = missingEnv(g.tools, process.env);
     if (needs.length) stdout.write(`  ⚠ ${t("needs {vars} — not set in .env, so this agent cannot run here yet", { vars: needs.map((n) => `$\{${n}\}`).join(", ") })}\n`);
+    if (g.language) {
+      const name = knownLanguage(g.language, locale());
+      if (name) stdout.write(`  ${t("language: {name} ({code})", { name, code: g.language })}\n`);
+      else stdout.write(`  ⚠ ${t("language \"{code}\" is not a code this computer knows (es, pt-BR, fr…); the date and the instruction to the model would fall back to English", { code: g.language })}\n`);
+    }
     for (const tool of g.tools) {
       const signIn = tool.auth === "oauth" ? (signInFor(tool, resolve(process.cwd(), ".garu", "auth")).signedIn() ? ` · ${t("signed in")}` : ` · ✖ ${t("not signed in — run: {command}", { command: `garu auth ${file} ${tool.name}` })}`) : "";
       if (isRemoteServer(tool)) stdout.write(`  ${t("remote: {server} → {url}", { server: tool.name, url: tool.url })}${signIn || (Object.keys(tool.headers).length ? ` · ${t("headers from .env")}` : "")}\n`);
