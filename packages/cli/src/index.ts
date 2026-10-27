@@ -47,6 +47,7 @@ import {
 } from "@garu/kernel";
 
 import { startUiServer } from "./ui-server.js";
+import { tailscaleAddresses } from "./ui-addresses.js";
 import { detectLocale, setLocale, t } from "./i18n.js";
 import { KINDS, SCHEDULES, cronFor, isFreeModel, renderGarufile, suggestModel, type Kind, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
 import { launchdLabel, launchdPlist, launchdPlistPath, logPath, serviceEnv, servicePath, serviceName, systemdUnit, systemdUnitPath } from "./service.js";
@@ -57,6 +58,8 @@ const DEFAULT_CHAT_ROOT = resolve(process.cwd(), ".garu", "chat");
 const DEFAULT_TOKEN_PATH = resolve(process.cwd(), ".garu", "ui-token");
 const DEFAULT_GRANTS_PATH = resolve(process.cwd(), ".garu", "grants.jsonl");
 const DEFAULT_DISMISSED_PATH = resolve(process.cwd(), ".garu", "suggestions-dismissed.json");
+/** Where `garu ui` listens unless told otherwise; `garu up` looks for a control room there when it has a push to send. */
+const DEFAULT_UI_PORT = 4000;
 
 // `garu log | head` must not crash when the reader closes the pipe.
 stdout.on("error", (e: NodeJS.ErrnoException) => {
@@ -188,7 +191,8 @@ program
           timeoutMs: timeoutMin * 60_000,
           onRequest: async (r) => {
             stderr.write(`\n┌ ${t("APPROVAL NEEDED  (expires {time})", { time: localTime(r.expiresAt, { seconds: false }) })}\n│ ${formatRequest(r)}\n└ garu approve ${r.id}   ·   garu deny ${r.id}\n\n`);
-            if (opts.notify) await notify(opts.notify, r);
+            // A control room served by Tailscale on the usual port is where a tap on the push should land.
+            if (opts.notify) await notify(opts.notify, r, (await tailscaleAddresses(DEFAULT_UI_PORT))[0]);
           },
         })
       : undefined;
@@ -898,13 +902,24 @@ const autoApprove: Approver = async () => ({ approved: true, by: "--yes" });
 /** `garu up` default: nobody is at the keyboard, so an `ask` is a no. The model is told and moves on. */
 const unattendedDeny: Approver = async () => ({ approved: false, by: "unattended (garu up --on-ask deny)" });
 
-/** Push an approval request to a URL. Body is plain text so ntfy.sh (free push to your phone) shows it as-is. */
-async function notify(url: string, r: ApprovalRequest): Promise<void> {
-  const body = `${t("{agent} wants {tool}", { agent: r.agent, tool: r.tool })}\n${JSON.stringify(r.args).slice(0, 300)}\n${t("reason: {reason}", { reason: r.reason })}\n\ngaru approve ${r.id}\ngaru deny ${r.id}`;
+/**
+ * Push an approval request to a URL. Plain text so ntfy.sh (free push to your phone) shows it as-is;
+ * with a control-room address, a tap opens the Inbox there (ntfy's Click header) and the body says
+ * so instead of printing commands on a phone. The control room's own copy lives in ui-server.ts;
+ * the two must send the same thing.
+ */
+async function notify(url: string, r: ApprovalRequest, link?: string): Promise<void> {
+  const body = `${t("{agent} wants {tool}", { agent: r.agent, tool: r.tool })}\n${JSON.stringify(r.args).slice(0, 300)}\n${t("reason: {reason}", { reason: r.reason })}\n\n${link ? t("Tap to review.") : `garu approve ${r.id} · garu deny ${r.id}`}`;
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: { "content-type": "text/plain", Title: `Garu: approval needed (${r.agent})`, Priority: "high", Tags: "lock" },
+      headers: {
+        "content-type": "text/plain",
+        Title: `Garu: approval needed (${r.agent})`,
+        Priority: "high",
+        Tags: "lock",
+        ...(link ? { Click: `${link.replace(/\/$/, "")}/#/inbox` } : {}),
+      },
       body,
     });
     if (!res.ok) stderr.write(`${t("notify: {url} answered HTTP {status}", { url, status: res.status })}\n`);

@@ -248,6 +248,7 @@ export const es: Record<string, string> = {
   // ---- approvals in the terminal, notifications, scheduler events
   "{agent} wants {tool}": "{agent} quiere {tool}",
   "reason: {reason}": "motivo: {reason}",
+  "Tap to review.": "Toca para revisar.",
   "notify: {url} answered HTTP {status}": "notificación: {url} respondió HTTP {status}",
   "notify: could not reach {url}: {error}": "notificación: no se pudo llegar a {url}: {error}",
   "{agent}: \"{cron}\" next at {time}": "{agent}: \"{cron}\", próxima a las {time}",
