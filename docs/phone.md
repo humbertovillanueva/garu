@@ -20,7 +20,7 @@ The browser on the computer running Garu is trusted automatically. Any other dev
 3. On the computer, in the control room you already have open (localhost is fine), go to **Settings → Your phone & other devices** and press *Show pairing code*. Garu asks Tailscale for the address it is serving and points the code there.
 4. Scan the code with your phone's camera. It opens the control room already signed in.
 
-The code is a link that carries the token, which is why it should be scanned by you and nobody else. If you'd rather not scan (an iPhone, or an emulator with no camera), press *Copy link* there and paste it into the phone's sign-in screen. A phone stays signed in for a year; *Sign out* is on the same Settings panel. If the token ever leaks, stop Garu, delete `.garu/ui-token`, start it again, and every device has to sign in afresh.
+The code is a link that carries the token, which is why it should be scanned by you and nobody else. If you'd rather not scan (an emulator with no camera, say), press *Copy link* there and paste it into the phone's sign-in screen. A phone stays signed in for a year; *Sign out* is on the same Settings panel. If the token ever leaks, stop Garu, delete `.garu/ui-token`, start it again, and every device has to sign in afresh.
 
 `--bg` keeps it serving after you close the terminal; `tailscale serve off` stops it. The control room itself keeps listening on `127.0.0.1:4000`, so nothing on your local network can reach it directly.
 
@@ -32,7 +32,7 @@ To make the other half survive a reboot too, run `garu service install` in your 
 
 **Android (Chrome):** the menu offers *Install app*, or *Add to Home screen*.
 
-**The apps.** The same control room also ships as an app. Android is in closed testing on Google Play: opt in at https://play.google.com/apps/testing/io.github.humbertovillanueva.garu, then install it from the store. The iPhone app runs in the Simulator today; a real device and TestFlight are on the roadmap. Both pair the same way, from their pairing screen.
+**The apps.** The same control room also ships as an app. Android is in closed testing on Google Play: opt in at https://play.google.com/apps/testing/io.github.humbertovillanueva.garu, then install it from the store. The iPhone app runs in the Simulator today; a real device and TestFlight are on the roadmap. The Android app scans the same code from its pairing screen. The iPhone app can't scan, so the panel has a switch, *Code is for → the iPhone app*: that code opens the app itself, paired, when you point the iPhone's camera at it (the link is `garu://pair?…`, which only the app answers). Pasting the link works in both apps too.
 
 HTTPS is what makes the install possible, which is one more reason to go through `tailscale serve` rather than binding Garu to another address.
 

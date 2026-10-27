@@ -35,7 +35,13 @@ dependencies and takes a few minutes; later builds are fast.
 
 To pair the running app: on your computer, Garu → **Settings → Your phone & other
 devices → Show pairing code**, then in the app press **Scan the code**. No camera on an emulator?
-Press *Copy link* on the computer and paste it into the app instead.
+Press *Copy link* on the computer and paste it into the app instead, or hand the
+emulator the app link (the code with *Code is for* switched to the iPhone app; the
+Android app answers it too, from the camera app or like this):
+
+```sh
+adb shell am start -a android.intent.action.VIEW -d 'garu://pair?base=https://your-mac.tail1234.ts.net\&token=…'
+```
 
 Changed the UI? Run `npm run sync -w @garu/app` again and press Run again.
 
@@ -83,6 +89,9 @@ key only proves the upload came from you.
   from `assets/` (made from `docs/brand/mark.svg`).
 - Camera permission is declared for the pairing scanner; the page uses the
   browser's `BarcodeDetector`, so no native plugin is involved.
+- The manifest also claims the `garu://pair` scheme (the pairing code made for the
+  iPhone app), so a camera app that reads it offers to open Garu; the page gets the
+  link through Capacitor's `appUrlOpen` event, same as on iPhone.
 
 ## Not yet
 

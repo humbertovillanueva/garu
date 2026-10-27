@@ -25,11 +25,27 @@ npm run open:ios -w @garu/app    # opens the project in Xcode
 In Xcode, pick an iPhone simulator at the top of the window and press **Run** (▶).
 The first build fetches Capacitor's Swift packages and takes a few minutes.
 
-To pair: an iPhone's web view can't scan codes, so the app asks for the link. On
-your computer, Garu → **Settings → Your phone & other devices → Show pairing
-code → Copy link**, then paste it into the app. The Simulator shares your Mac's
-clipboard (in the Simulator app: **Edit → Automatically Sync Pasteboard**). Once
-pasted, the key in the link shows as dots, with the address under it.
+To pair a real iPhone: on your computer, Garu → **Settings → Your phone & other
+devices → Show pairing code**, switch *Code is for* to **the iPhone app**, and
+point the iPhone's camera at the code. The banner says *Open in Garu*; tap it and
+the app opens, paired. That code is a `garu://pair?base=…&token=…` link, a scheme
+only the app registers, which is how the camera knows to hand it over instead of
+opening Safari (the plain code is an https link, and Safari is where the camera
+sends those). The web view can't scan on its own, so the app has no scanner of
+its own there.
+
+The Simulator has no camera, so hand it the link instead. Either paste it: **Copy
+link** on the computer, then into the app (the Simulator shares your Mac's
+clipboard: in the Simulator app, **Edit → Automatically Sync Pasteboard**; the key
+shows as dots once pasted, with the address under it). Or open the app link
+headlessly, which is also how the handler is tested:
+
+```sh
+xcrun simctl openurl booted 'garu://pair?base=https://your-mac.tail1234.ts.net&token=…'
+```
+
+It works with the app closed (the link starts it) and with it open. Use a token
+you don't mind in your shell history, not the one in `.garu/ui-token`.
 
 Changed the UI? Run `npm run sync -w @garu/app` again and press Run again.
 
@@ -38,7 +54,10 @@ Changed the UI? Run `npm run sync -w @garu/app` again and press Run again.
 - The app's own origin is `capacitor://localhost` (Android's is `https://localhost`);
   the control room already allows both.
 - No QR scanner: WebKit has no `BarcodeDetector`, so the app shows only the paste
-  field and the tour says so. A native scanner plugin would bring scanning back.
+  field and the tour says to use the phone's camera on the app code instead. The
+  `garu` scheme is in `Info.plist` (`CFBundleURLTypes`); Capacitor's App plugin
+  delivers the link to the page as `appUrlOpen`, and `lib/native.ts` hands it to
+  the pairing action. The link never reaches the page's address bar or a log.
 - iPhones zoom into any text box set under 16 px when it's tapped. `app.css` gives
   text boxes a 16 px floor on iOS only.
 

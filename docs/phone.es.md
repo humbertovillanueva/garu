@@ -20,7 +20,7 @@ El navegador de la computadora donde corre Garu es de confianza automáticamente
 3. En la computadora, en la sala de control que ya tienes abierta (localhost está bien), ve a **Ajustes → Tu teléfono y otros dispositivos** y pulsa *Mostrar código de vinculación*. Garu le pregunta a Tailscale la dirección que está sirviendo y apunta el código ahí.
 4. Escanea el código con la cámara de tu teléfono. Abre la sala de control con la sesión ya iniciada.
 
-El código es un enlace que lleva el token, y por eso debes escanearlo tú y nadie más. Si prefieres no escanear (un iPhone, o un emulador sin cámara), pulsa *Copiar enlace* ahí y pégalo en la pantalla de inicio de sesión del teléfono. Un teléfono se queda con la sesión iniciada un año; *Cerrar sesión* está en el mismo panel de Ajustes. Si el token llega a filtrarse, detén Garu, borra `.garu/ui-token`, arráncalo de nuevo, y todos los dispositivos tendrán que iniciar sesión otra vez.
+El código es un enlace que lleva el token, y por eso debes escanearlo tú y nadie más. Si prefieres no escanear (un emulador sin cámara, por ejemplo), pulsa *Copiar enlace* ahí y pégalo en la pantalla de inicio de sesión del teléfono. Un teléfono se queda con la sesión iniciada un año; *Cerrar sesión* está en el mismo panel de Ajustes. Si el token llega a filtrarse, detén Garu, borra `.garu/ui-token`, arráncalo de nuevo, y todos los dispositivos tendrán que iniciar sesión otra vez.
 
 `--bg` lo mantiene sirviendo después de que cierres la terminal; `tailscale serve off` lo detiene. La sala de control en sí sigue escuchando en `127.0.0.1:4000`, así que nada en tu red local puede llegarle directamente.
 
@@ -32,7 +32,7 @@ Para que la otra mitad también sobreviva a un reinicio, ejecuta `garu service i
 
 **Android (Chrome):** el menú ofrece *Instalar app*, o *Agregar a la pantalla principal*.
 
-**Las apps.** La misma sala de control también existe como app. La de Android está en prueba cerrada en Google Play: anótate en https://play.google.com/apps/testing/io.github.humbertovillanueva.garu y luego instálala desde la tienda. La de iPhone corre hoy en el Simulador; un dispositivo real y TestFlight están en la hoja de ruta. Las dos se emparejan igual, desde su pantalla de emparejar.
+**Las apps.** La misma sala de control también existe como app. La de Android está en prueba cerrada en Google Play: anótate en https://play.google.com/apps/testing/io.github.humbertovillanueva.garu y luego instálala desde la tienda. La de iPhone corre hoy en el Simulador; un dispositivo real y TestFlight están en la hoja de ruta. La app de Android escanea el mismo código desde su pantalla de vinculación. La de iPhone no puede escanear, así que el panel tiene un selector, *El código es para → la app de iPhone*: ese código abre la propia app, ya vinculada, al apuntarle la cámara del iPhone (el enlace es `garu://pair?…`, que solo responde la app). Pegar el enlace también funciona en las dos apps.
 
 HTTPS es lo que hace posible la instalación, una razón más para pasar por `tailscale serve` en vez de poner a Garu a escuchar en otra dirección.
 

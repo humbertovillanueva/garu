@@ -105,7 +105,7 @@
     {#if !embedded}
     <ol class="mt-4 space-y-1.5 text-[13px] text-fg-2">
       <li><span class="text-mute">1.</span> {#each parts("On your computer, open Garu → {settings} → {button}.", { settings: t("Settings → Your phone & other devices"), button: t("Show pairing code") }) as p}{#if p.name === "settings"}<span class="font-medium text-fg">{p.text}</span>{:else if p.name === "button"}<em>{p.text}</em>{:else}{p.text}{/if}{/each}</li>
-      <li><span class="text-mute">2.</span> {canScan ? t("Scan it here, or paste the link below.") : isIOS ? t("The iPhone app can't scan the code yet: press Copy link there and paste the link below.") : t("Press Copy link there and paste it below.")}</li>
+      <li><span class="text-mute">2.</span> {canScan ? t("Scan it here, or paste the link below.") : isIOS ? t("Switch the code there to the iPhone app and point your phone's camera at it: Garu opens, paired. Or press Copy link there and paste it below.") : t("Press Copy link there and paste it below.")}</li>
     </ol>
     {/if}
 
