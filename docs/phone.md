@@ -32,6 +32,8 @@ To make the other half survive a reboot too, run `garu service install` in your 
 
 **Android (Chrome):** the menu offers *Install app*, or *Add to Home screen*.
 
+**The apps.** The same control room also ships as an app. Android is in closed testing on Google Play: opt in at https://play.google.com/apps/testing/io.github.humbertovillanueva.garu, then install it from the store. The iPhone app runs in the Simulator today; a real device and TestFlight are on the roadmap. Both pair the same way, from their pairing screen.
+
 HTTPS is what makes the install possible, which is one more reason to go through `tailscale serve` rather than binding Garu to another address.
 
 **No Garu on a computer yet?** The app's pairing screen has a *Try the demo* button: a control room with made-up agents and mail, to look around and answer a sample ask. Nothing in it is real, and it can't run anything.

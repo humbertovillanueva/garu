@@ -32,6 +32,8 @@ Para que la otra mitad también sobreviva a un reinicio, ejecuta `garu service i
 
 **Android (Chrome):** el menú ofrece *Instalar app*, o *Agregar a la pantalla principal*.
 
+**Las apps.** La misma sala de control también existe como app. La de Android está en prueba cerrada en Google Play: anótate en https://play.google.com/apps/testing/io.github.humbertovillanueva.garu y luego instálala desde la tienda. La de iPhone corre hoy en el Simulador; un dispositivo real y TestFlight están en la hoja de ruta. Las dos se emparejan igual, desde su pantalla de emparejar.
+
 HTTPS es lo que hace posible la instalación, una razón más para pasar por `tailscale serve` en vez de poner a Garu a escuchar en otra dirección.
 
 **¿Aún no tienes Garu en una computadora?** La pantalla de emparejar de la app tiene un botón *Probar la demo*: una sala de control con agentes y correos inventados, para mirar y responder una pregunta de muestra. Nada en ella es real, y no puede ejecutar nada.
