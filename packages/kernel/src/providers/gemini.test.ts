@@ -74,6 +74,20 @@ describe("GeminiProvider (mocked fetch)", () => {
     expect(res.usage).toEqual({ inputTokens: 10, outputTokens: 4 });
   });
 
+  it("maps the Garufile's modelOptions into generationConfig, and leaves keys it has no place for out", async () => {
+    let captured: { generationConfig: Record<string, unknown> } | undefined;
+    const fakeFetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+      captured = JSON.parse(String(init?.body));
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "ok" }] }, finishReason: "STOP" }] }), { status: 200 });
+    }) as typeof fetch;
+    const p = new GeminiProvider("k", fakeFetch);
+    await p.complete({ model: "m", system: "", messages: [], tools: [], options: { temperature: 0.2, max_tokens: 1234, thinkingBudget: 0, think: false, num_ctx: 8192 } });
+    expect(captured?.generationConfig).toEqual({ maxOutputTokens: 1234, temperature: 0.2, thinkingConfig: { thinkingBudget: 0 } });
+    expect(JSON.stringify(captured)).not.toContain("num_ctx");
+    await p.complete({ model: "m", system: "", messages: [], tools: [] });
+    expect(captured?.generationConfig).toEqual({ maxOutputTokens: 4096 });
+  });
+
   it("a blocked prompt or an empty reply is an error that says so, never an empty answer", async () => {
     const blocked = (async () => new Response(JSON.stringify({ promptFeedback: { blockReason: "PROHIBITED_CONTENT" } }), { status: 200 })) as typeof fetch;
     await expect(new GeminiProvider("k", blocked).complete({ model: "m", system: "", messages: [], tools: [] })).rejects.toThrow(/gemini m: the request was blocked \(PROHIBITED_CONTENT\)/);

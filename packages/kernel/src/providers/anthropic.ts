@@ -1,5 +1,40 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { CompleteRequest, CompleteResponse, ContentBlock, ModelProvider } from "../provider.js";
+import { commonOptions, type CompleteRequest, type CompleteResponse, type ContentBlock, type ModelProvider } from "../provider.js";
+
+/** The request as the Messages API wants it, with the Garufile's modelOptions under Anthropic's names. Pure, so it can be tested without a key. */
+export function anthropicParams(req: CompleteRequest): Anthropic.MessageCreateParamsNonStreaming {
+  const knobs = commonOptions(req.options);
+  return {
+    model: req.model,
+    max_tokens: knobs.maxTokens ?? req.maxTokens ?? 4096,
+    ...(knobs.temperature !== undefined ? { temperature: knobs.temperature } : {}),
+    ...(knobs.thinkingBudget !== undefined ? { thinking: { type: "enabled", budget_tokens: knobs.thinkingBudget } } : {}),
+    system: req.system,
+    messages: req.messages.map((m) => ({
+      role: m.role,
+      content: m.content.map((b) => {
+        switch (b.type) {
+          case "text":
+            return { type: "text" as const, text: b.text };
+          case "tool_use":
+            return { type: "tool_use" as const, id: b.id, name: b.name, input: b.input };
+          case "tool_result":
+            return {
+              type: "tool_result" as const,
+              tool_use_id: b.toolUseId,
+              content: b.content,
+              ...(b.isError ? { is_error: true } : {}),
+            };
+        }
+      }),
+    })),
+    tools: req.tools.map((t) => ({
+      name: t.name,
+      description: t.description,
+      input_schema: t.inputSchema as Anthropic.Tool.InputSchema,
+    })),
+  };
+}
 
 export class AnthropicProvider implements ModelProvider {
   readonly id = "anthropic";
@@ -11,34 +46,7 @@ export class AnthropicProvider implements ModelProvider {
   }
 
   async complete(req: CompleteRequest): Promise<CompleteResponse> {
-    const res = await this.client.messages.create({
-      model: req.model,
-      max_tokens: req.maxTokens ?? 4096,
-      system: req.system,
-      messages: req.messages.map((m) => ({
-        role: m.role,
-        content: m.content.map((b) => {
-          switch (b.type) {
-            case "text":
-              return { type: "text" as const, text: b.text };
-            case "tool_use":
-              return { type: "tool_use" as const, id: b.id, name: b.name, input: b.input };
-            case "tool_result":
-              return {
-                type: "tool_result" as const,
-                tool_use_id: b.toolUseId,
-                content: b.content,
-                ...(b.isError ? { is_error: true } : {}),
-              };
-          }
-        }),
-      })),
-      tools: req.tools.map((t) => ({
-        name: t.name,
-        description: t.description,
-        input_schema: t.inputSchema as Anthropic.Tool.InputSchema,
-      })),
-    });
+    const res = await this.client.messages.create(anthropicParams(req));
 
     const content: ContentBlock[] = [];
     for (const b of res.content) {

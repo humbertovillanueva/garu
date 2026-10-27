@@ -205,7 +205,11 @@ export const Garufile = z
     maxTurns: z.number().int().positive().default(25),
     /** Money guard. Optional, but every always-on agent should have one. */
     budget: Budget.default({}),
-    /** Provider-specific knobs passed through untouched (e.g. Ollama: { think: false, temperature: 0.2 }). */
+    /**
+     * Knobs for the model. temperature, maxOutputTokens (or max_tokens) and thinkingBudget (or budget_tokens)
+     * reach every provider under its own name; Ollama also takes its own options (think, num_ctx, top_p…)
+     * as they are. A key a provider has no place for is left out of its request.
+     */
     modelOptions: z.record(z.string(), z.unknown()).default({}),
     /** Omit to run tool servers directly on the host. Set (even `{}`) to containerise them. */
     sandbox: Sandbox.optional(),

@@ -3,7 +3,7 @@
  * No SDK dependency: the surface Garu needs is small, and this keeps the
  * kernel light. Function calling maps 1:1 onto our ContentBlock dialect.
  */
-import { MODEL_REQUEST_TIMEOUT_MS as REQUEST_TIMEOUT_MS, type CompleteRequest, type CompleteResponse, type ContentBlock, type ModelProvider } from "../provider.js";
+import { MODEL_REQUEST_TIMEOUT_MS as REQUEST_TIMEOUT_MS, commonOptions, type CompleteRequest, type CompleteResponse, type ContentBlock, type ModelProvider } from "../provider.js";
 
 /** A request that took this much longer than its timeout means the machine slept through it (timers pause in sleep). */
 const SLEPT_MS = 30_000;
@@ -86,10 +86,16 @@ export class GeminiProvider implements ModelProvider {
       }),
     }));
 
+    // The Garufile's modelOptions, under Gemini's names; a thinking budget becomes thinkingConfig.
+    const knobs = commonOptions(req.options);
     const body: Record<string, unknown> = {
       systemInstruction: { parts: [{ text: req.system }] },
       contents,
-      generationConfig: { maxOutputTokens: req.maxTokens ?? 4096 },
+      generationConfig: {
+        maxOutputTokens: knobs.maxTokens ?? req.maxTokens ?? 4096,
+        ...(knobs.temperature !== undefined ? { temperature: knobs.temperature } : {}),
+        ...(knobs.thinkingBudget !== undefined ? { thinkingConfig: { thinkingBudget: knobs.thinkingBudget } } : {}),
+      },
     };
     if (req.tools.length > 0) {
       body["tools"] = [

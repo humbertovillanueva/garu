@@ -46,6 +46,27 @@ export interface CompleteRequest {
   onRetry?: (info: RetryInfo) => void;
 }
 
+/**
+ * The knobs every API has under its own name, read from a Garufile's modelOptions by either spelling:
+ * temperature; maxOutputTokens or max_tokens; thinkingBudget or budget_tokens. A provider maps them
+ * into its own request and ignores keys it has no place for.
+ */
+export function commonOptions(options: Record<string, unknown> | undefined): { temperature?: number; maxTokens?: number; thinkingBudget?: number } {
+  const o = options ?? {};
+  const num = (...keys: string[]): number | undefined => {
+    for (const k of keys) if (typeof o[k] === "number" && Number.isFinite(o[k])) return o[k] as number;
+    return undefined;
+  };
+  const temperature = num("temperature");
+  const maxTokens = num("maxOutputTokens", "max_tokens");
+  const thinkingBudget = num("thinkingBudget", "budget_tokens");
+  return {
+    ...(temperature !== undefined ? { temperature } : {}),
+    ...(maxTokens !== undefined ? { maxTokens } : {}),
+    ...(thinkingBudget !== undefined ? { thinkingBudget } : {}),
+  };
+}
+
 export interface RetryInfo {
   attempt: number;
   maxAttempts: number;
