@@ -54,7 +54,7 @@
     </div>
     <div class="flex items-center gap-1 text-[13px]">
       {#each [7, 14, 30] as d}
-        <button class="btn" class:opacity-50={days !== d} aria-pressed={days === d} onclick={() => (days = d)}>{t("{n}d", { n: d })}</button>
+        <button class="btn" class:btn-dim={days !== d} aria-pressed={days === d} onclick={() => (days = d)}>{t("{n}d", { n: d })}</button>
       {/each}
     </div>
   </div>

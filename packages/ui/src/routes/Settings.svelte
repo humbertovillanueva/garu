@@ -109,7 +109,7 @@
           <span class="flex-1">{t("Theme")}</span>
           <div class="flex gap-1" role="radiogroup" aria-label={t("Theme")}>
             {#each [["auto", isApp ? t("Phone") : t("System")], ["dark", t("Dark")], ["light", t("Light")]] as const as [value, label] (value)}
-              <button class="btn py-1 text-[12.5px]" class:opacity-50={prefs.theme !== value} role="radio" aria-checked={prefs.theme === value} onclick={() => setPref("theme", value)}>{label}</button>
+              <button class="btn py-1 text-[12.5px]" class:btn-dim={prefs.theme !== value} role="radio" aria-checked={prefs.theme === value} onclick={() => setPref("theme", value)}>{label}</button>
             {/each}
           </div>
         </div>
@@ -118,7 +118,7 @@
           <span class="flex-1">{t("Language")}</span>
           <div class="flex gap-1" role="radiogroup" aria-label={t("Language")}>
             {#each [["auto", isApp ? t("Phone") : t("System")], ["en", "English"], ["es", "Español"]] as const as [value, label] (value)}
-              <button class="btn py-1 text-[12.5px]" class:opacity-50={prefs.language !== value} role="radio" aria-checked={prefs.language === value} onclick={() => setPref("language", value)}>{label}</button>
+              <button class="btn py-1 text-[12.5px]" class:btn-dim={prefs.language !== value} role="radio" aria-checked={prefs.language === value} onclick={() => setPref("language", value)}>{label}</button>
             {/each}
           </div>
         </div>
