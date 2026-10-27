@@ -10,7 +10,7 @@
   import { prefs, setPref } from "../lib/prefs.svelte";
   import { buildText } from "../lib/format";
   import { haptic } from "../lib/native";
-  import { t } from "../lib/i18n.svelte";
+  import { t, around } from "../lib/i18n.svelte";
   function unpair() {
     if (!confirm(t("Forget this control room? You'll pair again by scanning a code on your computer."))) return;
     forget(); location.reload();
@@ -174,7 +174,9 @@
                 {#if chosenIsLocal}
                   <p style="color: var(--color-ask)">{t("This code points at")} <span class="mono">{new URL(chosen).host}</span>, {t("which a phone can't reach. Put the control room on your private network first:")} <span class="mono">tailscale serve --bg {s?.port ?? 4000}</span> {t("on this computer, then come back here and the code will point there by itself.")}</p>
                 {:else}
-                  <p>{t("Scan it with the Garu app, or with the phone's camera to open")} <span class="mono">{new URL(chosen).host}</span> {t("signed in.")}</p>
+                  {@const host = new URL(chosen).host}
+                  {@const [before, after] = around(t("Scan it with the Garu app on Android, or with any phone's camera to open {host} in its browser, signed in.", { host }), host)}
+                  <p>{before}<span class="mono">{host}</span>{after} {t("On iPhone the app can't scan the code yet: press Copy link and paste the link in the app.")}</p>
                 {/if}
                 <p class="mt-2 text-[12px] text-mute">{t("This code is a key. Anyone who scans it can approve actions as you.")}</p>
                 <div class="mt-3 flex flex-wrap gap-2">

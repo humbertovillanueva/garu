@@ -8,7 +8,7 @@
   import Logo from "../lib/components/Logo.svelte";
   import Creature from "../lib/components/Creature.svelte";
   import Pair from "./Pair.svelte";
-  import { backHandlers, canScan, haptic } from "../lib/native";
+  import { backHandlers, canScan, haptic, isIOS } from "../lib/native";
   import { t, siteUrl } from "../lib/i18n.svelte";
 
   let { onDone, splash = true, alreadyPaired = false }: { onDone: () => void; splash?: boolean; alreadyPaired?: boolean } = $props();
@@ -125,7 +125,7 @@
           <p>{t("Your agents live on the computer running Garu. Pair this phone once and it talks straight to that computer over your private network; there's no Garu server in between.")}</p>
           <ol class="steps">
             <li><i aria-hidden="true">1</i><span>{t("On your computer, open Garu, then")} <b>{t("Settings, Your phone & other devices")}</b>.</span></li>
-            <li><i aria-hidden="true">2</i><span>{t("Press")} <b>{t("Show pairing code")}</b>, {canScan ? t("then scan it below, or copy the link there and paste it below.") : t("then press Copy link there and paste it below.")}</span></li>
+            <li><i aria-hidden="true">2</i><span>{t("Press")} <b>{t("Show pairing code")}</b>, {canScan ? t("then scan it below, or copy the link there and paste it below.") : isIOS ? t("then press Copy link there and paste it below (the iPhone app can't scan the code yet).") : t("then press Copy link there and paste it below.")}</span></li>
             <li><i aria-hidden="true">3</i><span>{t("Both need")} <b>Tailscale</b> {t("(free), signed in to the same account.")}</span></li>
             <li><i aria-hidden="true">4</i><span>{t("Don't have Garu yet?")} <a class="link" href={siteUrl()} target="_blank" rel="noreferrer">{t("The website")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a> {t("walks you through setting it up on your computer.")}</span></li>
           </ol>

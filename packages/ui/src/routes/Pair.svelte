@@ -8,7 +8,7 @@
   import { onDestroy } from "svelte";
   import { connectLive, live } from "../lib/api.svelte";
   import { build, markIntroSeen, parsePairing, remember, server } from "../lib/server.svelte";
-  import { canScan, haptic } from "../lib/native";
+  import { canScan, haptic, isIOS } from "../lib/native";
   import { t, siteUrl, locale } from "../lib/i18n.svelte";
 
   /** The button that had focus goes away when the scanner opens; Cancel takes it. */
@@ -118,7 +118,7 @@
     {#if !embedded}
     <ol class="mt-4 space-y-1.5 text-[13px] text-fg-2">
       <li><span class="text-mute">1.</span> {t("On your computer, open Garu")} → <span class="font-medium text-fg">{t("Settings → Your phone & other devices")}</span> → <em>{t("Show pairing code")}</em>.</li>
-      <li><span class="text-mute">2.</span> {canScan ? t("Scan it here, or paste the link below.") : t("Press Copy link there and paste it below.")}</li>
+      <li><span class="text-mute">2.</span> {canScan ? t("Scan it here, or paste the link below.") : isIOS ? t("The iPhone app can't scan the code yet: press Copy link there and paste the link below.") : t("Press Copy link there and paste it below.")}</li>
     </ol>
     {/if}
 

@@ -29,3 +29,13 @@ export function t(key: string, vars?: Record<string, string | number>): string {
   const text = locale() === "es" ? (es[key] ?? key) : key;
   return vars ? text.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : text;
 }
+
+/**
+ * A whole sentence with one piece that needs its own markup (a path, a command, an address in
+ * monospace): the text before and after that piece, so the component can wrap it while the
+ * sentence stays in one piece for the translation and keeps the Spanish word order.
+ */
+export function around(sentence: string, piece: string): [string, string] {
+  const i = piece ? sentence.indexOf(piece) : -1;
+  return i < 0 ? [sentence, ""] : [sentence.slice(0, i), sentence.slice(i + piece.length)];
+}
