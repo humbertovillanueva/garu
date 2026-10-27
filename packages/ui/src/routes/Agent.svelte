@@ -16,7 +16,7 @@
   import { tick } from "svelte";
   import { isApp } from "../lib/server.svelte";
   import Icon from "../lib/components/Icon.svelte";
-  import { t } from "../lib/i18n.svelte";
+  import { t, parts } from "../lib/i18n.svelte";
 
   let { name }: { name: string } = $props();
   const a = $derived(agentByName(name));
@@ -195,8 +195,8 @@
           <div>{setupLine}</div>
         {:else}
           <div class="font-medium text-fg">{t("{name} can't run yet", { name: a.name })}</div>
-          {#if a.needs.length}<div>{t("Add")} <span class="mono text-fg">{a.needs.join(", ")}</span> {t("to")} <span class="mono">.env</span>, {t("then")} <span class="mono">npm run garu -- service restart</span>.</div>{/if}
-          {#each a.signIn as srv}<div>{t("Sign in to")} <span class="mono text-fg">{srv}</span> {t("once:")} <span class="mono text-fg [overflow-wrap:anywhere]">npm run garu -- auth {a.source} {srv}</span></div>{/each}
+          {#if a.needs.length}<div>{#each parts("Add {keys} to {file}, then {command}.", { keys: a.needs.join(", "), file: ".env", command: "npm run garu -- service restart" }) as p}{#if p.name === "keys"}<span class="mono text-fg">{p.text}</span>{:else if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}</div>{/if}
+          {#each a.signIn as srv}<div>{#each parts("Sign in to {server} once: {command}", { server: srv, command: `npm run garu -- auth ${a.source} ${srv}` }) as p}{#if p.name === "command"}<span class="mono text-fg [overflow-wrap:anywhere]">{p.text}</span>{:else if p.name}<span class="mono text-fg">{p.text}</span>{:else}{p.text}{/if}{/each}</div>{/each}
         {/if}
       </div>
     {:else if a.configured && pending.length === 0}

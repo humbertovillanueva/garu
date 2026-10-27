@@ -4,7 +4,7 @@
   import { href } from "../router.svelte";
   import Mark from "./Mark.svelte";
   import type { Suggestion } from "../types";
-  import { t } from "../i18n.svelte";
+  import { t, parts } from "../i18n.svelte";
 
   let { s }: { s: Suggestion } = $props();
   let busy = $state(false);
@@ -36,8 +36,7 @@
     <Mark name={s.agent} size={30} />
     <div class="min-w-0 flex-1">
       <div class="text-[14px]">
-        {t("You've approved")} <a href={href("agent", s.agent)} class="font-semibold hover:underline">{s.agent}</a> <span aria-hidden="true">→</span> <span class="mono">{s.tool}</span>
-        <span class="font-semibold">{t("{n} times", { n: s.approvals })}</span> {t("and never declined it.")}
+        {#each parts("You've approved {tool} for {agent} {n} times and never declined it.", { tool: s.tool, agent: s.agent, n: s.approvals }) as p}{#if p.name === "agent"}<a href={href("agent", s.agent)} class="font-semibold hover:underline">{p.text}</a>{:else if p.name === "tool"}<span class="mono">{p.text}</span>{:else if p.name === "n"}<span class="font-semibold">{p.text}</span>{:else}{p.text}{/if}{/each}
       </div>
       {#if s.rule.when}
         <div class="mt-0.5 text-[13px] text-fg-2">{t("Stop asking? This is the rule Garu would add, scoped to what you actually approved:")} <span class="text-fg">{s.summary}</span>.</div>
@@ -50,11 +49,11 @@
   <pre class="mono mx-4 mt-3 overflow-auto rounded-lg border hairline bg-bg/60 px-3 py-2 text-[12px] text-fg-2">{yaml()}</pre>
   <div class="mt-3 flex flex-wrap items-center gap-2 border-t hairline bg-bg/30 px-4 py-3">
     {#if done}
-      <span class="text-[13px]" role="status" style="color: var(--color-ok)">{t("Added to")} <span class="mono">{done}</span>. {t("It applies from the next run.")}</span>
+      <span class="text-[13px]" role="status" style="color: var(--color-ok)">{#each parts("Added to {file}. It applies from the next run.", { file: done }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}</span>
     {:else}
       <button class="btn btn-ok" disabled={busy} onclick={apply}>{t("Add to Garufile")}</button>
       <button class="btn" disabled={busy} onclick={dismiss}>{t("Not now")}</button>
-      <span class="text-[12px] text-mute">{t("Inserted above the current")} <span class="mono">ask</span> {t("rule, comments kept.")}</span>
+      <span class="text-[12px] text-mute">{#each parts("Inserted above the current {ask} rule, comments kept.", { ask: "ask" }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}</span>
     {/if}
     {#if error}<span class="text-[12.5px]" role="alert" style="color: var(--color-bad)">{error}</span>{/if}
   </div>

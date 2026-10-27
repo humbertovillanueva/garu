@@ -10,7 +10,7 @@
   import { prefs, setPref } from "../lib/prefs.svelte";
   import { buildText } from "../lib/format";
   import { haptic } from "../lib/native";
-  import { t, around } from "../lib/i18n.svelte";
+  import { t, parts } from "../lib/i18n.svelte";
   function unpair() {
     if (!confirm(t("Forget this control room? You'll pair again by scanning a code on your computer."))) return;
     forget(); location.reload();
@@ -172,11 +172,9 @@
               <div class="qr w-[180px] flex-none rounded-xl p-2" style="background:#f4f1ea" role="img" aria-label={t("Pairing code")}>{@html pairSvg}</div>
               <div class="min-w-0 flex-1 text-[13px] text-fg-2">
                 {#if chosenIsLocal}
-                  <p style="color: var(--color-ask)">{t("This code points at")} <span class="mono">{new URL(chosen).host}</span>, {t("which a phone can't reach. Put the control room on your private network first:")} <span class="mono">tailscale serve --bg {s?.port ?? 4000}</span> {t("on this computer, then come back here and the code will point there by itself.")}</p>
+                  <p style="color: var(--color-ask)">{#each parts("This code points at {host}, which a phone can't reach. Put the control room on your private network first: {command} on this computer, then come back here and the code will point there by itself.", { host: new URL(chosen).host, command: `tailscale serve --bg ${s?.port ?? 4000}` }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}</p>
                 {:else}
-                  {@const host = new URL(chosen).host}
-                  {@const [before, after] = around(t("Scan it with the Garu app on Android, or with any phone's camera to open {host} in its browser, signed in.", { host }), host)}
-                  <p>{before}<span class="mono">{host}</span>{after} {t("On iPhone the app can't scan the code yet: press Copy link and paste the link in the app.")}</p>
+                  <p>{#each parts("Scan it with the Garu app on Android, or with any phone's camera to open {host} in its browser, signed in.", { host: new URL(chosen).host }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each} {t("On iPhone the app can't scan the code yet: press Copy link and paste the link in the app.")}</p>
                 {/if}
                 <p class="mt-2 text-[12px] text-mute">{t("This code is a key. Anyone who scans it can approve actions as you.")}</p>
                 <div class="mt-3 flex flex-wrap gap-2">
@@ -185,7 +183,7 @@
                   <button class="btn" onclick={() => (showToken = !showToken)}>{showToken ? t("Hide token") : t("Show token")}</button>
                 </div>
                 {#if showToken}<div class="mono mt-2 break-all rounded-lg border hairline bg-bg px-2.5 py-2 text-[12px] select-all">{pairLink?.split("token=")[1]}</div>{/if}
-                <p class="mt-2 text-[12px] text-mute">{t("Someone else saw it?")} <button class="underline hover:text-fg" onclick={rotate}>{t("Make a new token")}</button>{#if rotated}<span class="ml-2" style="color: var(--color-ok)">{t("done — other devices are signed out")}</span>{/if}{#if pairError}<span class="ml-2" style="color: var(--color-bad)">{pairError}</span>{/if}. {#if s}{t("It lives in")} <span class="mono">{shortRoot(s.login.tokenPath)}</span>.{/if}</p>
+                <p class="mt-2 text-[12px] text-mute">{t("Someone else saw it?")} <button class="underline hover:text-fg" onclick={rotate}>{t("Make a new token")}</button>{#if rotated}<span class="ml-2" style="color: var(--color-ok)">{t("done — other devices are signed out")}</span>{/if}{#if pairError}<span class="ml-2" style="color: var(--color-bad)">{pairError}</span>{/if} {#if s}{#each parts("It lives in {path}.", { path: shortRoot(s.login.tokenPath) }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}{/if}</p>
               </div>
             </div>
           {/if}
@@ -220,7 +218,7 @@
 
         <div class="panel p-5">
           <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="key" size={14} /> {t("Models")}</h3>
-          <p class="mb-3 text-[13px] text-fg-2">{#if isApp}{t("Keys stay on your computer. Garu only reports whether each is set.")}{:else}{t("Keys live in")} <span class="mono">.env</span> {t("on the computer. Garu only reports whether each is set.")}{/if}</p>
+          <p class="mb-3 text-[13px] text-fg-2">{#if isApp}{t("Keys stay on your computer. Garu only reports whether each is set.")}{:else}{#each parts("Keys live in {file} on the computer. Garu only reports whether each is set.", { file: ".env" }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}{/if}</p>
           <ul class="space-y-2 text-[13.5px]">
             <li class="flex items-center gap-2"><span class="dot" style="background: {s.providers.gemini ? 'var(--color-ok)' : 'var(--color-line-2)'}"></span><span class="mono">GEMINI_API_KEY</span><span class="text-mute">{s.providers.gemini ? t("set") : t("not set · free at aistudio.google.com")}</span></li>
             <li class="flex items-center gap-2"><span class="dot" style="background: {s.providers.anthropic ? 'var(--color-ok)' : 'var(--color-line-2)'}"></span><span class="mono">ANTHROPIC_API_KEY</span><span class="text-mute">{s.providers.anthropic ? t("set") : t("not set")}</span></li>
@@ -231,7 +229,7 @@
         <div class="panel p-5">
           <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="shield" size={14} /> {t("Variables your agents reference")}</h3>
           {#if s.env.length === 0}
-            <p class="text-[13px] text-mute">{#if isApp}{t("None.")}{:else}{t("None. Agents reference secrets as")} <span class="mono">${"{VAR}"}</span> {t("in their Garufile and Garu fills them from")} <span class="mono">.env</span> {t("at run time.")}{/if}</p>
+            <p class="text-[13px] text-mute">{#if isApp}{t("None.")}{:else}{#each parts("None. Agents reference secrets as {syntax} in their Garufile and Garu fills them from {file} at run time.", { syntax: "${VAR}", file: ".env" }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}{/if}</p>
           {:else}
             <ul class="space-y-2 text-[13.5px]">
               {#each s.env as v (v.name)}
@@ -244,7 +242,7 @@
         <div class="panel p-5">
           <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="globe" size={14} /> {t("Tool servers that sign in or connect")}</h3>
           {#if s.remotes.length === 0}
-            <p class="text-[13px] text-mute">{#if isApp}{t("None yet.")}{:else}{t("None yet. A tool server can be a")} <span class="mono">url:</span> {t("instead of a")} <span class="mono">command:</span>; {t("servers that want a login use")} <span class="mono">auth: oauth</span> {t("and")} <span class="mono">npm run garu -- auth</span>.{/if}</p>
+            <p class="text-[13px] text-mute">{#if isApp}{t("None yet.")}{:else}{#each parts("None yet. A tool server can be a {url} instead of a {command}; servers that want a login use {auth} and {cli}.", { url: "url:", command: "command:", auth: "auth: oauth", cli: "npm run garu -- auth" }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}{/if}</p>
           {:else}
             <ul class="space-y-2.5 text-[13.5px]">
               {#each s.remotes as r (r.agent + r.server)}

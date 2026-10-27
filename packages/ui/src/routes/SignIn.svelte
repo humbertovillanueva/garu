@@ -2,7 +2,7 @@
   import Logo from "../lib/components/Logo.svelte";
   /** Shown when this browser has no session: the control room is on another computer (or login is required here). */
   import { api } from "../lib/api.svelte";
-  import { t } from "../lib/i18n.svelte";
+  import { t, parts } from "../lib/i18n.svelte";
   let token = $state("");
   const focus = (el: HTMLInputElement) => { el.focus(); };
   let busy = $state(false);
@@ -27,8 +27,8 @@
       {t("Your agents run on the computer where Garu is running. To use them from here, you need that computer's token.")}
     </p>
     <ol class="mt-3 space-y-1.5 text-[13px] text-fg-2">
-      <li><span class="text-mute">{t("Easiest:")}</span> {t("on that computer, open")} <span class="font-medium text-fg">{t("Settings → Your phone & other devices")}</span>, {t("press")} <em>{t("Show pairing code")}</em> {t("and scan it.")}</li>
-      <li><span class="text-mute">{t("Or:")}</span> {t("paste the token from")} <span class="mono">.garu/ui-token</span> {t("in your Garu folder.")}</li>
+      <li><span class="text-mute">{t("Easiest:")}</span> {#each parts("On that computer, open {settings}, press {button} and scan it.", { settings: t("Settings → Your phone & other devices"), button: t("Show pairing code") }) as p}{#if p.name === "settings"}<span class="font-medium text-fg">{p.text}</span>{:else if p.name === "button"}<em>{p.text}</em>{:else}{p.text}{/if}{/each}</li>
+      <li><span class="text-mute">{t("Or:")}</span> {#each parts("Paste the token from {file} in your Garu folder.", { file: ".garu/ui-token" }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}</li>
     </ol>
     <label class="mt-5 block">
       <span class="text-[11px] uppercase tracking-wider text-mute">{t("Token")}</span>

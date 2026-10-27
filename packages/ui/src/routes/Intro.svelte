@@ -9,7 +9,7 @@
   import Creature from "../lib/components/Creature.svelte";
   import Pair from "./Pair.svelte";
   import { backHandlers, canScan, haptic, isIOS } from "../lib/native";
-  import { t, siteUrl } from "../lib/i18n.svelte";
+  import { t, parts, siteUrl } from "../lib/i18n.svelte";
 
   let { onDone, splash = true, alreadyPaired = false }: { onDone: () => void; splash?: boolean; alreadyPaired?: boolean } = $props();
 
@@ -124,10 +124,10 @@
           <h1>{t("Connect to your computer.")}</h1>
           <p>{t("Your agents live on the computer running Garu. Pair this phone once and it talks straight to that computer over your private network; there's no Garu server in between.")}</p>
           <ol class="steps">
-            <li><i aria-hidden="true">1</i><span>{t("On your computer, open Garu, then")} <b>{t("Settings, Your phone & other devices")}</b>.</span></li>
-            <li><i aria-hidden="true">2</i><span>{t("Press")} <b>{t("Show pairing code")}</b>, {canScan ? t("then scan it below, or copy the link there and paste it below.") : isIOS ? t("then press Copy link there and paste it below (the iPhone app can't scan the code yet).") : t("then press Copy link there and paste it below.")}</span></li>
-            <li><i aria-hidden="true">3</i><span>{t("Both need")} <b>Tailscale</b> {t("(free), signed in to the same account.")}</span></li>
-            <li><i aria-hidden="true">4</i><span>{t("Don't have Garu yet?")} <a class="link" href={siteUrl()} target="_blank" rel="noreferrer">{t("The website")} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a> {t("walks you through setting it up on your computer.")}</span></li>
+            <li><i aria-hidden="true">1</i><span>{#each parts("On your computer, open Garu, then {settings}.", { settings: t("Settings, Your phone & other devices") }) as p}{#if p.name}<b>{p.text}</b>{:else}{p.text}{/if}{/each}</span></li>
+            <li><i aria-hidden="true">2</i><span>{#if canScan}{#each parts("Press {button}, then scan it below, or copy the link there and paste it below.", { button: t("Show pairing code") }) as p}{#if p.name}<b>{p.text}</b>{:else}{p.text}{/if}{/each}{:else if isIOS}{#each parts("Press {button}, then press Copy link there and paste it below (the iPhone app can't scan the code yet).", { button: t("Show pairing code") }) as p}{#if p.name}<b>{p.text}</b>{:else}{p.text}{/if}{/each}{:else}{#each parts("Press {button}, then press Copy link there and paste it below.", { button: t("Show pairing code") }) as p}{#if p.name}<b>{p.text}</b>{:else}{p.text}{/if}{/each}{/if}</span></li>
+            <li><i aria-hidden="true">3</i><span>{#each parts("Both need {app} (free), signed in to the same account.", { app: "Tailscale" }) as p}{#if p.name}<b>{p.text}</b>{:else}{p.text}{/if}{/each}</span></li>
+            <li><i aria-hidden="true">4</i><span>{t("Don't have Garu yet?")} {#each parts("{link} walks you through setting it up on your computer.", { link: t("The website") }) as p}{#if p.name}<a class="link" href={siteUrl()} target="_blank" rel="noreferrer">{p.text} <span aria-hidden="true">↗</span><span class="sr-only">{t("(opens in a new tab)")}</span></a>{:else}{p.text}{/if}{/each}</span></li>
           </ol>
           <!-- only while this slide shows, so the camera never runs off-screen -->
           {#if i === LAST}<div class="w-full"><Pair embedded /></div>{/if}

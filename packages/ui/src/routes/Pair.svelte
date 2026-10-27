@@ -9,7 +9,7 @@
   import { connectLive, live } from "../lib/api.svelte";
   import { build, markIntroSeen, parsePairing, remember, server } from "../lib/server.svelte";
   import { canScan, haptic, isIOS } from "../lib/native";
-  import { t, siteUrl, locale } from "../lib/i18n.svelte";
+  import { t, parts, siteUrl, locale } from "../lib/i18n.svelte";
 
   /** The button that had focus goes away when the scanner opens; Cancel takes it. */
   const takeFocus = (n: HTMLElement) => { n.focus(); };
@@ -109,7 +109,7 @@
       <!-- the intro slide above carries the title and explanation -->
     {:else if server.base && problem}
       <h1 class="text-[20px] font-semibold tracking-tight">{title ?? t("Can't reach your control room")}</h1>
-      <p class="mt-2 text-[13.5px] leading-relaxed text-fg-2">{t("This phone is paired with")} <span class="mono">{server.base.replace(/^https?:\/\//, "")}</span>. {problem}</p>
+      <p class="mt-2 text-[13.5px] leading-relaxed text-fg-2">{#each parts("This phone is paired with {host}.", { host: server.base.replace(/^https?:\/\//, "") }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each} {problem}</p>
     {:else}
       <h1 class="text-[20px] font-semibold tracking-tight">{t("Connect to your control room")}</h1>
       <p class="mt-2 text-[13.5px] leading-relaxed text-fg-2">{t("Your agents run on your computer. Garu on this phone talks straight to it over your private network (Tailscale); there's no Garu server in between.")}</p>
@@ -117,7 +117,7 @@
 
     {#if !embedded}
     <ol class="mt-4 space-y-1.5 text-[13px] text-fg-2">
-      <li><span class="text-mute">1.</span> {t("On your computer, open Garu")} → <span class="font-medium text-fg">{t("Settings → Your phone & other devices")}</span> → <em>{t("Show pairing code")}</em>.</li>
+      <li><span class="text-mute">1.</span> {#each parts("On your computer, open Garu → {settings} → {button}.", { settings: t("Settings → Your phone & other devices"), button: t("Show pairing code") }) as p}{#if p.name === "settings"}<span class="font-medium text-fg">{p.text}</span>{:else if p.name === "button"}<em>{p.text}</em>{:else}{p.text}{/if}{/each}</li>
       <li><span class="text-mute">2.</span> {canScan ? t("Scan it here, or paste the link below.") : isIOS ? t("The iPhone app can't scan the code yet: press Copy link there and paste the link below.") : t("Press Copy link there and paste it below.")}</li>
     </ol>
     {/if}
@@ -139,7 +139,7 @@
           <span class="text-[11px] uppercase tracking-wider text-mute">{t("Sign-in link")}</span>
           <input class="mono mt-1.5 w-full rounded-lg border field-border bg-bg px-3 py-2.5 text-[12.5px] outline-none focus:border-accent/60" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://your-mac.tail…ts.net/?token=…" style={parsed ? "-webkit-text-security: disc" : undefined} bind:value={text} />
         </label>
-        {#if parsed}<p class="mt-1.5 text-[11.5px] text-mute">{t("A link to")} <span class="mono [overflow-wrap:anywhere]">{parsed.base.replace(/^https?:\/\//, "")}</span>. {t("Its key stays hidden.")}</p>{/if}
+        {#if parsed}<p class="mt-1.5 text-[11.5px] text-mute">{#each parts("A link to {host}. Its key stays hidden.", { host: parsed.base.replace(/^https?:\/\//, "") }) as p}{#if p.name}<span class="mono [overflow-wrap:anywhere]">{p.text}</span>{:else}{p.text}{/if}{/each}</p>{/if}
         <button class="btn mt-3 w-full" class:btn-primary={!canScan} type="submit" disabled={busy || !text.trim()}>{busy ? t("Connecting…") : t("Connect")}</button>
       </form>
     {/if}

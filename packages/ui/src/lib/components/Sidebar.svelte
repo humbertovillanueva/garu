@@ -4,7 +4,7 @@
   import { live } from "../api.svelte";
   import { isApp } from "../server.svelte";
   import { until } from "../format";
-  import { t } from "../i18n.svelte";
+  import { t, parts } from "../i18n.svelte";
   import Mark from "./Mark.svelte";
   import Icon from "./Icon.svelte";
 
@@ -60,7 +60,7 @@
       </a>
     {/each}
     {#if live.loaded && live.agents.length === 0}
-      <div class="px-2 py-3 text-[12.5px] text-mute">{t("No Garufiles found under this folder yet.")} {#if isApp}{t("Make one on your computer.")}{:else}<span class="mono">npm run garu -- new</span> {t("makes one.")}{/if}</div>
+      <div class="px-2 py-3 text-[12.5px] text-mute">{t("No Garufiles found under this folder yet.")} {#if isApp}{t("Make one on your computer.")}{:else}{#each parts("{command} makes one.", { command: "npm run garu -- new" }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}{/if}</div>
     {/if}
   </nav>
 

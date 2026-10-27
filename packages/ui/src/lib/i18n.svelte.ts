@@ -31,11 +31,23 @@ export function t(key: string, vars?: Record<string, string | number>): string {
 }
 
 /**
- * A whole sentence with one piece that needs its own markup (a path, a command, an address in
- * monospace): the text before and after that piece, so the component can wrap it while the
- * sentence stays in one piece for the translation and keeps the Spanish word order.
+ * A whole sentence in pieces, for one that carries a path, a command, a link or a name that needs
+ * its own markup: the plain text between placeholders, and each `{name}` placeholder as its own
+ * piece carrying its name. The component wraps the named pieces and prints the rest, so the
+ * sentence stays one key (the test next door collects these keys like the ones given to t) and
+ * the Spanish keeps its own word order.
  */
-export function around(sentence: string, piece: string): [string, string] {
-  const i = piece ? sentence.indexOf(piece) : -1;
-  return i < 0 ? [sentence, ""] : [sentence.slice(0, i), sentence.slice(i + piece.length)];
+export function parts(key: string, vars: Record<string, string | number>): { text: string; name?: string }[] {
+  const text = locale() === "es" ? (es[key] ?? key) : key;
+  const out: { text: string; name?: string }[] = [];
+  let last = 0;
+  for (const m of text.matchAll(/\{(\w+)\}/g)) {
+    const k = m[1]!;
+    if (!(k in vars)) continue;
+    if (m.index > last) out.push({ text: text.slice(last, m.index) });
+    out.push({ text: String(vars[k]), name: k });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push({ text: text.slice(last) });
+  return out;
 }

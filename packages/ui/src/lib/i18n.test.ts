@@ -3,14 +3,14 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { es } from "./i18n/es";
 
-/** Every `t("…")` in the app, so a sentence without Spanish fails here instead of showing up in English on a Spanish phone. */
+/** Every `t("…")` and `parts("…")` in the app, so a sentence without Spanish fails here instead of showing up in English on a Spanish phone. */
 function keysIn(dir: string, out = new Set<string>()): Set<string> {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
     if (statSync(p).isDirectory()) { if (name !== "i18n") keysIn(p, out); continue; }
     if (!/\.(svelte|ts)$/.test(name) || name.endsWith(".test.ts")) continue;
     const src = readFileSync(p, "utf8");
-    for (const m of src.matchAll(/\bt\(\s*"((?:[^"\\]|\\.)*)"/g)) out.add(m[1]!.replace(/\\"/g, '"').replace(/\\n/g, "\n"));
+    for (const m of src.matchAll(/\b(?:t|parts)\(\s*"((?:[^"\\]|\\.)*)"/g)) out.add(m[1]!.replace(/\\"/g, '"').replace(/\\n/g, "\n"));
   }
   return out;
 }

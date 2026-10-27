@@ -11,7 +11,7 @@
   import type { FeedItem, ApprovalRequest, TodayResponse } from "../lib/types";
   import { isApp } from "../lib/server.svelte";
   import { renderMarkdown } from "../lib/md";
-  import { t, around } from "../lib/i18n.svelte";
+  import { t, parts } from "../lib/i18n.svelte";
   import { ticker } from "../lib/clock.svelte";
 
   let feed = $state<FeedItem[] | null>(null);
@@ -65,7 +65,8 @@
     <h1 class="text-[26px] font-semibold tracking-tight">{greeting}.</h1>
     <p class="mt-1 text-[14px] text-fg-2" aria-live="polite">
       {#if !live.loaded}{t("Loading your agents…")}
-      {:else if live.pending.length}<span class="font-medium text-fg">{live.pending.length === 1 ? t("1 decision") : t("{n} decisions", { n: live.pending.length })}</span> {t("waiting for you.")}
+      {:else if live.pending.length === 1}{#each parts("{n} decision is waiting for you.", { n: 1 }) as p}{#if p.name}<span class="font-medium text-fg">{p.text}</span>{:else}{p.text}{/if}{/each}
+      {:else if live.pending.length}{#each parts("{n} decisions are waiting for you.", { n: live.pending.length }) as p}{#if p.name}<span class="font-medium text-fg">{p.text}</span>{:else}{p.text}{/if}{/each}
       {:else if working.length}{working.length === 1 ? t("{names} is working right now.", { names: working[0]!.name }) : t("{names} are working right now.", { names: working.map((a) => a.name).join(", ") })}
       {:else if runsToday}{runsToday === 1 ? t("1 run today from {active} of your {total} agents, {cost} estimated. Nothing needs you.", { active: live.agents.filter((a) => a.runsToday).length, total: live.agents.length, cost: usd(spendToday) }) : t("{n} runs today from {active} of your {total} agents, {cost} estimated. Nothing needs you.", { n: runsToday, active: live.agents.filter((a) => a.runsToday).length, total: live.agents.length, cost: usd(spendToday) })}
       {:else if !live.up && scheduled}{t("Nothing has run today, and nothing will: schedules are off.")}
@@ -90,16 +91,13 @@
       <p class="mb-4 text-[13.5px] text-fg-2">{t("Garu runs agents that can only act through a policy you wrote. Nothing happens without a rule allowing it, or you approving it.")}</p>
       <ol class="grid gap-3 text-[13.5px] sm:grid-cols-3">
         {#if agentByName("pip")}
-          {@const [o1, o2] = around(t("Open {agent} and press {button}.", { agent: "pip", button: t("Run now") }), "pip")}
-          {@const [o3, o4] = around(o2, t("Run now"))}
-          <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">1</div><div class="font-medium">{t("Run pip")}</div><div class="mt-0.5 text-fg-2">{o1}<a class="underline hover:text-fg" href={href("agent", "pip")}>pip</a>{o3}<span class="font-medium text-fg">{t("Run now")}</span>{o4} {t("It reads a notes file and asks before writing a summary.")}</div></li>
+          <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">1</div><div class="font-medium">{t("Run pip")}</div><div class="mt-0.5 text-fg-2">{#each parts("Open {agent} and press {button}.", { agent: "pip", button: t("Run now") }) as p}{#if p.name === "agent"}<a class="underline hover:text-fg" href={href("agent", "pip")}>{p.text}</a>{:else if p.name === "button"}<span class="font-medium text-fg">{p.text}</span>{:else}{p.text}{/if}{/each} {t("It reads a notes file and asks before writing a summary.")}</div></li>
         {:else}
           <!-- pip only shows up when examples/ sits under this Garu folder; say where it lives instead of linking to nothing. -->
-          {@const [e1, e2] = around(t("pip, the example agent, lives in {path} in the Garu repository. Copy that folder under this one and it shows up here.", { path: "examples/pip" }), "examples/pip")}
-          <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">1</div><div class="font-medium">{t("Run an example")}</div><div class="mt-0.5 text-fg-2">{e1}<span class="mono">examples/pip</span>{e2} {t("It reads a notes file and asks before writing a summary.")}</div></li>
+          <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">1</div><div class="font-medium">{t("Run an example")}</div><div class="mt-0.5 text-fg-2">{#each parts("pip, the example agent, lives in {path} in the Garu repository. Copy that folder under this one and it shows up here.", { path: "examples/pip" }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each} {t("It reads a notes file and asks before writing a summary.")}</div></li>
         {/if}
         <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">2</div><div class="font-medium">{t("Approve it")}</div><div class="mt-0.5 text-fg-2">{t("The pause is the product. Approve once, approve for 24h, or decline with a note it reads.")}</div></li>
-        <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">3</div><div class="font-medium">{t("Make your own")}</div><div class="mt-0.5 text-fg-2"><span class="mono">npm run garu -- new</span> {t("asks what it should do and writes a Garufile with a closed policy.")}</div></li>
+        <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">3</div><div class="font-medium">{t("Make your own")}</div><div class="mt-0.5 text-fg-2">{#each parts("{command} asks what it should do and writes a Garufile with a closed policy.", { command: "npm run garu -- new" }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}</div></li>
       </ol>
     </div>
   {/if}
