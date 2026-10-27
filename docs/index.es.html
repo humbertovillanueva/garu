@@ -190,7 +190,7 @@
       </g>
       <g fill="#aeb6c2" text-anchor="start">
         <text x="676" y="131"><tspan fill="#43c979">permitir</tspan> → servidor MCP (Docker opcional)</text>
-        <text x="676" y="181"><tspan fill="#d9b24c">preguntar</tspan> → bandeja → tú · web · teléfono</text>
+        <text x="676" y="181"><tspan fill="#d9b24c">preguntar</tspan> → bandeja → tú · web · teléfono · CLI</text>
         <text x="676" y="231"><tspan fill="#ef5350">bloquear</tspan> → nunca se ejecuta, nunca se ofrece</text>
       </g>
       <g fill="#7f8899" font-size="11">
@@ -264,7 +264,7 @@
       <p class="sub" style="margin-bottom:14px">La sala de control se instala en tu pantalla de inicio. Habla con el mismo <code>garu ui</code> de tu computadora por Tailscale: HTTPS, solo tus dispositivos, nada expuesto a internet. Con <a href="https://ntfy.sh" style="color:var(--fg)">ntfy</a> configurado, llega un aviso push cuando un agente se pausa; un toque te deja en la tarjeta de revisión.</p>
 <pre class="code">tailscale serve --bg 4000
 <span class="c"># → https://your-mac.tail1234.ts.net</span>
-<span class="c"># Safari → Share → Add to Home Screen</span></pre>
+<span class="c"># Safari → Compartir → Agregar a inicio</span></pre>
       <p class="sub" style="margin-top:14px;font-size:14.5px"><a href="https://github.com/humbertovillanueva/garu/blob/main/docs/phone.es.md" style="color:var(--fg)">Lee la guía del teléfono →</a></p>
     </div>
     <img src="screenshots/phone-approve.png" alt="La sala de control en un teléfono: el borrador de respuesta de Bea para Lena mostrado como un correo, con Para, Asunto y el texto, y los botones Aprobar, Aprobar por 24 h y Rechazar sobre una barra de cuatro pestañas." width="390" height="844" loading="eager">
@@ -280,12 +280,12 @@
 npm install &amp;&amp; npm run build
 printf 'GEMINI_API_KEY=your-key\nGARU_USER=YourName\n' &gt; .env
 
-npm run garu -- ui --up --as YourName       <span class="c"># control room at http://localhost:4000</span></pre>
+npm run garu -- ui --up --as YourName       <span class="c"># sala de control en http://localhost:4000</span></pre>
     <p style="margin-top:16px">Haz clic en <b>pip</b> en la barra lateral y pulsa <b>Ejecutar ahora</b>. Lee un archivo de notas, se pausa para preguntar antes de escribir un resumen, y tú apruebas desde el navegador. Luego escríbele un mensaje.</p>
     <p style="margin-top:10px">Los agentes de verdad, <b>Tomay</b> (tu día, a partir de tu agenda y tu correo) y <b>Bea</b> (tu bandeja, ordenada, con las respuestas redactadas), necesitan un proyecto gratuito de Google Cloud una sola vez: <a href="https://github.com/humbertovillanueva/garu/blob/main/docs/google.es.md" style="color:var(--fg)">la guía de Google</a> toma unos quince minutos.</p>
-<pre>npm run garu -- run examples/nook/Garufile.yaml      <span class="c"># fully local with Ollama, $0</span>
-npm run garu -- run examples/vault/Garufile.yaml  <span class="c"># tools in Docker, network off</span>
-npm run garu -- log pip                                   <span class="c"># replay the flight recorder</span></pre>
+<pre>npm run garu -- run examples/nook/Garufile.yaml      <span class="c"># todo local con Ollama, $0</span>
+npm run garu -- run examples/vault/Garufile.yaml  <span class="c"># herramientas en Docker, sin red</span>
+npm run garu -- log pip                                   <span class="c"># repasa la caja negra</span></pre>
   </div>
 </section>
 
