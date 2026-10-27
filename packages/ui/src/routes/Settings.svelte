@@ -185,7 +185,7 @@
                   <button class="btn" onclick={() => (showToken = !showToken)}>{showToken ? t("Hide token") : t("Show token")}</button>
                 </div>
                 {#if showToken}<div class="mono mt-2 break-all rounded-lg border hairline bg-bg px-2.5 py-2 text-[12px] select-all">{pairLink?.split("token=")[1]}</div>{/if}
-                <p class="mt-2 text-[12px] text-mute">{t("Someone else saw it?")} <button class="underline hover:text-fg" onclick={rotate}>{t("Make a new token")}</button>{#if rotated}<span class="ml-2" style="color: var(--color-ok)">{t("done — other devices are signed out")}</span>{/if}{#if pairError}<span class="ml-2" style="color: var(--color-bad)">{pairError}</span>{/if} {#if s}{#each parts("It lives in {path}.", { path: shortRoot(s.login.tokenPath) }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}{/if}</p>
+                <p class="mt-2 text-[12px] text-mute">{t("Someone else saw it?")} <button class="tap underline hover:text-fg" onclick={rotate}>{t("Make a new token")}</button>{#if rotated}<span class="ml-2" style="color: var(--color-ok)">{t("done — other devices are signed out")}</span>{/if}{#if pairError}<span class="ml-2" style="color: var(--color-bad)">{pairError}</span>{/if} {#if s}{#each parts("It lives in {path}.", { path: shortRoot(s.login.tokenPath) }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}{/if}</p>
               </div>
             </div>
           {/if}

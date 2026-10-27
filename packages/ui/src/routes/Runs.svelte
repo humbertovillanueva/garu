@@ -61,7 +61,7 @@
 <section class="space-y-5">
   <div class="rise flex items-baseline justify-between">
     <h1 class="text-[24px] font-semibold tracking-tight">{t("Runs")}</h1>
-    {#if runs?.length}<a href={href("cost")} class="text-[13px] text-mute hover:text-fg">{t("{total} total · Cost", { total: usd(total) })}</a>{/if}
+    {#if runs?.length}<a href={href("cost")} class="tap text-[13px] text-mute hover:text-fg">{t("{total} total · Cost", { total: usd(total) })}</a>{/if}
   </div>
   {#if runs === null}
     {#if error}<LoadError message={error} />{:else}<Skeleton rows={6} h={44} />{/if}
