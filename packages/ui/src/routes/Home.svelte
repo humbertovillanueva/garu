@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api, live, loader } from "../lib/api.svelte";
+  import { api, live, loader, agentByName } from "../lib/api.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
   import { usd, clock, dayLabel, statusLabel, statusLine, until, cronLabel, humanTime, plainTimes } from "../lib/format";
@@ -11,7 +11,7 @@
   import type { FeedItem, ApprovalRequest, TodayResponse } from "../lib/types";
   import { isApp } from "../lib/server.svelte";
   import { renderMarkdown } from "../lib/md";
-  import { t } from "../lib/i18n.svelte";
+  import { t, around } from "../lib/i18n.svelte";
   import { ticker } from "../lib/clock.svelte";
 
   let feed = $state<FeedItem[] | null>(null);
@@ -89,7 +89,15 @@
       <div class="mb-1 text-[15px] font-semibold">{t("Welcome. Three steps to your first agent.")}</div>
       <p class="mb-4 text-[13.5px] text-fg-2">{t("Garu runs agents that can only act through a policy you wrote. Nothing happens without a rule allowing it, or you approving it.")}</p>
       <ol class="grid gap-3 text-[13.5px] sm:grid-cols-3">
-        <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">1</div><div class="font-medium">{t("Run pip")}</div><div class="mt-0.5 text-fg-2">{t("Open")} <a class="underline hover:text-fg" href={href("agent", "pip")}>pip</a> {t("and press")} <span class="font-medium text-fg">{t("Run now")}</span>. {t("It reads a notes file and asks before writing a summary.")}</div></li>
+        {#if agentByName("pip")}
+          {@const [o1, o2] = around(t("Open {agent} and press {button}.", { agent: "pip", button: t("Run now") }), "pip")}
+          {@const [o3, o4] = around(o2, t("Run now"))}
+          <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">1</div><div class="font-medium">{t("Run pip")}</div><div class="mt-0.5 text-fg-2">{o1}<a class="underline hover:text-fg" href={href("agent", "pip")}>pip</a>{o3}<span class="font-medium text-fg">{t("Run now")}</span>{o4} {t("It reads a notes file and asks before writing a summary.")}</div></li>
+        {:else}
+          <!-- pip only shows up when examples/ sits under this Garu folder; say where it lives instead of linking to nothing. -->
+          {@const [e1, e2] = around(t("pip, the example agent, lives in {path} in the Garu repository. Copy that folder under this one and it shows up here.", { path: "examples/pip" }), "examples/pip")}
+          <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">1</div><div class="font-medium">{t("Run an example")}</div><div class="mt-0.5 text-fg-2">{e1}<span class="mono">examples/pip</span>{e2} {t("It reads a notes file and asks before writing a summary.")}</div></li>
+        {/if}
         <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">2</div><div class="font-medium">{t("Approve it")}</div><div class="mt-0.5 text-fg-2">{t("The pause is the product. Approve once, approve for 24h, or decline with a note it reads.")}</div></li>
         <li class="rounded-lg border hairline bg-bg/40 p-3"><div class="mono mb-1 text-[11px] text-mute">3</div><div class="font-medium">{t("Make your own")}</div><div class="mt-0.5 text-fg-2"><span class="mono">npm run garu -- new</span> {t("asks what it should do and writes a Garufile with a closed policy.")}</div></li>
       </ol>
