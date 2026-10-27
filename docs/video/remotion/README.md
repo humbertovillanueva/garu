@@ -5,8 +5,8 @@ Remotion project for `docs/video/garu-v7-9x16.mp4` (1080×1920) and `garu-v7-16x
 ```
 npm install
 npm run dev                                   # Remotion Studio: scrub frame by frame
-npx remotion render src/index.ts Garu-9x16 ../garu-v7-9x16.mp4 --crf=16
-npx remotion render src/index.ts Garu-16x9 ../garu-v7-16x9.mp4 --crf=16
+npm run render:9x16                           # → ../garu-v7-9x16.mp4 (crf 16)
+npm run render:16x9                           # → ../garu-v7-16x9.mp4
 ```
 
 ## Design
