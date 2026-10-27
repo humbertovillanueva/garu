@@ -187,6 +187,7 @@ since 2026-10-10. What they do, the rules learned on real mail, and the setup: `
 v8 (`docs/video/garu-v8-9x16.mp4`, `garu-v8-16x9.mp4`, 2026-10-27) tells it with Tomay and Bea, with
 room to read and nothing under the Shorts and Reels buttons; beside it a 15-second cut
 (`garu-v8-15s-9x16.mp4`), two posters and a 1.7 MB web encode (`garu-v8-16x9-web.mp4`) that the site
-plays. v7 (2026-10-10, re-rendered 2026-10-27 with Bea at 8:00) and v6 (the old weather Tomay) are
-still in the tree. Source, commands, scenes and rules: `docs/video/remotion/README.md`.
+plays. Only the web encode and the two posters are tracked; the full v8 renders, the 15-second cut, v7,
+v6 and `score.wav` stay on this Mac, gitignored, and the README links the site's copy. Source, commands,
+scenes and rules: `docs/video/remotion/README.md`.
 Garu's own facts on screen are real; sample meetings and emails are made up (example.com).

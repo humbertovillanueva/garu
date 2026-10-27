@@ -33,10 +33,11 @@ keystore.properties
 *.p12
 *.mobileprovision
 
-# the launch video's source clips and old cuts stay out; only the current renders are tracked
+# the launch video: only what the site serves is tracked (the web encode and the posters); the full
+# renders, the old cuts, the 15-second cut, the source clips and the score stay on this Mac
 docs/video/*.mp4
-!docs/video/garu-v7-*.mp4
-!docs/video/garu-v8-*.mp4
+!docs/video/garu-v8-16x9-web.mp4
+docs/video/remotion/public/audio/score.wav
 
 # editor settings stay personal
 .vscode/

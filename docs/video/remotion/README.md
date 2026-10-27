@@ -50,4 +50,6 @@ Garu's own facts are real: agent names, descriptions, schedules and rules from t
 - Every name, schedule, rule, command and model on screen is Garu's real data.
 - Earlier cuts (tilted phone frames, composited stock clips, floating UI) were judged dated; don't go back.
 - The source clips in `docs/video/` (`01-nightstand.mp4`, `02-approve.mp4`, `06-outro.mp4`, `garu-v1.mp4`)
-  are untracked and unused; leave them. Only final renders get committed.
+  are untracked and unused; leave them. Only what the site serves is tracked: the web encode and the two
+  posters. The full renders, the 15-second cut, the old versions and `public/audio/score.wav` stay on
+  this Mac (regenerate the score with `tools/score.py` on a fresh clone).
