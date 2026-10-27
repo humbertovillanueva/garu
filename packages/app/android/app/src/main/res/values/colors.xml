@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The app's page background (--color-bg in the UI), for the system splash so a cold start never flashes light. -->
+    <!-- The app's page background (the UI's color-bg token), for the system splash so a cold start never flashes light. -->
     <color name="garu_background">#0a0c0f</color>
 </resources>
