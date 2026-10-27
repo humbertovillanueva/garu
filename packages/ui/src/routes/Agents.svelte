@@ -11,7 +11,7 @@
 
 <section class="space-y-5">
   <div class="rise">
-    <h1 class="text-[24px] font-semibold tracking-tight">{t("Agents")}</h1>
+    <h1 class="title">{t("Agents")}</h1>
   </div>
   {#if !live.loaded}
     <Skeleton rows={3} h={84} />

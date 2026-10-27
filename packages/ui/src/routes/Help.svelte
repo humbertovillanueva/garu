@@ -40,7 +40,7 @@
 </script>
 
 <section class="mx-auto max-w-2xl space-y-6">
-  <div class="rise"><h1 class="text-[24px] font-semibold tracking-tight">{t("Help")}</h1></div>
+  <div class="rise"><h1 class="title">{t("Help")}</h1></div>
   {#each sections as s (s.title)}
     <div class="rise">
       <h2 class="mb-1.5 text-[15px] font-semibold">{s.title}</h2>

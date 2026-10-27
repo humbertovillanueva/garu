@@ -62,7 +62,7 @@
 
 <section class="space-y-8">
   <div class="rise">
-    <h1 class="text-[26px] font-semibold tracking-tight">{greeting}.</h1>
+    <h1 class="title">{greeting}.</h1>
     <p class="mt-1 text-[14px] text-fg-2" aria-live="polite">
       {#if !live.loaded}{t("Loading your agents…")}
       {:else if live.pending.length === 1}{#each parts("{n} decision is waiting for you.", { n: 1 }) as p}{#if p.name}<span class="font-medium text-fg">{p.text}</span>{:else}{p.text}{/if}{/each}

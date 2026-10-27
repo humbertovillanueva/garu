@@ -39,7 +39,7 @@
 
 <section class="mx-auto max-w-2xl space-y-5">
   <div class="rise">
-    <h1 class="text-[24px] font-semibold tracking-tight">{t("Report a problem")}</h1>
+    <h1 class="title">{t("Report a problem")}</h1>
     <p class="mt-1 text-[13.5px] text-fg-2">{t("Say what happened. The report opens as a draft issue on GitHub for you to review before posting; nothing is sent from here.")}</p>
   </div>
   <textarea class="field" rows="5" aria-label={t("What happened")} placeholder={t("What did you expect, and what happened instead?")} bind:value={what}></textarea>

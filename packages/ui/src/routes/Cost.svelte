@@ -50,7 +50,7 @@
 <section class="space-y-5">
   <div class="rise flex flex-wrap items-end justify-between gap-3">
     <div>
-      <h1 class="text-[24px] font-semibold tracking-tight">{t("Cost")}</h1>
+      <h1 class="title">{t("Cost")}</h1>
     </div>
     <div class="flex items-center gap-1 text-[13px]">
       {#each [7, 14, 30] as d}

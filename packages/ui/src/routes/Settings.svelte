@@ -77,7 +77,7 @@
 </script>
 
 <section class="space-y-6">
-  <div class="rise"><h1 class="text-[26px] font-semibold tracking-tight">{t("Settings")}</h1></div>
+  <div class="rise"><h1 class="title">{t("Settings")}</h1></div>
 
   <!-- This device, preferences and help render without the computer: a phone paired to an address that
        no longer answers must still be able to forget it, read Help or report the problem. -->

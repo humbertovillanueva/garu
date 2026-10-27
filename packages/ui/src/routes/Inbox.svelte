@@ -49,7 +49,7 @@
 
 <section class="space-y-6">
   <div class="rise">
-    <h1 class="text-[24px] font-semibold tracking-tight">{t("Inbox")}</h1>
+    <h1 class="title">{t("Inbox")}</h1>
   </div>
 
   {#if !live.loaded}

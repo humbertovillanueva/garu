@@ -16,7 +16,7 @@
   <div class="rise flex items-center gap-4">
     <Logo size={56} />
     <div>
-      <h1 class="text-[24px] font-semibold tracking-tight">Garu</h1>
+      <h1 class="title">Garu</h1>
       <p class="text-[14px] text-fg-2">{t("Always-on agents you can actually trust.")}</p>
     </div>
   </div>

@@ -123,7 +123,7 @@
       <Mark name={a.name} size={52} status={a.status} />
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h1 class="text-[24px] font-semibold tracking-tight">{a.name}</h1>
+          <h1 class="title">{a.name}</h1>
           <Status status={a.status === "scheduled" ? "sleeping" : a.status} />
         </div>
         {#if a.persona?.tagline}<p class="mt-0.5 text-[14px] italic text-fg-2">“{a.persona.tagline}”</p>{/if}

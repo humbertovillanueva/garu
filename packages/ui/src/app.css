@@ -67,6 +67,9 @@ body {
 }
 .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 0.93em; }
 
+/* One size for every page title (Home, Inbox, Runs, Settings…). A run's header is a sub-page of its agent and stays smaller. */
+.title { font-size: 24px; font-weight: 600; letter-spacing: -.025em; }
+
 /* Surfaces */
 .panel { background: var(--color-panel); border: 1px solid var(--color-line); border-radius: 12px; }
 .panel-raised {
