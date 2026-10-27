@@ -8,7 +8,7 @@ import { ToolBus, missingEnv } from "./bus.js";
 import { StdioServerSpec, parseGarufile, type McpServerSpec } from "./garufile.js";
 import { NeedsSignInError, authFileFor, localAccessToken, signInFor } from "./oauth.js";
 import { PolicyEngine } from "./policy.js";
-import { Recorder } from "./recorder.js";
+import { Recorder, readRun } from "./recorder.js";
 import { dockerArgs } from "./sandbox.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -172,6 +172,31 @@ describe("ToolBus with a local server that signs in", () => {
       writeFileSync(file, JSON.stringify(stored));
       expect(JSON.stringify(await bus.call("gmail.whoami", {}))).toContain("token=fresh-1");
       expect(issuer.refreshes()).toBe(1);
+      await bus.close();
+    } finally {
+      await issuer.close();
+    }
+  }, 30_000);
+
+  it("two calls of one step with a stale token renew it once, between them, and both get the fresh one", async () => {
+    const issuer = await startIssuer();
+    try {
+      const r = root();
+      const spec = local(issuer.url, readonly);
+      signInFor(spec, r).saveTokens({ access_token: "tok-old", token_type: "Bearer", expires_in: 3599, refresh_token: "rt" });
+      const recorder = rec();
+      const bus = new ToolBus({ policy, recorder, approver: async () => ({ approved: true, by: "t" }), authRoot: r });
+      await bus.connect([spec]);
+      const file = join(r, readdirSync(r).find((n) => n.endsWith(".json"))!);
+      const stored = JSON.parse(readFileSync(file, "utf8")) as { tokensSavedAt: string };
+      stored.tokensSavedAt = new Date(Date.now() - 2 * 3600_000).toISOString();
+      writeFileSync(file, JSON.stringify(stored));
+      // The agent loop sends every call of a step at once; each one sees the stale token.
+      const [a, b] = await Promise.all([bus.call("gmail.whoami", {}), bus.call("gmail.whoami", {})]);
+      expect(JSON.stringify(a)).toContain("token=fresh-1");
+      expect(JSON.stringify(b)).toContain("token=fresh-1");
+      expect(issuer.refreshes()).toBe(1);
+      expect(readRun(recorder.path).filter((e) => e.event.type === "tools.renew")).toHaveLength(1);
       await bus.close();
     } finally {
       await issuer.close();

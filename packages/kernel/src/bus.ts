@@ -172,8 +172,22 @@ export class ToolBus {
     return !isRemoteServer(c.spec) && c.spec.auth === "oauth";
   }
 
-  /** Renew the sign-in token and restart the server with it. The tools are the same; the token isn't. */
-  private async renew(server: string, reason: string): Promise<Connected> {
+  /** Renewals in flight, one per server: the calls of one step go out together, and each would otherwise restart the server. */
+  private readonly renewing = new Map<string, Promise<Connected>>();
+
+  /**
+   * Renew the sign-in token and restart the server with it. The tools are the same; the token isn't.
+   * Callers that arrive while one renewal is under way wait for that one instead of starting their own.
+   */
+  private renew(server: string, reason: string): Promise<Connected> {
+    const pending = this.renewing.get(server);
+    if (pending) return pending;
+    const p = this.renewNow(server, reason).finally(() => this.renewing.delete(server));
+    this.renewing.set(server, p);
+    return p;
+  }
+
+  private async renewNow(server: string, reason: string): Promise<Connected> {
     const old = this.servers.get(server)!;
     if (!this.signsIn(old)) return old;
     this.opts.recorder.record({ type: "tools.renew", server, reason });
