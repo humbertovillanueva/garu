@@ -144,25 +144,28 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 - Commit messages: a short title, then a plain paragraph on what changed and why. Written as
   Humberto would write them; match the style in `git log` (e.g. "review card: … ; …").
 
-## Status (2026-10-10)
+## Status (2026-10-27)
 
-Built: kernel, CLI, control room, Android debug app, iPhone app in the Simulator (2026-10-11), login service, catch-up, brand, Owner's Guide,
-launch video v7, onboarding and UI audit fixes (2026-10-10), the always-on fixes from the full
-audit and its security items, Spanish end to end: app, terminal, Tomay and Bea, website and guides
-(2026-10-12). Open: the rest of that audit, in `docs/audit-2026-10-12.md`.
+Built and running: kernel, CLI, control room, Android app (debug and the signed Play build), iPhone app
+in the Simulator, login service with catch-up, the Google agents, Nudge, the public demos, brand, Owner's
+Guide, launch video v7, Spanish end to end. Open: the rest of `docs/audit-2026-10-12.md`.
 
-Not launching yet. Order: understand → real app → Play closed test → launch → beyond. The real-app
-list is done in code (2026-10-12: crash screen, dark and light theme, accessibility pass, release
-signing wired, support-email slot in `packages/ui/src/lib/support.ts`, privacy page current). The
-Play developer account is verified and the app exists in the console with its declarations; support is
-`support@garuagents.com` (a Namecheap forwarder to his Gmail; the site and the mail share the domain). The closed-test release
-(build 4, with the Try-the-demo button) is published on the Alpha track since 2026-10-15; the tester list
-("Garu Testers", family, 14 addresses) and the feedback address went to review the same day. Opt-in link:
-https://play.google.com/apps/testing/io.github.humbertovillanueva.garu (works once that review clears). The upload
-key is `~/garu-upload.jks` (`docs/android.md`). Twelve testers were opted in on 2026-10-16, so the fourteen days end on 2026-10-30 if nobody
-leaves; then apply for production on the dashboard. The listing is `docs/launch/play-store.md`. Then marketing (posts;
-the video is done). Roadmap after that: push via a relay, hosted Garu, `garu install` registry, iPhone
-on a real device and TestFlight, two-way Slack.
+Play: build 4 is on the closed-testing track "Alpha" since 2026-10-15 with the Spanish listing and
+Spanish screenshots; the opt-in link is https://play.google.com/apps/testing/io.github.humbertovillanueva.garu;
+twelve family testers have been opted in since 2026-10-16, so "Apply for production" opens on
+2026-10-30. The draft answers are in `docs/launch/play-store.md` ("Applying for production"), with
+three facts marked [confirm] that only Humberto knows. The upload key is `~/garu-upload.jks`
+(`docs/android.md`). After approval: promote to production, then the launch posts in `docs/launch/`
+(drafts; "A Policy Kernel, Not a Prompt" is already on dev.to). Roadmap after that: push notifications
+via a relay, hosted Garu, `garu install` registry, iPhone on a real device and TestFlight, two-way Slack.
+
+Weekly chore: the Google OAuth app stays in Testing (`docs/google.md` says why), so the three Google
+sign-ins (Tomay's calendar and Gmail, Bea's Gmail) die every seven days; the home screen warns from
+day six and `garu auth <Garufile> <server>` renews one in place. Last renewed Sunday 2026-10-25 night.
+
+His Mac is a laptop that sleeps after a minute idle, on power too, and spends nights on battery
+napping every quarter hour; runs that fire in a nap are late or cut off, and catch-up, the awake hold
+and the read-only retry are the seatbelts. He declined changing the setting; don't re-ask.
 
 ## The public demo
 
