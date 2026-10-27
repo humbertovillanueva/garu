@@ -180,7 +180,7 @@ program
           root: opts.inboxRoot,
           timeoutMs: timeoutMin * 60_000,
           onRequest: async (r) => {
-            stderr.write(`\n┌ ${t("APPROVAL NEEDED  (expires {time} UTC)", { time: r.expiresAt.slice(11, 16) })}\n│ ${formatRequest(r)}\n└ garu approve ${r.id}   ·   garu deny ${r.id}\n\n`);
+            stderr.write(`\n┌ ${t("APPROVAL NEEDED  (expires {time})", { time: localTime(r.expiresAt, { seconds: false }) })}\n│ ${formatRequest(r)}\n└ garu approve ${r.id}   ·   garu deny ${r.id}\n\n`);
             if (opts.notify) await notify(opts.notify, r);
           },
         }).approver();
@@ -466,8 +466,8 @@ program
       return;
     }
     for (const r of rows) {
-      const state = r.decision ? (r.decision.approved ? t("approved by {who}", { who: r.decision.by }) : t("denied by {who}", { who: r.decision.by })) : t("pending, expires {time} UTC", { time: r.expiresAt.slice(11, 16) });
-      stdout.write(`${formatRequest(r)}\n    ${r.createdAt.slice(0, 19).replace("T", " ")}  ·  ${state}\n`);
+      const state = r.decision ? (r.decision.approved ? t("approved by {who}", { who: r.decision.by }) : t("denied by {who}", { who: r.decision.by })) : t("pending, expires {time}", { time: localTime(r.expiresAt, { seconds: false }) });
+      stdout.write(`${formatRequest(r)}\n    ${localTime(r.createdAt, { date: true, seconds: false })}  ·  ${state}\n`);
     }
   });
 
@@ -487,7 +487,7 @@ for (const [cmd, approved] of [["approve", true], ["deny", false]] as const) {
       stdout.write(`${approved ? `✔ ${t("approved {tool} for {agent} — the run will continue", { tool: r.tool, agent: r.agent })}` : `✖ ${t("denied {tool} for {agent} — the run will continue", { tool: r.tool, agent: r.agent })}`}\n`);
       if (approved && opts.for) {
         const g = new GrantStore(DEFAULT_GRANTS_PATH).create({ agent: r.agent, tool: r.tool, scope: scopeFor(r.args), durationMs: parseDuration(opts.for), createdBy: opts.as });
-        stdout.write(`  ${t("grant {id}: {what} until {time} UTC", { id: g.id, what: describeGrant(g), time: g.expiresAt.slice(0, 16).replace("T", " ") })}\n`);
+        stdout.write(`  ${t("grant {id}: {what} until {time}", { id: g.id, what: describeGrant(g), time: localTime(g.expiresAt, { date: true, seconds: false }) })}\n`);
       }
     } catch (e) {
       fail((e as Error).message);
@@ -505,7 +505,7 @@ grantsCmd
     const rows = opts.all ? store.all() : store.active();
     if (!rows.length) return void stdout.write((opts.all ? t("no grants") : t("no active grants")) + "\n");
     for (const g of rows) {
-      const state = g.revokedAt ? t("revoked") : Date.parse(g.expiresAt) < Date.now() ? t("expired") : t("until {time} UTC", { time: g.expiresAt.slice(0, 16).replace("T", " ") });
+      const state = g.revokedAt ? t("revoked") : Date.parse(g.expiresAt) < Date.now() ? t("expired") : t("until {time}", { time: localTime(g.expiresAt, { date: true, seconds: false }) });
       stdout.write(`${g.id}  ${describeGrant(g)}  · ${state} · ${t("used {n}×", { n: g.uses })}\n`);
     }
   });

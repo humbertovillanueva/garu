@@ -133,7 +133,9 @@ export function withGrants(inner: Approver, grants: GrantStore): Approver {
     const g = grants.find(ctx.agent, req);
     if (g) {
       grants.use(g.id);
-      return { approved: true, by: `grant ${g.id} (${g.createdBy}, until ${g.expiresAt.slice(0, 16).replace("T", " ")})` };
+      // No clock in here: the grant's expiry is its own field, and a UTC stamp in a recorded sentence
+      // would be shown as written wherever the decision is read.
+      return { approved: true, by: `grant ${g.id} (${g.createdBy})` };
     }
     return inner(req, decision, ctx);
   };

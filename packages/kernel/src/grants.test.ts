@@ -47,7 +47,8 @@ describe("GrantStore", () => {
     s.create({ agent: "heartbeat", tool: "fs.write_file", durationMs: 60_000, createdBy: "humberto" }); // unscoped
     const r = await approver(req, decision, ctx);
     expect(r.approved).toBe(true);
-    expect(r.by).toMatch(/^grant [a-f0-9]{6} \(humberto, until /);
+    expect(r.by).toMatch(/^grant [a-f0-9]{6} \(humberto\)$/);
+    expect(r.by).not.toMatch(/\d{4}-\d{2}-\d{2}|UTC/); // the expiry is the grant's own field, not a clock in a sentence
     expect(humanCalls).toBe(1);
   });
 
