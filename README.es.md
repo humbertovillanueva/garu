@@ -218,7 +218,7 @@ Garu es la capa debajo de todo eso: *systemd para tus agentes*. Corre en tu lapt
 
 ## Estado y hoja de ruta
 
-Garu tiene una semana de vida y ya ejecuta los agentes del autor todos los días. Espera bordes sin pulir. Lo que sigue, en orden:
+Garu tiene tres semanas de vida y ya ejecuta los agentes del autor todos los días. Espera bordes sin pulir. Lo que sigue, en orden:
 
 1. **`garu install <url>`**: un registro de Garufiles que puedes instalar, bifurcar y publicar.
 2. **Garu alojado:** agentes que siguen corriendo con la laptop cerrada, aprobar con un toque desde donde sea, pensado para la UE de forma predeterminada.

@@ -218,7 +218,7 @@ Garu is the layer underneath all of that: *systemd for your agents*. It runs on 
 
 ## Status and roadmap
 
-Garu is a week old and already runs the author's own agents every day. Expect sharp edges. What's next, in order:
+Garu is three weeks old and already runs the author's own agents every day. Expect sharp edges. What's next, in order:
 
 1. **`garu install <url>`**: a registry of Garufiles you can install, fork and publish.
 2. **Hosted Garu:** agents that keep running when your laptop is closed, tap-to-approve from anywhere, EU-friendly by default.

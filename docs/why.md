@@ -70,7 +70,7 @@ The sentence that captures all of it: everyone else is building the agent; Garu 
 
 ## What we've proven so far
 
-Not slides; runs. Tomay reads the calendar every weekday at 7 and writes a prep note for each meeting from recent email with the people in it; it can only read, so it never pauses; its first run cost $0.0013. Bea files the last day's mail under four labels at 8 and drafts replies that wait for a tap; Garu's Gmail server has no send tool, so she can't send even if a rule were wrong. Her first runs on real mail are why she files in batches now: seven threads, nine turns, $0.004. Rook reads GitHub's hosted MCP server, is allowed 3 of its 46 tools and only for one repository, and every Monday morning logs stars, forks, issues and PRs, posting only when something changed. Atlas reads a Linear workspace over OAuth, lists the backlog, and files an issue when asked, with the issue shown in full before it's created. Local models through Ollama run the examples for nothing. Docker sandboxing runs tool servers with the network off. The free Gemini tier runs all of it. Twenty-eight test files and 230 tests cover the kernel, the inbox, grants, suggestions, the scheduler, remote servers, OAuth, the Google server and the web tools.
+Not slides; runs. Tomay reads the calendar every weekday at 7 and writes a prep note for each meeting from recent email with the people in it; it can only read, so it never pauses; its first run cost $0.0013. Bea files the last day's mail under four labels at 8 and drafts replies that wait for a tap; Garu's Gmail server has no send tool, so she can't send even if a rule were wrong. Her first runs on real mail are why she files in batches now: seven threads, nine turns, $0.004. Rook reads GitHub's hosted MCP server, is allowed 3 of its 46 tools and only for one repository, and every Monday morning logs stars, forks, issues and PRs, posting only when something changed. Atlas reads a Linear workspace over OAuth, lists the backlog, and files an issue when asked, with the issue shown in full before it's created. Local models through Ollama run the examples for nothing. Docker sandboxing runs tool servers with the network off. The free Gemini tier runs all of it. Thirty-two test files and 265 tests cover the kernel, the inbox, grants, suggestions, the scheduler, remote servers, OAuth, the Google server and the web tools.
 
 ## The hard questions, answered honestly
 
@@ -84,7 +84,7 @@ Not slides; runs. Tomay reads the calendar every weekday at 7 and writes a prep 
 
 *Who can reach the control room?* It listens on localhost, and a browser on the same computer is let in as you; `--require-login` turns that off on a shared machine. Everything else needs the sign-in token in `.garu/ui-token`: a phone gets it by scanning the pairing code (it becomes a cookie), and the apps send it as a bearer header. Over Tailscale, only your own devices can resolve the address at all. Binding to another address still prints a warning, because the token is then the only lock on your network.
 
-*Is a week old enough to trust?* Trust the design, not the age. The design is the smallest thing that answers the overnight question, and every part of it is readable: a YAML file, a JSONL log, a few thousand lines of TypeScript.
+*Is three weeks old enough to trust?* Trust the design, not the age. The design is the smallest thing that answers the overnight question, and every part of it is readable: a YAML file, a JSONL log, a few thousand lines of TypeScript.
 
 ## Vocabulary
 
