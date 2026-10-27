@@ -1,4 +1,9 @@
 @import "tailwindcss";
+/* The two typefaces ship with the page (OFL, from the packages): nothing is fetched from a font service,
+   and a phone on Tailscale alone gets the same type as the desktop. Inter with its optical-size axis; the mono in 400 and 500. */
+@import "@fontsource-variable/inter/opsz.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
 
 /* Garu control room — black and white, data in monospace, colour only where it means something: agents, and status. */
 @theme {
@@ -16,7 +21,7 @@
   --color-ask: #d9b24c;
   --color-bad: #ef5350;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
