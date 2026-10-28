@@ -340,6 +340,46 @@ triggers:
     expect(runs).toBe(2);
   });
 
+  it("a run the network cut off after reading is caught up once, labelled catch-up, and not again", async () => {
+    // Tomay's morning: the 7:00 run read the calendar, the computer slept, the provider gave up at 9:07.
+    const m = manualCron();
+    const triggers: string[] = [];
+    const dues: (Date | undefined)[] = [];
+    // What the store would hold: every scheduled run, with whether it ended offline.
+    const runs: { trigger: string; at: Date; offline: boolean }[] = [];
+    let t = local(9, 7, 0);
+    let network = false;
+    const s = new Scheduler({
+      runner: async (a, trigger, dueAt) => {
+        triggers.push(trigger);
+        dues.push(dueAt);
+        const offline = !network;
+        runs.push({ trigger, at: t, offline });
+        if (!offline) return ok(a.garufile.name);
+        t = local(9, 9, 7); // the run hung for two hours before the provider gave up
+        return { ...ok(a.garufile.name), status: "error", output: "no network after 3 read-only steps; will catch up: can't reach the network", turns: 2, offline: true };
+      },
+      cronFactory: m.factory,
+      online: async () => true, // the lookup passed at 7:00; the network went away mid-run
+      catchUp: { lastRunAt: () => runs.filter((r) => !r.offline).at(-1)?.at ?? null, now: () => t, everyMs: 0 },
+    });
+    s.start([brief]);
+    m.tick("0 7 * * 1-5");
+    await new Promise((r) => setTimeout(r, 5));
+    expect(triggers).toEqual(["cron:0 7 * * 1-5"]);
+    expect(s.checkMissed()).toBe(0); // 9:07: paused, not tried again right away
+    t = local(9, 9, 20);
+    network = true;
+    expect(s.checkMissed()).toBe(1);
+    await new Promise((r) => setTimeout(r, 5));
+    expect(triggers).toEqual(["cron:0 7 * * 1-5", "catch-up:0 7 * * 1-5"]);
+    expect(dues[1]?.getTime()).toBe(local(9, 7).getTime()); // told it was due at 7:00
+    t = local(9, 9, 21);
+    expect(s.checkMissed()).toBe(0); // the catch-up counts as the 7:00 run: no third try
+    await s.stop();
+    expect(triggers).toHaveLength(2);
+  });
+
   it("a run started elsewhere (the control room, chat) blocks a cron fire like one of its own", async () => {
     const m = manualCron();
     const events: SchedulerEvent[] = [];
