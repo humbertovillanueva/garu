@@ -105,7 +105,7 @@ export function assertValidCron(pattern: string): void {
  * window with no run started since is fired once with a `catch-up:` trigger.
  */
 export interface CatchUpOptions {
-  /** When this agent's last scheduled run (cron or catch-up, not chat) started; null if never. An attempt that never reached the model (offline) doesn't count. */
+  /** When this agent's last scheduled run (cron or catch-up, not chat) started; null if never. An attempt the network cut off before it changed anything (offline) doesn't count. */
   lastRunAt: (agent: string) => Date | null;
   /** How far back a missed fire still counts. Default 6 hours. */
   windowMs?: number;
@@ -237,8 +237,9 @@ export class Scheduler {
       .runner(a, `${kind}:${cron}`, kind === "catch-up" ? missedAt : undefined)
       .then((result) => {
         this.emit({ type: "run.done", agent: name, result });
-        // The lookup passed but the model never answered (a provider down, a token refresh that couldn't
-        // reach its issuer): the run doesn't count, so without a pause catch-up would try again every minute.
+        // The lookup passed but the network went away before the run changed anything (a provider down, a
+        // token refresh that couldn't reach its issuer, the computer asleep after a few read-only calls):
+        // the run doesn't count, so without a pause catch-up would try again every minute.
         if (result.offline) this.backOff(name, cron);
       })
       .catch((e: unknown) => this.emit({ type: "run.failed", agent: name, error: (e as Error).message }))

@@ -56,7 +56,10 @@ export interface RunResult {
   costUsd: number | null;
   inputTokens: number;
   outputTokens: number;
-  /** The network was down before the model ever answered. The schedule treats such a run as not run. */
+  /**
+   * The network went away before the run changed anything out there: no model answer yet, or only
+   * calls to tools their servers mark read-only. The schedule treats such a run as not run and catches up.
+   */
   offline?: boolean;
   /** The run stopped because the model's daily quota is used up. */
   quota?: ModelQuota;
@@ -121,7 +124,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
   let completed = 0;
   // A priced model that reports no usage can't be metered: the run says so instead of claiming a price.
   let unmetered = false;
-  // The network was down before the model ever answered: not a run, as far as the schedule is concerned.
+  // The network went away before anything out there changed: not a run, as far as the schedule is concerned.
   let offline = false;
   let quota: ModelQuota | undefined;
 
@@ -246,10 +249,18 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
   } catch (e) {
     status = "error";
     const err = e as Error;
-    offline = completed === 0 && isConnectionError(err);
+    // The network went away (the computer slept). When every call that went out was to a tool its
+    // server marks read-only, nothing out there changed and the run can be tried again from the start:
+    // it is "offline", the schedule doesn't count it and catches up. One call to a tool without that
+    // mark, and the run stands as an error: a brief written or a message posted must not happen twice.
+    const sent = bus.sentSoFar();
+    offline = isConnectionError(err) && sent.allReadOnly;
     if (err instanceof ModelQuotaError) quota = { model: err.model, retryAt: err.retryAt, ...(err.limit !== undefined ? { limit: err.limit } : {}) };
     recorder.record({ type: "error", message: err.message, ...(err.stack ? { stack: err.stack } : {}) });
-    output = offline ? `no network: ${err.message}` : err.message;
+    const scheduled = /^(cron|catch-up):/.test(trigger);
+    output = !offline ? err.message
+      : sent.calls === 0 ? `no network: ${err.message}`
+      : `no network after ${sent.calls} read-only step${sent.calls === 1 ? "" : "s"}${scheduled ? "; will catch up" : ""}: ${err.message}`;
   } finally {
     release();
     await bus.close();

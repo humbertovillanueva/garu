@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { runAgent } from "./agent.js";
 import { parseGarufile } from "./garufile.js";
 import { FakeProvider } from "./providers/fake.js";
+import type { CompleteRequest, CompleteResponse } from "./provider.js";
 import { readRun } from "./recorder.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -23,12 +24,28 @@ tools:
 policy:
   - tool: echo.echo
     action: allow
+  - tool: echo.peek
+    action: allow
   - tool: echo.danger
     action: block
     reason: no deleting
   - tool: "*"
     action: ask
 `);
+
+/** Answers the script, then loses the network the way the Gemini provider reports it after the computer slept. */
+function sleepyProvider(script: CompleteResponse[]) {
+  const fake = new FakeProvider(script);
+  let left = script.length;
+  return {
+    id: "fake",
+    calls: fake.calls,
+    complete: async (req: CompleteRequest) => {
+      if (left-- > 0) return fake.complete(req);
+      throw new Error("gemini gemini-3.5-flash-lite: can't reach the network (The operation was aborted due to timeout)");
+    },
+  };
+}
 
 describe("runAgent", () => {
   it("tells the model its owner and language, and hands it the date in that language", async () => {
@@ -273,6 +290,43 @@ budget:
     const end = readRun(res.logPath).find((e) => e.event.type === "run.end")!.event;
     expect(end).toMatchObject({ type: "run.end", status: "error", offline: true });
   });
+
+  it("a run the network cut off after read-only steps only is offline too: nothing changed, so it can be caught up", async () => {
+    // Tomay's morning of 2026-10-28: two turns, three calls that only read, then the computer slept through the third model call.
+    const provider = sleepyProvider([
+      { stopReason: "tool_use", content: [{ type: "tool_use", id: "a", name: "echo__peek", input: {} }, { type: "tool_use", id: "b", name: "echo__peek", input: {} }] },
+      { stopReason: "tool_use", content: [{ type: "tool_use", id: "c", name: "echo__peek", input: {} }] },
+    ]);
+    const res = await runAgent({ garufile, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider, approver: async () => ({ approved: false, by: "t" }), trigger: "cron:0 7 * * 1-5" });
+    expect(res).toMatchObject({ status: "error", offline: true, turns: 2 });
+    expect(res.output).toBe("no network after 3 read-only steps; will catch up: gemini gemini-3.5-flash-lite: can't reach the network (The operation was aborted due to timeout)");
+    const events = readRun(res.logPath).map((e) => e.event);
+    expect(events.filter((e) => e.type === "tool.result" && e.ok)).toHaveLength(3);
+    expect(events.at(-1)).toMatchObject({ type: "run.end", status: "error", offline: true, summary: expect.stringMatching(/^no network after 3 read-only steps; will catch up/) });
+  }, 30_000);
+
+  it("a run the network cut off after a call that may have written stands as an error: never replayed", async () => {
+    // echo.echo carries no readOnlyHint, so as far as Garu knows it changed something.
+    const provider = sleepyProvider([
+      { stopReason: "tool_use", content: [{ type: "tool_use", id: "a", name: "echo__peek", input: {} }, { type: "tool_use", id: "b", name: "echo__echo", input: { text: "written" } }] },
+    ]);
+    const res = await runAgent({ garufile, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider, approver: async () => ({ approved: false, by: "t" }), trigger: "cron:0 7 * * 1-5" });
+    expect(res).toMatchObject({ status: "error", turns: 1 });
+    expect(res.offline).toBeUndefined();
+    expect(res.output).toBe("gemini gemini-3.5-flash-lite: can't reach the network (The operation was aborted due to timeout)");
+    expect(readRun(res.logPath).at(-1)!.event).not.toHaveProperty("offline");
+  }, 30_000);
+
+  it("a call that never went out (blocked, declined, unknown) changes nothing; a run by hand says no catch-up", async () => {
+    const provider = sleepyProvider([
+      { stopReason: "tool_use", content: [{ type: "tool_use", id: "a", name: "echo__danger", input: { target: "prod" } }, { type: "tool_use", id: "b", name: "echo__add", input: { a: 1, b: 2 } }] },
+      { stopReason: "tool_use", content: [{ type: "tool_use", id: "c", name: "echo__peek", input: {} }] },
+    ]);
+    const res = await runAgent({ garufile, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider, approver: async () => ({ approved: false, by: "t" }) });
+    expect(res).toMatchObject({ status: "error", offline: true, turns: 2 });
+    // One step went out, and "manual" has no schedule to catch it up.
+    expect(res.output).toMatch(/^no network after 1 read-only step: gemini/);
+  }, 30_000);
 
   it("a turn with no words and no tools is an error unless the model really finished", async () => {
     const cut = new FakeProvider([{ stopReason: "max_tokens", content: [], usage: { inputTokens: 10, outputTokens: 0 } }]);

@@ -48,7 +48,7 @@ docs/video/remotion the launch video's source (Remotion 4, React); see "Launch v
 
 ```
 npm install && npm run build          # all workspaces
-npm run typecheck && npm test         # tsc -b, vitest (288 tests); run before every commit
+npm run typecheck && npm test         # tsc -b, vitest (293 tests); run before every commit
 npx svelte-check --workspace packages/ui
 npm run garu -- <cmd>                 # the CLI from the repo (no global install yet)
 npm run garu -- service install|status|logs|restart|uninstall   # Garu as a login service (launchd)
@@ -118,7 +118,10 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   English one (discovery ignores it; `docs/google.md` says how to switch; the Spanish demo runs on them). Spanish no-reply address words live
   in `mcp-google/src/google.ts` and in Bea's block rule, both editions.
 - Scheduler catch-up: a cron fire missed in the last 6 h (machine asleep/off) runs once on start,
-  trigger `catch-up:<cron>`. Don't double-fire; don't run catch-ups in parallel.
+  trigger `catch-up:<cron>`. Don't double-fire; don't run catch-ups in parallel. A run the network cut
+  off (the Mac slept) before any call to a tool its server doesn't mark read-only (MCP `readOnlyHint`;
+  `bus.sentSoFar()`) ends `offline`: not counted as the agent's run, backed off 10 min, caught up.
+  One call to a tool without the mark and the run stands as an error: never replayed.
 - On macOS a run holds the Mac out of idle sleep while it works (`kernel/src/awake.ts`, caffeinate), and a
   local server that signs in gets its access token renewed mid-run when it's about to run out (`bus.ts`).
 - UI: black and white, no orange, in a dark and a light theme: every color is a token in `app.css`
