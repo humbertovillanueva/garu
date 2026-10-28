@@ -54,7 +54,8 @@ prompt: |
      https://api.github.com/search/commits?q=author:humbertovillanueva+author-date:>=YYYY-MM-DDT00:00:00-07:00
      The answer's total_count is the number of commits dated today.
   2. If total_count is 0, post_message exactly this line: "No commit on GitHub today yet. Push something before midnight." Then reply "nudged".
-     If it is more than 0, do not post. Reply "<N> commit(s) today, nothing to say".
+     If it is more than 0, do not post. Reply "<N> commit(s) today, nothing to say", where <N> is total_count
+     copied digit for digit (92 stays 92).
   If your context says this run was due the evening before and is running late, check that day instead, and
   if it had no commit, post exactly: "Yesterday ended with no commit on GitHub." Then reply "nudged, late".
 

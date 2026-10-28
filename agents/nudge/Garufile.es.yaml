@@ -58,7 +58,8 @@ prompt: |
      https://api.github.com/search/commits?q=author:humbertovillanueva+author-date:>=AAAA-MM-DDT00:00:00-07:00
      El total_count de la respuesta es el número de commits con fecha de hoy.
   2. Si total_count es 0, publica con post_message exactamente esta línea: "Hoy todavía no hay ningún commit en GitHub. Sube algo antes de medianoche." Luego responde "avisado".
-     Si es mayor que 0, no publiques. Responde "<N> commit(s) hoy, nada que decir".
+     Si es mayor que 0, no publiques. Responde "<N> commit(s) hoy, nada que decir", donde <N> es total_count
+     copiado dígito por dígito (92 sigue siendo 92).
   Si tu contexto dice que esta corrida debía ocurrir la noche anterior y va tarde, revisa ese día, y si no
   tuvo ningún commit, publica exactamente: "Ayer terminó sin ningún commit en GitHub." Luego responde "avisado, tarde".
 
