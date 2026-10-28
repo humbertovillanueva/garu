@@ -48,7 +48,7 @@ docs/video/remotion the launch video's source (Remotion 4, React); see "Launch v
 
 ```
 npm install && npm run build          # all workspaces
-npm run typecheck && npm test         # tsc -b, vitest (283 tests); run before every commit
+npm run typecheck && npm test         # tsc -b, vitest (288 tests); run before every commit
 npx svelte-check --workspace packages/ui
 npm run garu -- <cmd>                 # the CLI from the repo (no global install yet)
 npm run garu -- service install|status|logs|restart|uninstall   # Garu as a login service (launchd)
@@ -149,16 +149,17 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 Built and running: kernel, CLI, control room, Android app (debug and the signed Play build), iPhone app
 in the Simulator, login service with catch-up, the Google agents, Nudge, the public demos, brand, Owner's
 Guide, launch video v8, Spanish end to end. Both audits are done (`docs/audit-2026-10-12.md`,
-`docs/audit-2026-10-27.md`) except the two decisions at the end of the second: whether the v6 videos
-and the score WAV leave the tree, and the iPhone scanner (a native plugin or a URL scheme, after launch).
-On 2026-10-27 Tailscale was found stopped on the Mac, which takes both demos and the phone offline:
+`docs/audit-2026-10-27.md`), including their last two decisions: the v6 videos and the WAV left the
+tree, and the iPhone pairs by scanning a `garu://pair` code with its own camera (the pairing panel's
+"Code is for" switch; `docs/ios.md`). No Apple developer account yet, so the iPhone app stays in the
+Simulator; the launch is Android only. On 2026-10-27 Tailscale was found stopped on the Mac, which takes both demos and the phone offline:
 check its menu-bar icon before the Play application and before posting.
 
 Play: build 4 is on the closed-testing track "Alpha" since 2026-10-15 with the Spanish listing and
 Spanish screenshots; the opt-in link is https://play.google.com/apps/testing/io.github.humbertovillanueva.garu;
 twelve family testers have been opted in since 2026-10-16, so "Apply for production" opens on
-2026-10-30. The draft answers are in `docs/launch/play-store.md` ("Applying for production"), with
-three facts marked [confirm] that only Humberto knows. The upload key is `~/garu-upload.jks`
+2026-10-30. The answers are in `docs/launch/play-store.md` ("Applying for production"): the family
+testers installed and opened the app and no more, said as it is. The upload key is `~/garu-upload.jks`
 (`docs/android.md`). After approval: promote to production, then the launch posts in `docs/launch/`
 (drafts; "A Policy Kernel, Not a Prompt" is already on dev.to). Roadmap after that: push notifications
 via a relay, hosted Garu, `garu install` registry, iPhone on a real device and TestFlight, two-way Slack.
