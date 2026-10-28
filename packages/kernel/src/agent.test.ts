@@ -110,7 +110,7 @@ describe("runAgent", () => {
     expect(res.turns).toBe(2);
 
     // the model saw the tools under provider-safe names — minus echo.danger, which policy blocks unconditionally
-    expect(provider.calls[0]?.tools.map((t) => t.name).sort()).toEqual(["echo__add", "echo__cut_read", "echo__cut_write", "echo__echo", "echo__fail"]);
+    expect(provider.calls[0]?.tools.map((t) => t.name).sort()).toEqual(["echo__add", "echo__cut_read", "echo__cut_write", "echo__echo", "echo__fail", "echo__peek"]);
     const offered = readRun(res.logPath).find((e) => e.event.type === "tools.offered")!.event;
     expect(offered).toMatchObject({ type: "tools.offered", hidden: ["echo.danger"] });
 

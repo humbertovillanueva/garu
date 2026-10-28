@@ -40,7 +40,7 @@ describe("ToolBus (real MCP server over stdio)", () => {
 
   it("discovers tools under <server>.<tool>", () => {
     const names = bus.listTools().map((t) => t.qualified).sort();
-    expect(names).toEqual(["echo.add", "echo.cut_read", "echo.cut_write", "echo.danger", "echo.echo", "echo.fail"]);
+    expect(names).toEqual(["echo.add", "echo.cut_read", "echo.cut_write", "echo.danger", "echo.echo", "echo.fail", "echo.peek"]);
   });
 
   it("allow → calls the server and returns content", async () => {
@@ -102,6 +102,29 @@ describe("ToolBus (real MCP server over stdio)", () => {
     expect(write.status).toBe("error");
     expect((write as { error: string }).error).toMatch(/aborted .*cut off after \d+ s/);
   });
+});
+
+describe("ToolBus keeps count of what went out", () => {
+  it("counts the calls that reached a server, and whether all of them went to read-only tools", async () => {
+    const rec = new Recorder({ root: mkdtempSync(join(tmpdir(), "garu-")), agent: "count" });
+    const bus = new ToolBus({
+      policy: new PolicyEngine([{ tool: "echo.danger", action: "block", reason: "never" }, { tool: "echo.add", action: "ask" }, { tool: "*", action: "allow" }]),
+      recorder: rec,
+      approver: async () => ({ approved: false, by: "test" }),
+    });
+    await bus.connect([{ name: "echo", command: "node", args: [serverPath], env: {} }]);
+    expect(bus.sentSoFar()).toEqual({ calls: 0, allReadOnly: true });
+    await bus.call("echo.danger", { target: "prod" }); // blocked
+    await bus.call("echo.add", { a: 1, b: 2 }); // declined
+    await bus.call("echo.nope", {}); // no such tool
+    expect(bus.sentSoFar()).toEqual({ calls: 0, allReadOnly: true }); // none of them went out
+    await bus.call("echo.peek", {});
+    await bus.call("echo.cut_read", {}); // cut off and tried again: one step, not two
+    expect(bus.sentSoFar()).toEqual({ calls: 2, allReadOnly: true });
+    await bus.call("echo.fail", {}); // went out, failed, and carries no read-only mark: it may have changed something
+    expect(bus.sentSoFar()).toEqual({ calls: 3, allReadOnly: false });
+    await bus.close();
+  }, 30_000);
 });
 
 describe("ToolBus retries a server that dies while starting", () => {

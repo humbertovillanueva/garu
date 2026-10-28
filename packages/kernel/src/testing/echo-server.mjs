@@ -33,6 +33,8 @@ server.registerTool(
 const cuts = { cut_read: 0, cut_write: 0 };
 const cutOnce = (name) => async () =>
   cuts[name]++ === 0 ? { isError: true, content: [{ type: "text", text: "This operation was aborted" }] } : { content: [{ type: "text", text: "fine" }] };
+// A tool that only looks, and says so (readOnlyHint): a run cut off after calls like this one has changed nothing.
+server.registerTool("peek", { description: "Only looks", inputSchema: {}, annotations: { readOnlyHint: true } }, async () => ({ content: [{ type: "text", text: "looked" }] }));
 server.registerTool("cut_read", { description: "Cut off once, then answers", inputSchema: {}, annotations: { readOnlyHint: true } }, cutOnce("cut_read"));
 server.registerTool("cut_write", { description: "Cut off once, then answers; a write", inputSchema: {} }, cutOnce("cut_write"));
 

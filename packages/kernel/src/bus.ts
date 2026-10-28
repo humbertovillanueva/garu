@@ -77,6 +77,9 @@ export class ToolBus {
   private readonly servers = new Map<string, Connected>();
   private tools: BusTool[] = [];
   private authRoot = "";
+  /** Calls that went out to a server so far, and how many of them went to a tool its server does not mark read-only. */
+  private sentCalls = 0;
+  private sentWrites = 0;
 
   constructor(private readonly opts: BusOptions) {}
 
@@ -226,6 +229,17 @@ export class ToolBus {
     return this.tools;
   }
 
+  /**
+   * What has gone out to the servers so far: how many calls, and whether every one of them went to a
+   * tool its server marks read-only (MCP readOnlyHint). A tool without the mark counts as one that may
+   * have changed something, whatever its name suggests. A call the policy blocked, a person declined or
+   * that named no tool never went out, so it is not counted; a call that went out and then failed still
+   * counts, since a write cut off by a timeout may well have landed.
+   */
+  sentSoFar(): { calls: number; allReadOnly: boolean } {
+    return { calls: this.sentCalls, allReadOnly: this.sentWrites === 0 };
+  }
+
   /** Split "<server>.<tool>" back into its parts. Tool names may contain dots; server names may not. */
   resolve(qualified: string): { server: string; tool: string } | undefined {
     const dot = qualified.indexOf(".");
@@ -284,6 +298,8 @@ export class ToolBus {
       if (this.signsIn(c) && signInFor(c.spec, this.authRoot).expiresSoon()) c = await this.renew(target.server, "the access token was about to run out");
       const callOnce = (conn: Connected) => conn.client.callTool({ name: target.tool, arguments: args }, undefined, { timeout: timeoutMs });
       let result: Awaited<ReturnType<typeof callOnce>>;
+      this.sentCalls++;
+      if (!readOnly) this.sentWrites++;
       try {
         result = await callOnce(c);
       } catch (e) {
