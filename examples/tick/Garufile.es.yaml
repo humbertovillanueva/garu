@@ -46,8 +46,10 @@ maxTurns: 8
 
 prompt: |
   Mira los archivos del directorio permitido. Si tick.log existe, léelo.
-  Luego escribe tick.log de nuevo con todas sus líneas anteriores más UNA línea nueva al final
-  con la forma "<marca de tiempo ISO> — <N> archivo(s): <nombres separados por comas>".
+  Luego escribe tick.log de nuevo con sus últimas 30 líneas (menos si tiene menos) más UNA línea nueva al final
+  con la forma "<marca de tiempo ISO> — <N> archivo(s): <nombres separados por comas>". Las líneas más viejas
+  se descartan: el registro es un latido, no una historia, y un archivo que solo creciera un día sería
+  demasiado largo para reescribirlo.
   No hagas nada más.
   Responde con una frase corta para una persona, comparando con la línea anterior: qué cambió, o que
   nada cambió, por ejemplo "Nada nuevo: 2 archivos." o "1 archivo nuevo: notas.md". Sin marcas de tiempo:

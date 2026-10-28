@@ -42,8 +42,9 @@ maxTurns: 8
 
 prompt: |
   Look at the files in the allowed directory. If tick.log exists, read it.
-  Then write tick.log back with all its previous lines plus ONE new line at the end
-  in the form "<ISO timestamp> — <N> file(s): <comma-separated names>".
+  Then write tick.log back with its last 30 lines (fewer if it has fewer) plus ONE new line at the end
+  in the form "<ISO timestamp> — <N> file(s): <comma-separated names>". Older lines are dropped: the
+  log is a heartbeat, not a history, and a file that only grew would one day be too long to write back.
   Do nothing else.
   Reply with one short sentence for a person, comparing with the previous line: what changed, or that
   nothing did, e.g. "Nothing new: 2 files." or "1 new file: notes.md." No timestamps: the control room
