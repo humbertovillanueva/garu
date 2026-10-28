@@ -227,30 +227,32 @@ feedback came in, what changed because of it), so keep notes of both.
 
 Google's form (Dashboard → Apply for production, from 2026-10-30) has three parts;
 the questions are in the Play Console help article "App testing requirements for
-new personal developer accounts". Answers below are true as of the 26th; the
-lines marked [confirm] need Humberto's word before they go in.
+new personal developer accounts". Answers below are true as of the 27th and say
+what happened, which was not much: family testers installed the app and opened
+it, and that is the honest answer.
 
 **Part 1 — About your closed test**
 
 - *How easy was it to recruit testers?* Easy. Family and friends, asked in one
   WhatsApp message with the opt-in link and three steps; twelve were opted in
   the same morning the tester list went live (2026-10-16), fifteen on the list.
-- *Did testers use all features? Did usage match production users?* Not all,
-  and no, by design. The app is a companion to Garu on a computer; production
-  users are developers who pair it with their own Garu. The testers were
-  family: three on Android installed it and used "Try the demo", which walks
+- *Did testers use all features? Did usage match production users?* No, and
+  it couldn't. The app is a companion to Garu on a computer; production users
+  are developers who pair it with their own Garu. The testers were family, not
+  developers: those on Android installed the app and opened it, where the first
+  screen offers "Try the demo", a control room with made-up agents that walks
   every screen (home, inbox with a decision to approve or decline, an agent's
-  page and chat, the agents list, cost, pairing) on made-up data in their
-  language; the rest opted in from iPhones and could not install. Nobody paired
-  with a real Garu. [confirm: what the three Android testers tried and said]
-- *Feedback and how it was collected.* WhatsApp messages and screenshots to the
-  developer, plus support@garuagents.com as the listed channel. What came in:
-  the first tester to open the link saw "App not available" because the
-  tester list was still in review (timing, fixed by waiting); a Spanish-speaking
-  tester saw agent descriptions in English, which led to a fully Spanish demo
-  (agents, sample mail, labels) chosen by the phone's language; the Spanish
-  listing showed English screenshots, replaced with Spanish ones on
-  2026-10-19. [confirm: anything else the family said]
+  page and chat, the agents list, cost, pairing) in their language. Nobody
+  paired with a real Garu, and nobody went deeper than that. The developer
+  exercised every screen himself, on his own Garu, throughout the fourteen days.
+- *Feedback and how it was collected.* WhatsApp messages to the developer, plus
+  support@garuagents.com as the listed channel. Little came in, because the
+  testers are not the app's audience: the first to open the link saw "App not
+  available" while the tester list was still in review (timing, fixed by
+  waiting), and that was the one problem reported. The changes made during the
+  test came from the developer's own use: a fully Spanish demo chosen by the
+  phone's language, and Spanish screenshots for the Spanish listing on
+  2026-10-19.
 
 **Part 2 — About your app**
 
@@ -272,8 +274,8 @@ lines marked [confirm] need Humberto's word before they go in.
   a Spanish demo beside the English one, picked by the phone's language; Spanish
   screenshots for the Spanish listing; the listing text and the reviewer
   instructions now say what the demo is and that it is the one thing the app
-  reaches that isn't the user's own. [confirm: whether a build 5 goes out
-  before applying; build 4 already has the demo button]
+  reaches that isn't the user's own. Build 4, the one on the closed track, is
+  the build applied with; no new upload before applying.
 - *How readiness was decided.* Twelve testers opted in for the full fourteen
   days with no crash reports; the app shows a crash screen instead of a blank
   page if anything fails; it has a dark and a light theme, an accessibility
