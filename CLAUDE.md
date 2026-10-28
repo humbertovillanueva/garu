@@ -80,6 +80,9 @@ xcrun simctl install booted /tmp/garu-ios/Build/Products/Debug-iphonesimulator/A
 
 To pair it without showing the token, pipe the link into the simulator's clipboard (`xcrun simctl
 pbcopy booted`) and paste it in the app; empty the clipboard after.
+On Android, `adb shell am start -a android.intent.action.VIEW -d 'garu://pair?base=…\&token=…'` opens the app
+paired, but only with the `&` escaped: the phone's shell parses the line again, and a bare `&` ends the link
+before the token, so the app ignores it without a word (`docs/android.md` has the form).
 
 Garu on Humberto's Mac runs as the login service: after a build or a Garufile schedule change,
 `npm run build && npm run garu -- service restart`. Control room: http://localhost:4000. Phone pairs
