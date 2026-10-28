@@ -94,12 +94,16 @@ export function tokens(n: number): string {
 export function truncate(s: string, n = 90): string {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
+/** A run's status as the screens show it: one the network cut off before it changed anything is "offline", not an error. */
+export function runStatus(r: { status: string; offline?: boolean }): string {
+  return r.offline ? "offline" : r.status;
+}
 export function statusLabel(s: string): string {
-  return ({ ok: t("done"), error: t("error"), running: t("running"), interrupted: t("interrupted"), blocked: t("blocked"), max_turns: t("hit turn limit"), budget_exceeded: t("over budget"), "run.ok": t("done"), "needs-setup": t("needs setup"), waiting: t("waiting for you"), working: t("working"), scheduled: t("scheduled"), sleeping: t("sleeping"), idle: t("idle") } as Record<string, string>)[s] ?? s;
+  return ({ ok: t("done"), error: t("error"), offline: t("no network"), running: t("running"), interrupted: t("interrupted"), blocked: t("blocked"), max_turns: t("hit turn limit"), budget_exceeded: t("over budget"), "run.ok": t("done"), "needs-setup": t("needs setup"), waiting: t("waiting for you"), working: t("working"), scheduled: t("scheduled"), sleeping: t("sleeping"), idle: t("idle") } as Record<string, string>)[s] ?? s;
 }
 
 /** First-person status line, the way a colleague would say it. */
-export function statusLine(a: { status: string; inFlight: { turn: number } | null; pending: number; nextRun: string | null; lastRun: { status: string; startedAt: string } | null; cron: string | null; configured: boolean; needs?: string[]; signIn?: string[] }): string {
+export function statusLine(a: { status: string; inFlight: { turn: number } | null; pending: number; nextRun: string | null; lastRun: { status: string; startedAt: string; offline?: boolean } | null; cron: string | null; configured: boolean; needs?: string[]; signIn?: string[] }): string {
   if (a.status === "waiting") return a.pending === 1 ? t("Waiting for you to approve one action") : t("Waiting for you on {n} actions", { n: a.pending });
   if (a.status === "working") return a.inFlight ? t("Working — turn {turn}", { turn: a.inFlight.turn }) : t("Working");
   if (a.status === "scheduled") return t("Sleeping — next run {until}", { until: until(a.nextRun) });
@@ -112,7 +116,7 @@ export function statusLine(a: { status: string; inFlight: { turn: number } | nul
     return t("Needs setup — {parts}", { parts: parts.join("; ") });
   }
   if (!a.configured) return t("No Garufile found — history only");
-  if (a.lastRun) return t("Idle — last ran {when} ({status})", { when: when(a.lastRun.startedAt), status: statusLabel(a.lastRun.status) });
+  if (a.lastRun) return t("Idle — last ran {when} ({status})", { when: when(a.lastRun.startedAt), status: statusLabel(runStatus(a.lastRun)) });
   if (a.cron) return t("Has a schedule, but Garu isn't running schedules right now");
   return t("Idle — hasn't run yet");
 }

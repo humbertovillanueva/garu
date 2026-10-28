@@ -159,7 +159,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       // The thread is the agent's diary: a chat reply for chat runs, a short entry for everything else.
       if (result) {
         const text = result.output?.trim() || `run ${result.status} with nothing to say`;
-        chat.append(name, { role: "agent", kind: trigger === "chat" ? (result.status === "ok" ? "chat" : "error") : result.status === "ok" ? "run" : "error", text, runId: result.runId, ...(result.quota ? { quota: result.quota } : {}) });
+        // A run the network cut off before it changed anything is a diary entry, not a red one: the schedule runs it again.
+        chat.append(name, { role: "agent", kind: trigger === "chat" ? (result.status === "ok" ? "chat" : "error") : result.status === "ok" || result.offline ? "run" : "error", text, runId: result.runId, ...(result.quota ? { quota: result.quota } : {}) });
       }
       live.delete(name);
       ping();
@@ -602,7 +603,7 @@ export function feed(store: RunStore, inbox: Inbox, limit: number) {
     if (r.endedAt) {
       items.push({
         ts: r.endedAt,
-        kind: `run.${r.status}`,
+        kind: r.offline ? "run.offline" : `run.${r.status}`,
         agent: r.agent,
         runId: r.runId,
         text: r.summary ?? r.status,

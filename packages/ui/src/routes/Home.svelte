@@ -58,7 +58,7 @@
     return out;
   });
   const oneLine = (s: string) => plainTimes(s).replace(/[#*_`>]/g, "").replace(/\s+/g, " ").trim();
-  const kindColor = (k: string) => k === "run.ok" ? "var(--color-ok)" : k.startsWith("run.") ? "var(--color-bad)" : "var(--color-mute)";
+  const kindColor = (k: string) => k === "run.ok" ? "var(--color-ok)" : k === "run.offline" ? "var(--color-mute)" : k.startsWith("run.") ? "var(--color-bad)" : "var(--color-mute)";
 
   // The status line under the greeting, as plain words. A screen reader hears it when it changes, and
   // only then: every refresh recomputes it, and a live region would have read the same sentence each tick.

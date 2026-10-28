@@ -3,7 +3,7 @@
   import { scrollBehavior } from "../lib/a11y.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, humanTime, statusLine, until, duration, cronLabel, triggerLabel, plainTimes } from "../lib/format";
+  import { usd, humanTime, statusLine, runStatus, until, duration, cronLabel, triggerLabel, plainTimes } from "../lib/format";
   import Mark from "../lib/components/Mark.svelte";
   import Status from "../lib/components/Status.svelte";
   import Budget from "../lib/components/Budget.svelte";
@@ -228,7 +228,7 @@
         <div class="panel divide-y divide-line">
           {#each runs.filter((r) => r.runId !== currentRunId).slice(0, showAllRuns ? undefined : RECENT) as r (r.runId)}
             <a href={href("run", r.agent, r.runId)} class="card-hover flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2.5 first:rounded-t-xl last:rounded-b-xl">
-              <Status status={r.status} />
+              <Status status={runStatus(r)} />
               <span class="text-[12.5px] text-fg-2">{humanTime(r.startedAt)}</span>
               <span class="text-[12px] text-mute">{triggerLabel(r.trigger)}</span>
               <span class="min-w-0 flex-1 truncate text-[13px] text-fg-2">{plainTimes(r.summary ?? "")}</span>

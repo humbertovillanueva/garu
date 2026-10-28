@@ -8,7 +8,7 @@
   import { api, live, loader, errorText } from "../lib/api.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, clock, dayLabel, duration, statusLabel, triggerLabel, plainTimes } from "../lib/format";
+  import { usd, clock, dayLabel, duration, statusLabel, runStatus, triggerLabel, plainTimes } from "../lib/format";
   import Status from "../lib/components/Status.svelte";
   import Mark from "../lib/components/Mark.svelte";
   import Skeleton from "../lib/components/Skeleton.svelte";
@@ -47,8 +47,9 @@
       if (!d || d.day !== day) { d = { day, rows: [], cost: 0, count: 0 }; out.push(d); }
       d.cost += r.costUsd; d.count++;
       const last = d.rows.at(-1);
-      if (last && last.agent === r.agent && last.status === r.status) last.runs.push(r);
-      else d.rows.push({ agent: r.agent, status: r.status, runs: [r] });
+      const status = runStatus(r);
+      if (last && last.agent === r.agent && last.status === status) last.runs.push(r);
+      else d.rows.push({ agent: r.agent, status, runs: [r] });
     }
     return out;
   });
@@ -84,7 +85,7 @@
                 <div class="min-w-0 flex-1">
                   <div class="flex items-baseline gap-2 text-[13.5px]">
                     <span class="font-medium">{first.agent}</span>
-                    <Status status={first.status} />
+                    <Status status={row.status} />
                     <span class="ml-auto flex-none text-[12px] text-mute">{clock(first.startedAt)}</span>
                   </div>
                   <div class="truncate text-[12.5px] text-mute">{triggerLabel(first.trigger)}{summary(first) ? ` · ${summary(first)}` : ""}</div>

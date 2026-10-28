@@ -533,6 +533,7 @@ export const es: Record<string, string> = {
   "done": "terminada",
   "error": "error",
   "interrupted": "interrumpida",
+  "no network": "sin red",
   "blocked": "bloqueada",
   "hit turn limit": "límite de turnos",
   "over budget": "sin presupuesto",
@@ -570,6 +571,8 @@ export const es: Record<string, string> = {
   // ---- a run, step by step (timeline, decisions)
   "run {id}": "ejecución {id}",
   "What it said": "Lo que dijo",
+  "No network: the computer was asleep or offline, and nothing was changed.": "Sin red: la computadora estaba dormida o sin conexión, y nada cambió.",
+  "The schedule will run it again once the network is back.": "El horario lo volverá a correr cuando vuelva la red.",
   "How it was made": "Cómo se hizo",
   "{n} steps": "{n} pasos",
   "rate limited": "límite de velocidad",

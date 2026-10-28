@@ -31,7 +31,10 @@
   const end = $derived(events?.find((e) => e.event.type === "run.end"));
   // No end recorded: running only if it's the agent's current run or one waiting on you; otherwise Garu stopped mid-run.
   const live_ = $derived(a?.inFlight?.runId === runId || live.pending.some((p) => p.runId === runId));
-  const status = $derived(end ? (end.event["status"] as string) : live_ ? "running" : "interrupted");
+  // A run the network cut off before it changed anything is "offline": not an error, and the schedule runs it again.
+  const offline = $derived(end?.event["offline"] === true);
+  const status = $derived(end ? (offline ? "offline" : (end.event["status"] as string)) : live_ ? "running" : "interrupted");
+  const scheduled = $derived(/^(cron|catch-up):/.test(String(start?.event["trigger"] ?? "")));
   const cost = $derived.by(() => {
     if (end && end.event["costUsd"] !== undefined) return end.event["costUsd"] as number;
     const last = [...(events ?? [])].reverse().find((e) => e.event.type === "model.turn" && e.event["totalCostUsd"] !== undefined);
@@ -96,7 +99,9 @@
   {:else if events === null}
     {#if error}<LoadError message={error} />{:else}<Skeleton rows={6} h={40} />{/if}
   {:else}
-    {#if status === "error"}
+    {#if status === "offline"}
+      <div class="panel px-4 py-3 text-[14px] text-fg-2" role="status">{t("No network: the computer was asleep or offline, and nothing was changed.")}{#if scheduled}{" "}{t("The schedule will run it again once the network is back.")}{/if}</div>
+    {:else if status === "error"}
       <div class="panel px-4 py-3 text-[14px]" role="alert" style="border-color: color-mix(in oklab, var(--color-bad) 35%, var(--color-line))">{#if quota}{@const q = quota}{t("Gemini's daily limit for {model} is used up; it resets {when}. Add billing to the key, or switch the model.", { model: q.model, when: until(q.retryAt) })}{:else}{plainTimes(String(end?.event["summary"] ?? ""))}{/if}</div>
     {/if}
     {#if doc}
@@ -105,7 +110,7 @@
         <div class="md space-y-2 text-[14.5px] leading-relaxed">{@html renderMarkdown(plainTimes(doc.content), { breaks: true })}</div>
       </article>
     {/if}
-    {#if reply && status !== "error"}
+    {#if reply && status !== "error" && status !== "offline"}
       <div class="panel rise p-4">
         <div class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("What it said")}</div>
         <div class="md space-y-2 text-[14px] text-fg-2">{@html renderMarkdown(plainTimes(reply))}</div>
