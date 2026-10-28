@@ -56,7 +56,8 @@ npm run sync -w @garu/app             # the phone UI, built and copied into andr
 ```
 
 Phone app on the emulator (no more dragging APKs): boot `~/Library/Android/sdk/emulator/emulator
--avd Pixel_8` (the AVD with Tailscale, already paired), then build and install over the old copy:
+-avd Pixel_8` (since 2026-10-28 it holds the debug build, paired to this Mac; it has no Tailscale app and
+reaches the Mac's Tailscale address through the host's network), then build and install over the old copy:
 
 ```
 export ANDROID_HOME=~/Library/Android/sdk JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
