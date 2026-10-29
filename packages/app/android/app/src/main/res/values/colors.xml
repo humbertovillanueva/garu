@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The app's page background (the UI's color-bg token), for the system splash so a cold start never flashes light. -->
-    <color name="garu_background">#0a0c0f</color>
+    <!-- The app's page background (the UI's color-bg token) for the system splash, so a cold start matches the
+         page that follows: this is the light theme; values-night has the dark one. -->
+    <color name="garu_background">#f5f4f0</color>
 </resources>

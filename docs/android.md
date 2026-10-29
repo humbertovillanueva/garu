@@ -86,7 +86,9 @@ key only proves the upload came from you.
   cannot send headers.
 - `android/` is the generated native project, committed so the build is
   reproducible. `npm run assets -w @garu/app` regenerates icons and splash screens
-  from `assets/` (made from `docs/brand/mark.svg`).
+  from `assets/` (made from `docs/brand/mark.svg`): `splash.png` is the light one,
+  `splash-dark.png` the dark one, and the system splash color in `values/colors.xml`
+  and `values-night/colors.xml` follows the phone's theme the same way.
 - Camera permission is declared for the pairing scanner; the page uses the
   browser's `BarcodeDetector`, so no native plugin is involved.
 - The manifest also claims the `garu://pair` scheme (the pairing code made for the

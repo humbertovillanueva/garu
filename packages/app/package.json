@@ -9,7 +9,7 @@
     "sync": "npm run build:app -w @garu/ui && cap sync",
     "open": "cap open android",
     "open:ios": "cap open ios",
-    "assets": "npx @capacitor/assets generate --android --ios --iconBackgroundColor '#0a0c0f' --iconBackgroundColorDark '#0a0c0f' --splashBackgroundColor '#0a0c0f' --splashBackgroundColorDark '#0a0c0f'"
+    "assets": "npx @capacitor/assets generate --android --ios --iconBackgroundColor '#0a0c0f' --iconBackgroundColorDark '#0a0c0f' --splashBackgroundColor '#f5f4f0' --splashBackgroundColorDark '#0a0c0f'"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",

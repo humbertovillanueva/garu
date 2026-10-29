@@ -16,8 +16,9 @@
     </style>
 
 
-    <!-- Android 12+ draws its own splash from this theme before the WebView is up: dark like the page,
-         then hands over to the app theme, so a cold start never flashes a light screen first. -->
+    <!-- Android 12+ draws its own splash from this theme before the WebView is up. Its color follows the
+         phone's theme like the page does (values and values-night), then it hands over to the app theme,
+         so a cold start never flashes dark on a light phone or light on a dark one. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
         <item name="windowSplashScreenBackground">@color/garu_background</item>
