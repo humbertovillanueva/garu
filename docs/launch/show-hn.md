@@ -37,7 +37,7 @@ Three questions I expect, answered up front:
 - *Who can reach the control room?* It listens on localhost; a browser on the same machine is let in as you. Anything else needs the sign-in token. My phone gets it by scanning a code, over Tailscale, so only my own devices can resolve the address at all. No account, no cloud: everything is files under `.garu/`.
 - *Always-on, on a laptop?* Mine sleeps. A run holds the Mac awake while it works, and a schedule missed while asleep runs once at wake, within six hours. A Mac mini or any box that stays on is the simpler setup.
 
-It's a month old. TypeScript, Apache-2.0, 288 tests. The policy language is the part I most want pushed on: what can't it express that you'd need?
+It's a month old. TypeScript, Apache-2.0, 293 tests. The policy language is the part I most want pushed on: what can't it express that you'd need?
 
 ## Replies to have ready
 
