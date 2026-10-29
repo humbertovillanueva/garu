@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#0a0c0f" />
+    <script>
+      // The theme before the first paint: the saved choice, else the device's, so a light phone never sees a
+      // dark frame before the page. applyTheme() in lib/theme.svelte.ts takes over once the app runs.
+      (function () {
+        var t = "auto";
+        try { t = JSON.parse(localStorage.getItem("garu.prefs") || "{}").theme || "auto"; } catch (e) {}
+        if (t !== "dark" && t !== "light") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        document.documentElement.dataset.theme = t;
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute("content", t === "light" ? "#f5f4f0" : "#0a0c0f");
+      })();
+    </script>
     <title>Garu</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.webmanifest" />
