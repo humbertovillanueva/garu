@@ -219,13 +219,13 @@ person adds nothing to the twelve. Addresses can be added anytime (Testers →
 the list → Save; adding to a list needs no review). The dashboard shows the
 opted-in count, never the names, and installs reach Statistics a day or two
 late. The twelfth tester opted in on 2026-10-16, so the fourteen days end on
-2026-10-30 if nobody leaves; the list has 15 addresses as a margin. Then
+2026-10-31 (the dashboard counted 13 on the 30th) if nobody leaves; the list has 15 addresses as a margin. Then
 "Apply for production" on the dashboard: Google asks about the test (how
 feedback came in, what changed because of it), so keep notes of both.
 
 ## Applying for production (draft answers, 2026-10-26)
 
-Google's form (Dashboard → Apply for production, from 2026-10-30) has three parts;
+Google's form (Dashboard → Apply for production, from 2026-10-31) has three parts;
 the questions are in the Play Console help article "App testing requirements for
 new personal developer accounts". Answers below are true as of the 27th and say
 what happened, which was not much: family testers installed the app and opened

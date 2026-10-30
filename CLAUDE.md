@@ -165,7 +165,7 @@ check its menu-bar icon before the Play application and before posting.
 Play: build 4 is on the closed-testing track "Alpha" since 2026-10-15 with the Spanish listing and
 Spanish screenshots; the opt-in link is https://play.google.com/apps/testing/io.github.humbertovillanueva.garu;
 twelve family testers have been opted in since 2026-10-16, so "Apply for production" opens on
-2026-10-30. The answers are in `docs/launch/play-store.md` ("Applying for production"): the family
+2026-10-31 (the dashboard counted 13 days on the 30th). The answers are in `docs/launch/play-store.md` ("Applying for production"): the family
 testers installed and opened the app and no more, said as it is. The upload key is `~/garu-upload.jks`
 (`docs/android.md`). After approval: promote to production, then the launch posts in `docs/launch/`
 (drafts; "A Policy Kernel, Not a Prompt" is already on dev.to). Roadmap after that: push notifications
