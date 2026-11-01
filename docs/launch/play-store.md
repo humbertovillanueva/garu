@@ -227,9 +227,9 @@ feedback came in, what changed because of it), so keep notes of both.
 
 Google's form (Dashboard → Apply for production, from 2026-10-31) has three parts;
 the questions are in the Play Console help article "App testing requirements for
-new personal developer accounts". Answers below are true as of the 27th and say
+new personal developer accounts". Answers below are true as of the 31st and say
 what happened, which was not much: family testers installed the app and opened
-it, and that is the honest answer.
+it, one used it through, and that is the honest answer.
 
 **Part 1 — About your closed test**
 
@@ -242,15 +242,15 @@ it, and that is the honest answer.
   developers: those on Android installed the app and opened it, where the first
   screen offers "Try the demo", a control room with made-up agents that walks
   every screen (home, inbox with a decision to approve or decline, an agent's
-  page and chat, the agents list, cost, pairing) in their language. Nobody
-  paired with a real Garu, and nobody went deeper than that. The developer
-  exercised every screen himself, on his own Garu, throughout the fourteen days.
-- *Feedback and how it was collected.* WhatsApp messages to the developer, plus
-  support@garuagents.com as the listed channel. Little came in, because the
-  testers are not the app's audience: the first to open the link saw "App not
-  available" while the tester list was still in review (timing, fixed by
-  waiting), and that was the one problem reported. The changes made during the
-  test came from the developer's own use: a fully Spanish demo chosen by the
+  page and chat, the agents list, cost, pairing) in their language. One
+  tester, the developer's brother, used the whole app; the others did not go
+  past the demo. The developer exercised every screen himself, on his own
+  Garu, throughout the fourteen days.
+- *Feedback and how it was collected.* By phone, in calls with the developer,
+  plus support@garuagents.com as the listed channel, which received nothing.
+  What came back: they liked the onboarding, the logos and the idea behind the
+  app. No problems were reported. The changes made during the test came from
+  the developer's own use: a fully Spanish demo chosen by the
   phone's language, and Spanish screenshots for the Spanish listing on
   2026-10-19.
 
