@@ -69,5 +69,6 @@ Changed the UI? Run `npm run sync -w @garu/app` again and press Run again.
   (target *App* → *Signing & Capabilities* → *Team*). Free signing stops working
   after 7 days; a paid developer account doesn't.
 - **TestFlight and the App Store.** Apple Developer Program ($99 a year), then
-  *Product → Archive* in Xcode and upload.
+  *Product → Archive* in Xcode and upload. The listing, the review notes, the
+  screenshots and the steps in order: `docs/launch/app-store.md`.
 - **Push notifications.** Same as Android: they need a relay.

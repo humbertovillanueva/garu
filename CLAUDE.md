@@ -180,6 +180,11 @@ His Mac is a laptop that sleeps after a minute idle, on power too, and spends ni
 napping every quarter hour; runs that fire in a nap are late or cut off, and catch-up, the awake hold
 and the read-only retry are the seatbelts. He declined changing the setting; don't re-ask.
 
+## The App Store
+
+Next after Play, started 2026-11-01: Humberto enrolls in the Apple Developer Program himself ($99); the
+listing, the review notes, the screenshots (`docs/launch/app-store/`) and the steps are in `docs/launch/app-store.md`.
+
 ## The public demo
 
 Two more Garus, `~/garu-demo` (English) and `~/garu-demo-es` (Spanish), run `garu ui --demo` as their

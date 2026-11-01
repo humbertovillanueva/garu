@@ -1,9 +1,12 @@
 #!/usr/bin/env node
-// Store screenshots for Google Play: the six phone screens, captured from the phone build of the
-// UI paired to a seeded Garu, each framed under its caption at 1080×1920.
+// Store screenshots: the six phone screens, captured from the phone build of the UI paired to a
+// seeded Garu, each framed under its caption. `--frame play` (the default) makes Google Play's
+// 1080×1920 cards; `--frame ios` makes the App Store's 1320×2868 ones (the 6.9-inch iPhone size,
+// which App Store Connect scales down for every smaller iPhone).
 //
 //   GARU_APP=1 npm run dev -w @garu/ui -- --port 5174          # the phone build, in a browser
 //   node scripts/play-shots.mjs --server http://127.0.0.1:4101 --token … --lang es --out docs/launch/play/es
+//   node scripts/play-shots.mjs --server http://127.0.0.1:4100 --token … --frame ios
 //
 // Needs Google Chrome. The server is a seeded control room (scripts/demo-data.mjs); reseed it first so
 // the inbox has a fresh ask. Nothing on the server is changed: the screens are only read.
@@ -20,7 +23,17 @@ const APP = arg("app", "http://localhost:5174");
 const SERVER = arg("server", "http://127.0.0.1:4101");
 const TOKEN = arg("token", "");
 const LANG = arg("lang", "en");
-const OUT = arg("out", `docs/launch/play/${LANG}`);
+const FRAME = {
+  // The card, and the phone it shows: Play's is a 390×844 phone at 3× in a 894-px frame; the App
+  // Store's is the 6.9-inch iPhone (440×956 at 3× is exactly 1320×2868) in a 1094-px frame.
+  play: { w: 1080, h: 1920, phone: [390, 844], title: [96, 88], sub: [300, 38, 60], frame: [93, 400, 894, 1560] },
+  ios: { w: 1320, h: 2868, phone: [440, 956], title: [120, 108], sub: [372, 46, 80], frame: [113, 500, 1094, 2248] },
+}[arg("frame", "play")];
+if (!FRAME) {
+  console.error("--frame must be play or ios");
+  process.exit(2);
+}
+const OUT = arg("out", FRAME.w === 1080 ? `docs/launch/play/${LANG}` : `docs/launch/app-store/${LANG}`);
 const CHROME = arg("chrome", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome");
 const PORT = 9333;
 if (!TOKEN) {
@@ -130,9 +143,14 @@ async function main() {
     await page.send("Page.enable");
     await page.send("Runtime.enable");
     await page.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "dark" }] });
+    if (FRAME.w === 1320) {
+      // An iPhone's web view: no scanner of its own, so the pairing screen says to use the camera.
+      await page.send("Emulation.setUserAgentOverride", { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148" });
+      await page.send("Page.addScriptToEvaluateOnNewDocument", { source: "delete window.BarcodeDetector;" });
+    }
 
-    // A phone: 390×844 at 3× gives 1170×2532, sharper than the 894-px frame it ends up in.
-    const phone = () => page.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 3, mobile: true });
+    // A phone at 3×: sharper than, or exactly, the frame it ends up in.
+    const phone = () => page.send("Emulation.setDeviceMetricsOverride", { width: FRAME.phone[0], height: FRAME.phone[1], deviceScaleFactor: 3, mobile: true });
     await phone();
     await page.send("Page.navigate", { url: `${APP}/` });
     await sleep(2000);
@@ -164,18 +182,19 @@ async function main() {
     raw.pair = await page.shot();
     console.log("captured pair");
 
-    // The cards: caption on top, the phone screen in a rounded frame, 1080×1920.
-    await page.send("Emulation.setDeviceMetricsOverride", { width: 1080, height: 1920, deviceScaleFactor: 1, mobile: false });
+    // The cards: caption on top, the phone screen in a rounded frame.
+    const { w: W, h: H, title: [tTop, tSize], sub: [sTop, sSize, sSide], frame: [fLeft, fTop, fW, fH] } = FRAME;
+    await page.send("Emulation.setDeviceMetricsOverride", { width: W, height: H, deviceScaleFactor: 1, mobile: false });
     await page.send("Page.navigate", { url: "about:blank" });
     await sleep(500);
     const { frameTree } = await page.send("Page.getFrameTree");
     for (const name of Object.keys(raw)) {
       const [title, sub] = CAPTIONS[name];
       const html = `<!doctype html><html><head><meta charset="utf-8"><style>
-        html,body{margin:0;width:1080px;height:1920px;background:#0b0d12;overflow:hidden;font-family:-apple-system,"SF Pro Display","Inter","Helvetica Neue",sans-serif;color:#e9edf3}
-        .t{position:absolute;left:0;right:0;top:96px;text-align:center;font-size:88px;line-height:1.02;font-weight:700;letter-spacing:-0.025em;white-space:pre-line}
-        .s{position:absolute;left:60px;right:60px;top:300px;text-align:center;font-size:38px;line-height:1.25;color:#aeb6c2}
-        .f{position:absolute;left:93px;top:400px;width:894px;height:1560px;border-radius:44px;border:2px solid #2b303b;overflow:hidden;background:#0b0d12}
+        html,body{margin:0;width:${W}px;height:${H}px;background:#0b0d12;overflow:hidden;font-family:-apple-system,"SF Pro Display","Inter","Helvetica Neue",sans-serif;color:#e9edf3}
+        .t{position:absolute;left:0;right:0;top:${tTop}px;text-align:center;font-size:${tSize}px;line-height:1.02;font-weight:700;letter-spacing:-0.025em;white-space:pre-line}
+        .s{position:absolute;left:${sSide}px;right:${sSide}px;top:${sTop}px;text-align:center;font-size:${sSize}px;line-height:1.25;color:#aeb6c2}
+        .f{position:absolute;left:${fLeft}px;top:${fTop}px;width:${fW}px;height:${fH}px;border-radius:${Math.round(fW * 0.05)}px;border:2px solid #2b303b;overflow:hidden;background:#0b0d12}
         .f img{display:block;width:100%}
       </style></head><body><div class="t">${title}</div><div class="s">${sub}</div><div class="f"><img src="data:image/png;base64,${raw[name].toString("base64")}"></div></body></html>`;
       await page.send("Page.setDocumentContent", { frameId: frameTree.frame.id, html });
