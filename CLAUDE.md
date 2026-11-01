@@ -174,7 +174,7 @@ via a relay, hosted Garu, `garu install` registry, iPhone on a real device and T
 
 Weekly chore: the Google OAuth app stays in Testing (`docs/google.md` says why), so the three Google
 sign-ins (Tomay's calendar and Gmail, Bea's Gmail) die every seven days; the home screen warns from
-day six and `garu auth <Garufile> <server>` renews one in place. Last renewed Sunday 2026-10-25 night.
+day six and `garu auth <Garufile> <server>` renews one in place. Last renewed Sunday 2026-11-01.
 
 His Mac is a laptop that sleeps after a minute idle, on power too, and spends nights on battery
 napping every quarter hour; runs that fire in a nap are late or cut off, and catch-up, the awake hold
