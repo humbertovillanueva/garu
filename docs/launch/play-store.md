@@ -298,6 +298,46 @@ condensed; this is the text Google has, word for word.
 - *Changes from the test.* A "Try the demo" button on the first screen, so a reviewer or tester without a computer sees every screen; a Spanish demo beside the English one, picked by the phone's language; Spanish screenshots for the Spanish listing; listing text and reviewer notes that explain the demo. Applying with build 4.
 - *Readiness.* Twelve testers opted in for the full 14 days with no crash reports; a crash screen instead of a blank page if anything fails; dark and light themes; an accessibility pass (screen-reader names, 44 px targets, reduced motion); fits a 240 pt phone; data safety, content rating and sign-in details done.
 
+## Google's answer (2026-11-01) and the second application
+
+**The verdict.** Google Play Support answered on Sunday 2026-11-01 at 12:54 PM, sixteen hours
+after the application: "More testing required to access Google Play production". The reasons it
+lists are the stock two: testers were not engaged with the app during the closed test, and no
+cycle of gathering feedback and acting on it through updates. The dashboard crossed off the first
+two steps (a closed release published, twelve testers opted in) and added one: "Run your closed
+test with at least 12 testers for 14 more days starting from the review date", with a counter
+("12 testers have currently been opted in for 5 days continuously" on 11-06). Nothing else was
+flagged: the listing, the graphics, data safety, content rating and the sign-in details stand.
+
+**Dates.** The clock restarted on 2026-11-01. "Apply for production" opens again on or after
+**Sunday 2026-11-15**, and only if the tester count never dipped under twelve in between.
+
+**What the first answers lacked, read back.** They said, truthfully, that family installed the app
+and opened it, one used it through, support@ received nothing, and the changes during the test came
+from the developer's own use. That is a test with no testers in it, and the reviewer said so. The
+second application has to show testers who did something, said something, and a build that changed
+because of it. Still true, just with a test that actually happened.
+
+**The plan for the fourteen days**
+
+1. *Keep twelve in.* Nobody leaves the test, nobody uninstalls. Check the counter on the dashboard
+   once a week.
+2. *One message to the WhatsApp group* (Humberto), asking each person to open the app, try the demo,
+   and answer one question: what confused you, or what would you change? Save every reply here, under
+   "Feedback received", with the date and the first name.
+3. *Build 5 on the closed track*, with one change that came from a reply. The change goes in the
+   release notes in both languages ("From tester feedback: …"), so the test shows an update that
+   came from the test.
+4. *Rewrite the three "closed test" answers* with the replies and the build: how many answered, what
+   they said, what changed, which build. The audience, value and readiness answers stay.
+5. *Declare non-trader* in the Play Console (Manage account → About you), a Nov 4 policy notice
+   with a 2027-02-01 deadline; the app earns nothing.
+6. On or after 11-15, apply again.
+
+**Feedback received** (fill in as it comes)
+
+- _none yet_
+
 ## Version naming
 
 `versionName` follows the repo (`0.1.0`), `versionCode` increments by 1 per

@@ -164,12 +164,16 @@ check its menu-bar icon before the Play application and before posting.
 
 Play: build 4 is on the closed-testing track "Alpha" since 2026-10-15 with the Spanish listing and
 Spanish screenshots; the opt-in link is https://play.google.com/apps/testing/io.github.humbertovillanueva.garu;
-twelve family testers have been opted in since 2026-10-16. The production application went in on
-2026-10-31 at 8:58 PM; Google answers by email, usually within 7 days. The answers, as sent, are in
-`docs/launch/play-store.md` ("Applying for production"): the family testers installed and opened the app,
-one used it through, feedback came by phone, no problems reported, said as it is. The upload key is `~/garu-upload.jks`
-(`docs/android.md`). After approval: promote to production, then the launch posts in `docs/launch/`
-(drafts; "A Policy Kernel, Not a Prompt" is already on dev.to). Roadmap after that: push notifications
+twelve family testers have been opted in since 2026-10-16. The first production application (2026-10-31)
+was answered on 2026-11-01: "more testing required", testers not engaged, no feedback-and-update cycle. The
+clock restarted that day: keep at least twelve testers opted in without a gap, and "Apply for production"
+opens again on **2026-11-15**. Until then: collect one piece of feedback per tester (WhatsApp), ship build 5
+to the closed track with a change that came from it, and rewrite the answers with what really happened.
+The verdict, the plan and the answers as sent are in `docs/launch/play-store.md` ("Applying for
+production"). Also due, by 2027-02-01: declare non-trader status in the Play Console (Manage account →
+About you); the app earns nothing. The upload key is `~/garu-upload.jks` (`docs/android.md`). After
+approval: promote to production, then the launch posts in `docs/launch/` (drafts; "A Policy Kernel, Not a
+Prompt" is already on dev.to; the LinkedIn post can go before the app, it's in `docs/launch/linkedin.md`). Roadmap after that: push notifications
 via a relay, hosted Garu, `garu install` registry, iPhone on a real device and TestFlight, two-way Slack.
 
 Weekly chore: the Google OAuth app stays in Testing (`docs/google.md` says why), so the three Google
