@@ -8,6 +8,7 @@ npm run dev                                   # Remotion Studio: scrub frame by 
 npm run render:9x16                           # → ../garu-v8-9x16.mp4 (crf 16)
 npm run render:16x9                           # → ../garu-v8-16x9.mp4
 npm run render:15s                            # → ../garu-v8-15s-9x16.mp4
+npm run render:16x9 -- --props='{"voice":true}'   # the spoken version: bed.wav + voice-<scene>.wav, see voice-over.md
 ```
 
 ## Which file goes where

@@ -8,7 +8,8 @@ arranged to the scene plan in src/theme.ts. No samples.
   bar  24–28  logo       impact, sustained chord, tail
 
 usage: score.py <out_dir>
-Writes score.wav (full mix) plus the whoosh, tick, tap and stamp one-shots.
+Writes score.wav (full mix), bed.wav (pad and bass only, under the voice-over) plus the whoosh,
+tick, tap and stamp one-shots.
 """
 import numpy as np, wave, sys
 
@@ -185,6 +186,15 @@ fade = np.minimum(1, np.arange(N) / (0.3 * SR)) * np.minimum(1, (N - np.arange(N
 mix *= fade[:, None]
 mix = np.tanh(mix * 1.15) / np.tanh(1.15)
 save("score", mix, 0.85)
+
+# ---- the bed for the voice-over: the same pad and a touch of bass, nothing that marks time.
+# No drums, no arp, no riser, no impact: a voice carries the cuts, and the giveaways of a
+# generated score are exactly the parts left out. Quiet on purpose (the voice sits well above it).
+bed = np.zeros((N, 2))
+bed[:, 0] = pad[:, 0] + 0.45 * bass[:, 0]
+bed[:, 1] = pad[:, 1] + 0.45 * bass[:, 1]
+bed = lp(bed, 2400) * fade[:, None]
+save("bed", bed, 0.45)
 
 # ---- one-shots for the picture
 tt = t(0.6); w = lp(hp(rng.standard_normal(len(tt)), 300), 5000) * np.sin(np.pi * np.minimum(1, tt / 0.5)) ** 2

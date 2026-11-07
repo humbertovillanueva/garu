@@ -12,12 +12,18 @@ type Shot = { key: string; s: Span; el: React.ReactNode; noIn?: boolean; noOut?:
 // never clips (at full level the sum reached 0 dBTP).
 const SCORE = 1;
 const SFX = 0.7;
+/** Under a voice the one-shots come down further, so a tap never steps on a word. */
+const SFX_VOICE = 0.4;
+const SfxLevel = React.createContext(SFX);
 
-const Sfx: React.FC<{ at: number; src: string; vol: number; len?: number }> = ({ at, src, vol, len = 15 }) => (
-  <Sequence from={Math.round(at)} durationInFrames={len}>
-    <Audio src={staticFile(src)} volume={vol * SFX} />
-  </Sequence>
-);
+const Sfx: React.FC<{ at: number; src: string; vol: number; len?: number }> = ({ at, src, vol, len = 15 }) => {
+  const level = React.useContext(SfxLevel);
+  return (
+    <Sequence from={Math.round(at)} durationInFrames={len}>
+      <Audio src={staticFile(src)} volume={vol * level} />
+    </Sequence>
+  );
+};
 
 /** A small mark top-left from frame 0 (the thumbnail carries it); it leaves as the big one lands. */
 const Mark: React.FC<{ until: number }> = ({ until }) => {
@@ -59,9 +65,23 @@ const SHOTS: Shot[] = [
   { key: "logo", s: S.logo, el: <Logo />, noIn: true, noOut: true },
 ];
 
-const Sound: React.FC = () => (
+/** The spoken version: one clip per scene (public/audio/voice-<scene>.wav, see ../voice-over.md), from that scene's first frame. */
+const VOICE_SCENES = ["hook", "meet", "brief", "control", "ask", "learn", "proof", "logo"] as const;
+const Voice: React.FC = () => (
   <>
-    <Audio src={staticFile("audio/score.wav")} volume={(f) => SCORE * interpolate(f, [TOTAL - 30, TOTAL], [1, 0], clamp)} />
+    {VOICE_SCENES.map((k) => (
+      <Sequence key={`v${k}`} from={Math.max(0, Math.round(S[k].from + XF / 2))} durationInFrames={S[k].dur} name={`voice:${k}`}>
+        <Audio src={staticFile(`audio/voice-${k}.wav`)} />
+      </Sequence>
+    ))}
+  </>
+);
+
+/** With `voice`, the bed (pad and bass, no drums) replaces the score, the one-shots come down, and the voice plays over it. */
+const Sound: React.FC<{ voice?: boolean }> = ({ voice }) => (
+  <>
+    <Audio src={staticFile(voice ? "audio/bed.wav" : "audio/score.wav")} volume={(f) => SCORE * interpolate(f, [TOTAL - 30, TOTAL], [1, 0], clamp)} />
+    {voice && <Voice />}
     {/* a whoosh on every cut: the question, then each scene's bar line */}
     {[2, 3, 6, 8, 12, 16, 19].map((b) => <Sfx key={`w${b}`} at={b * BAR - 9} src="audio/whoosh.wav" vol={b === 2 ? 0.2 : 0.32} len={20} />)}
     {[1, 2].map((k) => <Sfx key={`wp${k}`} at={S.proof.from + XF / 2 + k * PROOF_BEAT - 6} src="audio/whoosh.wav" vol={0.22} len={20} />)}
@@ -73,8 +93,13 @@ const Sound: React.FC = () => (
     <Sfx at={S.learn.from + LEARN_TAP - 1} src="audio/tap.wav" vol={0.7} />
   </>
 );
+const SoundAt: React.FC<{ voice?: boolean }> = ({ voice }) => (
+  <SfxLevel.Provider value={voice ? SFX_VOICE : SFX}>
+    <Sound voice={voice} />
+  </SfxLevel.Provider>
+);
 
-export const GaruVideo: React.FC = () => <Film shots={SHOTS} sound={<Sound />} markUntil={S.logo.from} />;
+export const GaruVideo: React.FC<{ voice?: boolean }> = ({ voice = false }) => <Film shots={SHOTS} sound={<SoundAt voice={voice} />} markUntil={S.logo.from} />;
 
 // ---------------------------------------------------------------- the 15-second cut
 const SHORT_ASK_TAP = 36;

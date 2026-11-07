@@ -38,6 +38,9 @@ keystore.properties
 docs/video/*.mp4
 !docs/video/garu-v8-16x9-web.mp4
 docs/video/remotion/public/audio/score.wav
+docs/video/remotion/public/audio/bed.wav
+docs/video/remotion/public/audio/voice-*.wav
+docs/video/remotion/public/audio/voice-raw.*
 
 # editor settings stay personal
 .vscode/
