@@ -1,79 +1,124 @@
 # LinkedIn post — draft (2026-11-06)
 
-Goes before the Android app is in the store: the app is in closed testing until mid November, and
-the post says so in one line instead of waiting for it. Attach the 16:9 video from this Mac
-(`docs/video/garu-v8-16x9.mp4`, 2026-10-27; LinkedIn plays native video in the feed and
-autoplays it muted, which this one was cut for) or, if the upload is a bother, the poster
-`docs/video/garu-v8-16x9-poster.jpg`. Links in the first comment keep the post's reach; LinkedIn
-shrinks a post with a link in the body. Post on a weekday morning, Mountain time.
+Goes before the Android app is in the store; the post says so in one line. Links are in the body
+because Humberto wants them there (LinkedIn shows a link post to fewer people; if reach matters more
+than the click, move the two links to the first comment). Post on a weekday morning, Mountain time.
 Before posting: check that garuagents.com and the demo answer, and that Tailscale is up on the Mac.
+
+**What to attach.** One of these, not both (LinkedIn takes a video or images per post):
+
+- The launch video, `docs/video/garu-v8-16x9.mp4` (45 s, on this Mac). The feed autoplays it muted,
+  which that cut was made for. Its music is the synthesized score from `tools/score.py`, and that is
+  what sounds like every other generated video; see "Audio" below before using it.
+- Four images, in this order: `docs/launch/play/home.png`, `inbox.png`, `agent.png`, `cost.png`
+  (the Play cards, 1080×1920, each with its caption).
+- Or the three desktop shots of the demo control room in `docs/launch/linkedin/`, same width, in
+  this order: `control-room-home.jpg` (an ask from Bea with the email in it, and under it Garu
+  suggesting a rule after three approvals), `control-room-runs.jpg` (a day of runs, each with what
+  it said), `control-room-cost.jpg` (two weeks for three cents). Don't mix the phone cards and the
+  desktop shots in one post; the grid crops whichever shape is in the minority.
 
 ## The post
 
-A month ago I started building something I wanted for myself: agents that run all day on my own
-computer, and that I can actually trust.
+Five weeks ago I started building something because I couldn't answer a question: if an AI agent
+ran all day on my laptop while I wasn't looking, what exactly would I let it touch?
 
-It's called Garu, and it's open source.
+I didn't have a good answer. So I built the thing that makes me write one down.
 
-An agent is one YAML file. Garu keeps it running on a schedule, gives it tools, and puts a policy I
-wrote in front of every single thing it does: allow, ask, or block, by tool and by argument. When
-an agent wants to do something I marked "ask", it stops, and the question lands on my phone. I
-approve or decline with a tap. Every run is recorded step by step, and every run has a price on it.
+It's called Garu. Each agent is one YAML file: who it is, when it runs, which tools it gets, and a
+list of rules. Allow, ask, block. By tool, and by what it's about to do with it. A tool the rules
+would always block is never even shown to the agent, so it can't try.
 
-Two of my agents go through my real calendar and my real email every weekday morning. One writes
-my day. The other files the mail and drafts replies. Neither of them can send anything, because the
-tool they talk to has no "send". That's the part I care about most: safety that's in the rules,
-not in the prompt.
+When it hits an "ask", it stops, and the question shows up on my phone with the actual thing in it:
+the email it wants to draft, to whom, the text. One tap. If I don't answer in 30 minutes, that's a no.
 
-No cloud, no account, no database. Everything is files on your machine.
+Two of them run on my real life every weekday. Tomay reads my calendar at 7 and writes me the day.
+Bea goes through my Gmail at 8, files everything into four labels and drafts replies to the ones that
+need one. Neither can send email. Not "isn't allowed to". Can't: the Gmail tool they get has no send
+in it.
 
-It's five weeks old, it runs my own agents every day, and it's Apache-2.0. The phone app is in
-closed testing on Google Play and should be in the store later this month. The runtime and the
-control room work today.
+It runs on whatever model you point it at. Mine run on Gemini's free tier, so they cost me nothing;
+Garu still shows what each run would cost at list price, and it's about a cent a day. You can point
+an agent at Claude instead. Or at a model running on your own machine with Ollama, and then nothing
+leaves your computer at all, not even the question.
 
-If you run agents, or want to and haven't dared yet, I'd like to hear what you'd want one to do
-for you, and what you'd never let it do.
+Things I didn't expect: my laptop goes to sleep after a minute idle, so a good part of the work went
+into agents that survive a nap.
 
-Site and repo in the first comment.
+Everything is files on your own computer. No cloud, no account, no database. Open source, Apache-2.0.
 
-## First comment
+The Android app is in closed testing right now (my family are the testers, so it speaks Spanish
+too). The runtime and the control room are on GitHub today.
 
-Site: https://garuagents.com (there's a demo you can click through on the home page)
+Site, with a demo you can click through: https://garuagents.com
 Code: https://github.com/humbertovillanueva/garu
-A longer write-up on the policy kernel: https://dev.to/ (link to "A Policy Kernel, Not a Prompt")
 
-## Short version (if the long one feels like too much)
+If you've ever wanted an agent to do something for you but didn't want to find out the hard way what
+it would do: where's your line? What would you never let it do?
 
-I built Garu: open-source, always-on agents that run on your own computer, where every tool call
-goes through a policy you wrote. Allow, ask, or block. The asks land on your phone. Every run is
-recorded and priced. No cloud, no account. Five weeks in, it runs my calendar and inbox agents
-every morning. Site and code in the first comment.
+## Short version
+
+I built Garu: open-source agents that run all day on your own computer, with a list of rules in
+front of every tool. Allow, ask, block. The asks land on my phone. Every run is recorded and has a
+price on it. Any model: mine run on Gemini's free tier for nothing, or use Claude, or a local model
+with Ollama so nothing leaves your machine. Mine read my calendar and sort my inbox every morning,
+and neither can send an email.
+Site https://garuagents.com, code https://github.com/humbertovillanueva/garu. What would you never
+let an agent do?
 
 ## En español
 
-Hace un mes empecé a construir algo que quería para mí: agentes que corren todo el día en mi propia
-computadora, y en los que puedo confiar de verdad.
+Hace cinco semanas empecé a construir algo porque no podía responder una pregunta: si un agente de
+IA corriera todo el día en mi laptop mientras no estoy mirando, ¿qué exactamente le dejaría tocar?
 
-Se llama Garu y es de código abierto.
+No tenía una buena respuesta. Así que construí la cosa que me obliga a escribirla.
 
-Un agente es un archivo YAML. Garu lo mantiene corriendo en un horario, le da herramientas y pone
-una política que yo escribí delante de cada cosa que hace: permitir, preguntar o bloquear, por
-herramienta y por argumento. Cuando un agente quiere hacer algo que marqué como "preguntar", se
-detiene y la pregunta llega a mi teléfono. Apruebo o rechazo con un toque. Cada corrida queda
-grabada paso a paso, y cada corrida tiene su precio.
+Se llama Garu. Cada agente es un archivo YAML: quién es, cuándo corre, qué herramientas recibe y una
+lista de reglas. Permitir, preguntar, bloquear. Por herramienta, y por lo que está a punto de hacer
+con ella. Una herramienta que las reglas siempre bloquearían ni siquiera se le muestra al agente, así
+que no puede intentarlo.
 
-Dos de mis agentes revisan mi calendario y mi correo reales cada mañana entre semana. Uno escribe
-mi día. El otro archiva el correo y redacta respuestas. Ninguno puede enviar nada, porque la
-herramienta con la que hablan no tiene "enviar". Esa es la parte que más me importa: la seguridad
-está en las reglas, no en el prompt.
+Cuando llega a un "preguntar", se detiene, y la pregunta aparece en mi teléfono con la cosa real
+adentro: el correo que quiere redactar, para quién, el texto. Un toque. Si no respondo en 30
+minutos, es un no.
 
-Sin nube, sin cuenta, sin base de datos. Todo son archivos en tu máquina.
+Dos de ellos corren sobre mi vida real cada día entre semana. Tomay lee mi calendario a las 7 y me
+escribe el día. Bea revisa mi Gmail a las 8, archiva todo en cuatro etiquetas y redacta respuestas
+para los que la necesitan. Ninguno puede enviar correos. No es que "no tenga permiso". No puede: la
+herramienta de Gmail que reciben no tiene "enviar".
 
-Tiene cinco semanas, corre mis propios agentes todos los días y es Apache-2.0. La app para el
-teléfono está en prueba cerrada en Google Play y debería estar en la tienda este mes. El runtime y
-la sala de control funcionan hoy.
+Corre con el modelo que tú le apuntes. Los míos corren en la capa gratuita de Gemini, así que no me
+cuestan nada; Garu igual muestra lo que costaría cada corrida a precio de lista, y es como un centavo
+al día. Puedes apuntar un agente a Claude. O a un modelo corriendo en tu propia máquina con Ollama, y
+entonces nada sale de tu computadora, ni siquiera la pregunta.
 
-Si usas agentes, o quieres y no te has animado, me gustaría saber qué querrías que uno hiciera por
-ti, y qué nunca le dejarías hacer.
+Cosas que no esperaba: mi laptop se duerme después de un minuto sin uso, así que buena parte del
+trabajo se fue en agentes que sobreviven una siesta.
 
-Sitio y código en el primer comentario.
+Todo son archivos en tu propia computadora. Sin nube, sin cuenta, sin base de datos. Código
+abierto, Apache-2.0.
+
+La app para Android está en prueba cerrada ahora mismo (los testers son mi familia, así que también
+habla español). El runtime y la sala de control están en GitHub hoy.
+
+Sitio, con una demo para recorrer: https://garuagents.com
+Código: https://github.com/humbertovillanueva/garu
+
+Si alguna vez quisiste que un agente hiciera algo por ti pero no querías descubrir por las malas qué
+haría: ¿dónde está tu límite? ¿Qué nunca le dejarías hacer?
+
+## Audio
+
+The v8 score is synthesized by `docs/video/remotion/tools/score.py` (150 bpm, pad, kick, arp,
+riser, impact) and it sounds like the music under every generated launch video. Three ways out, in
+order of how human they sound:
+
+1. Humberto's own voice over a much quieter bed. He reads the scene lines (they're in the video
+   already) into the phone's recorder in a quiet room; the bed is the current pad with the drums and
+   the arp off, at a quarter of the volume. One evening of work after the recording lands.
+2. A real track with a licence that allows it (YouTube Audio Library, or a paid one from Epidemic or
+   Artlist), cut to the scene plan. The scenes sit on bar lines at 150 bpm, so the track has to be
+   re-timed or the scenes re-cut to its tempo; half a day.
+3. A different synthesized score (slower, warmer, no riser, no impact). Fastest, still a machine.
+
+The video stays as is until this is decided; the four-image post needs nothing.
