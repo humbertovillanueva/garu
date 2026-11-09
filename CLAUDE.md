@@ -126,6 +126,10 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   off (the Mac slept) before any call to a tool its server doesn't mark read-only (MCP `readOnlyHint`;
   `bus.sentSoFar()`) ends `offline`: not counted as the agent's run, backed off 10 min, caught up.
   One call to a tool without the mark and the run stands as an error: never replayed.
+- Triggers: `cron`, `manual`, and `webhook: <name>` (lowercase, digits, dashes), which opens
+  `POST /api/agents/<agent>/hooks/<name>` on the control room: same sign-in as the rest of the API, the body's
+  `message` reaches the model as the run's input, the run is recorded as `webhook:<name>`, a busy agent answers
+  409 (not queued). It is the door that agent-to-agent asks will use; the ask tool itself is not built.
 - On macOS a run holds the Mac out of idle sleep while it works (`kernel/src/awake.ts`, caffeinate), and a
   local server that signs in gets its access token renewed mid-run when it's about to run out (`bus.ts`).
 - UI: black and white, no orange, in a dark and a light theme: every color is a token in `app.css`

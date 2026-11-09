@@ -42,6 +42,11 @@ tools:
     expect(() => parseGarufile(y)).toThrow(/duplicate tool server name "fs"/);
   });
 
+  it("a webhook trigger is a name that fits in a URL", () => {
+    expect(parseGarufile(minimal + "\ntriggers:\n  - webhook: ask-bea\n").triggers).toEqual([{ webhook: "ask-bea" }]);
+    expect(() => parseGarufile(minimal + "\ntriggers:\n  - webhook: Ask Bea\n")).toThrow(/lowercase letters, digits and dashes/);
+  });
+
   it("rejects an empty trigger", () => {
     expect(() => parseGarufile(minimal + "\ntriggers:\n  - {}\n")).toThrow(/trigger needs one of/);
   });

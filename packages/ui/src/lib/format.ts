@@ -68,6 +68,7 @@ export function triggerLabel(trigger: string): string {
   if (trigger === "catch-up" || trigger.startsWith("catch-up:")) return t("catch-up");
   if (trigger === "chat") return t("message");
   if (trigger === "manual" || trigger === "ui") return t("run now");
+  if (trigger === "webhook" || trigger.startsWith("webhook:")) return t("webhook");
   return trigger;
 }
 export function dayLabel(iso: string): string {

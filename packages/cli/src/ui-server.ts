@@ -365,6 +365,32 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         return json(res, { started: true, runId: live.get(name)?.runId ?? null }, 202);
       }
 
+      // The webhook door: an agent that declares `- webhook: <name>` in its triggers can be started by
+      // POST /api/agents/<agent>/hooks/<name>, with an optional message that reaches the model as the
+      // run's input. The run is recorded with trigger "webhook:<name>", like a cron fire is "cron:<pattern>".
+      // Same sign-in as every other call here: loopback, or the control room's token. Busy means refused,
+      // not queued, like Run now.
+      const hook = /^\/api\/agents\/([^/]+)\/hooks\/([^/]+)$/.exec(path);
+      if (hook && req.method === "POST") {
+        const name = decodeURIComponent(hook[1]!);
+        const hookName = decodeURIComponent(hook[2]!);
+        const a = discover().agents.find((x) => x.garufile.name === name);
+        if (!a) return json(res, { error: t("no Garufile for agent \"{name}\"", { name }) }, 404);
+        if (!a.garufile.triggers.some((tr) => tr.webhook === hookName)) return json(res, { error: t("{name} has no webhook \"{hook}\"", { name, hook: hookName }) }, 404);
+        const body = (await readBody(req)) as { message?: unknown };
+        if (body.message !== undefined && typeof body.message !== "string") return json(res, { error: t("message must be text") }, 400);
+        const message = typeof body.message === "string" ? body.message.trim() : "";
+        if (message.length > 8000) return json(res, { error: t("message is too long (8000 characters at most)") }, 400);
+        if (live.has(name)) return json(res, { error: t("{name} is already running", { name }) }, 409);
+        opts.log(`▶ ${name} (webhook ${hookName}${message ? ", with a message" : ""})`);
+        const input = message ? `A webhook named "${hookName}" brought this message:\n\n${message}\n\nCarry out your standing instructions with it in mind.` : undefined;
+        void startRun(a, `webhook:${hookName}`, input)
+          .then((r) => opts.log(`■ ${name}: ${r.status} in ${r.turns} turn(s)`))
+          .catch((e: unknown) => opts.log(`✖ ${name}: ${(e as Error).message}`));
+        await new Promise((r) => setTimeout(r, 250));
+        return json(res, { started: true, runId: live.get(name)?.runId ?? null }, 202);
+      }
+
       const chatM = /^\/api\/agents\/([^/]+)\/chat$/.exec(path);
       if (chatM) {
         const name = decodeURIComponent(chatM[1]!);

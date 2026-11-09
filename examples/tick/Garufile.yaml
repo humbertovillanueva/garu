@@ -17,6 +17,7 @@ model: gemini/gemini-3.5-flash-lite
 
 triggers:
   - cron: "0 */3 * * *"      # eight beats a day prove the schedule as well as 24 did, with a third of the log
+  - webhook: poke           # POST /api/agents/tick/hooks/poke on the control room runs it now, with the body's message
 
 budget:
   maxCostUsd: 0.01          # per run; every three hours is ~240 runs a month, under $3 at list price even if every run hit the cap

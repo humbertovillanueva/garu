@@ -182,6 +182,25 @@ Un servidor local también puede iniciar sesión: dale `auth: oauth` y un bloque
 
 <p align="center"><img src="docs/screenshots/agent.png" alt="La página de Tomay: qué hace, su horario, modelo, herramientas y política, una conversación y sus ejecuciones recientes" width="900"></p>
 
+### Disparadores
+
+Un Garufile puede tener más de un disparador, y existen tres tipos:
+
+- `cron: "0 8 * * 1-5"` corre en un horario, en tu hora local. Un disparo perdido mientras la computadora dormía se recupera una vez.
+- `manual: true` corre cuando pulsas Ejecutar ahora o escribes `garu run`. Todo agente lo tiene.
+- `webhook: ask` abre una puerta en la sala de control. Cualquier cosa que pueda hacer una petición HTTP puede iniciar una ejecución por ahí, con un mensaje que el agente lee como su entrada:
+
+```bash
+curl -X POST http://localhost:4000/api/agents/bea/hooks/ask \
+  -H "Authorization: Bearer $(cat .garu/ui-token)" -H "Content-Type: application/json" \
+  -d '{"message": "¿Lena escribió sobre la página de inicio esta semana?"}'
+```
+
+Desde la misma computadora no hace falta token. La ejecución aparece como `webhook` en la sala de control,
+el mensaje llega al modelo como la entrada de la ejecución, y la política del agente aplica exactamente igual
+que en cualquier otra. Un agente ocupado responde 409 y quien llama lo intenta después; el mensaje no se
+encola. El nombre de un webhook son letras minúsculas, dígitos y guiones.
+
 ## Aprobaciones que aprenden
 
 La queja de quienes usan agentes siempre activos es que *su propio* ritmo se vuelve el cuello de botella: el agente trabaja toda la noche y tú pasas la mañana haciendo clic en Aprobar. Garu trata la aprobación como el producto, no como un cuadro de diálogo.

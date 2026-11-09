@@ -142,6 +142,7 @@ export const es: Record<string, string> = {
   "scheduled": "programada",
   "catch-up": "recuperación",
   "run now": "manual",
+  "webhook": "webhook",
   "Today": "Hoy",
   "Yesterday": "Ayer",
   "running": "en curso",

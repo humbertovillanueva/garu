@@ -182,6 +182,25 @@ A local server can sign in too: give it `auth: oauth` and an `oauth:` block that
 
 <p align="center"><img src="docs/screenshots/agent.png" alt="Tomay's page: what it does, its schedule, model, tools and policy, a conversation, and its recent runs" width="900"></p>
 
+### Triggers
+
+A Garufile can have more than one trigger, and three kinds exist:
+
+- `cron: "0 8 * * 1-5"` runs on a schedule, in your local time. A fire missed while the computer slept is caught up once.
+- `manual: true` runs when you press Run now or type `garu run`. Every agent has it.
+- `webhook: ask` opens a door on the control room. Anything that can make an HTTP request can start a run through it, with a message the agent reads as its input:
+
+```bash
+curl -X POST http://localhost:4000/api/agents/bea/hooks/ask \
+  -H "Authorization: Bearer $(cat .garu/ui-token)" -H "Content-Type: application/json" \
+  -d '{"message": "Did Lena write about the homepage this week?"}'
+```
+
+From the same computer no token is needed. The run shows as `webhook` in the control room, the message
+reaches the model as the run's input, and the agent's policy applies exactly as on any other run. A busy
+agent answers 409 and the caller tries later; the message is not queued. A hook name is lowercase letters,
+digits and dashes.
+
 ## Approvals that get smarter
 
 The complaint practitioners make about always-on agents is that *their* throughput becomes the bottleneck: the agent works all night and you spend the morning clicking Approve. Garu treats approval as the product, not a dialog box.

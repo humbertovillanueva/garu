@@ -142,7 +142,8 @@ export function isRemoteServer(spec: McpServerSpec): spec is HttpServerSpec {
 export const Trigger = z
   .object({
     cron: z.string().optional(),
-    webhook: z.string().optional(),
+    /** A door: POST /api/agents/<agent>/hooks/<name> on the control room starts a run, with the body's message as its input. */
+    webhook: z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/, "a webhook name is lowercase letters, digits and dashes, up to 40").optional(),
     manual: z.boolean().optional(),
   })
   .strict()

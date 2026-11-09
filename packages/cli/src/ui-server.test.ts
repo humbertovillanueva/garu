@@ -22,6 +22,9 @@ const GARUFILE = `
 name: pip
 model: fake/any
 prompt: p
+triggers:
+  - manual: true
+  - webhook: nudge
 tools:
   - name: fs
     command: node
@@ -221,6 +224,26 @@ describe("the rest", () => {
     expect((await get("/api/agents")).status).toBe(200);
     expect(logLines.some((l) => /✖ pip: unknown model provider "fake"/.test(l))).toBe(true);
   });
+
+  it("the webhook door starts a run with the message as its input, and only through a declared hook", async () => {
+    expect((await post("/api/agents/pip/hooks/nope", { message: "hi" })).status).toBe(404);
+    expect((await post("/api/agents/nobody/hooks/nudge", {})).status).toBe(404);
+    expect((await post("/api/agents/pip/hooks/nudge", { message: 42 })).status).toBe(400);
+    expect((await post("/api/agents/pip/hooks/nudge", { message: "x".repeat(8001) })).status).toBe(400);
+    // slow's model passes the provider check (pip's "fake" fails before anything is recorded), so its run is on the books.
+    const res = await post("/api/agents/slow/hooks/nudge", { message: "Lena asked about the homepage" });
+    expect(res.status).toBe(202);
+    await new Promise((r) => setTimeout(r, 300));
+    expect(logLines.some((l) => /▶ slow \(webhook nudge, with a message\)/.test(l))).toBe(true);
+    for (let i = 0; i < 100; i++) {
+      const now = (await (await get("/api/agents")).json()) as { agents: { name: string; status: string }[] };
+      if (now.agents.find((x) => x.name === "slow")?.status !== "working") break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    // The run is on the books with its trigger, like a cron fire would be.
+    const runs = (await (await get("/api/runs?agent=slow")).json()) as { trigger: string }[];
+    expect(runs.some((r) => r.trigger === "webhook:nudge")).toBe(true);
+  }, 15_000);
 
   it("two Run now taps in the same instant start one run; the other is refused", async () => {
     const [a, b] = await Promise.all([post("/api/agents/slow/run", {}), post("/api/agents/slow/run", {})]);

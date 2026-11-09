@@ -119,6 +119,7 @@ program
           fail((e as Error).message);
         }
       }
+      if (tr.webhook) stdout.write(`  ${t("trigger: webhook \"{hook}\" (POST /api/agents/{name}/hooks/{hook} on the control room)", { hook: tr.webhook, name: g.name })}\n`);
     }
     if (g.sandbox) {
       stdout.write(`  ${t("sandbox: image {image}, network {network}, {memory} / {cpus} cpu", { image: g.sandbox.image, network: g.sandbox.network, memory: g.sandbox.memory, cpus: g.sandbox.cpus })}${g.sandbox.workspace ? `, ${t("workspace {path}", { path: g.sandbox.workspace })}` : ""}\n`);
