@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Inbox, suggestRules } from "@garu/kernel";
-import { startUiServer } from "./ui-server.js";
+import { startUiServer, askRefusal, MAX_ASK_HOPS } from "./ui-server.js";
 
 /**
  * The control room, booted for real on a free port over a temporary folder with one agent,
@@ -213,6 +213,20 @@ describe("approvals", () => {
     expect(file).toContain("learned: approved");
     expect(file.indexOf("action: allow")).toBeLessThan(file.indexOf("action: ask"));
     expect((await post(`/api/suggestions/${encodeURIComponent(sug!.id)}/apply`, {})).status).toBe(404); // applied once
+  });
+});
+
+describe("one agent asking another", () => {
+  it("the rules: not itself, only through a door, not past two hops, not while busy", () => {
+    const agents = [{ name: "tomay", door: false }, { name: "bea", door: true }, { name: "rook", door: true }];
+    const q = (o: Partial<Parameters<typeof askRefusal>[0]>) => askRefusal({ asker: "tomay", target: "bea", hop: 0, agents, busy: false, ...o });
+    expect(q({})).toBeNull();
+    expect(q({ target: "tomay" })).toMatch(/can't ask itself/);
+    expect(q({ target: "nook" })).toMatch(/no agent named "nook"; the agents that can be asked are: bea, rook/);
+    expect(q({ asker: "bea", target: "tomay" })).toMatch(/tomay has no door/);
+    expect(q({ hop: MAX_ASK_HOPS })).toMatch(/too many agents in a row/);
+    expect(q({ hop: MAX_ASK_HOPS - 1 })).toBeNull();
+    expect(q({ busy: true })).toMatch(/bea is busy/);
   });
 });
 

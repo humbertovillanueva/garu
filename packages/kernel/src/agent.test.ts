@@ -47,6 +47,83 @@ function sleepyProvider(script: CompleteResponse[]) {
   };
 }
 
+describe("runAgent asking another agent", () => {
+  const asking = parseGarufile(`
+name: tomay-test
+model: fake/any
+prompt: write the day
+maxTurns: 4
+tools:
+  - name: echo
+    command: node
+    args: ["${serverPath}"]
+policy:
+  - tool: garu.ask
+    when: { agent: { matches: "^bea$" } }
+    action: allow
+  - tool: "*"
+    action: block
+    reason: nothing else
+`);
+  const script = (): CompleteResponse[] => [
+    { stopReason: "tool_use", content: [
+      { type: "tool_use", id: "a1", name: "garu__ask", input: { agent: "bea", message: "Anything from Lena this week?" } },
+      { type: "tool_use", id: "a2", name: "garu__ask", input: { agent: "rook", message: "stars?" } },
+    ] },
+    { stopReason: "end_turn", content: [{ type: "text", text: "10:00 Lena: she is waiting on the pricing copy." }] },
+  ];
+
+  it("offers garu.ask only when the run can reach other agents, and the answer comes back as the tool result", async () => {
+    const asked: [string, string][] = [];
+    const provider = new FakeProvider(script());
+    const res = await runAgent({
+      garufile: asking,
+      logRoot: mkdtempSync(join(tmpdir(), "garu-")),
+      provider,
+      approver: async () => ({ approved: false, by: "t" }),
+      ask: {
+        agents: () => ["tomay-test", "bea", "rook"],
+        ask: async (target, message) => { asked.push([target, message]); return { status: "ok", output: "Yes: Monday, she is waiting on the pricing copy." }; },
+      },
+    });
+    expect(res.status).toBe("ok");
+    // echo's tools are all blocked and hidden; the one tool on offer is the ask, whose text names the others but not itself
+    const offered = provider.calls[0]!.tools.map((t) => t.name);
+    expect(offered).toEqual(["garu__ask"]);
+    expect(provider.calls[0]!.tools[0]!.description).toContain("bea, rook");
+    expect(provider.calls[0]!.tools[0]!.description).not.toContain("tomay-test");
+    const results = provider.calls[1]!.messages.at(-1)!.content;
+    expect(results).toEqual([
+      { type: "tool_result", toolUseId: "a1", content: "Yes: Monday, she is waiting on the pricing copy." },
+      { type: "tool_result", toolUseId: "a2", isError: true, content: "BLOCKED by policy: nothing else" },
+    ]);
+    expect(asked).toEqual([["bea", "Anything from Lena this week?"]]);
+    const log = readRun(res.logPath);
+    expect(log.find((e) => e.event.type === "tool.request" && e.event.request.tool === "ask")!.event).toMatchObject({ request: { server: "garu", tool: "ask", args: { agent: "bea" } } });
+  });
+
+  it("a refusal or a failed run reaches the model as an error it can act on", async () => {
+    const provider = new FakeProvider(script());
+    const res = await runAgent({
+      garufile: asking,
+      logRoot: mkdtempSync(join(tmpdir(), "garu-")),
+      provider,
+      approver: async () => ({ approved: false, by: "t" }),
+      ask: { agents: () => ["bea"], ask: async () => { throw new Error("bea is busy with a run right now; answer with what you have, or say it should be asked later"); } },
+    });
+    expect(res.status).toBe("ok");
+    const results = provider.calls[1]!.messages.at(-1)!.content;
+    expect(results[0]).toEqual({ type: "tool_result", toolUseId: "a1", isError: true, content: expect.stringMatching(/^ERROR: bea is busy/) });
+  });
+
+  it("without a way to reach other agents, garu.ask is not offered at all", async () => {
+    const provider = new FakeProvider([{ stopReason: "end_turn", content: [{ type: "text", text: "alone" }] }]);
+    const res = await runAgent({ garufile: asking, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider, approver: async () => ({ approved: false, by: "t" }) });
+    expect(res.status).toBe("ok");
+    expect(provider.calls[0]!.tools).toEqual([]);
+  });
+});
+
 describe("runAgent", () => {
   it("tells the model its owner and language, and hands it the date in that language", async () => {
     const provider = new FakeProvider([{ stopReason: "end_turn", content: [{ type: "text", text: "listo" }] }]);

@@ -9,7 +9,7 @@ import { ModelQuotaError } from "./providers/gemini.js";
  * tool error so it can adapt instead of pretending the call succeeded.
  */
 import type { Garufile } from "./garufile.js";
-import { ToolBus, extractText, type Approver } from "./bus.js";
+import { ToolBus, extractText, type Approver, type BuiltinTool } from "./bus.js";
 import { holdAwake } from "./awake.js";
 import { PolicyEngine } from "./policy.js";
 import { Recorder, type Envelope } from "./recorder.js";
@@ -35,6 +35,52 @@ export interface RunOptions {
   owner?: string;
   /** A catch-up: when the schedule meant this run to happen. The model is told, so "today" means that day. */
   dueAt?: Date;
+  /**
+   * The other agents, when the run happens where they live (the control room). With it the model is
+   * offered one more tool, garu.ask, policed like any other: `tool: garu.ask` with `when: { agent: … }`.
+   */
+  ask?: AskAgents;
+}
+
+/** How a run reaches the owner's other agents. The control room supplies it; a bare `garu run` has none. */
+export interface AskAgents {
+  /** The agents this one may ring: every other agent with a webhook door. For the tool's description. */
+  agents(): string[];
+  /** Ring another agent's door with a message and wait for its answer. Throws with a plain reason when it can't (no such agent, no door, busy, too many agents in a row). */
+  ask(target: string, message: string): Promise<{ status: string; output: string }>;
+}
+
+/** The one tool Garu provides itself: ask another agent, and get what it wrote back. */
+export function askTool(self: string, ask: AskAgents): BuiltinTool {
+  const names = ask.agents().filter((n) => n !== self);
+  return {
+    server: "garu",
+    name: "ask",
+    description:
+      `Ask another of your owner's agents a question and get its answer. Each is an expert on its own job and answers with its own tools, under its own rules; what it writes back is your result. ` +
+      (names.length ? `Agents you can ask: ${names.join(", ")}.` : `No other agent can be asked right now.`),
+    inputSchema: {
+      type: "object",
+      properties: {
+        agent: { type: "string", description: "The agent's name, exactly as listed." },
+        message: { type: "string", description: "Your question, with the context it needs to answer." },
+      },
+      required: ["agent", "message"],
+    },
+    readOnly: false,
+    call: async (args) => {
+      const agent = typeof args["agent"] === "string" ? args["agent"].trim() : "";
+      const message = typeof args["message"] === "string" ? args["message"].trim() : "";
+      if (!agent || !message) return { text: "garu.ask needs an agent and a message", isError: true };
+      try {
+        const r = await ask.ask(agent, message);
+        if (r.status !== "ok") return { text: `${agent} could not answer (its run ended ${r.status})${r.output ? `: ${r.output}` : ""}`, isError: true };
+        return { text: r.output.trim() || `${agent} answered with nothing to say` };
+      } catch (e) {
+        return { text: (e as Error).message, isError: true };
+      }
+    },
+  };
 }
 
 /** "es" → "Spanish", for the one line that tells the model which language to write in. */
@@ -100,7 +146,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
 
   const recorder = new Recorder({ root: opts.logRoot, agent: g.name, ...(opts.sink ? { sink: opts.sink } : {}) });
   const policy = new PolicyEngine(g.policy);
-  const bus = new ToolBus({ policy, recorder, approver: opts.approver, agent: g.name, ...(g.sandbox ? { sandbox: g.sandbox } : {}) });
+  const bus = new ToolBus({ policy, recorder, approver: opts.approver, agent: g.name, ...(g.sandbox ? { sandbox: g.sandbox } : {}), ...(opts.ask ? { builtins: [askTool(g.name, opts.ask)] } : {}) });
   const release = holdAwake();
 
   const trigger = opts.trigger ?? "manual";

@@ -10,6 +10,38 @@ import { Recorder, readRun } from "./recorder.js";
 const here = dirname(fileURLToPath(import.meta.url));
 const serverPath = join(here, "testing", "echo-server.mjs");
 
+describe("ToolBus built-in tools", () => {
+  it("a built-in tool is listed, policed and recorded like a server's, and counts as a write", async () => {
+    const rec = new Recorder({ root: mkdtempSync(join(tmpdir(), "garu-")), agent: "builtin-test" });
+    const asked: string[] = [];
+    const bus = new ToolBus({
+      policy: new PolicyEngine([
+        { tool: "garu.ask", when: { agent: { matches: "^bea$" } }, action: "allow" },
+        { tool: "*", action: "block", reason: "only bea" },
+      ]),
+      recorder: rec,
+      approver: async () => ({ approved: false, by: "nobody" }),
+      builtins: [{
+        server: "garu", name: "ask", description: "ask", inputSchema: { type: "object" }, readOnly: false,
+        call: async (args) => { asked.push(String(args["agent"])); return args["agent"] === "bea" ? { text: "Yes, Monday." } : { text: "no", isError: true }; },
+      }],
+    });
+    await bus.connect([]);
+    expect(bus.listTools().map((t) => t.qualified)).toEqual(["garu.ask"]);
+    expect(bus.sentSoFar()).toEqual({ calls: 0, allReadOnly: true });
+    const ok = await bus.call("garu.ask", { agent: "bea", message: "lunch?" });
+    expect(ok.status).toBe("ok");
+    expect(ok.status === "ok" && ok.result).toEqual([{ type: "text", text: "Yes, Monday." }]);
+    const blocked = await bus.call("garu.ask", { agent: "rook", message: "x" });
+    expect(blocked.status).toBe("blocked");
+    expect(asked).toEqual(["bea"]);
+    expect(bus.sentSoFar()).toEqual({ calls: 1, allReadOnly: false });
+    const types = readRun(rec.path).map((e) => e.event.type);
+    expect(types).toEqual(["tool.request", "policy.decision", "tool.result", "tool.request", "policy.decision"]);
+    await bus.close();
+  });
+});
+
 describe("ToolBus (real MCP server over stdio)", () => {
   let bus: ToolBus;
   let rec: Recorder;

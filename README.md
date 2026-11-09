@@ -201,6 +201,24 @@ reaches the model as the run's input, and the agent's policy applies exactly as 
 agent answers 409 and the caller tries later; the message is not queued. A hook name is lowercase letters,
 digits and dashes.
 
+### Agents asking agents
+
+The door is also how one agent reaches another. An agent whose policy allows `garu.ask` can put a
+question to any agent that has a webhook door, and gets that agent's reply as its tool result:
+
+```yaml
+policy:
+  - tool: "garu.ask"              # Tomay may ask Bea, and nobody else
+    when: { agent: { matches: "^bea$" } }
+    action: allow
+```
+
+Bea's run is a normal run in her log, with the trigger `asked by tomay` and the question as its input;
+she answers with her own tools under her own rules, so Tomay never borrows Bea's Gmail. The tool is
+offered only when the run happens on the control room (`garu ui`), where the other agents live. An agent
+can't ask itself, a chain stops after two asks in a row, and a busy agent says so instead of queueing.
+With `action: ask` instead of `allow`, each question waits for your tap in the inbox first.
+
 ## Approvals that get smarter
 
 The complaint practitioners make about always-on agents is that *their* throughput becomes the bottleneck: the agent works all night and you spend the morning clicking Approve. Garu treats approval as the product, not a dialog box.

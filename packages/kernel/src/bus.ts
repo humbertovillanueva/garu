@@ -31,6 +31,20 @@ export interface BusTool {
   readOnly: boolean;
 }
 
+/**
+ * A tool Garu itself provides, with no MCP server behind it (garu.ask, which rings another agent).
+ * It is listed, policed and recorded exactly like a server's tool; only the call goes to a function.
+ */
+export interface BuiltinTool {
+  server: string;
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+  /** Marked like MCP's readOnlyHint: false for anything that starts a run or changes something. */
+  readOnly: boolean;
+  call(args: Record<string, unknown>): Promise<{ text: string; isError?: boolean }>;
+}
+
 export interface ApprovalContext {
   agent: string;
   runId: string;
@@ -62,6 +76,8 @@ export interface BusOptions {
   agent?: string;
   /** Where OAuth sign-ins for remote servers are kept (default .garu/auth). */
   authRoot?: string;
+  /** Tools Garu provides itself, beside the servers' (see BuiltinTool). */
+  builtins?: readonly BuiltinTool[];
 }
 
 interface Connected {
@@ -221,6 +237,9 @@ export class ToolBus {
         });
       }
     }
+    for (const b of this.opts.builtins ?? []) {
+      out.push({ qualified: `${b.server}.${b.name}`, server: b.server, name: b.name, description: b.description, inputSchema: b.inputSchema, readOnly: b.readOnly });
+    }
     this.tools = out;
     return out;
   }
@@ -246,9 +265,13 @@ export class ToolBus {
     if (dot < 0) return undefined;
     const server = qualified.slice(0, dot);
     const tool = qualified.slice(dot + 1);
-    if (!this.servers.has(server)) return undefined;
+    if (!this.servers.has(server) && !this.builtin(server, tool)) return undefined;
     if (!this.tools.some((t) => t.server === server && t.name === tool)) return undefined;
     return { server, tool };
+  }
+
+  private builtin(server: string, tool: string): BuiltinTool | undefined {
+    return this.opts.builtins?.find((b) => b.server === server && b.name === tool);
   }
 
   /** The one path to the outside world. */
@@ -279,6 +302,28 @@ export class ToolBus {
     const started = Date.now();
     const timeoutMs = this.opts.callTimeoutMs ?? 60_000;
     const readOnly = this.tools.find((t) => t.qualified === qualified)?.readOnly === true;
+
+    // A built-in tool: past the policy like any other, then a function instead of a server. Counted as
+    // sent (it is not read-only), recorded with its outcome, and never retried: it may have started a run.
+    const builtin = this.builtin(target.server, target.tool);
+    if (builtin) {
+      this.sentCalls++;
+      if (!readOnly) this.sentWrites++;
+      try {
+        const r = await builtin.call(args);
+        const content = [{ type: "text", text: r.text }];
+        if (r.isError) {
+          rec.record({ type: "tool.result", callId, ok: false, durationMs: Date.now() - started, error: r.text });
+          return { status: "error", error: r.text, callId };
+        }
+        rec.record({ type: "tool.result", callId, ok: true, durationMs: Date.now() - started, result: content });
+        return { status: "ok", result: content, callId };
+      } catch (e) {
+        const error = (e as Error).message;
+        rec.record({ type: "tool.result", callId, ok: false, durationMs: Date.now() - started, error });
+        return { status: "error", error, callId };
+      }
+    }
     // A call that was cut off: a timeout, or an abort because the machine slept through it. The
     // message says how long it really took, so a model doesn't invent a reason for the gap.
     const cutOff = (text: string) => /aborted|timed out|timeout|no answer/i.test(text);

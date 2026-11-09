@@ -13,7 +13,7 @@ import type { ApprovalContext, Approver } from "./bus.js";
 import type { ToolCallRequest } from "./policy.js";
 
 /** Argument keys that identify "the same thing" across calls, in priority order. */
-export const SCOPE_KEYS = ["path", "url", "to", "recipient", "recipients", "channel", "command", "cmd", "query"] as const;
+export const SCOPE_KEYS = ["path", "url", "to", "recipient", "recipients", "channel", "command", "cmd", "query", "agent"] as const;
 
 export interface Grant {
   id: string;

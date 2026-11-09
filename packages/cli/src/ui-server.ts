@@ -38,6 +38,7 @@ import {
   lineDiff,
   diffStats,
   localDay,
+  type AskAgents,
 } from "@garu/kernel";
 import { t } from "./i18n.js";
 import { VERSION } from "./version.js";
@@ -136,7 +137,28 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
   // --- agents: discovered Garufiles (re-read on each request so edits show up) ---
   const discover = () => discoverGarufiles(opts.root);
 
-  const startRun = async (a: DiscoveredAgent, trigger: string, input?: string, dueAt?: Date): Promise<RunResult> => {
+  /** Agents another agent may ring: those with a webhook door. The door is the owner's say-so. */
+  const hasDoor = (x: DiscoveredAgent) => x.garufile.triggers.some((tr) => tr.webhook);
+  /**
+   * How a run reaches the other agents. `hop` is how many asks deep this run already is: a run a person
+   * or a schedule started is 0, the agent it asks runs at 1, and so on, up to MAX_ASK_HOPS.
+   */
+  const askFrom = (asker: DiscoveredAgent, hop: number): AskAgents => ({
+    agents: () => discover().agents.filter((x) => x.garufile.name !== asker.garufile.name && hasDoor(x)).map((x) => x.garufile.name),
+    ask: async (target, message) => {
+      const agents = discover().agents;
+      const refusal = askRefusal({ asker: asker.garufile.name, target, hop, agents: agents.map((x) => ({ name: x.garufile.name, door: hasDoor(x) })), busy: live.has(target) });
+      if (refusal) throw new Error(refusal);
+      const to = agents.find((x) => x.garufile.name === target)!;
+      opts.log(`▶ ${target} (asked by ${asker.garufile.name})`);
+      const input = `Another of your owner's agents, "${asker.garufile.name}", asks you:\n\n${message}\n\nAnswer it in your reply: what you write is what ${asker.garufile.name} gets back. Use your tools as your standing instructions allow, and nothing beyond them.`;
+      const r = await startRun(to, `ask:${asker.garufile.name}`, input, undefined, hop + 1);
+      opts.log(`■ ${target}: ${r.status} in ${r.turns} turn(s)`);
+      return { status: r.status, output: r.output };
+    },
+  });
+
+  const startRun = async (a: DiscoveredAgent, trigger: string, input?: string, dueAt?: Date, hop = 0): Promise<RunResult> => {
     const name = a.garufile.name;
     const started = new Date().toISOString();
     // Busy from this very moment, before the first await: a second start in the same instant sees it
@@ -150,7 +172,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     };
     let result: RunResult | undefined;
     try {
-      result = await runAgent({ garufile: a.garufile, logRoot: opts.logRoot, approver, trigger, sink, ...(input ? { input } : {}), ...(dueAt ? { dueAt } : {}), ...(opts.userName && opts.userName !== "you" ? { owner: opts.userName } : {}) });
+      result = await runAgent({ garufile: a.garufile, logRoot: opts.logRoot, approver, trigger, sink, ask: askFrom(a, hop), ...(input ? { input } : {}), ...(dueAt ? { dueAt } : {}), ...(opts.userName && opts.userName !== "you" ? { owner: opts.userName } : {}) });
       return result;
     } catch (e) {
       chat.append(name, { role: "agent", kind: "error", text: (e as Error).message });
@@ -646,6 +668,24 @@ export function feed(store: RunStore, inbox: Inbox, limit: number) {
 const MAX_BODY_BYTES = 1_048_576;
 
 /** The JSON object a request carries, or {}: never more than 1 MB, never anything but an object. */
+/** How many agents may stand in a row: a person's or a schedule's run (0) may ask one (1), which may ask one more (2). */
+export const MAX_ASK_HOPS = 2;
+
+/**
+ * Why one agent may not ask another right now, in a sentence the asking model can act on; null when it may.
+ * Pure, so the rules are tested without a server: the asker never rings itself, only an agent with a
+ * webhook door can be rung, a chain stops at MAX_ASK_HOPS, and a busy agent is a "later", not a queue.
+ */
+export function askRefusal(q: { asker: string; target: string; hop: number; agents: { name: string; door: boolean }[]; busy: boolean }): string | null {
+  if (q.target === q.asker) return `an agent can't ask itself`;
+  const t = q.agents.find((x) => x.name === q.target);
+  if (!t) return `no agent named "${q.target}"; the agents that can be asked are: ${q.agents.filter((x) => x.door && x.name !== q.asker).map((x) => x.name).join(", ") || "none"}`;
+  if (!t.door) return `${q.target} has no door for other agents: its owner would add "- webhook: ask" to its triggers`;
+  if (q.hop >= MAX_ASK_HOPS) return `too many agents in a row: you were asked by an agent that was itself asked, so answer with what you have instead of asking ${q.target}`;
+  if (q.busy) return `${q.target} is busy with a run right now; answer with what you have, or say it should be asked later`;
+  return null;
+}
+
 async function readBody(req: import("node:http").IncomingMessage): Promise<Record<string, unknown>> {
   const chunks: Buffer[] = [];
   let size = 0;

@@ -201,6 +201,26 @@ el mensaje llega al modelo como la entrada de la ejecución, y la política del 
 que en cualquier otra. Un agente ocupado responde 409 y quien llama lo intenta después; el mensaje no se
 encola. El nombre de un webhook son letras minúsculas, dígitos y guiones.
 
+### Agentes que preguntan a agentes
+
+La puerta también es como un agente llega a otro. Un agente cuya política permite `garu.ask` puede
+hacerle una pregunta a cualquier agente que tenga una puerta webhook, y recibe la respuesta de ese agente
+como resultado de la herramienta:
+
+```yaml
+policy:
+  - tool: "garu.ask"              # Tomay puede preguntarle a Bea, y a nadie más
+    when: { agent: { matches: "^bea$" } }
+    action: allow
+```
+
+La ejecución de Bea es una ejecución normal en su registro, con el disparador `a pedido de tomay` y la
+pregunta como entrada; responde con sus propias herramientas y sus propias reglas, así que Tomay nunca
+toma prestado el Gmail de Bea. La herramienta se ofrece solo cuando la ejecución ocurre en la sala de
+control (`garu ui`), donde viven los demás agentes. Un agente no puede preguntarse a sí mismo, una
+cadena se corta después de dos preguntas seguidas, y un agente ocupado lo dice en vez de encolar. Con
+`action: ask` en lugar de `allow`, cada pregunta espera primero tu toque en la bandeja.
+
 ## Aprobaciones que aprenden
 
 La queja de quienes usan agentes siempre activos es que *su propio* ritmo se vuelve el cuello de botella: el agente trabaja toda la noche y tú pasas la mañana haciendo clic en Aprobar. Garu trata la aprobación como el producto, no como un cuadro de diálogo.
