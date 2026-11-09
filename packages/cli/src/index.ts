@@ -809,7 +809,8 @@ program
       const interactive = signInFor(spec, opts.authRoot, { redirectUrl: AUTH_REDIRECT_URL, onAuthorize: openBrowser });
       const waitForCode = () => {
         stdout.write(`${t("waiting for the sign-in to finish (5 minutes)…")}\n`);
-        return Promise.race([code, new Promise<string>((_, rej) => setTimeout(() => rej(new Error(t("timed out waiting for the browser"))), 5 * 60_000))]);
+        // The timer must not keep the process alive once the code is in: unref'd, it dies with the command.
+        return Promise.race([code, new Promise<string>((_, rej) => setTimeout(() => rej(new Error(t("timed out waiting for the browser"))), 5 * 60_000).unref())]);
       };
 
       if (!isRemoteServer(spec)) {
@@ -862,6 +863,8 @@ program
       }
       stdout.write(`  ${t("tokens: {dir}/ (shared by every agent that uses {url})", { dir: opts.authRoot, url: spec.url })}\n`);
     } finally {
+      // close() alone leaves the browser's keep-alive connection open, and the command with it.
+      listener.closeAllConnections();
       listener.close();
     }
   });
