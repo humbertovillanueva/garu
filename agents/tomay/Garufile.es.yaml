@@ -90,6 +90,9 @@ policy:
     action: allow
     when:
       path: { matches: "briefs/\\d{4}-\\d{2}-\\d{2}\\.md$" }
+  - tool: "garu.ask"              # Bea conoce la bandeja: Tomay puede preguntarle a ella, y a nadie más
+    when: { agent: { matches: "^bea$" } }
+    action: allow
   - tool: "*"
     action: block
     reason: no es parte de preparar tu día

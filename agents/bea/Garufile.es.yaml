@@ -33,6 +33,7 @@ model: gemini/gemini-3.5-flash-lite
 
 triggers:
   - cron: "0 8 * * 1-5"
+  - webhook: ask                  # la puerta que otro agente (Tomay) toca para preguntarle algo
 
 budget:
   maxCostUsd: 0.05

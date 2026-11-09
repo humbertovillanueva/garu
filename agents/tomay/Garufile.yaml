@@ -85,6 +85,9 @@ policy:
     action: allow
     when:
       path: { matches: "briefs/\\d{4}-\\d{2}-\\d{2}\\.md$" }
+  - tool: "garu.ask"              # Bea knows the inbox: Tomay may ask her, and nobody else
+    when: { agent: { matches: "^bea$" } }
+    action: allow
   - tool: "*"
     action: block
     reason: not part of preparing your day
