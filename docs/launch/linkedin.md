@@ -47,8 +47,10 @@ into agents that survive a nap.
 
 Everything is files on your own computer. No cloud, no account, no database. Open source, Apache-2.0.
 
-The Android app is in closed testing right now (my family are the testers, so it speaks Spanish
-too). The runtime and the control room are on GitHub today.
+The phone app is coming soon. It's the control room in your pocket: the asks land there, you
+approve or decline with a tap, and you can see every run and what it cost from wherever you are.
+It's in closed testing on Android right now, and it speaks Spanish too. The runtime and the desktop
+control room are on GitHub today.
 
 Site, with a demo you can click through: https://garuagents.com
 Code: https://github.com/humbertovillanueva/garu
@@ -98,8 +100,10 @@ trabajo se fue en agentes que sobreviven una siesta.
 Todo son archivos en tu propia computadora. Sin nube, sin cuenta, sin base de datos. Código
 abierto, Apache-2.0.
 
-La app para Android está en prueba cerrada ahora mismo (los testers son mi familia, así que también
-habla español). El runtime y la sala de control están en GitHub hoy.
+La app para el teléfono viene pronto. Es la sala de control en tu bolsillo: ahí llegan las
+preguntas, apruebas o rechazas con un toque, y ves cada corrida y lo que costó desde donde estés.
+Está en prueba cerrada en Android ahora mismo, y también habla español. El runtime y la sala de
+control de escritorio están en GitHub hoy.
 
 Sitio, con una demo para recorrer: https://garuagents.com
 Código: https://github.com/humbertovillanueva/garu
