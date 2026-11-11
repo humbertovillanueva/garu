@@ -6,7 +6,7 @@ import { GrantStore, parseDuration, scopeFor, withGrants } from "./grants.js";
 
 const req = { server: "fs", tool: "write_file", args: { path: "/w/heartbeat.log", content: "x" } };
 const decision = { action: "ask" as const, ruleIndex: 0, matched: "fs.write_file", reason: "r" };
-const ctx = { agent: "heartbeat", runId: "r", callId: "c" };
+const ctx = { agent: "heartbeat", runId: "r", callId: "c", parkable: false };
 
 describe("GrantStore", () => {
   it("creates, finds, uses, expires and revokes grants", () => {

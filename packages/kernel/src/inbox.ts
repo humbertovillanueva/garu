@@ -7,11 +7,15 @@
  * paused run picks it up and continues. No server, no database: a folder you
  * can read with `ls`, like the flight recorder. Unanswered requests expire
  * as a deny — silence never means yes.
+ *
+ * A run that can park doesn't wait in memory for the whole of that time: after a short hold it is
+ * told "parked", saves itself and lets go; the request stays open here, and the run is started again
+ * when the answer lands (or the request expires). A run that can't park waits the old way.
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import type { ApprovalContext, Approver } from "./bus.js";
+import type { ApprovalAnswer, ApprovalContext, Approver } from "./bus.js";
 import type { Decision, ToolCallRequest } from "./policy.js";
 
 export interface ApprovalRequest {
@@ -54,11 +58,15 @@ export class Inbox {
     mkdirSync(this.root, { recursive: true });
   }
 
-  /** An Approver that pauses the run until someone decides, or the request expires. */
-  approver(): Approver {
+  /**
+   * An Approver that pauses the run until someone decides, or the request expires. With `holdMs`, a
+   * run that can park is held in memory only that long: past it the answer is "parked" and the
+   * request stays open for the run to come back to.
+   */
+  approver(opts: { holdMs?: number } = {}): Approver {
     return async (req, decision, ctx) => {
       const r = await this.create(req, decision, ctx);
-      return this.waitFor(r.id);
+      return this.waitFor(r.id, { ...(opts.holdMs !== undefined ? { holdMs: opts.holdMs } : {}), parkable: ctx.parkable });
     };
   }
 
@@ -88,13 +96,18 @@ export class Inbox {
     this.closedReason = reason;
   }
 
-  /** Resolve when a decision lands or the request expires (expiry = deny). */
-  async waitFor(id: string): Promise<{ approved: boolean; by: string; note?: string }> {
+  /**
+   * Resolve when a decision lands or the request expires (expiry = deny). A parkable wait answers
+   * "parked" once the hold is over, or at once when Garu is stopping: the request stays open.
+   */
+  async waitFor(id: string, wait: { holdMs?: number; parkable?: boolean } = {}): Promise<ApprovalAnswer> {
+    const holdUntil = wait.holdMs !== undefined ? this.now().getTime() + wait.holdMs : Infinity;
     for (;;) {
       const r = this.get(id);
       if (!r) return { approved: false, by: "inbox: request vanished" };
       if (r.decision) return { approved: r.decision.approved, by: r.decision.by, ...(r.decision.note ? { note: r.decision.note } : {}) };
       if (this.closedReason) {
+        if (wait.parkable) return { parked: id };
         try { this.decide(id, false, this.closedReason); } catch { /* decided in the meantime */ }
         return { approved: false, by: this.closedReason };
       }
@@ -102,8 +115,26 @@ export class Inbox {
         this.decide(id, false, "inbox: expired");
         return { approved: false, by: "inbox: expired" };
       }
+      if (this.now().getTime() >= holdUntil) {
+        if (wait.parkable) return { parked: id };
+        // A run that can't put itself away can't hold a server and the computer for hours either.
+        const by = "inbox: the run could not wait longer";
+        try { this.decide(id, false, by); } catch { /* decided in the meantime */ }
+        return { approved: false, by };
+      }
       await sleep(this.pollMs);
     }
+  }
+
+  /** Requests past their time with no decision are declined now, as expired, so nothing stays open forever once no run is waiting on it. */
+  expireOverdue(): ApprovalRequest[] {
+    const now = this.now().getTime();
+    const out: ApprovalRequest[] = [];
+    for (const r of this.all()) {
+      if (r.decision || Date.parse(r.expiresAt) > now) continue;
+      try { out.push(this.decide(r.id, false, "inbox: expired")); } catch { /* decided in the meantime */ }
+    }
+    return out;
   }
 
   /** Record a human decision. Throws if the request is unknown or already decided. */

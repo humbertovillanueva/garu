@@ -113,7 +113,15 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
 - Everything must run on Node 22 (`engines`, and CI tests on 22) although this Mac has Node 25: no
   regex inline modifiers like `(?i:…)`; a rule's `matches` takes `ignoreCase: true` instead.
 - Policy semantics: first matching rule wins; nothing matching = ask; an unanswered ask expires as a
-  deny after 30 min; a tool the policy can never allow is not shown to the model. Approving the same
+  deny after a day (`--ask-timeout`, minutes or 30m/24h/7d; the service plist bakes it in, so
+  `service install` again to change it); a tool the policy can never allow is not shown to the model.
+  Parked asks: a control-room run holds an ask in memory for `ASK_HOLD_MS` (2 min), then parks
+  (`kernel/src/park.ts`: `<runId>.parked.json` beside the log, `run.parked` in it, status "parked",
+  awake hold and tool servers released) and the control room's sweeper (`checkParked`, every 30 s,
+  on each decision, at start) resumes it in the same log (`run.resumed`, the answer recorded under the
+  original callId, `bus.callDecided`); the state file is deleted first thing on resume so an approved
+  call never goes out twice; a stop parks waiting runs instead of declining them. `garu up` (no
+  control room) still waits in memory. Approving the same
   agent → tool 3 times with no decline makes Garu suggest the rule (`kernel/src/suggest.ts`,
   `ui/.../SuggestionCard.svelte`); "Add to Garufile" inserts it above the existing ask rule.
 - A Garufile may say `language: es`: the kernel then hands the model the date in that language and tells

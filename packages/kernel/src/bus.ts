@@ -49,23 +49,32 @@ export interface ApprovalContext {
   agent: string;
   runId: string;
   callId: string;
+  /** The run can put itself away and be started again later: an approver may answer "parked" instead of waiting. */
+  parkable: boolean;
 }
+
+/** A yes or a no, or "parked": the request stays open and the run will come back for the answer. */
+export type ApprovalAnswer = { approved: boolean; by: string; note?: string } | { parked: string };
 
 export interface Approver {
   /** Return true to let the call through. Called only for `ask` decisions. */
-  (req: ToolCallRequest, decision: Decision, ctx: ApprovalContext): Promise<{ approved: boolean; by: string; note?: string }>;
+  (req: ToolCallRequest, decision: Decision, ctx: ApprovalContext): Promise<ApprovalAnswer>;
 }
 
 export type CallOutcome =
   | { status: "ok"; result: unknown }
   | { status: "blocked"; decision: Decision }
   | { status: "denied"; decision: Decision; by: string; note?: string }
-  | { status: "error"; error: string };
+  | { status: "error"; error: string }
+  /** The ask is open in the inbox under `requestId`; the run parks and makes the call when the answer comes. */
+  | { status: "parked"; decision: Decision; requestId: string };
 
 export interface BusOptions {
   policy: PolicyEngine;
   recorder: Recorder;
   approver: Approver;
+  /** The run can park on an ask (the loop saves its state and the host starts it again). */
+  parkable?: boolean;
   /** Per-call timeout for the MCP server. */
   callTimeoutMs?: number;
   /** How long to wait before the one retry of a tool server that didn't start. */
@@ -255,8 +264,8 @@ export class ToolBus {
    * that named no tool never went out, so it is not counted; a call that went out and then failed still
    * counts, since a write cut off by a timeout may well have landed.
    */
-  sentSoFar(): { calls: number; allReadOnly: boolean } {
-    return { calls: this.sentCalls, allReadOnly: this.sentWrites === 0 };
+  sentSoFar(): { calls: number; writes: number; allReadOnly: boolean } {
+    return { calls: this.sentCalls, writes: this.sentWrites, allReadOnly: this.sentWrites === 0 };
   }
 
   /** Split "<server>.<tool>" back into its parts. Tool names may contain dots; server names may not. */
@@ -294,11 +303,35 @@ export class ToolBus {
 
     if (decision.action === "ask") {
       rec.record({ type: "approval.requested", callId });
-      const { approved, by, note } = await this.opts.approver(req, decision, { agent: rec.agent, runId: rec.runId, callId });
+      const answer = await this.opts.approver(req, decision, { agent: rec.agent, runId: rec.runId, callId, parkable: this.opts.parkable === true });
+      if ("parked" in answer) return { status: "parked", decision, requestId: answer.parked, callId };
+      const { approved, by, note } = answer;
       rec.record({ type: "approval.resolved", callId, approved, by, ...(note ? { note } : {}) });
       if (!approved) return { status: "denied", decision, by, callId, ...(note ? { note } : {}) };
     }
+    return this.execute(target, qualified, args, callId);
+  }
 
+  /**
+   * A call whose ask was answered after the run parked. The answer is recorded under the call's
+   * original id, then the call goes out, or doesn't, exactly as if the answer had come at once.
+   */
+  async callDecided(qualified: string, args: Record<string, unknown>, callId: string, decision: Decision, answer: { approved: boolean; by: string; note?: string }): Promise<CallOutcome & { callId: string }> {
+    const rec = this.opts.recorder;
+    rec.record({ type: "approval.resolved", callId, approved: answer.approved, by: answer.by, ...(answer.note ? { note: answer.note } : {}) });
+    if (!answer.approved) return { status: "denied", decision, by: answer.by, callId, ...(answer.note ? { note: answer.note } : {}) };
+    const target = this.resolve(qualified);
+    if (!target) {
+      const error = `unknown tool "${qualified}" (its server is no longer in the Garufile)`;
+      rec.record({ type: "tool.result", callId, ok: false, durationMs: 0, error });
+      return { status: "error", error, callId };
+    }
+    return this.execute(target, qualified, args, callId);
+  }
+
+  /** Past the policy and past any ask: the call itself, to a server or a built-in. */
+  private async execute(target: { server: string; tool: string }, qualified: string, args: Record<string, unknown>, callId: string): Promise<CallOutcome & { callId: string }> {
+    const rec = this.opts.recorder;
     const started = Date.now();
     const timeoutMs = this.opts.callTimeoutMs ?? 60_000;
     const readOnly = this.tools.find((t) => t.qualified === qualified)?.readOnly === true;

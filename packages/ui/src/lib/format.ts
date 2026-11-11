@@ -101,7 +101,7 @@ export function runStatus(r: { status: string; offline?: boolean }): string {
   return r.offline ? "offline" : r.status;
 }
 export function statusLabel(s: string): string {
-  return ({ ok: t("done"), error: t("error"), offline: t("no network"), running: t("running"), interrupted: t("interrupted"), blocked: t("blocked"), max_turns: t("hit turn limit"), budget_exceeded: t("over budget"), "run.ok": t("done"), "needs-setup": t("needs setup"), waiting: t("waiting for you"), working: t("working"), scheduled: t("scheduled"), sleeping: t("sleeping"), idle: t("idle") } as Record<string, string>)[s] ?? s;
+  return ({ ok: t("done"), error: t("error"), offline: t("no network"), running: t("running"), parked: t("waiting for you"), interrupted: t("interrupted"), blocked: t("blocked"), max_turns: t("hit turn limit"), budget_exceeded: t("over budget"), "run.ok": t("done"), "needs-setup": t("needs setup"), waiting: t("waiting for you"), working: t("working"), scheduled: t("scheduled"), sleeping: t("sleeping"), idle: t("idle") } as Record<string, string>)[s] ?? s;
 }
 
 /** First-person status line, the way a colleague would say it. */

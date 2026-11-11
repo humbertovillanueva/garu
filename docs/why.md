@@ -44,7 +44,7 @@ Second, approvals should write the policy. "Approve for 24h" creates a grant sco
 
 Third, a decline should teach. Declining a call used to stop that call and nothing else. Our own agent proved why that's not enough: told to watch "the Garu repo" without being given the name, it found someone else's project called garu and tried to log its stats. The review card caught the wrong numbers, I declined, and the agent then tried to post the same wrong numbers to Slack, because nothing told it why. Now a decline carries a note, "wrong repo, use humbertovillanueva/garu", that goes back to the model before its next step. A declined call becomes a correction, not just a wall.
 
-And always: silence is a deny. A request nobody answers in thirty minutes is refused. An unattended agent never gets a yes by default.
+And always: silence is a deny. A request nobody answers in a day is refused. An unattended agent never gets a yes by default. The run doesn't wait up for that answer either: after two minutes it parks itself, state on disk, computer free, and resumes at that exact call when the answer comes, whether that's in an hour or on Thursday.
 
 ## What we are trying to achieve
 

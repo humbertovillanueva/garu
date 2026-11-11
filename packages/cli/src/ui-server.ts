@@ -38,8 +38,19 @@ import {
   lineDiff,
   diffStats,
   localDay,
+  listParked,
   type AskAgents,
+  type ParkedRun,
 } from "@garu/kernel";
+
+/**
+ * How long a run waits in memory for an answer before it parks. Long enough that a tap on the phone
+ * as the card arrives resumes without reconnecting a thing; short enough that nobody's computer is
+ * held awake, with a tool server open, for an answer that comes tomorrow.
+ */
+export const ASK_HOLD_MS = 2 * 60_000;
+/** The sweeper's pace: a decision written by `garu approve` or a request past its time is noticed within this. */
+const PARKED_CHECK_MS = 30_000;
 import { t } from "./i18n.js";
 import { VERSION } from "./version.js";
 import { authenticate, clearSessionCookie, corsHeaders, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, rotateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
@@ -122,13 +133,15 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       if (opts.notify) await notify(opts.notify, r, (await addresses())[0]?.url);
     },
   });
-  const approver = withGrants(inbox.approver(), grants);
+  // The demo has nothing to resume, so its sample asks wait in memory as long as they live.
+  const approver = withGrants(inbox.approver(opts.demo ? {} : { holdMs: ASK_HOLD_MS }), grants);
 
   const watchers: FSWatcher[] = [];
   for (const dir of [opts.logRoot, opts.inboxRoot]) {
     if (!existsSync(dir)) continue;
     try {
-      watchers.push(watch(dir, { recursive: true }, ping));
+      // A decision written straight into the inbox folder (`garu approve`) is a reason to look at the parked runs.
+      watchers.push(watch(dir, { recursive: true }, dir === opts.inboxRoot ? () => { ping(); scheduleParkedCheck(); } : ping));
     } catch {
       /* recursive watch unsupported here; the UI still works, just not live */
     }
@@ -153,12 +166,16 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       opts.log(`▶ ${target} (asked by ${asker.garufile.name})`);
       const input = `Another of your owner's agents, "${asker.garufile.name}", asks you:\n\n${message}\n\nAnswer it in your reply: what you write is what ${asker.garufile.name} gets back. Use your tools as your standing instructions allow, and nothing beyond them.`;
       const r = await startRun(to, `ask:${asker.garufile.name}`, input, undefined, hop + 1);
-      opts.log(`■ ${target}: ${r.status} in ${r.turns} turn(s)`);
+      opts.log(r.status === "parked" ? `⏸ ${target}: parked on an ask of its own; ${asker.garufile.name} goes on without it` : `■ ${target}: ${r.status} in ${r.turns} turn(s)`);
       return { status: r.status, output: r.output };
     },
   });
 
-  const startRun = async (a: DiscoveredAgent, trigger: string, input?: string, dueAt?: Date, hop = 0): Promise<RunResult> => {
+  /**
+   * One run, fresh or resumed. `hop` is the ask depth (kept in the parked state, so a resumed run
+   * keeps it); `resume` is a parked run's saved state, with the inbox's answers looked up here.
+   */
+  const startRun = async (a: DiscoveredAgent, trigger: string, input?: string, dueAt?: Date, hop = 0, resume?: ParkedRun): Promise<RunResult> => {
     const name = a.garufile.name;
     const started = new Date().toISOString();
     // Busy from this very moment, before the first await: a second start in the same instant sees it
@@ -172,14 +189,29 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     };
     let result: RunResult | undefined;
     try {
-      result = await runAgent({ garufile: a.garufile, logRoot: opts.logRoot, approver, trigger, sink, ask: askFrom(a, hop), ...(input ? { input } : {}), ...(dueAt ? { dueAt } : {}), ...(opts.userName && opts.userName !== "you" ? { owner: opts.userName } : {}) });
+      const answers: Record<string, { approved: boolean; by: string; note?: string }> = {};
+      if (resume) {
+        for (const s of resume.step) {
+          if (s.kind !== "waiting") continue;
+          const d = inbox.get(s.call.requestId)?.decision;
+          if (d) answers[s.call.requestId] = { approved: d.approved, by: d.by, ...(d.note ? { note: d.note } : {}) };
+        }
+      }
+      result = await runAgent({
+        garufile: a.garufile, logRoot: opts.logRoot, approver, trigger, sink, ask: askFrom(a, hop),
+        park: !opts.demo, host: { hop },
+        ...(input ? { input } : {}), ...(dueAt ? { dueAt } : {}), ...(opts.userName && opts.userName !== "you" ? { owner: opts.userName } : {}),
+        ...(resume ? { resume: { parked: resume, answers } } : {}),
+      });
       return result;
     } catch (e) {
       chat.append(name, { role: "agent", kind: "error", text: (e as Error).message });
       throw e;
     } finally {
       // The thread is the agent's diary: a chat reply for chat runs, a short entry for everything else.
-      if (result) {
+      // A parked run writes nothing yet: its entry comes when it resumes and finishes.
+      if (result && result.status === "parked") opts.log(`⏸ ${name}: parked, waiting for your answer in the inbox (${result.parked?.requests.join(", ")})`);
+      else if (result) {
         const text = result.output?.trim() || `run ${result.status} with nothing to say`;
         // A run the network cut off before it changed anything is a diary entry, not a red one: the schedule runs it again.
         chat.append(name, { role: "agent", kind: trigger === "chat" ? (result.status === "ok" ? "chat" : "error") : result.status === "ok" || result.offline ? "run" : "error", text, runId: result.runId, ...(result.quota ? { quota: result.quota } : {}) });
@@ -188,6 +220,39 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       ping();
     }
   };
+
+  /**
+   * Parked runs come back here: once every request a run waited on has its answer (or ran out of
+   * time), and the agent is free, the run is started again from its saved state. Runs the service
+   * never knew (a restart in between) are found the same way: the state is a file.
+   */
+  const unresumable = new Set<string>();
+  const checkParked = () => {
+    if (opts.demo) return;
+    for (const r of inbox.expireOverdue()) opts.log(`✖ ${r.agent}: nobody answered about ${r.tool} in time (${r.id}); declined`);
+    for (const p of listParked(opts.logRoot)) {
+      if (live.has(p.agent)) continue;
+      if (!p.step.every((s) => s.kind === "done" || inbox.get(s.call.requestId)?.decision)) continue;
+      const a = discover().agents.find((x) => x.garufile.name === p.agent);
+      if (!a) {
+        if (!unresumable.has(p.runId)) opts.log(`✖ ${p.agent}: a parked run has its answer but no Garufile to resume with (${p.runId})`);
+        unresumable.add(p.runId);
+        continue;
+      }
+      const hop = typeof p.host?.["hop"] === "number" ? (p.host["hop"] as number) : 0;
+      opts.log(`▶ ${p.agent} (resuming ${p.runId}: your answer came)`);
+      void startRun(a, p.trigger, p.input, p.dueAt ? new Date(p.dueAt) : undefined, hop, p)
+        .then((r) => opts.log(r.status === "parked" ? `⏸ ${p.agent}: parked again` : `■ ${p.agent}: ${r.status} in ${r.turns} turn(s)`))
+        .catch((e: unknown) => opts.log(`✖ ${p.agent}: ${(e as Error).message}`));
+    }
+  };
+  let parkedTimer: NodeJS.Timeout | undefined;
+  const scheduleParkedCheck = () => {
+    clearTimeout(parkedTimer);
+    parkedTimer = setTimeout(checkParked, 300);
+  };
+  const parkedTicker = opts.demo ? undefined : setInterval(checkParked, PARKED_CHECK_MS);
+  parkedTicker?.unref();
 
   // --- optional scheduler ---
   let scheduler: Scheduler | undefined;
@@ -228,6 +293,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     });
     scheduled = scheduler.start(ready);
   }
+  // Parked runs whose answer came while Garu was down resume now.
+  scheduleParkedCheck();
 
   const agentView = (a: DiscoveredAgent | undefined, name: string) => {
     const g = a?.garufile;
@@ -521,6 +588,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
             }
           }
           ping();
+          scheduleParkedCheck();
           return json(res, { ...r, grant });
         } catch (e) {
           return json(res, { error: (e as Error).message }, 409);
@@ -534,6 +602,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           catch (e) { results.push({ id, ok: false, error: (e as Error).message }); }
         }
         ping();
+        scheduleParkedCheck();
         return json(res, { results });
       }
       const gr = /^\/api\/grants\/([a-z0-9]+)\/revoke$/.exec(path);
@@ -599,7 +668,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           env: [...referenced].sort().map((k) => ({ name: k, set: isSet(k) })),
           remotes,
           notify: Boolean(opts.notify),
-          askTimeoutMin: Math.round((opts.askTimeoutMs ?? 30 * 60_000) / 60_000),
+          askTimeoutMin: Math.round((opts.askTimeoutMs ?? 24 * 60 * 60_000) / 60_000),
+          askHoldMin: Math.round(ASK_HOLD_MS / 60_000),
           login: { required: requireLogin, direct: isDirectLoopback(req), tokenPath: opts.tokenPath },
         });
       }
@@ -626,10 +696,13 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     close: async () => {
       for (const w of watchers) w.close();
       for (const c of clients) c.end();
-      // A restart shouldn't wait half an hour for an answer nobody is giving: paused asks end now,
-      // recorded as declined by the stop, and runs get ten seconds to wrap up.
+      clearTimeout(parkedTimer);
+      if (parkedTicker) clearInterval(parkedTicker);
+      // A restart shouldn't wait for an answer nobody is giving right now: a run waiting on an ask
+      // parks (the ask stays open and the run comes back for it), and runs get ten seconds to wrap up.
       inbox.close();
       await scheduler?.stop(10_000);
+      for (const until = Date.now() + 10_000; live.size && Date.now() < until; ) await new Promise((r) => setTimeout(r, 100));
       server.close();
     },
   };

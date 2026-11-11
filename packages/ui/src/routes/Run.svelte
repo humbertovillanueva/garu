@@ -33,7 +33,9 @@
   const live_ = $derived(a?.inFlight?.runId === runId || live.pending.some((p) => p.runId === runId));
   // A run the network cut off before it changed anything is "offline": not an error, and the schedule runs it again.
   const offline = $derived(end?.event["offline"] === true);
-  const status = $derived(end ? (offline ? "offline" : (end.event["status"] as string)) : live_ ? "running" : "interrupted");
+  // Parked: the run put itself away on an ask and will pick up in this same log once you answer.
+  const parked = $derived([...(events ?? [])].reverse().find((e) => e.event.type === "run.parked" || e.event.type === "run.resumed")?.event.type === "run.parked");
+  const status = $derived(end ? (offline ? "offline" : (end.event["status"] as string)) : parked ? "parked" : live_ ? "running" : "interrupted");
   const scheduled = $derived(/^(cron|catch-up):/.test(String(start?.event["trigger"] ?? "")));
   const cost = $derived.by(() => {
     if (end && end.event["costUsd"] !== undefined) return end.event["costUsd"] as number;
@@ -101,6 +103,8 @@
   {:else}
     {#if status === "offline"}
       <div class="panel px-4 py-3 text-[14px] text-fg-2" role="status">{t("No network: the computer was asleep or offline, and nothing was changed.")}{#if scheduled}{" "}{t("The schedule will run it again once the network is back.")}{/if}</div>
+    {:else if status === "parked"}
+      <div class="panel px-4 py-3 text-[14px] text-fg-2" role="status">{t("Waiting for your answer in the inbox. The run picks up right where it stopped once you decide; nothing is held open meanwhile.")}</div>
     {:else if status === "error"}
       <div class="panel px-4 py-3 text-[14px]" role="alert" style="border-color: color-mix(in oklab, var(--color-bad) 35%, var(--color-line))">{#if quota}{@const q = quota}{t("Gemini's daily limit for {model} is used up; it resets {when}. Add billing to the key, or switch the model.", { model: q.model, when: until(q.retryAt) })}{:else}{plainTimes(String(end?.event["summary"] ?? ""))}{/if}</div>
     {/if}

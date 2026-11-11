@@ -170,7 +170,7 @@ program
   .command("up")
   .argument("<files...>", t("Garufiles to keep running on their cron triggers"))
   .option("--on-ask <mode>", t("what to do with `ask` decisions: inbox (pause for `garu approve`) | deny | allow | terminal"), "inbox")
-  .option("--ask-timeout <minutes>", t("inbox mode: deny a request nobody answers after this long"), "30")
+  .option("--ask-timeout <time>", t("inbox mode: deny a request nobody answers after this long (30m, 24h, 7d; a bare number is minutes)"), "30")
   .option("--notify <url>", t("inbox mode: POST each approval request to this URL (ntfy.sh topic URLs work)"))
   .option("--inbox-root <dir>", t("where approval requests live"), DEFAULT_INBOX_ROOT)
   .option("--log-root <dir>", t("where run logs go"), DEFAULT_LOG_ROOT)
@@ -190,13 +190,12 @@ program
     });
     if (agents.length === 0) fail(t("nothing to run: every agent given is missing something in .env or a sign-in"));
     if (!["inbox", "deny", "allow", "terminal"].includes(opts.onAsk)) fail(t("--on-ask must be inbox, deny, allow or terminal (got \"{mode}\")", { mode: opts.onAsk }));
-    const timeoutMin = Number(opts.askTimeout);
-    if (!Number.isFinite(timeoutMin) || timeoutMin <= 0) fail(t("--ask-timeout must be a positive number of minutes"));
+    const timeoutMs = askTimeoutMs(opts.askTimeout);
     // Kept by name so a stop can end its paused asks instead of waiting out their half hour.
     const inbox = opts.onAsk === "inbox"
       ? new Inbox({
           root: opts.inboxRoot,
-          timeoutMs: timeoutMin * 60_000,
+          timeoutMs,
           onRequest: async (r) => {
             stderr.write(`\n┌ ${t("APPROVAL NEEDED  (expires {time})", { time: localTime(r.expiresAt, { seconds: false }) })}\n│ ${formatRequest(r)}\n└ garu approve ${r.id}   ·   garu deny ${r.id}\n\n`);
             // A control room served by Tailscale on the usual port is where a tap on the push should land.
@@ -314,7 +313,7 @@ service
   .option("--host <host>", t("bind address"), "127.0.0.1")
   .option("--as <name>", t("your name"), process.env["GARU_USER"] ?? process.env["USER"] ?? "you")
   .option("--notify <url>", t("POST approval requests to this URL"))
-  .option("--ask-timeout <minutes>", t("deny approvals nobody answers after this long"), "30")
+  .option("--ask-timeout <time>", t("deny approvals nobody answers after this long (30m, 24h, 7d; a bare number is minutes)"), "24h")
   .option("--demo", t("install the public demo instead: no schedules, nothing runs, nothing is edited"))
   .description(t("Start `garu ui --up` for this folder at every login, and now."))
   .action(async (opts: { port: string; host: string; as: string; notify?: string; askTimeout: string; demo?: boolean }) => {
@@ -429,7 +428,7 @@ program
   .option("-p, --port <n>", t("port"), "4000")
   .option("--host <host>", t("bind address (localhost only by default)"), "127.0.0.1")
   .option("--up", t("also run cron schedules for every Garufile found under this directory"))
-  .option("--ask-timeout <minutes>", t("deny approvals nobody answers after this long"), "30")
+  .option("--ask-timeout <time>", t("deny approvals nobody answers after this long (30m, 24h, 7d; a bare number is minutes)"), "24h")
   .option("--notify <url>", t("POST approval requests to this URL (ntfy.sh topic URLs work)"))
   .option("--log-root <dir>", t("where run logs live"), DEFAULT_LOG_ROOT)
   .option("--inbox-root <dir>", t("where approval requests live"), DEFAULT_INBOX_ROOT)
@@ -455,7 +454,7 @@ program
       decider: `${opts.as} (ui)`,
       up: Boolean(opts.up) && !opts.demo,
       demo: Boolean(opts.demo),
-      askTimeoutMs: Number(opts.askTimeout) * 60_000,
+      askTimeoutMs: askTimeoutMs(opts.askTimeout),
       ...(opts.notify ? { notify: opts.notify } : {}),
       tokenPath: DEFAULT_TOKEN_PATH,
       requireLogin: Boolean(opts.requireLogin),
@@ -493,7 +492,7 @@ program
       return;
     }
     for (const r of rows) {
-      const state = r.decision ? (r.decision.approved ? t("approved by {who}", { who: r.decision.by }) : t("denied by {who}", { who: r.decision.by })) : t("pending, expires {time}", { time: localTime(r.expiresAt, { seconds: false }) });
+      const state = r.decision ? (r.decision.approved ? t("approved by {who}", { who: r.decision.by }) : t("denied by {who}", { who: r.decision.by })) : t("pending, expires {time}", { time: localTime(r.expiresAt, { date: true, seconds: false }) });
       stdout.write(`${formatRequest(r)}\n    ${localTime(r.createdAt, { date: true, seconds: false })}  ·  ${state}\n`);
     }
   });
@@ -978,6 +977,19 @@ function printSchedulerEvent(e: SchedulerEvent): void {
   }
 }
 const autoDeny: Approver = async () => ({ approved: false, by: "--deny" });
+
+/** "--ask-timeout 30" is thirty minutes, as it always was; "24h" and "7d" read as they look. Exits on anything else. */
+function askTimeoutMs(given: string): number {
+  const s = given.trim();
+  if (/^\d+$/.test(s) && Number(s) > 0) return Number(s) * 60_000;
+  try {
+    const ms = parseDuration(s);
+    if (ms > 0) return ms;
+  } catch {
+    /* said below */
+  }
+  return fail(t("--ask-timeout must be a number of minutes, or a time like 30m, 24h or 7d (got \"{given}\")", { given }));
+}
 
 const terminalApprover: Approver = async (req, decision) => {
   const rl = createInterface({ input: stdin, output: stderr });

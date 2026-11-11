@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runAgent } from "./agent.js";
 import { parseGarufile } from "./garufile.js";
+import { readParked } from "./park.js";
 import { FakeProvider } from "./providers/fake.js";
 import type { CompleteRequest, CompleteResponse } from "./provider.js";
 import { readRun } from "./recorder.js";
@@ -122,6 +123,85 @@ policy:
     expect(res.status).toBe("ok");
     expect(provider.calls[0]!.tools).toEqual([]);
   });
+});
+
+describe("runAgent parking on an ask", () => {
+  it("parks the step as it stands, and resumes in the same log with the answer under the original call", async () => {
+    const logRoot = mkdtempSync(join(tmpdir(), "garu-"));
+    const provider = new FakeProvider([
+      { stopReason: "tool_use", content: [
+        { type: "tool_use", id: "t1", name: "echo__echo", input: { text: "hello" } },
+        { type: "tool_use", id: "t2", name: "echo__add", input: { a: 1, b: 2 } }, // asks: no rule names it
+      ] },
+    ]);
+    const asked: string[] = [];
+    const res = await runAgent({
+      garufile, logRoot, provider, park: true, host: { hop: 1 }, trigger: "cron:0 7 * * *", input: "a note", owner: "Humberto",
+      approver: async (req, _d, ctx) => { asked.push(`${req.tool}:${ctx.parkable}`); return { parked: "req001" }; },
+    });
+    expect(res.status).toBe("parked");
+    expect(res.parked).toEqual({ requests: ["req001"] });
+    expect(asked).toEqual(["add:true"]);
+    const state = readParked(logRoot, "loop-test", res.runId)!;
+    expect(state).toMatchObject({ trigger: "cron:0 7 * * *", input: "a note", owner: "Humberto", host: { hop: 1 }, turn: 1, completed: 1, sent: { calls: 1, writes: 1 } });
+    expect(state.step).toEqual([
+      { kind: "done", block: { type: "tool_result", toolUseId: "t1", content: "hello" } },
+      { kind: "waiting", call: expect.objectContaining({ toolUseId: "t2", name: "echo__add", qualified: "echo.add", args: { a: 1, b: 2 }, requestId: "req001" }) },
+    ]);
+    const before = readRun(res.logPath).map((e) => e.event.type);
+    expect(before.at(-1)).toBe("run.parked");
+    expect(before).not.toContain("run.end");
+
+    // The answer came: the run comes back, finishes the step, and goes on.
+    const again = new FakeProvider([{ stopReason: "end_turn", content: [{ type: "text", text: "3 it is" }] }]);
+    const back = await runAgent({
+      garufile, logRoot, provider: again, park: true,
+      approver: async () => { throw new Error("nothing should ask on the way back"); },
+      resume: { parked: state, answers: { req001: { approved: true, by: "humberto (ui)" } } },
+    });
+    expect(back).toMatchObject({ status: "ok", runId: res.runId, logPath: res.logPath, output: "3 it is", turns: 2 });
+    expect(readParked(logRoot, "loop-test", res.runId)).toBeNull();
+    const first = again.calls[0]!;
+    expect(first.system).toContain("Trigger: cron:0 7 * * *");
+    expect(first.system).toContain("Your owner: Humberto.");
+    expect(first.system).toContain("This run paused at");
+    expect(first.messages[0]).toEqual({ role: "user", content: [{ type: "text", text: "a note" }] });
+    expect(first.messages.at(-1)!.content).toEqual([
+      { type: "tool_result", toolUseId: "t1", content: "hello" },
+      { type: "tool_result", toolUseId: "t2", content: "3" },
+    ]);
+    const events = readRun(res.logPath);
+    const types = events.map((e) => e.event.type);
+    expect(types.filter((t) => t === "run.start")).toHaveLength(1);
+    expect(types.slice(types.indexOf("run.parked"))).toEqual(["run.parked", "run.resumed", "approval.resolved", "tool.result", "model.turn", "run.end"]);
+    const addCall = events.find((e) => e.event.type === "tool.request" && e.event.request.tool === "add")!.event as { callId: string };
+    expect(events.find((e) => e.event.type === "approval.resolved")!.event).toMatchObject({ callId: addCall.callId, approved: true, by: "humberto (ui)" });
+    expect(events.map((e) => e.seq)).toEqual(events.map((_, i) => i + 1));
+  }, 30_000);
+
+  it("a no on the way back reaches the model as DENIED with the note; an answer that vanished as a deny too", async () => {
+    const logRoot = mkdtempSync(join(tmpdir(), "garu-"));
+    const provider = new FakeProvider([
+      { stopReason: "tool_use", content: [
+        { type: "tool_use", id: "t1", name: "echo__add", input: { a: 1, b: 2 } },
+        { type: "tool_use", id: "t2", name: "echo__fail", input: {} },
+      ] },
+    ]);
+    let n = 0;
+    const res = await runAgent({ garufile, logRoot, provider, park: true, approver: async () => ({ parked: `req${++n}` }) });
+    expect(res.status).toBe("parked");
+    expect(res.parked?.requests.sort()).toEqual(["req1", "req2"]);
+    const again = new FakeProvider([{ stopReason: "end_turn", content: [{ type: "text", text: "ok then" }] }]);
+    const back = await runAgent({
+      garufile, logRoot, provider: again, park: true, approver: async () => { throw new Error("no"); },
+      resume: { parked: readParked(logRoot, "loop-test", res.runId)!, answers: { req1: { approved: false, by: "humberto (ui)", note: "not now" } } },
+    });
+    expect(back.status).toBe("ok");
+    const results = again.calls[0]!.messages.at(-1)!.content;
+    expect(results[0]).toMatchObject({ toolUseId: "t1", isError: true, content: expect.stringMatching(/^DENIED by humberto \(ui\): .*\nThe person who declined said: "not now"/s) });
+    expect(results[1]).toMatchObject({ toolUseId: "t2", isError: true, content: expect.stringContaining("DENIED by inbox: request vanished") });
+    expect(readRun(res.logPath).filter((e) => e.event.type === "tool.result")).toHaveLength(0);
+  }, 30_000);
 });
 
 describe("runAgent", () => {

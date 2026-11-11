@@ -15,6 +15,9 @@ export type GaruEvent =
   | { type: "run.start"; agent: string; model: string; trigger: string; sandbox?: { image: string; network: string }; /** A catch-up: when the schedule meant it to run (ISO). */ dueAt?: string }
   | { type: "tools.offered"; offered: string[]; hidden: string[] }
   | { type: "run.end"; status: "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded"; summary?: string; costUsd?: number; priced?: boolean; offline?: boolean; quota?: { model: string; retryAt: string; limit?: number } }
+  /** The run put itself away, waiting on these inbox requests; it resumes in this same log when they are answered. */
+  | { type: "run.parked"; requests: string[] }
+  | { type: "run.resumed"; parkedAt: string }
   | { type: "model.turn"; turn: number; inputTokens?: number; outputTokens?: number; text?: string; costUsd?: number; totalCostUsd?: number }
   | { type: "budget.exceeded"; costUsd: number; maxCostUsd: number; pendingToolCalls: number }
   | { type: "tool.request"; callId: string; request: ToolCallRequest }
@@ -42,6 +45,8 @@ export interface RecorderOptions {
   root: string;
   agent: string;
   runId?: string;
+  /** Carry on an existing log (a parked run coming back): the sequence continues where the file ends. */
+  resume?: boolean;
   /** Mirror events to this sink too (e.g. stderr pretty-printer). */
   sink?: (e: Envelope) => void;
 }
@@ -61,6 +66,12 @@ export class Recorder {
     mkdirSync(dirname(this.path), { recursive: true });
     // Create the file up front so a run with zero events still leaves a trace.
     closeSync(openSync(this.path, "a"));
+    if (opts.resume) {
+      const last = readFileSync(this.path, "utf8").trimEnd().split("\n").at(-1);
+      if (last) {
+        try { this.seq = (JSON.parse(last) as Envelope).seq; } catch { throw new Error(`flight recorder: ${this.path} ends in a corrupt line; the run can't resume into it`); }
+      }
+    }
   }
 
   record(event: GaruEvent): Envelope {
@@ -142,6 +153,10 @@ export function formatEvent(env: Envelope): string {
       return `${t}   waiting for approval…`;
     case "approval.resolved":
       return `${t}   ${e.approved ? "approved" : "denied"} by ${e.by}${e.note ? ` — "${e.note}"` : ""}`;
+    case "run.parked":
+      return `${t} ⏸ parked: waiting on ${e.requests.length === 1 ? "an answer" : `${e.requests.length} answers`} in the inbox (${e.requests.join(", ")}); the run resumes when it comes`;
+    case "run.resumed":
+      return `${t} ▶ resumed: the answer came (parked since ${localTime(e.parkedAt, { date: true, seconds: false })})`;
     case "tool.result":
       return `${t} ← ${e.ok ? "ok" : "ERROR"} in ${e.durationMs}ms${e.error ? `: ${e.error}` : ""}`;
     case "model.retry":

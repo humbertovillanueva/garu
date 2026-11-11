@@ -3,7 +3,7 @@ import { createServer } from "node:net";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Inbox, suggestRules } from "@garu/kernel";
+import { Inbox, Recorder, readRun, suggestRules, writeParked, readParked } from "@garu/kernel";
 import { startUiServer, askRefusal, MAX_ASK_HOPS } from "./ui-server.js";
 
 /**
@@ -258,6 +258,43 @@ describe("the rest", () => {
     const runs = (await (await get("/api/runs?agent=slow")).json()) as { trigger: string }[];
     expect(runs.some((r) => r.trigger === "webhook:nudge")).toBe(true);
   }, 15_000);
+
+  it("a parked run comes back on its own once its ask is answered, in the same log", async () => {
+    const logRoot = join(root, ".garu", "runs");
+    // A run of slow that parked on a write, as the kernel leaves it: a log ending in run.parked and the state beside it.
+    const rec = new Recorder({ root: logRoot, agent: "slow" });
+    rec.record({ type: "run.start", agent: "slow", model: "ollama/test", trigger: "cron:0 8 * * *" });
+    rec.record({ type: "tool.request", callId: "c-park", request: { server: "fs", tool: "write_file", args: { path: "notes.md", content: "new" } } });
+    rec.record({ type: "policy.decision", callId: "c-park", decision: { action: "ask", ruleIndex: 0, matched: "fs.write_file", reason: "writing" } });
+    rec.record({ type: "approval.requested", callId: "c-park" });
+    const id = pending("fs.write_file", { path: "notes.md", content: "new" }, "slow");
+    rec.record({ type: "run.parked", requests: [id] });
+    writeParked(logRoot, {
+      version: 1, agent: "slow", runId: rec.runId, trigger: "cron:0 8 * * *", parkedAt: new Date().toISOString(), host: { hop: 0 },
+      messages: [{ role: "user", content: [{ type: "text", text: "Carry out your standing instructions now." }] }, { role: "assistant", content: [{ type: "tool_use", id: "t1", name: "fs__write_file", input: { path: "notes.md", content: "new" } }] }],
+      step: [{ kind: "waiting", call: { toolUseId: "t1", name: "fs__write_file", qualified: "fs.write_file", args: { path: "notes.md", content: "new" }, callId: "c-park", requestId: id, decision: { action: "ask", ruleIndex: 0, matched: "fs.write_file", reason: "writing" } } }],
+      turn: 1, completed: 1, totalCost: 0, inputTokens: 10, outputTokens: 5, unmetered: false, sent: { calls: 0, writes: 0 },
+    });
+    // Nothing happens while the ask is open.
+    await new Promise((r) => setTimeout(r, 500));
+    expect(readParked(logRoot, "slow", rec.runId)).not.toBeNull();
+    expect((await (await get("/api/runs?agent=slow")).json() as { runId: string; status: string }[]).find((r) => r.runId === rec.runId)?.status).toBe("parked");
+
+    expect((await post(`/api/inbox/${id}/approve`, {})).status).toBe(200);
+    for (let i = 0; i < 100 && readParked(logRoot, "slow", rec.runId); i++) await new Promise((r) => setTimeout(r, 100));
+    expect(readParked(logRoot, "slow", rec.runId)).toBeNull();
+    expect(logLines.some((l) => l.includes(`▶ slow (resuming ${rec.runId}`))).toBe(true);
+    for (let i = 0; i < 100; i++) {
+      const now = (await (await get("/api/agents")).json()) as { agents: { name: string; status: string }[] };
+      if (now.agents.find((x) => x.name === "slow")?.status !== "working") break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    // Same log: the resume follows the park; slow's tool server isn't a real one, so the run then ends in error, with run.end on the books.
+    const types = readRun(rec.path).map((e) => e.event.type);
+    expect(types.slice(types.indexOf("run.parked"), types.indexOf("run.parked") + 2)).toEqual(["run.parked", "run.resumed"]);
+    expect(types.at(-1)).toBe("run.end");
+    expect(types.filter((t) => t === "run.start")).toHaveLength(1);
+  }, 20_000);
 
   it("two Run now taps in the same instant start one run; the other is refused", async () => {
     const [a, b] = await Promise.all([post("/api/agents/slow/run", {}), post("/api/agents/slow/run", {})]);

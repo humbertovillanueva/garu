@@ -1,6 +1,6 @@
 <script lang="ts">
   /** A run's flight recorder as a timeline. Tool calls are grouped with their decision and result. */
-  import { clockExact, usd, tokens, statusLabel, decidedBy, expired, plainTimes, until } from "../format";
+  import { clockExact, usd, tokens, statusLabel, decidedBy, expired, plainTimes, until, humanTime } from "../format";
   import Decision from "./Decision.svelte";
   import { t } from "../i18n.svelte";
   /** Why the model was retried, in the reader's words; anything else is shown as the server said it. */
@@ -81,6 +81,8 @@
           {#if e.type === "run.start"}<span class="text-mute">{e["sandbox"] ? t("Run started, sandboxed") : t("Run started")}</span>
           {:else if e.type === "tools.offered"}{@const offered = (e["offered"] as string[]).length}{@const hidden = (e["hidden"] as string[]).length}<span class="text-mute">{offered === 1 ? t("1 tool offered") : t("{n} tools offered", { n: offered })}{hidden ? `, ${hidden === 1 ? t("1 more hidden because the policy always blocks it") : t("{n} more hidden because the policy always blocks them", { n: hidden })}` : ""}</span>
           {:else if e.type === "run.end"}<span class="font-medium">{t("Run {status}", { status: statusLabel(e["status"] as string) })}</span>{#if e["quota"]}{@const q = e["quota"] as { model: string; retryAt: string }}<span class="text-fg-2">— {t("Gemini's daily limit for {model} is used up; it resets {when}. Add billing to the key, or switch the model.", { model: q.model, when: until(q.retryAt) })}</span>{:else if e["summary"]}<span class="text-fg-2">— {plainTimes(String(e["summary"]))}</span>{/if}
+          {:else if e.type === "run.parked"}<span class="font-medium">{t("Parked, waiting for your answer")}</span><span class="text-fg-2">— {t("the run picks up here once you decide; nothing stays open meanwhile")}</span>
+          {:else if e.type === "run.resumed"}<span class="font-medium">{t("Resumed")}</span><span class="text-fg-2">— {t("your answer came; parked since {when}", { when: humanTime(String(e["parkedAt"])) })}</span>
           {:else if e.type === "budget.exceeded"}<span style="color: var(--color-bad)">{t("budget cap hit: {cost} reached the cap of {cap} — {n} call(s) not executed", { cost: usd(e["costUsd"] as number), cap: usd(e["maxCostUsd"] as number), n: e["pendingToolCalls"] as number })}</span>
           {:else if e.type === "model.retry"}<span style="color: var(--color-ask)">{t("model busy ({reason}) — retrying in {s}s, attempt {attempt} of {max}", { reason: reasonLabel(String(e["reason"])), s: Math.round((e["waitMs"] as number) / 1000), attempt: e["attempt"] as number, max: e["maxAttempts"] as number })}</span>
           {:else if e.type === "tools.retry"}<span style="color: var(--color-ask)">{t("tool server \"{server}\" didn't start in time — retrying in {s}s", { server: String(e["server"]), s: Math.round((e["waitMs"] as number) / 1000) })}</span>

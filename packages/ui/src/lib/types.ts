@@ -1,4 +1,4 @@
-export type RunStatus = "running" | "interrupted" | "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded";
+export type RunStatus = "running" | "parked" | "interrupted" | "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded";
 
 export interface RunSummary {
   agent: string;
@@ -173,6 +173,7 @@ export interface Settings {
   remotes: { agent: string; source: string; server: string; url: string; local?: boolean; auth: "none" | "oauth"; signedIn: boolean | null }[];
   notify: boolean;
   askTimeoutMin: number;
+  askHoldMin: number;
   /** required: even this computer signs in. direct: this request came from a browser on the same computer. */
   login: { required: boolean; direct: boolean; tokenPath: string };
 }

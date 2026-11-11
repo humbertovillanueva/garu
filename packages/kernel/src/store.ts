@@ -15,7 +15,7 @@ export interface RunSummary {
   runId: string;
   startedAt: string;
   endedAt: string | null;
-  status: "running" | "interrupted" | "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded";
+  status: "running" | "parked" | "interrupted" | "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded";
   trigger: string;
   model: string;
   sandbox: { image: string; network: string } | null;
@@ -96,6 +96,13 @@ export function summarizeRun(path: string, events: Envelope[], now = Date.now())
         break;
       case "policy.decision":
         s.toolCalls[e.decision.action]++;
+        break;
+      // Parked is quiet on purpose, for as long as the ask is open: never "interrupted".
+      case "run.parked":
+        s.status = "parked";
+        break;
+      case "run.resumed":
+        s.status = "running";
         break;
       case "run.end":
         s.endedAt = ts;

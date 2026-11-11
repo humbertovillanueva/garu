@@ -89,11 +89,11 @@
 
       <section class="slide" inert={i !== 2} aria-roledescription="slide" aria-label={t("{n} of {total}", { n: 3, total: LAST + 1 })}>
         <h1>{t("Every action passes through your rules.")}</h1>
-        <p>{t("Allow runs. Ask pauses and comes to your phone. Block: it can't even try. If you don't answer in 30 minutes, the answer is no.")}</p>
+        <p>{t("Allow runs. Ask pauses and comes to your phone. Block: it can't even try. If you don't answer within a day, the answer is no.")}</p>
         <div class="card rc">
           <div class="h">
             <span class="orb" style="background:{KIND_COLOR.bee}"><Creature kind="bee" size={22} /></span>
-            <span class="min-w-0"><b>bea</b> {t("wants to draft")} <b>{t("an email")}</b> <span class="tag">create_draft</span><span class="why">{t("a draft reply in your name · expires in 30 min")}</span></span>
+            <span class="min-w-0"><b>bea</b> {t("wants to draft")} <b>{t("an email")}</b> <span class="tag">create_draft</span><span class="why">{t("a draft reply in your name · expires tomorrow")}</span></span>
           </div>
           <div class="body"><span class="lbl">{t("To")}</span> Lena Ortiz<br><span class="lbl">{t("Re")}</span> {t("Homepage draft")}<br>{t("Hi Lena, thanks for sending the draft. I'll get back to you on the pricing copy before our review…")}</div>
           <div class="btns"><span class="ok">{t("Approve")}</span><span>{t("Approve for 24h")}</span><span class="no">{t("Decline")}</span></div>

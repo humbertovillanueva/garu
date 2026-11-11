@@ -9,8 +9,9 @@ import { ModelQuotaError } from "./providers/gemini.js";
  * tool error so it can adapt instead of pretending the call succeeded.
  */
 import type { Garufile } from "./garufile.js";
-import { ToolBus, extractText, type Approver, type BuiltinTool } from "./bus.js";
+import { ToolBus, extractText, type Approver, type BuiltinTool, type CallOutcome } from "./bus.js";
 import { holdAwake } from "./awake.js";
+import { removeParked, writeParked, type ParkedRun, type ParkedStep } from "./park.js";
 import { PolicyEngine } from "./policy.js";
 import { Recorder, type Envelope } from "./recorder.js";
 import { fromModelToolName, splitModelId, toModelToolName, type ContentBlock, type ModelMessage, type ModelProvider, type ModelTool } from "./provider.js";
@@ -40,6 +41,16 @@ export interface RunOptions {
    * offered one more tool, garu.ask, policed like any other: `tool: garu.ask` with `when: { agent: … }`.
    */
   ask?: AskAgents;
+  /**
+   * The run may park: when an ask isn't answered within the approver's hold, the loop saves the
+   * conversation beside its log and ends as "parked" instead of holding the computer and a tool
+   * server for hours. The host starts it again with `resume` once the answer is in.
+   */
+  park?: boolean;
+  /** Kept in the parked state for the host, untouched (the control room stores the ask depth). */
+  host?: Record<string, unknown>;
+  /** A parked run coming back: its saved state, and the answer to each request it waited on, by request id. */
+  resume?: { parked: ParkedRun; answers: Record<string, { approved: boolean; by: string; note?: string }> };
 }
 
 /** How a run reaches the owner's other agents. The control room supplies it; a bare `garu run` has none. */
@@ -74,6 +85,7 @@ export function askTool(self: string, ask: AskAgents): BuiltinTool {
       if (!agent || !message) return { text: "garu.ask needs an agent and a message", isError: true };
       try {
         const r = await ask.ask(agent, message);
+        if (r.status === "parked") return { text: `${agent} is waiting on its owner's answer to a question of its own and will finish later; it can't answer you now. Go on with what you have, or say it should be asked another time.`, isError: true };
         if (r.status !== "ok") return { text: `${agent} could not answer (its run ended ${r.status})${r.output ? `: ${r.output}` : ""}`, isError: true };
         return { text: r.output.trim() || `${agent} answered with nothing to say` };
       } catch (e) {
@@ -94,7 +106,7 @@ export type ModelQuota = { model: string; retryAt: string; limit?: number };
 export interface RunResult {
   runId: string;
   logPath: string;
-  status: "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded";
+  status: "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded" | "parked";
   /** The model's final text, if any. */
   output: string;
   turns: number;
@@ -109,6 +121,30 @@ export interface RunResult {
   offline?: boolean;
   /** The run stopped because the model's daily quota is used up. */
   quota?: ModelQuota;
+  /** The run put itself away, waiting on these inbox requests; it ends when it resumes. */
+  parked?: { requests: string[] };
+}
+
+/** What the model is told about one call, whatever became of it. */
+function resultBlock(out: CallOutcome, toolUseId: string): ContentBlock {
+  switch (out.status) {
+    case "ok":
+      return { type: "tool_result", toolUseId, content: extractText(out.result) || JSON.stringify(out.result) };
+    case "blocked":
+      return { type: "tool_result", toolUseId, isError: true, content: `BLOCKED by policy: ${out.decision.reason}` };
+    case "denied":
+      return {
+        type: "tool_result",
+        toolUseId,
+        isError: true,
+        content: `DENIED by ${out.by}: ${out.decision.reason}` + (out.note ? `\nThe person who declined said: "${out.note}". Act on this before doing anything else — correct the mistake if there is one, and do not repeat it in later calls.` : ""),
+      };
+    case "error":
+      return { type: "tool_result", toolUseId, isError: true, content: `ERROR: ${out.error}` };
+    case "parked":
+      // Never reaches the model: a parked call is saved, not answered. Here only so every outcome has a line.
+      return { type: "tool_result", toolUseId, isError: true, content: `ERROR: waiting for an answer` };
+  }
 }
 
 /** The network, not the model, failed: fetch's "fetch failed", a DNS or socket error, a timeout, Ollama unreachable. */
@@ -144,35 +180,45 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     );
   }
 
-  const recorder = new Recorder({ root: opts.logRoot, agent: g.name, ...(opts.sink ? { sink: opts.sink } : {}) });
+  // A parked run coming back: same run id, same log, and the state file goes first thing, so a run
+  // killed halfway through its resume is never resumed twice (an approved call must not go out twice).
+  const parked = opts.resume?.parked;
+  if (parked) removeParked(opts.logRoot, g.name, parked.runId);
+  const recorder = new Recorder({ root: opts.logRoot, agent: g.name, ...(parked ? { runId: parked.runId, resume: true } : {}), ...(opts.sink ? { sink: opts.sink } : {}) });
   const policy = new PolicyEngine(g.policy);
-  const bus = new ToolBus({ policy, recorder, approver: opts.approver, agent: g.name, ...(g.sandbox ? { sandbox: g.sandbox } : {}), ...(opts.ask ? { builtins: [askTool(g.name, opts.ask)] } : {}) });
+  const bus = new ToolBus({ policy, recorder, approver: opts.approver, agent: g.name, parkable: opts.park === true, ...(g.sandbox ? { sandbox: g.sandbox } : {}), ...(opts.ask ? { builtins: [askTool(g.name, opts.ask)] } : {}) });
   const release = holdAwake();
 
-  const trigger = opts.trigger ?? "manual";
-  recorder.record({
-    type: "run.start",
-    agent: g.name,
-    model: g.model,
-    trigger,
-    ...(g.sandbox ? { sandbox: { image: g.sandbox.image, network: g.sandbox.network } } : {}),
-    ...(opts.dueAt ? { dueAt: opts.dueAt.toISOString() } : {}),
-  });
+  const trigger = parked?.trigger ?? opts.trigger ?? "manual";
+  const input = parked ? parked.input : opts.input;
+  const dueAt = parked ? (parked.dueAt ? new Date(parked.dueAt) : undefined) : opts.dueAt;
+  const owner = parked ? parked.owner : opts.owner;
+  if (parked) recorder.record({ type: "run.resumed", parkedAt: parked.parkedAt });
+  else
+    recorder.record({
+      type: "run.start",
+      agent: g.name,
+      model: g.model,
+      trigger,
+      ...(g.sandbox ? { sandbox: { image: g.sandbox.image, network: g.sandbox.network } } : {}),
+      ...(dueAt ? { dueAt: dueAt.toISOString() } : {}),
+    });
 
   let status: RunResult["status"] = "ok";
   let output = "";
-  let turn = 0;
+  let turn = parked?.turn ?? 0;
 
-  let totalCost = 0;
-  let inputTokens = 0;
-  let outputTokens = 0;
+  let totalCost = parked?.totalCost ?? 0;
+  let inputTokens = parked?.inputTokens ?? 0;
+  let outputTokens = parked?.outputTokens ?? 0;
   // Turns the model actually answered. `turn` counts attempts, so an error mid-call doesn't inflate it.
-  let completed = 0;
+  let completed = parked?.completed ?? 0;
   // A priced model that reports no usage can't be metered: the run says so instead of claiming a price.
-  let unmetered = false;
+  let unmetered = parked?.unmetered ?? false;
   // The network went away before anything out there changed: not a run, as far as the schedule is concerned.
   let offline = false;
   let quota: ModelQuota | undefined;
+  let parkedNow: { requests: string[] } | undefined;
 
   try {
     await bus.connect(g.tools);
@@ -185,12 +231,12 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
       description: t.description,
       inputSchema: t.inputSchema,
     }));
-    recorder.record({ type: "tools.offered", offered: known, hidden });
+    if (!parked) recorder.record({ type: "tools.offered", offered: known, hidden });
 
     // The Garufile prompt is who the agent is and what its job is: it lives in the system prompt.
     // The user turn is what this particular run is about: a chat message, a note, or simply "do your job".
-    const userText = opts.input ?? "Carry out your standing instructions now.";
-    const messages: ModelMessage[] = [{ role: "user", content: [{ type: "text", text: userText }] }];
+    const userText = input ?? "Carry out your standing instructions now.";
+    const messages: ModelMessage[] = parked ? parked.messages : [{ role: "user", content: [{ type: "text", text: userText }] }];
     const now = (opts.now ?? (() => new Date()))();
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     // Spelled out in local time: given only a UTC timestamp, models get the weekday wrong, and after
@@ -201,18 +247,32 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     const local = spell(now);
     const localDate = dayOf(now);
     // A catch-up after midnight for a run due the evening before: without this, "today" is the wrong day.
-    const due = opts.dueAt;
+    const due = dueAt;
     const system = [
       SYSTEM_PREAMBLE,
       `Agent: ${g.name}${g.description ? ` — ${g.description}` : ""}`,
-      ...(opts.owner ? [`Your owner: ${opts.owner}.`] : []),
+      ...(owner ? [`Your owner: ${owner}.`] : []),
       ...(g.language ? [`Language: write everything meant for your owner (summaries, documents, notes, chat replies) in ${languageName(g.language)}. Answer an email in the language it was written in.`] : []),
       `Trigger: ${trigger}`,
       `Current time: ${local}, ${tz} (local date ${localDate}; UTC ${now.toISOString()}). Use this for any date, day of the week or timestamp; never work them out or guess.`,
       ...(due ? [`This run was due at ${spell(due)} (local date ${dayOf(due)}; UTC ${due.toISOString()}) and is running late: the computer was asleep or off. "Today", "tonight" and the local date your instructions refer to mean the due time's day, not the current one.`] : []),
+      ...(parked ? [`This run paused at ${spell(new Date(parked.parkedAt))} while your owner was asked about one of your calls, and resumed now: the answer is in the tool results that follow. Carry on from there; don't start over.`] : []),
       `Your standing instructions:\n${g.prompt.trim()}`,
       `The user message that follows is what this run is about. If it asks a question, answer it. If it asks for work, do it. If it only says to carry out your standing instructions, do exactly that. Never do work the message asked you not to do.`,
     ].join("\n\n");
+
+    // Coming back: the step the run stopped in is finished first. Calls that were done stay as they
+    // were; the ones that waited get their answer recorded and go out now, or come back as DENIED.
+    if (parked) {
+      const answers = opts.resume!.answers;
+      const results: ContentBlock[] = await Promise.all(parked.step.map(async (s): Promise<ContentBlock> => {
+        if (s.kind === "done") return s.block;
+        const c = s.call;
+        const answer = answers[c.requestId] ?? { approved: false, by: "inbox: request vanished" };
+        return resultBlock(await bus.callDecided(c.qualified, c.args, c.callId, c.decision, answer), c.toolUseId);
+      }));
+      messages.push({ role: "user", content: results });
+    }
 
     while (turn < g.maxTurns) {
       turn++;
@@ -268,27 +328,51 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
       // Every call the model made in this step goes out together. When two of them need a yes,
       // both cards reach the inbox at once instead of the second waiting on the first; the results
       // still go back to the model in the order it asked.
-      const results: ContentBlock[] = await Promise.all(toolUses.map(async (tu): Promise<ContentBlock> => {
+      const outs = await Promise.all(toolUses.map(async (tu) => {
         const qualified = fromModelToolName(tu.name, known);
-        if (!qualified) return { type: "tool_result", toolUseId: tu.id, content: `unknown tool ${tu.name}`, isError: true };
-        const out = await bus.call(qualified, tu.input);
-        switch (out.status) {
-          case "ok":
-            return { type: "tool_result", toolUseId: tu.id, content: extractText(out.result) || JSON.stringify(out.result) };
-          case "blocked":
-            return { type: "tool_result", toolUseId: tu.id, isError: true, content: `BLOCKED by policy: ${out.decision.reason}` };
-          case "denied":
-            return {
-              type: "tool_result",
-              toolUseId: tu.id,
-              isError: true,
-              content: `DENIED by ${out.by}: ${out.decision.reason}` + (out.note ? `\nThe person who declined said: "${out.note}". Act on this before doing anything else — correct the mistake if there is one, and do not repeat it in later calls.` : ""),
-            };
-          case "error":
-            return { type: "tool_result", toolUseId: tu.id, isError: true, content: `ERROR: ${out.error}` };
-        }
+        const out: (CallOutcome & { callId: string }) | null = qualified ? await bus.call(qualified, tu.input) : null;
+        return { tu, qualified, out };
       }));
-      messages.push({ role: "user", content: results });
+      const blockOf = (o: (typeof outs)[number]): ContentBlock => o.out ? resultBlock(o.out, o.tu.id) : { type: "tool_result", toolUseId: o.tu.id, content: `unknown tool ${o.tu.name}`, isError: true };
+      // One of them is waiting on a person and the hold is over: the whole step is saved as it stands
+      // and the run puts itself away. The calls that finished keep their results; the waiting ones are
+      // made when the answer comes, under the same call ids, in this same log.
+      const waiting = outs.filter((o) => o.out?.status === "parked");
+      if (waiting.length) {
+        const sent = bus.sentSoFar();
+        const step: ParkedStep[] = outs.map((o): ParkedStep =>
+          o.out?.status === "parked"
+            ? { kind: "waiting", call: { toolUseId: o.tu.id, name: o.tu.name, qualified: o.qualified!, args: o.tu.input, callId: o.out.callId, requestId: o.out.requestId, decision: o.out.decision } }
+            : { kind: "done", block: blockOf(o) },
+        );
+        const requests = waiting.map((o) => (o.out as { requestId: string }).requestId);
+        const host = parked?.host ?? opts.host;
+        writeParked(opts.logRoot, {
+          version: 1,
+          agent: g.name,
+          runId: recorder.runId,
+          trigger,
+          parkedAt: (opts.now ?? (() => new Date()))().toISOString(),
+          ...(input !== undefined ? { input } : {}),
+          ...(dueAt ? { dueAt: dueAt.toISOString() } : {}),
+          ...(owner !== undefined ? { owner } : {}),
+          ...(host ? { host } : {}),
+          messages,
+          step,
+          turn,
+          completed,
+          totalCost,
+          inputTokens,
+          outputTokens,
+          unmetered,
+          sent: { calls: (parked?.sent.calls ?? 0) + sent.calls, writes: (parked?.sent.writes ?? 0) + sent.writes },
+        });
+        recorder.record({ type: "run.parked", requests });
+        status = "parked";
+        parkedNow = { requests };
+        break;
+      }
+      messages.push({ role: "user", content: outs.map(blockOf) });
     }
 
     if (status === "ok" && turn >= g.maxTurns && !output) status = "max_turns";
@@ -300,7 +384,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     // it is "offline", the schedule doesn't count it and catches up. One call to a tool without that
     // mark, and the run stands as an error: a brief written or a message posted must not happen twice.
     const sent = bus.sentSoFar();
-    offline = isConnectionError(err) && sent.allReadOnly;
+    offline = isConnectionError(err) && sent.allReadOnly && (parked?.sent.writes ?? 0) === 0;
     if (err instanceof ModelQuotaError) quota = { model: err.model, retryAt: err.retryAt, ...(err.limit !== undefined ? { limit: err.limit } : {}) };
     recorder.record({ type: "error", message: err.message, ...(err.stack ? { stack: err.stack } : {}) });
     const scheduled = /^(cron|catch-up):/.test(trigger);
@@ -310,15 +394,17 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
   } finally {
     release();
     await bus.close();
-    recorder.record({
-      type: "run.end",
-      status,
-      costUsd: totalCost,
-      priced: price !== null && !unmetered,
-      ...(offline ? { offline: true } : {}),
-      ...(quota ? { quota } : {}),
-      ...(output ? { summary: output.slice(0, 200) } : {}),
-    });
+    // A parked run hasn't ended: its run.end comes when it resumes and finishes.
+    if (status !== "parked")
+      recorder.record({
+        type: "run.end",
+        status,
+        costUsd: totalCost,
+        priced: price !== null && !unmetered,
+        ...(offline ? { offline: true } : {}),
+        ...(quota ? { quota } : {}),
+        ...(output ? { summary: output.slice(0, 200) } : {}),
+      });
   }
 
   return {
@@ -327,6 +413,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     status,
     output,
     ...(quota ? { quota } : {}),
+    ...(parkedNow ? { parked: parkedNow } : {}),
     turns: completed,
     costUsd: price ? totalCost : null,
     inputTokens,

@@ -192,3 +192,22 @@ describe("RunStore", () => {
     }
   });
 });
+
+describe("a parked run", () => {
+  it("is parked for as long as it waits, running again once resumed, and never interrupted meanwhile", () => {
+    const root = mkdtempSync(join(tmpdir(), "store-"));
+    const r = new Recorder({ root, agent: "bea" });
+    r.record({ type: "run.start", agent: "bea", model: "gemini/x", trigger: "cron:0 8 * * 1-5" });
+    r.record({ type: "approval.requested", callId: "c" });
+    r.record({ type: "run.parked", requests: ["ab12cd"] });
+    const events = readRun(r.path);
+    const dayLater = Date.parse(events.at(-1)!.ts) + 86_400_000;
+    expect(summarizeRun(r.path, events, dayLater)).toMatchObject({ status: "parked", endedAt: null });
+    expect(new RunStore(root).runs("bea")[0]?.status).toBe("parked");
+
+    r.record({ type: "run.resumed", parkedAt: events.at(-1)!.ts });
+    expect(summarizeRun(r.path, readRun(r.path))?.status).toBe("running");
+    r.record({ type: "run.end", status: "ok", costUsd: 0.002, priced: true, summary: "filed 3" });
+    expect(summarizeRun(r.path, readRun(r.path))).toMatchObject({ status: "ok", summary: "filed 3", costUsd: 0.002 });
+  });
+});

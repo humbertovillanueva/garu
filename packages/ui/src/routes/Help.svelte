@@ -12,7 +12,8 @@
     { title: t("The three rules"), body: [
       t("Every tool call passes through the agent's policy. The first rule that matches wins. A call that matches no rule asks you; nothing is ever allowed by accident."),
       t("An ask pauses the run and lands in the inbox. Approve it once, approve it for 24 hours, or decline, with a note the agent reads before its next step."),
-      t("Silence is a no. An ask nobody answers expires after 30 minutes and the agent is told."),
+      t("Silence is a no. An ask nobody answers expires after a day and the agent is told."),
+      t("A run that asks doesn't sit there holding your computer: after two minutes it parks, and picks up where it stopped the moment you answer, even days later or after a restart."),
     ] },
     { title: t("The screens"), body: [
       t("Home: what's waiting on you, what fires next, and what happened today."),
@@ -34,7 +35,7 @@
       t("\"Schedules are off\": Garu is running without its schedules. On your computer, set Garu to start at login (Settings → Advanced there shows how) and they run from then on."),
       t("\"Needs setup on your computer\": the agent references a key or a sign-in that isn't there yet. Finish it in the control room on that computer."),
       t("\"Reconnecting…\": the phone can't reach your computer. Check that it's awake and that Tailscale is on, on both ends."),
-      t("A run shown as interrupted was killed before it finished, usually because Garu was stopped while it was waiting on you."),
+      t("A run shown as interrupted was killed before it finished, usually because the computer or Garu went down while it was working."),
     ] },
   ]);
 </script>

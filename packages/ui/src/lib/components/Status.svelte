@@ -3,7 +3,7 @@
   let { status }: { status: string } = $props();
   const color = $derived(
     status === "ok" || status === "run.ok" ? "var(--color-ok)"
-    : status === "waiting" ? "var(--color-ask)" : status === "running" || status === "working" ? "var(--color-accent)"
+    : status === "waiting" || status === "parked" ? "var(--color-ask)" : status === "running" || status === "working" ? "var(--color-accent)"
     : status === "blocked" || status === "error" || status === "budget_exceeded" || status === "interrupted" ? "var(--color-bad)"
     : "var(--color-mute)", // sleeping, idle, offline (no network: nothing went wrong, nothing was done)
   );

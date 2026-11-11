@@ -63,3 +63,19 @@ describe("Recorder", () => {
     expect(lines[2]).toContain("ERROR");
   });
 });
+
+describe("a resumed run's log", () => {
+  it("continues the sequence where the file ends, and the parked and resumed lines format", () => {
+    const root = mkdtempSync(join(tmpdir(), "rec-"));
+    const first = new Recorder({ root, agent: "a" });
+    first.record({ type: "run.start", agent: "a", model: "m", trigger: "manual" });
+    first.record({ type: "run.parked", requests: ["x1", "x2"] });
+    const back = new Recorder({ root, agent: "a", runId: first.runId, resume: true });
+    expect(back.path).toBe(first.path);
+    back.record({ type: "run.resumed", parkedAt: "2026-01-01T12:00:00.000Z" });
+    expect(readRun(first.path).map((e) => e.seq)).toEqual([1, 2, 3]);
+    const base = { seq: 1, ts: "2026-01-01T12:34:56.000Z", runId: "r", agent: "a" } as const;
+    expect(formatEvent({ ...base, event: { type: "run.parked", requests: ["x1", "x2"] } })).toContain("parked: waiting on 2 answers");
+    expect(formatEvent({ ...base, event: { type: "run.resumed", parkedAt: "2026-01-01T12:00:00.000Z" } })).toContain("resumed");
+  });
+});

@@ -28,16 +28,42 @@ describe("ToolBus built-in tools", () => {
     });
     await bus.connect([]);
     expect(bus.listTools().map((t) => t.qualified)).toEqual(["garu.ask"]);
-    expect(bus.sentSoFar()).toEqual({ calls: 0, allReadOnly: true });
+    expect(bus.sentSoFar()).toEqual({ calls: 0, writes: 0, allReadOnly: true });
     const ok = await bus.call("garu.ask", { agent: "bea", message: "lunch?" });
     expect(ok.status).toBe("ok");
     expect(ok.status === "ok" && ok.result).toEqual([{ type: "text", text: "Yes, Monday." }]);
     const blocked = await bus.call("garu.ask", { agent: "rook", message: "x" });
     expect(blocked.status).toBe("blocked");
     expect(asked).toEqual(["bea"]);
-    expect(bus.sentSoFar()).toEqual({ calls: 1, allReadOnly: false });
+    expect(bus.sentSoFar()).toEqual({ calls: 1, writes: 1, allReadOnly: false });
     const types = readRun(rec.path).map((e) => e.event.type);
     expect(types).toEqual(["tool.request", "policy.decision", "tool.result", "tool.request", "policy.decision"]);
+    await bus.close();
+  });
+});
+
+describe("ToolBus answering a parked call", () => {
+  it("callDecided records the answer under the original call id, then makes the call or doesn't", async () => {
+    const rec = new Recorder({ root: mkdtempSync(join(tmpdir(), "garu-")), agent: "decided-test" });
+    const calls: string[] = [];
+    const bus = new ToolBus({
+      policy: new PolicyEngine([{ tool: "*", action: "ask", reason: "always ask" }]),
+      recorder: rec,
+      approver: async () => { throw new Error("nobody should be asked here"); },
+      builtins: [{ server: "garu", name: "ask", description: "ask", inputSchema: { type: "object" }, readOnly: false, call: async (args) => { calls.push(String(args["agent"])); return { text: "Monday" }; } }],
+    });
+    await bus.connect([]);
+    const decision = { action: "ask" as const, ruleIndex: 0, matched: "*", reason: "always ask" };
+    const yes = await bus.callDecided("garu.ask", { agent: "bea" }, "call-1", decision, { approved: true, by: "humberto (ui)" });
+    expect(yes).toMatchObject({ status: "ok", callId: "call-1", result: [{ type: "text", text: "Monday" }] });
+    const no = await bus.callDecided("garu.ask", { agent: "rook" }, "call-2", decision, { approved: false, by: "inbox: expired" });
+    expect(no).toMatchObject({ status: "denied", callId: "call-2", by: "inbox: expired", decision });
+    const gone = await bus.callDecided("nope.tool", {}, "call-3", decision, { approved: true, by: "h" });
+    expect(gone).toMatchObject({ status: "error", callId: "call-3" });
+    expect(calls).toEqual(["bea"]);
+    expect(readRun(rec.path).map((e) => [e.event.type, (e.event as { callId?: string }).callId])).toEqual([
+      ["approval.resolved", "call-1"], ["tool.result", "call-1"], ["approval.resolved", "call-2"], ["approval.resolved", "call-3"], ["tool.result", "call-3"],
+    ]);
     await bus.close();
   });
 });
@@ -145,16 +171,16 @@ describe("ToolBus keeps count of what went out", () => {
       approver: async () => ({ approved: false, by: "test" }),
     });
     await bus.connect([{ name: "echo", command: "node", args: [serverPath], env: {} }]);
-    expect(bus.sentSoFar()).toEqual({ calls: 0, allReadOnly: true });
+    expect(bus.sentSoFar()).toEqual({ calls: 0, writes: 0, allReadOnly: true });
     await bus.call("echo.danger", { target: "prod" }); // blocked
     await bus.call("echo.add", { a: 1, b: 2 }); // declined
     await bus.call("echo.nope", {}); // no such tool
-    expect(bus.sentSoFar()).toEqual({ calls: 0, allReadOnly: true }); // none of them went out
+    expect(bus.sentSoFar()).toEqual({ calls: 0, writes: 0, allReadOnly: true }); // none of them went out
     await bus.call("echo.peek", {});
     await bus.call("echo.cut_read", {}); // cut off and tried again: one step, not two
-    expect(bus.sentSoFar()).toEqual({ calls: 2, allReadOnly: true });
+    expect(bus.sentSoFar()).toEqual({ calls: 2, writes: 0, allReadOnly: true });
     await bus.call("echo.fail", {}); // went out, failed, and carries no read-only mark: it may have changed something
-    expect(bus.sentSoFar()).toEqual({ calls: 3, allReadOnly: false });
+    expect(bus.sentSoFar()).toEqual({ calls: 3, writes: 1, allReadOnly: false });
     await bus.close();
   }, 30_000);
 });
