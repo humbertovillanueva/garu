@@ -1,6 +1,6 @@
 <script lang="ts">
   /** A run's flight recorder as a timeline. Tool calls are grouped with their decision and result. */
-  import { clockExact, usd, tokens, statusLabel, decidedBy, expired, plainTimes, until, humanTime, span } from "../format";
+  import { clockExact, usd, tokens, statusLabel, decidedBy, expired, plainTimes, until, humanTime, span, truncate } from "../format";
   import Decision from "./Decision.svelte";
   import { t } from "../i18n.svelte";
   /** Why the model was retried, in the reader's words; anything else is shown as the server said it. */
@@ -32,6 +32,15 @@
     return { d, approval, waiting, result };
   }
   const pretty = (v: unknown) => JSON.stringify(v, null, 2);
+  /** Garu's own tools name the thing: the note remembered or forgotten, the question asked. Other calls show their tool id. */
+  function said(req: { server: string; tool: string; args: Record<string, unknown> }): { verb: string; text: string } | null {
+    if (req.server !== "garu") return null;
+    const arg = (k: string) => (typeof req.args[k] === "string" ? (req.args[k] as string) : "");
+    if (req.tool === "remember") return { verb: t("Remembered"), text: arg("note") };
+    if (req.tool === "forget") return { verb: t("Forgot"), text: arg("note") };
+    if (req.tool === "ask") return { verb: t("Asked {agent}", { agent: arg("agent") }), text: arg("message") };
+    return null;
+  }
 </script>
 
 <ol class="relative ml-2 border-l hairline">
@@ -55,7 +64,13 @@
         <div class="panel overflow-hidden" style={waiting ? "border-color: color-mix(in oklab, var(--color-ask) 45%, var(--color-line))" : ""}>
           <button class="tap flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-left text-[13px]" aria-expanded={Boolean(open[row.env.seq])} onclick={() => (open[row.env.seq] = !open[row.env.seq])}>
             <span class="mono text-mute">{clockExact(row.env.ts)}</span>
-            <span class="mono font-medium">{req.server}.{req.tool}</span>
+            {#if said(req)}{@const s = said(req)!}
+              <span class="font-medium">{s.verb}</span>
+              {#if s.text}<span class="text-fg-2 [overflow-wrap:anywhere]">“{truncate(s.text, 140)}”</span>{/if}
+              <span class="mono text-[11px] text-mute">{req.server}.{req.tool}</span>
+            {:else}
+              <span class="mono font-medium">{req.server}.{req.tool}</span>
+            {/if}
             {#if d}<Decision action={d.action} />{/if}
             {#if approval}<Decision action={approval.approved ? "allow" : "block"} label={approval.approved ? (/^grant\b/.test(approval.by) ? t("allowed by your 24h approval") : t("approved by {who}", { who: decidedBy(approval.by) })) : expired(approval.by) ? t("expired, no answer") : t("declined by {who}", { who: decidedBy(approval.by) })} />{/if}
             {#if approval?.note}<span class="text-[12.5px] italic text-fg-2">“{approval.note}”</span>{/if}
