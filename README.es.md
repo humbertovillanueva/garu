@@ -30,7 +30,7 @@ OpenAI lanzó Dots y Meta lanzó Muse: agentes que corren todo el día en una co
 - **Una bandeja, no una avalancha.** Cuando una regla dice `ask`, la ejecución se pausa. Ves el correo como un correo, el archivo como un archivo. Aprueba una vez, aprueba por 24 horas o rechaza. El silencio es un no.
 - **Una política que aprende, contigo al mando.** Aprueba lo mismo tres veces y Garu propone la regla exacta, limitada a lo que de verdad aprobaste, y la escribe en tu archivo cuando tú lo digas.
 - **Una caja negra.** Cada turno del modelo, cada llamada a una herramienta, cada decisión y cada aprobación en un registro al que solo se agrega. Repasa cualquier ejecución como una línea de tiempo.
-- **Un tope de presupuesto.** El costo se estima a partir de los tokens reales; una ejecución se detiene en el momento en que cruzaría `maxCostUsd`.
+- **Un tope de presupuesto.** El costo se estima a partir de los tokens reales; una ejecución se detiene en el momento en que cruzaría `maxCostUsd`. `maxRunsPerDay` limita cuántas veces al día se ejecuta el agente, llame quien llame a su puerta.
 - **Un entorno aislado.** Cada servidor de herramientas en su propio contenedor de Docker: sin red, raíz de solo lectura, solo la carpeta de trabajo del agente montada, destruido al terminar la ejecución.
 - **Cualquier modelo.** Gemini (nivel gratuito), Claude, o modelos locales a través de Ollama a $0. Cambia editando una línea.
 - **Habla con tus agentes.** Cada agente tiene una conversación. Hazle una pregunta, dale trabajo, o solo lee lo que hizo mientras no estabas.
@@ -97,6 +97,7 @@ triggers:
 
 budget:
   maxCostUsd: 0.05                # por ejecución; la ejecución se detiene si lo cruzaría
+  maxRunsPerDay: 8                # al día, lo inicie lo que lo inicie; la novena espera a mañana
 
 tools:
   - name: gmail                   # el servidor de Gmail de Garu: no existe herramienta para enviar ni borrar

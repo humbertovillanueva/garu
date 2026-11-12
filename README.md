@@ -30,7 +30,7 @@ OpenAI shipped Dots and Meta shipped Muse: agents that run all day on a computer
 - **An inbox, not a firehose.** When a rule says `ask`, the run pauses. You see the email as an email, the file as a file. Approve once, approve for 24 hours, or decline. Silence is a deny.
 - **Policy that learns, with you in control.** Approve the same thing three times and Garu proposes the exact rule, scoped to what you actually approved, and writes it into your file when you say so.
 - **A flight recorder.** Every model turn, tool call, decision and approval in an append-only log. Replay any run as a timeline.
-- **A budget cap.** Cost is estimated from real token counts; a run stops the moment it would cross `maxCostUsd`.
+- **A budget cap.** Cost is estimated from real token counts; a run stops the moment it would cross `maxCostUsd`. `maxRunsPerDay` caps how many times a day the agent runs at all, whoever rings its door.
 - **A sandbox.** Each tool server in its own Docker container: no network, read-only root, only the agent's workspace mounted, destroyed after the run.
 - **Any model.** Gemini (free tier), Claude, or local models through Ollama at $0. Switch by changing one line.
 - **Talk to your agents.** Each agent has a thread. Ask it a question, give it work, or just read what it did while you were away.
@@ -97,6 +97,7 @@ triggers:
 
 budget:
   maxCostUsd: 0.05                # per run; the run stops if it would cross this
+  maxRunsPerDay: 8                # a day, whatever starts it; the ninth waits for tomorrow
 
 tools:
   - name: gmail                   # Garu's own Gmail server: no send or delete tool exists

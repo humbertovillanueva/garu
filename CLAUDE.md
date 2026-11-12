@@ -141,6 +141,11 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   the run has `ask:` from the control room) that rings another agent's door and returns its reply; policed by
   `tool: garu.ask` + `when: { agent }`; the target runs with trigger `ask:<asker>`; rules in `askRefusal`
   (not itself, door required, `MAX_ASK_HOPS` = 2, busy = refused).
+- `budget.maxRunsPerDay`: at most that many runs a day (this machine's day, offline attempts not counted;
+  `capReached` in `kernel/src/store.ts`). Checked at every door of the control room (Run now, chat, webhook,
+  ask: 429 or a refusal the asking model reads), in `startRun` and in `garu up`'s runner (a scheduled fire
+  logs the sentence and skips); a parked run resuming is the same run and is never counted. The agent page
+  shows "{n} runs a day" under Limits and "Done for today" once reached.
 - Memory: a Garufile with `memory: true` gets a notebook at `.garu/memory/<agent>.md` (`kernel/src/memory.ts`:
   one `- YYYY-MM-DD · note` per line, 40 notes of 240 chars at most; a hand-typed `- note` line counts too).
   Shown to the model in the system prompt; kept through the built-ins `garu.remember` / `garu.forget`
