@@ -267,6 +267,7 @@ La queja de quienes usan agentes siempre activos es que *su propio* ritmo se vue
 | `garu inbox` · `garu approve <id> [--for 24h]` · `garu deny <id>` | La bandeja desde la terminal. |
 | `garu grants [list\|revoke <id>]` | Permisos temporales. |
 | `garu log [agent] [run]` | Repasa una caja negra. |
+| `garu prune [--keep 90d] [--yes]` | Dice qué registros de ejecución son más antiguos que la ventana, y los borra con `--yes`. `--prune 90d` en `garu ui` o `service install` lo hace una vez al día; una ejecución aparcada nunca se toca. Sin esto, todas las ejecuciones se guardan para siempre. |
 | `garu validate <Garufile>` | Revisa política, cron, presupuesto y aislamiento. |
 | `garu auth <Garufile> <server>` | Inicia sesión en un servidor de herramientas remoto una vez, en tu navegador. `--forget` lo elimina. |
 | `garu sandbox build` | Construye la imagen de Docker predeterminada para los servidores de herramientas. |

@@ -53,6 +53,7 @@ npm run typecheck && npm test         # tsc -b, vitest (293 tests); run before e
 npx svelte-check --workspace packages/ui
 npm run garu -- <cmd>                 # the CLI from the repo (no global install yet)
 npm run garu -- service install|status|logs|restart|uninstall   # Garu as a login service (launchd)
+npm run garu -- prune [--keep 90d] [--yes]                       # old run logs: dry run, then delete
 npm run sync -w @garu/app             # the phone UI, built and copied into android/ and ios/
 ```
 
@@ -150,6 +151,10 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   ask: 429 or a refusal the asking model reads), in `startRun` and in `garu up`'s runner (a scheduled fire
   logs the sentence and skips); a parked run resuming is the same run and is never counted. The agent page
   shows "{n} runs a day" under Limits and "Done for today" once reached.
+- Pruning (`kernel/src/prune.ts`): `planPrune` lists run logs older than a keep window (never running or parked
+  ones) and settled inbox requests; `applyPrune` deletes. `garu prune` is a dry run without `--yes`; `--prune 90d`
+  on `garu ui` / `service install` runs it at start and once a day (the plist bakes it in). Humberto's service
+  keeps 90 days. Off by default: without the flag every run is kept.
 - Memory: a Garufile with `memory: true` gets a notebook at `.garu/memory/<agent>.md` (`kernel/src/memory.ts`:
   one `- YYYY-MM-DD · note` per line, 40 notes of 240 chars at most; a hand-typed `- note` line counts too).
   Shown to the model in the system prompt; kept through the built-ins `garu.remember` / `garu.forget`
