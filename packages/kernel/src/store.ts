@@ -9,6 +9,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join, sep } from "node:path";
 import { readRun, type Envelope } from "./recorder.js";
+import type { Garufile } from "./garufile.js";
 
 export interface RunSummary {
   agent: string;
@@ -132,6 +133,14 @@ export function localDay(at: Date | string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** The Garufile's daily cap, once today's runs have reached it; null while there is room, or without a cap. */
+export function capReached(g: Garufile, store: RunStore, now = new Date()): { cap: number; runs: number } | null {
+  const cap = g.budget.maxRunsPerDay;
+  if (cap === undefined) return null;
+  const runs = store.runsToday(g.name, now);
+  return runs >= cap ? { cap, runs } : null;
+}
+
 export class RunStore {
   constructor(readonly root: string) {}
 
@@ -216,6 +225,12 @@ export class RunStore {
   /** The newest run the schedule itself started (cron or catch-up) that got somewhere; an offline attempt (nothing changed yet) doesn't count. */
   lastScheduledRun(agent: string): RunSummary | null {
     return this.runs(agent).find((r) => (r.trigger.startsWith("cron:") || r.trigger.startsWith("catch-up:")) && !r.offline) ?? null;
+  }
+
+  /** How many runs the agent started today, by this computer's day; one the network cut off doesn't count. */
+  runsToday(agent: string, now = new Date()): number {
+    const today = localDay(now);
+    return this.runs(agent).filter((r) => localDay(r.startedAt) === today && !r.offline).length;
   }
 
   /**

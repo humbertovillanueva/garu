@@ -156,6 +156,8 @@ export const Budget = z
   .object({
     /** Stop the run as soon as its estimated cost reaches this many USD. */
     maxCostUsd: z.number().nonnegative().optional(),
+    /** At most this many runs a day (this computer's day), whatever starts them: a schedule, a webhook, another agent, a message. A run the network cut off doesn't count. */
+    maxRunsPerDay: z.number().int().positive().optional(),
     /** Override the built-in price table for this agent's model (set both to 0 on a free tier). */
     pricing: z
       .object({ inputPerMTok: z.number().nonnegative(), outputPerMTok: z.number().nonnegative() })

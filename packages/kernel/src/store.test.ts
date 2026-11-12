@@ -3,7 +3,8 @@ import { mkdtempSync, writeFileSync, mkdirSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Recorder } from "./recorder.js";
-import { RunStore, localDay, summarizeRun } from "./store.js";
+import { RunStore, localDay, summarizeRun, capReached } from "./store.js";
+import { parseGarufile } from "./garufile.js";
 import { readRun } from "./recorder.js";
 
 // readRun counts its calls here, so a test can tell a log read from disk from one answered from memory.
@@ -89,6 +90,28 @@ describe("RunStore", () => {
     expect(last?.runId).toBe(good.runId);
     expect(new RunStore(root).runs("a").find((r) => r.runId === dark.runId)?.offline).toBe(true);
     expect(new RunStore(root).lastScheduledRun("nobody")).toBeNull();
+  });
+
+  it("runsToday counts today's runs but not an offline attempt, and the cap says when the day is full", () => {
+    const root = mkdtempSync(join(tmpdir(), "garu-store-"));
+    const store = new RunStore(root);
+    const g = parseGarufile("name: capped\nmodel: fake/any\nprompt: p\nbudget:\n  maxRunsPerDay: 2\n");
+    const run = (id: string, offline = false) => {
+      const r = new Recorder({ root, agent: "capped", runId: id });
+      r.record({ type: "run.start", agent: "capped", model: "m", trigger: "cron:* * * * *" });
+      r.record({ type: "run.end", status: offline ? "error" : "ok", ...(offline ? { offline: true } : {}) });
+    };
+    expect(capReached(g, store)).toBeNull();
+    run("20260101-000000-a0000001");
+    run("20260101-000000-a0000002", true);
+    expect(store.runsToday("capped")).toBe(1);
+    expect(capReached(g, store)).toBeNull();
+    run("20260101-000000-a0000003");
+    expect(store.runsToday("capped")).toBe(2);
+    expect(capReached(g, store)).toEqual({ cap: 2, runs: 2 });
+    // Tomorrow it's a new day; and an agent without a cap never hits one.
+    expect(capReached(g, store, new Date(Date.now() + 86_400_000))).toBeNull();
+    expect(capReached(parseGarufile("name: capped\nmodel: fake/any\nprompt: p\n"), store)).toBeNull();
   });
 
   it("a run without run.end is 'running'", () => {
