@@ -16,7 +16,8 @@ Repo: https://github.com/humbertovillanueva/garu · Site: https://garuagents.com
   committing so timestamps fall on his day. Only touch this repo.
 - Never force-push or rewrite history unless Humberto asks for it in so many words.
 - Never print, log or paste secrets. They live in `.env` (gitignored): `GEMINI_API_KEY`, `GITHUB_TOKEN`,
-  `GARU_USER`, `BRIEF_WEBHOOK_URL`, `REPO_WATCH_WEBHOOK_URL`. The control-room sign-in token is
+  `GARU_USER`, `BRIEF_WEBHOOK_URL`, `REPO_WATCH_WEBHOOK_URL`, `GARU_NOTIFY_URL` (the ntfy topic; the push
+  carries agent, tool and reason, never arguments). The control-room sign-in token is
   `.garu/ui-token`; never show it in screenshots or recordings.
 - Nothing gets posted, published or purchased without Humberto saying so. Launch posts in
   `docs/launch/` are drafts. Pushing to GitHub counts: commit when asked, and before any push show

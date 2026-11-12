@@ -40,7 +40,7 @@ HTTPS es lo que hace posible la instalación, una razón más para pasar por `ta
 
 ## Notificaciones
 
-La app del teléfono muestra lo que está esperando cuando la abres. Para recibir un aviso push cuando un agente se pausa, ejecuta la sala de control con `--notify https://ntfy.sh/<your-topic>` y suscríbete a ese tema en la app de [ntfy](https://ntfy.sh). Cada notificación enlaza de vuelta a la sala de control, así que de la pantalla de bloqueo a la tarjeta de revisión hay un solo toque.
+La app del teléfono muestra lo que está esperando cuando la abres. Para recibir un aviso push cuando un agente se pausa, ejecuta la sala de control con `GARU_NOTIFY_URL=https://ntfy.sh/<your-topic>` en `.env` (o `--notify`) y suscríbete a ese tema en la app de [ntfy](https://ntfy.sh). Cada notificación enlaza de vuelta a la sala de control, así que de la pantalla de bloqueo a la tarjeta de revisión hay un solo toque.
 
 ## Sin Tailscale
 

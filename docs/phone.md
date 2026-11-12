@@ -40,7 +40,7 @@ HTTPS is what makes the install possible, which is one more reason to go through
 
 ## Notifications
 
-The phone app shows what is waiting when you open it. For a push when an agent pauses, run the control room with `--notify https://ntfy.sh/<your-topic>` and subscribe to the topic in the [ntfy](https://ntfy.sh) app. Each notification links back to the control room, so it's one tap from the lock screen to the review card.
+The phone app shows what is waiting when you open it. For a push when an agent pauses, run the control room with `GARU_NOTIFY_URL=https://ntfy.sh/<your-topic>` in `.env` (or `--notify`) and subscribe to the topic in the [ntfy](https://ntfy.sh) app. Each notification links back to the control room, so it's one tap from the lock screen to the review card. The push says which agent wants which tool and why; the arguments (an email's body, a file's content) never leave your computer.
 
 ## Without Tailscale
 
