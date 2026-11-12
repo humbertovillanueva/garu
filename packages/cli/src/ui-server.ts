@@ -293,7 +293,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       isBusy: (name) => live.has(name),
       onEvent: (e) => {
         if (e.type === "fire") opts.log(`▶ ${e.agent} (cron ${e.cron})`);
-        else if (e.type === "offline") opts.log(`⏸ ${e.agent}: no network, will catch up`);
+        else if (e.type === "offline") opts.log(e.reason === "busy" ? `⏸ ${e.agent}: the model is busy, will try again in 10 min` : `⏸ ${e.agent}: no network, will catch up`);
         else if (e.type === "catch-up") opts.log(`↺ ${e.agent}: missed ${e.missedAt.toLocaleTimeString()} (cron ${e.cron}), catching up`);
         else if (e.type === "run.done") opts.log(`■ ${e.agent}: ${e.result.status} in ${e.result.turns} turn(s)`);
         else if (e.type === "run.failed") opts.log(`✖ ${e.agent}: ${e.error}`);

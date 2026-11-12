@@ -964,7 +964,7 @@ function printSchedulerEvent(e: SchedulerEvent): void {
       stderr.write(`${now} ↷ ${t("{agent}: previous run still going, skipped this tick", { agent: e.agent })}\n`);
       break;
     case "offline":
-      stderr.write(`${now} ⏸ ${t("{agent}: no network, will catch up", { agent: e.agent })}\n`);
+      stderr.write(`${now} ⏸ ${e.reason === "busy" ? t("{agent}: the model is busy, will try again in 10 min", { agent: e.agent }) : t("{agent}: no network, will catch up", { agent: e.agent })}\n`);
       break;
     case "run.done": {
       const r = e.result;
