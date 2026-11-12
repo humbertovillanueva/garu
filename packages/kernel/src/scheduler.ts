@@ -22,7 +22,7 @@ export type SchedulerEvent =
   | { type: "fire"; agent: string; cron: string }
   | { type: "catch-up"; agent: string; cron: string; missedAt: Date }
   | { type: "skip.overlap"; agent: string; cron: string }
-  | { type: "offline"; agent: string; cron: string }
+  | { type: "offline"; agent: string; cron: string; /** No network, or the model busy through every retry. */ reason: "network" | "busy" }
   | { type: "run.done"; agent: string; result: RunResult }
   | { type: "run.failed"; agent: string; error: string }
   /** The schedule itself hit an error outside any one run (the catch-up check, say); the service keeps going. */
@@ -240,7 +240,7 @@ export class Scheduler {
         // The lookup passed but the network went away before the run changed anything (a provider down, a
         // token refresh that couldn't reach its issuer, the computer asleep after a few read-only calls):
         // the run doesn't count, so without a pause catch-up would try again every minute.
-        if (result.offline) this.backOff(name, cron);
+        if (result.offline) this.backOff(name, cron, result.busy ? "busy" : "network");
       })
       .catch((e: unknown) => this.emit({ type: "run.failed", agent: name, error: (e as Error).message }))
       .finally(() => this.inFlight.delete(name));
@@ -249,10 +249,10 @@ export class Scheduler {
   }
 
   /** No network for this agent right now: leave it alone for a while, then let catch-up try again. */
-  private backOff(name: string, cron: string): void {
+  private backOff(name: string, cron: string, reason: "network" | "busy" = "network"): void {
     const now = (this.opts.catchUp?.now ?? (() => new Date()))();
     this.offlineUntil.set(name, now.getTime() + OFFLINE_RETRY_MS);
-    this.emit({ type: "offline", agent: name, cron });
+    this.emit({ type: "offline", agent: name, cron, reason });
   }
 
   /** Stop scheduling new runs and wait for in-flight ones: forever by default, or up to `deadlineMs`. */

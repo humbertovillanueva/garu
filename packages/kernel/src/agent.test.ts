@@ -527,6 +527,25 @@ budget:
     expect(events.at(-1)).toMatchObject({ type: "run.end", status: "error", offline: true, summary: expect.stringMatching(/^no network after 3 read-only steps; will catch up/) });
   }, 30_000);
 
+  it("a model busy through every retry ends the run like no network: nothing done, try again later; after a write it stands as an error", async () => {
+    const { ModelBusyError } = await import("./providers/gemini.js");
+    const busy = () => new ModelBusyError("gemini-3.5-flash-lite", "This model is currently experiencing high demand.", "high demand");
+    // Tick's 9 AM of 2026-11-12: a read-only call, then Gemini busy on the next turn.
+    let n = 0;
+    const provider = { id: "fake", complete: async () => { if (n++ === 0) return { stopReason: "tool_use" as const, content: [{ type: "tool_use" as const, id: "a", name: "echo__peek", input: {} }] }; throw busy(); } };
+    const res = await runAgent({ garufile, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider, approver: async () => ({ approved: false, by: "t" }), trigger: "cron:0 */6 * * *" });
+    expect(res).toMatchObject({ status: "error", offline: true, busy: { model: "gemini-3.5-flash-lite", reason: "high demand" }, turns: 1 });
+    expect(res.output).toBe("model busy (high demand) after 1 read-only step; will try again: gemini gemini-3.5-flash-lite: This model is currently experiencing high demand.");
+    expect(readRun(res.logPath).at(-1)!.event).toMatchObject({ type: "run.end", status: "error", offline: true, busy: { reason: "high demand" } });
+    // After a call that may have written, busy is just an error: the run is never replayed.
+    let m = 0;
+    const wrote = { id: "fake", complete: async () => { if (m++ === 0) return { stopReason: "tool_use" as const, content: [{ type: "tool_use" as const, id: "b", name: "echo__echo", input: { text: "written" } }] }; throw busy(); } };
+    const res2 = await runAgent({ garufile, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider: wrote, approver: async () => ({ approved: false, by: "t" }), trigger: "cron:0 */6 * * *" });
+    expect(res2).toMatchObject({ status: "error", turns: 1 });
+    expect(res2.offline).toBeUndefined();
+    expect(res2.busy).toBeUndefined();
+  });
+
   it("a run the network cut off after a call that may have written stands as an error: never replayed", async () => {
     // echo.echo carries no readOnlyHint, so as far as Garu knows it changed something.
     const provider = sleepyProvider([

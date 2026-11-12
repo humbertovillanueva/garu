@@ -331,6 +331,7 @@ triggers:
     await new Promise((r) => setTimeout(r, 5));
     expect(runs).toBe(1);
     expect(events.map((e) => e.type).slice(-3)).toEqual(["fire", "run.done", "offline"]);
+    expect(events.at(-1)).toMatchObject({ type: "offline", reason: "network" });
     // The store never counts an offline run, so without the pause this would queue the same catch-up every minute.
     expect(s.checkMissed()).toBe(0);
     t = new Date(t.getTime() + 11 * 60_000);

@@ -1,4 +1,4 @@
-import { ModelQuotaError } from "./providers/gemini.js";
+import { ModelQuotaError, ModelBusyError } from "./providers/gemini.js";
 /**
  * The agent loop.
  *
@@ -122,6 +122,8 @@ export interface RunResult {
    * calls to tools their servers mark read-only. The schedule treats such a run as not run and catches up.
    */
   offline?: boolean;
+  /** The model was busy through every retry; with `offline`, the run did nothing and the schedule tries again. */
+  busy?: { model: string; reason: string };
   /** The run stopped because the model's daily quota is used up. */
   quota?: ModelQuota;
   /** The run put itself away, waiting on these inbox requests; it ends when it resumes. */
@@ -148,6 +150,16 @@ function resultBlock(out: CallOutcome, toolUseId: string): ContentBlock {
       // Never reaches the model: a parked call is saved, not answered. Here only so every outcome has a line.
       return { type: "tool_result", toolUseId, isError: true, content: `ERROR: waiting for an answer` };
   }
+}
+
+/** The model answered busy (high demand, rate limited) through every retry: the error, or null. */
+export function modelBusy(e: unknown): ModelBusyError | null {
+  const seen = new Set<unknown>();
+  for (let cur = e; cur && typeof cur === "object" && !seen.has(cur); cur = (cur as { cause?: unknown }).cause) {
+    seen.add(cur);
+    if (cur instanceof ModelBusyError) return cur;
+  }
+  return null;
 }
 
 /** The network, not the model, failed: fetch's "fetch failed", a DNS or socket error, a timeout, Ollama unreachable. */
@@ -227,6 +239,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
   let unmetered = parked?.unmetered ?? false;
   // The network went away before anything out there changed: not a run, as far as the schedule is concerned.
   let offline = false;
+  let busy: { model: string; reason: string } | undefined;
   let quota: ModelQuota | undefined;
   let parkedNow: { requests: string[] } | undefined;
 
@@ -394,14 +407,19 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     // server marks read-only, nothing out there changed and the run can be tried again from the start:
     // it is "offline", the schedule doesn't count it and catches up. One call to a tool without that
     // mark, and the run stands as an error: a brief written or a message posted must not happen twice.
+    // A model that stayed busy through every retry is the same case: nothing was done, try again later.
     const sent = bus.sentSoFar();
-    offline = isConnectionError(err) && sent.allReadOnly && (parked?.sent.writes ?? 0) === 0;
+    const b = modelBusy(err);
+    offline = (isConnectionError(err) || b !== null) && sent.allReadOnly && (parked?.sent.writes ?? 0) === 0;
+    if (b && offline) busy = { model: b.model, reason: b.reason };
     if (err instanceof ModelQuotaError) quota = { model: err.model, retryAt: err.retryAt, ...(err.limit !== undefined ? { limit: err.limit } : {}) };
     recorder.record({ type: "error", message: err.message, ...(err.stack ? { stack: err.stack } : {}) });
     const scheduled = /^(cron|catch-up):/.test(trigger);
+    const why = busy ? `model busy (${busy.reason})` : "no network";
+    const again = busy ? "; will try again" : "; will catch up";
     output = !offline ? err.message
-      : sent.calls === 0 ? `no network: ${err.message}`
-      : `no network after ${sent.calls} read-only step${sent.calls === 1 ? "" : "s"}${scheduled ? "; will catch up" : ""}: ${err.message}`;
+      : sent.calls === 0 ? `${why}: ${err.message}`
+      : `${why} after ${sent.calls} read-only step${sent.calls === 1 ? "" : "s"}${scheduled ? again : ""}: ${err.message}`;
   } finally {
     stopWatching();
     release();
@@ -414,6 +432,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
         costUsd: totalCost,
         priced: price !== null && !unmetered,
         ...(offline ? { offline: true } : {}),
+        ...(busy ? { busy } : {}),
         ...(quota ? { quota } : {}),
         ...(output ? { summary: output.slice(0, 200) } : {}),
       });
@@ -431,5 +450,6 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
     inputTokens,
     outputTokens,
     ...(offline ? { offline: true } : {}),
+    ...(busy ? { busy } : {}),
   };
 }

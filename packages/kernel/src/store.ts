@@ -29,6 +29,8 @@ export interface RunSummary {
   summary: string | null;
   /** The network went away before the run changed anything (no answer yet, or read-only calls only); the schedule doesn't count it. */
   offline?: boolean;
+  /** The offline run's reason was a busy model, not the network. */
+  busy?: { model: string; reason: string };
   path: string;
 }
 
@@ -111,6 +113,7 @@ export function summarizeRun(path: string, events: Envelope[], now = Date.now())
         s.costUsd = e.costUsd ?? s.costUsd;
         s.priced = e.priced !== false;
         if (e.offline) s.offline = true;
+        if (e.busy) s.busy = e.busy;
         s.summary = e.summary ?? null;
         break;
     }
