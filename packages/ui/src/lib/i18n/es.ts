@@ -596,6 +596,7 @@ export const es: Record<string, string> = {
   "Open an agent and press Run now.": "Abre un agente y pulsa Ejecutar ahora.",
   "Scheduled, {schedule}": "Programada, {schedule}",
   "Catch-up for {schedule}": "Recuperación de {schedule}",
+  "started {span} late, due {time}": "empezó {span} tarde; debía empezar a las {time}",
   "From a message": "Desde un mensaje",
   "Started with Run now": "Iniciada con Ejecutar ahora",
   "took {duration}": "duró {duration}",
