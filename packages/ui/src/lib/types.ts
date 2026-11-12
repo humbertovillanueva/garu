@@ -187,6 +187,8 @@ export interface Settings {
   notify: boolean;
   askTimeoutMin: number;
   askHoldMin: number;
+  /** Run logs older than this many days are deleted once a day; null keeps everything. */
+  pruneDays: number | null;
   /** required: even this computer signs in. direct: this request came from a browser on the same computer. */
   login: { required: boolean; direct: boolean; tokenPath: string };
 }
