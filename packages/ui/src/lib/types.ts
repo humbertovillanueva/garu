@@ -46,10 +46,19 @@ export interface Agent {
   sandbox: { image: string; network: string } | null;
   budget: { maxCostUsd: number | null; free: boolean } | null;
   maxTurns: number | null;
+  /** The Garufile gave it a notebook (memory: true). */
+  memory: boolean;
   runs: number;
   runsToday: number;
   costTodayUsd: number;
   lastRun: RunSummary | null;
+}
+
+/** One line of an agent's notebook. */
+export interface MemoryNote {
+  text: string;
+  /** The local day it was written (YYYY-MM-DD); absent when typed into the file by hand. */
+  at?: string;
 }
 
 export interface AgentsResponse {

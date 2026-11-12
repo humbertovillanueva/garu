@@ -3,7 +3,7 @@
   import { scrollBehavior } from "../lib/a11y.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, humanTime, statusLine, runStatus, until, duration, cronLabel, triggerLabel, plainTimes } from "../lib/format";
+  import { usd, humanTime, statusLine, runStatus, until, duration, cronLabel, triggerLabel, plainTimes, dayLabel } from "../lib/format";
   import Mark from "../lib/components/Mark.svelte";
   import Status from "../lib/components/Status.svelte";
   import Budget from "../lib/components/Budget.svelte";
@@ -12,7 +12,7 @@
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
   import Thread from "../lib/components/Thread.svelte";
-  import type { ChatMessage, Envelope, RunSummary } from "../lib/types";
+  import type { ChatMessage, Envelope, RunSummary, MemoryNote } from "../lib/types";
   import { tick } from "svelte";
   import { isApp } from "../lib/server.svelte";
   import Icon from "../lib/components/Icon.svelte";
@@ -29,6 +29,22 @@
   let starting = $state(false);
   let error = $state<string | null>(null);
   let showAllRuns = $state(false);
+  // The agent's notebook, shown only for a Garufile that gave it one. Reloaded with the rest after each run.
+  let memory = $state<MemoryNote[] | null>(null);
+  let newNote = $state("");
+  let memoryBusy = $state(false);
+  let memoryError = $state<string | null>(null);
+  $effect(() => { live.tick; if (a?.memory) void api.memory(name).then((m) => (memory = m.notes), () => {}); });
+  async function remember() {
+    const text = newNote.trim();
+    if (!text || memoryBusy) return;
+    memoryBusy = true; memoryError = null;
+    try { memory = (await api.remember(name, text)).notes; newNote = ""; } catch (e) { memoryError = (e as Error).message; } finally { memoryBusy = false; }
+  }
+  async function forget(text: string) {
+    memoryError = null;
+    try { memory = (await api.forget(name, text)).notes; } catch (e) { memoryError = (e as Error).message; }
+  }
   let bottom = $state<HTMLDivElement | null>(null);
   const hasKeyboard = typeof window === "undefined" || !window.matchMedia("(hover: none)").matches;
   const modKey = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘" : "Ctrl";
@@ -157,6 +173,36 @@
           </div>
         </div>
         <div class="fact"><div class="k">{t("Limits")}</div><div class="v">{a.budget?.maxCostUsd ? t("{cost} per run", { cost: usd(a.budget.maxCostUsd) }) : a.budget?.free ? t("free model") : t("no cap")}<span class="text-mute">&nbsp;· {a.sandbox ? t("sandboxed, net {network}", { network: a.sandbox.network }) : t("no sandbox")}</span></div></div>
+      </div>
+    {/if}
+
+    <!-- Memory -->
+    {#if a.memory}
+      <div>
+        <div class="mb-2 flex items-center justify-between">
+          <h2 class="text-[11px] uppercase tracking-wider text-mute">{t("What it remembers")}</h2>
+          {#if memory}<span class="text-[11.5px] text-mute">{memory.length === 1 ? t("1 note") : t("{n} notes", { n: memory.length })}</span>{/if}
+        </div>
+        {#if memory === null}
+          <Skeleton rows={2} h={32} />
+        {:else}
+          {#if memory.length === 0}<p class="text-[13px] text-mute">{t("Nothing yet. {name} writes a note here when it learns something worth keeping for later runs; you can add one too.", { name: a.name })}</p>{/if}
+          <ul class="space-y-1.5">
+            {#each memory as n (n.text)}
+              <li class="flex items-start gap-2 text-[13.5px]">
+                <span class="flex-1 [overflow-wrap:anywhere]">{n.text}{#if n.at}<span class="text-mute">&nbsp;· {dayLabel(n.at + "T12:00:00")}</span>{/if}</span>
+                {#if !live.demo}<button class="tap flex-none px-1 text-mute hover:text-fg" onclick={() => forget(n.text)} aria-label={t("Forget this note")} title={t("Forget this note")}>×</button>{/if}
+              </li>
+            {/each}
+          </ul>
+          {#if !live.demo}
+            <form class="mt-2 flex gap-2" onsubmit={(e) => { e.preventDefault(); void remember(); }}>
+              <input class="field flex-1" placeholder={t("A note {name} should keep in mind", { name: a.name })} aria-label={t("A note {name} should keep in mind", { name: a.name })} bind:value={newNote} maxlength="240" />
+              <button class="btn py-1 text-[12.5px]" disabled={!newNote.trim() || memoryBusy}>{t("Remember")}</button>
+            </form>
+          {/if}
+          {#if memoryError}<p class="mt-1 text-[12.5px]" style="color: var(--color-bad)">{memoryError}</p>{/if}
+        {/if}
       </div>
     {/if}
 
