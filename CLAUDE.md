@@ -182,6 +182,11 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   as a small tag beside it, never "wants to post post_message". Long mono labels (grants, paths) must
   wrap: the Inbox has to fit a 240 pt-wide phone (large display zoom) without sideways scroll.
 - Phone-side preferences live in `lib/prefs.svelte.ts` (localStorage), not on the server.
+- Builds and the page: `vite.config.ts` writes the build stamp into `index.html` (`<meta name="garu-build">`),
+  the live stream's hello carries the stamp of the page the server serves, and a browser page with another
+  stamp reloads itself (`api.svelte.ts`). The service worker is network-first and hands out the last good
+  copy while the server restarts, which is how a page could go stale; it also drops earlier builds' assets.
+  The app ships its own page and never reloads over it.
 - Commit messages: a short title, then a plain paragraph on what changed and why. Written as
   Humberto would write them; match the style in `git log` (e.g. "review card: … ; …").
 
