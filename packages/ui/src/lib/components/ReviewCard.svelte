@@ -57,9 +57,10 @@
   // "Lena Ortiz <lena@example.com>" → the name as words, the address under it.
   const person = (x: string) => { const m = /^\s*"?([^"<]*?)"?\s*<([^<>\s]+)>\s*$/.exec(x); return m && m[1] ? { name: m[1], addr: m[2]! } : { name: "", addr: x }; };
 
-  type Shape = "email" | "post" | "file" | "command" | "ask" | "generic";
+  type Shape = "email" | "post" | "file" | "command" | "ask" | "note" | "generic";
   const shape = $derived.by((): Shape => {
     if (req.tool === "garu.ask" && str("agent") && str("message")) return "ask";
+    if ((req.tool === "garu.remember" || req.tool === "garu.forget") && str("note")) return "note";
     if (/send|mail|message|reply|draft/i.test(tool) && (a["to"] || a["subject"] || a["body"] || a["recipients"])) return "email";
     if (/post|publish|message|notify|announce|say|chat/i.test(tool) && (str("text") || str("message") || str("content"))) return "post";
     if (/write|edit|create|append|save/i.test(tool) && (str("path") || str("file") || str("filename")) && (str("content") || str("text"))) return "file";
@@ -73,9 +74,9 @@
   const postTo = $derived(str("channel") ?? str("room") ?? str("chat_id") ?? str("recipient"));
   // What the card is about, for the header and the spoken "Approved: bea, …". A call with no better name is named by its tool id, never "a command".
   const askAgent = $derived(str("agent") ?? "");
-  const object = $derived(shape === "file" ? fileName : shape === "email" ? t("an email") : shape === "post" ? (postTo ? t("a message to {to}", { to: postTo }) : t("a message")) : shape === "command" ? t("a command") : shape === "ask" ? t("a question for {agent}", { agent: askAgent }) : req.tool);
+  const object = $derived(shape === "file" ? fileName : shape === "email" ? t("an email") : shape === "post" ? (postTo ? t("a message to {to}", { to: postTo }) : t("a message")) : shape === "command" ? t("a command") : shape === "ask" ? t("a question for {agent}", { agent: askAgent }) : shape === "note" ? t("a note") : req.tool);
   // A draft only waits in Drafts; saying "send" would promise more than happens.
-  const verb = $derived(shape === "email" ? (/draft/i.test(tool) ? t("wants to draft") : t("wants to send")) : shape === "post" ? t("wants to post") : shape === "file" ? t("wants to write") : shape === "command" ? t("wants to run") : shape === "ask" ? t("wants to ask") : t("wants to call"));
+  const verb = $derived(shape === "email" ? (/draft/i.test(tool) ? t("wants to draft") : t("wants to send")) : shape === "post" ? t("wants to post") : shape === "file" ? t("wants to write") : shape === "command" ? t("wants to run") : shape === "ask" ? t("wants to ask") : shape === "note" ? (req.tool === "garu.forget" ? t("wants to forget") : t("wants to remember")) : t("wants to call"));
 
   // For a file write: what would actually change. Unchanged lines collapse to a little context; tap to see everything.
   let diff = $state<WriteDiff | null>(null);
@@ -170,6 +171,13 @@
           <span>{t("to {agent}, who answers with its own tools, under its own rules", { agent: askAgent })}</span>
         </div>
         <pre class="max-h-64 overflow-auto whitespace-pre-wrap px-3 py-3 text-[13px] leading-relaxed text-fg-2" style="font-family: inherit">{str("message")}</pre>
+      </div>
+    {:else if shape === "note"}
+      <div class="overflow-hidden rounded-lg border hairline bg-bg/60">
+        <div class="flex flex-wrap items-center gap-x-3 border-b hairline px-3 py-1.5 text-[11.5px] text-mute">
+          <span>{req.tool === "garu.forget" ? t("a line it would drop from its notebook") : t("a line in its notebook, shown to it at the start of every run")}</span>
+        </div>
+        <pre class="max-h-64 overflow-auto whitespace-pre-wrap px-3 py-3 text-[13px] leading-relaxed text-fg-2" style="font-family: inherit">{str("note")}</pre>
       </div>
     {:else if shape === "command"}
       <pre class="mono overflow-auto rounded-lg border hairline bg-bg/60 px-3 py-3 text-[12.5px] text-fg-2"><span class="text-mute">$ </span>{str("command") ?? str("cmd")}</pre>
