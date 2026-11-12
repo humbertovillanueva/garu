@@ -1,4 +1,4 @@
-# An always-on agent. Every three hours it checks the workspace and appends one
+# An always-on agent. Every six hours it checks the workspace and appends one
 # line to tick.log saying what's there. Tiny on purpose: it exists to show
 # `garu up` keeping an agent alive on a schedule, with every run in the log.
 #
@@ -16,11 +16,11 @@ persona:
 model: gemini/gemini-3.5-flash-lite
 
 triggers:
-  - cron: "0 */3 * * *"      # eight beats a day prove the schedule as well as 24 did, with a third of the log
+  - cron: "0 */6 * * *"      # four beats a day prove the schedule as well as 24 did, with a sixth of the log
   - webhook: poke           # POST /api/agents/tick/hooks/poke on the control room runs it now, with the body's message
 
 budget:
-  maxCostUsd: 0.01          # per run; every three hours is ~240 runs a month, under $3 at list price even if every run hit the cap
+  maxCostUsd: 0.01          # per run; every six hours is ~120 runs a month, under $2 at list price even if every run hit the cap
 
 tools:
   - name: fs

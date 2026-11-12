@@ -1,4 +1,4 @@
-# Un agente siempre activo. Cada tres horas revisa el espacio de trabajo y agrega una
+# Un agente siempre activo. Cada seis horas revisa el espacio de trabajo y agrega una
 # línea a tick.log diciendo qué hay. Diminuto a propósito: existe para mostrar a
 # `garu up` manteniendo vivo un agente con horario, con cada ejecución en el registro.
 #
@@ -20,11 +20,11 @@ persona:
 model: gemini/gemini-3.5-flash-lite
 
 triggers:
-  - cron: "0 */3 * * *"      # ocho latidos al día prueban el horario igual que 24, con un tercio del registro
+  - cron: "0 */6 * * *"      # cuatro latidos al día prueban el horario igual que 24, con un sexto del registro
   - webhook: poke           # POST /api/agents/tick/hooks/poke en la sala de control lo ejecuta ahora, con el mensaje del cuerpo
 
 budget:
-  maxCostUsd: 0.01          # por ejecución; cada tres horas son ~240 al mes, menos de $3 a precio de lista aunque todas tocaran el tope
+  maxCostUsd: 0.01          # por ejecución; cada seis horas son ~120 al mes, menos de $2 a precio de lista aunque todas tocaran el tope
 
 tools:
   - name: fs
