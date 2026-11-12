@@ -1,5 +1,5 @@
 import type { Agent, AgentsResponse, ApprovalRequest, ChatMessage, CostRow, Envelope, FeedItem, InboxResponse, RunSummary, TodayResponse } from "./types";
-import { isApp, server } from "./server.svelte";
+import { build, isApp, server } from "./server.svelte";
 import { t } from "./i18n.svelte";
 
 /** Every call goes to the control room this page is paired with (the serving host in a browser). */
@@ -191,7 +191,14 @@ export function connectLive(again = false): Promise<void> {
   const refreshed = refreshCore();
   // EventSource can't carry a header, so the app passes its token in the query; a browser session uses its cookie.
   source = new EventSource(url("/api/events") + (server.token ? `?token=${encodeURIComponent(server.token)}` : ""));
-  source.addEventListener("hello", () => {
+  source.addEventListener("hello", (e) => {
+    // Garu was rebuilt and restarted: the server now serves a newer page than the one running here (the
+    // service worker hands out the last good copy while the server is down). The browser page reloads to
+    // match. The app ships its own copy of the page and never reloads over it.
+    try {
+      const served = (JSON.parse((e as MessageEvent).data) as { build?: string | null }).build;
+      if (served && !isApp && build !== "dev" && served !== build) { location.reload(); return; }
+    } catch { /* an older server says "ok" */ }
     const wasDown = live.disconnectedAt > 0;
     live.connected = true; live.disconnectedAt = 0; backoff = 2000;
     // Back after a drop (the browser reconnects a dropped stream by itself): what changed meanwhile was

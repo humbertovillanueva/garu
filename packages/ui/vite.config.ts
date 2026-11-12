@@ -14,7 +14,12 @@ try { commit = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe"
 const stamp = `${version} · ${commit} · ${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC`;
 
 export default defineConfig({
-  plugins: [svelte(), tailwindcss()],
+  plugins: [
+    svelte(),
+    tailwindcss(),
+    // The stamp also goes into index.html, so the control room can tell a browser page which build it serves.
+    { name: "garu-build-meta", transformIndexHtml: (html) => html.replace("<title>Garu</title>", `<meta name="garu-build" content="${stamp}" />\n    <title>Garu</title>`) },
+  ],
   define: { "import.meta.env.VITE_GARU_APP": JSON.stringify(app ? "1" : "0"), "import.meta.env.VITE_GARU_BUILD": JSON.stringify(stamp) },
   build: { outDir: app ? "dist-app" : "dist", emptyOutDir: true, target: "es2022" },
   server: { proxy: { "/api": "http://127.0.0.1:4000" } },

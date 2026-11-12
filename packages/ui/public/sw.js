@@ -17,9 +17,23 @@ self.addEventListener("fetch", (e) => {
   e.respondWith(
     fetch(req)
       .then((res) => {
-        if (res.ok) { const copy = res.clone(); caches.open(SHELL).then((c) => c.put(req, copy)); }
+        if (res.ok) {
+          const copy = res.clone();
+          const page = req.mode === "navigate" ? res.clone() : null;
+          caches.open(SHELL).then(async (c) => {
+            await c.put(req, copy);
+            // A fresh page names the assets of its own build; the ones of earlier builds can go.
+            if (page) {
+              const html = await page.text();
+              for (const k of await c.keys()) {
+                const p = new URL(k.url).pathname;
+                if (p.startsWith("/assets/") && !html.includes(p.slice(1))) await c.delete(k);
+              }
+            }
+          });
+        }
         return res;
       })
-      .catch(async () => (await caches.match(req)) ?? (req.mode === "navigate" ? caches.match("/") : undefined))
+      .catch(async () => (await caches.match(req)) ?? (req.mode === "navigate" ? await caches.match("/") : undefined) ?? Response.error())
   );
 });
