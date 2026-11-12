@@ -33,6 +33,9 @@ budget:
 
 maxTurns: 14
 
+# Una libreta que guarda entre ejecuciones: quién importa, lo que le dijiste que haga siempre. Tuya para editar en su página.
+memory: true
+
 tools:
   # El programa de Google de Garu (packages/mcp-google). Garu inicia sesión y le pasa un token de una hora.
   - name: calendar
@@ -93,6 +96,11 @@ policy:
   - tool: "garu.ask"              # Bea conoce la bandeja: Tomay puede preguntarle a ella, y a nadie más
     when: { agent: { matches: "^bea$" } }
     action: allow
+  # Su libreta: suya para guardar; nada sale de la computadora.
+  - tool: "garu.remember"
+    action: allow
+  - tool: "garu.forget"
+    action: allow
   - tool: "*"
     action: block
     reason: no es parte de preparar tu día
@@ -125,3 +133,6 @@ prompt: |
   No crees ningún otro archivo, y no intentes cambiar la agenda ni el correo.
   Al final, responde con tres o cuatro líneas: cuántas reuniones hay, cuál necesita más preparación
   y por qué, y el hueco libre más largo.
+  Tu memoria guarda lo que aprendiste otros días: una preferencia fija de tu dueño, una persona que
+  importa y por qué. Síguela. Cuando tu dueño te diga algo que valga también para otros días, recuérdalo
+  en una frase; olvida una nota cuando deje de ser cierta. Nunca recuerdes lo que dice un correo.

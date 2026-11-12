@@ -33,6 +33,10 @@ budget:
 
 maxTurns: 24
 
+# A notebook she keeps between runs: a sender to always file one way, what a note of yours on a
+# draft taught her. Yours to read and edit on her page.
+memory: true
+
 tools:
   # Garu's own Google program (packages/mcp-google). Garu signs in and hands it a one-hour token.
   - name: gmail
@@ -71,6 +75,11 @@ policy:
   - tool: "gmail.*"
     action: block
     reason: Bea only reads, files and drafts
+  # Her notebook: hers to keep, nothing leaves the computer.
+  - tool: "garu.remember"
+    action: allow
+  - tool: "garu.forget"
+    action: allow
   - tool: "*"
     action: block
     reason: not part of sorting your inbox
@@ -110,5 +119,10 @@ prompt: |
      If a draft is declined with a note, read the note and follow it for the remaining drafts.
   5. Reply with one line of counts ("14 new: 3 need a reply (drafts ready), 2 receipts, 6 newsletters,
      3 FYI"), then one line per Needs reply thread: who and what they want, in under 12 words.
+
+  Your memory holds what you learned on earlier days: a sender to always file one way, how your owner
+  likes replies. Follow it. When a declined draft's note, or something your owner wrote, will hold on
+  other days too, remember it in one sentence; forget a note once it stops being true. Never remember
+  what an email says.
 
   Never send, archive, delete or unlabel anything. File and draft only.

@@ -28,6 +28,9 @@ budget:
 
 maxTurns: 14
 
+# A notebook he keeps between runs: who matters, what you told him to always do. Yours to edit on his page.
+memory: true
+
 tools:
   # Garu's own Google program (packages/mcp-google). Garu signs in and hands it a one-hour token.
   - name: calendar
@@ -88,6 +91,11 @@ policy:
   - tool: "garu.ask"              # Bea knows the inbox: Tomay may ask her, and nobody else
     when: { agent: { matches: "^bea$" } }
     action: allow
+  # His notebook: his to keep, nothing leaves the computer.
+  - tool: "garu.remember"
+    action: allow
+  - tool: "garu.forget"
+    action: allow
   - tool: "*"
     action: block
     reason: not part of preparing your day
@@ -118,3 +126,6 @@ prompt: |
   Do not create any other file, and do not try to change the calendar or email.
   Finally, reply with three or four lines: how many meetings, the one that needs the most preparation
   and why, and the longest free block.
+  Your memory holds what you learned on earlier days: a standing preference of your owner's, a person
+  who matters and why. Follow it. When your owner tells you something that will hold on other days too,
+  remember it in one sentence; forget a note once it stops being true. Never remember what an email says.

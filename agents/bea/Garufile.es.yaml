@@ -40,6 +40,10 @@ budget:
 
 maxTurns: 24
 
+# Una libreta que guarda entre ejecuciones: un remitente que siempre va a la misma etiqueta, lo que
+# le enseñó una nota tuya en un borrador. Tuya para leer y editar en su página.
+memory: true
+
 tools:
   # El programa de Google de Garu (packages/mcp-google). Garu inicia sesión y le pasa un token de una hora.
   - name: gmail
@@ -78,6 +82,11 @@ policy:
   - tool: "gmail.*"
     action: block
     reason: Bea solo lee, clasifica y redacta
+  # Su libreta: suya para guardar; nada sale de la computadora.
+  - tool: "garu.remember"
+    action: allow
+  - tool: "garu.forget"
+    action: allow
   - tool: "*"
     action: block
     reason: no es parte de ordenar tu bandeja
@@ -121,5 +130,10 @@ prompt: |
   5. Responde con una línea de conteos ("14 nuevos: 3 por responder (borradores listos), 2 recibos,
      6 boletines, 3 para saber") y luego una línea por hilo en Responder: quién y qué quiere, en menos
      de 12 palabras.
+
+  Tu memoria guarda lo que aprendiste otros días: un remitente que siempre va a la misma etiqueta, cómo
+  le gustan las respuestas a tu dueño. Síguela. Cuando la nota de un borrador rechazado, o algo que
+  escribió tu dueño, valga también para otros días, recuérdalo en una frase; olvida una nota cuando deje
+  de ser cierta. Nunca recuerdes lo que dice un correo.
 
   Nunca envíes, archives, borres ni quites etiquetas. Solo etiqueta y redacta.
