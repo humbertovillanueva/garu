@@ -43,6 +43,8 @@ import {
   type AskAgents,
   type ParkedRun,
   Memory,
+  planPrune,
+  applyPrune,
 } from "@garu/kernel";
 
 /**
@@ -79,6 +81,8 @@ export interface UiServerOptions {
   up: boolean;
   askTimeoutMs: number;
   notify?: string;
+  /** Delete run logs (and settled inbox requests) older than this, at start and once a day. Unset: keep everything. */
+  pruneMs?: number;
   /** Where the sign-in token lives (created on first start). */
   tokenPath: string;
   /** Make even the browser on this computer sign in. */
@@ -313,6 +317,22 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
   }
   // Parked runs whose answer came while Garu was down resume now.
   scheduleParkedCheck();
+
+  // Old runs go at start and once a day, when a keep window is set. Never in the demo.
+  const prune = () => {
+    if (!opts.pruneMs || opts.demo) return;
+    try {
+      const plan = planPrune({ logRoot: opts.logRoot, inboxRoot: opts.inboxRoot, keepMs: opts.pruneMs });
+      if (!plan.runs.length && !plan.requests.length) return;
+      const n = applyPrune(plan);
+      opts.log(`🧹 pruned ${n.runs} run log(s) and ${n.requests} settled inbox request(s) older than ${Math.round(opts.pruneMs / 86_400_000)} days`);
+    } catch (e) {
+      opts.log(`✖ prune: ${(e as Error).message}`);
+    }
+  };
+  prune();
+  const pruneTicker = opts.pruneMs && !opts.demo ? setInterval(prune, 24 * 3600_000) : undefined;
+  pruneTicker?.unref();
 
   const agentView = (a: DiscoveredAgent | undefined, name: string) => {
     const g = a?.garufile;
@@ -717,6 +737,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           notify: Boolean(opts.notify),
           askTimeoutMin: Math.round((opts.askTimeoutMs ?? 24 * 60 * 60_000) / 60_000),
           askHoldMin: Math.round(ASK_HOLD_MS / 60_000),
+          pruneDays: opts.pruneMs ? Math.round(opts.pruneMs / 86_400_000) : null,
           login: { required: requireLogin, direct: isDirectLoopback(req), tokenPath: opts.tokenPath },
         });
       }
@@ -745,6 +766,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       for (const c of clients) c.end();
       clearTimeout(parkedTimer);
       if (parkedTicker) clearInterval(parkedTicker);
+      if (pruneTicker) clearInterval(pruneTicker);
       // A restart shouldn't wait for an answer nobody is giving right now: a run waiting on an ask
       // parks (the ask stays open and the run comes back for it), and runs get ten seconds to wrap up.
       inbox.close();
