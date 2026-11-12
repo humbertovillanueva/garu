@@ -8,6 +8,8 @@ export interface RunSummary {
   status: RunStatus;
   /** Ended before the model answered because the network was down. */
   offline?: boolean;
+  /** The offline run's reason was a busy model, not the network. */
+  busy?: { model: string; reason: string };
   trigger: string;
   model: string;
   sandbox: { image: string; network: string } | null;

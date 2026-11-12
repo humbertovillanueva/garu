@@ -35,7 +35,10 @@
   const offline = $derived(end?.event["offline"] === true);
   // Parked: the run put itself away on an ask and will pick up in this same log once you answer.
   const parked = $derived([...(events ?? [])].reverse().find((e) => e.event.type === "run.parked" || e.event.type === "run.resumed")?.event.type === "run.parked");
-  const status = $derived(end ? (offline ? "offline" : (end.event["status"] as string)) : parked ? "parked" : live_ ? "running" : "interrupted");
+  // The model stayed busy through every retry: nothing was done either, and the schedule tries again.
+  const busy = $derived(end?.event["busy"] as { model: string; reason: string } | undefined);
+  const status = $derived(end ? (busy ? "busy" : offline ? "offline" : (end.event["status"] as string)) : parked ? "parked" : live_ ? "running" : "interrupted");
+  const reasonLabel = (r: string) => (r === "rate limited" ? t("rate limited") : r === "high demand" ? t("high demand") : r);
   const scheduled = $derived(/^(cron|catch-up):/.test(String(start?.event["trigger"] ?? "")));
   const cost = $derived.by(() => {
     if (end && end.event["costUsd"] !== undefined) return end.event["costUsd"] as number;
@@ -105,6 +108,8 @@
   {:else}
     {#if status === "offline"}
       <div class="panel px-4 py-3 text-[14px] text-fg-2" role="status">{t("No network: the computer was asleep or offline, and nothing was changed.")}{#if scheduled}{" "}{t("The schedule will run it again once the network is back.")}{/if}</div>
+    {:else if status === "busy" && busy}
+      <div class="panel px-4 py-3 text-[14px] text-fg-2" role="status">{t("The model was busy ({model} said {reason}) through every retry, and nothing was changed.", { model: busy.model, reason: reasonLabel(busy.reason) })}{#if scheduled}{" "}{t("The schedule tries again in ten minutes.")}{/if}</div>
     {:else if status === "parked"}
       <div class="panel px-4 py-3 text-[14px] text-fg-2" role="status">{t("Waiting for your answer in the inbox. The run picks up right where it stopped once you decide; nothing is held open meanwhile.")}</div>
     {:else if status === "error"}
@@ -116,7 +121,7 @@
         <div class="md space-y-2 text-[14.5px] leading-relaxed">{@html renderMarkdown(plainTimes(doc.content), { breaks: true })}</div>
       </article>
     {/if}
-    {#if reply && status !== "error" && status !== "offline"}
+    {#if reply && status !== "error" && status !== "offline" && status !== "busy"}
       <div class="panel rise p-4">
         <div class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("What it said")}</div>
         <div class="md space-y-2 text-[14px] text-fg-2">{@html renderMarkdown(plainTimes(reply))}</div>
