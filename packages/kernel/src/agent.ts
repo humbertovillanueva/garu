@@ -11,6 +11,7 @@ import { ModelQuotaError } from "./providers/gemini.js";
 import type { Garufile } from "./garufile.js";
 import { ToolBus, extractText, type Approver, type BuiltinTool, type CallOutcome } from "./bus.js";
 import { holdAwake, watchSleep } from "./awake.js";
+import { memoryPrompt, memoryTools, type Memory } from "./memory.js";
 import { removeParked, writeParked, type ParkedRun, type ParkedStep } from "./park.js";
 import { PolicyEngine } from "./policy.js";
 import { Recorder, type Envelope } from "./recorder.js";
@@ -34,6 +35,8 @@ export interface RunOptions {
   now?: () => Date;
   /** The person the agent works for, by name, so it can address them; the Garufile's prompt says "your owner". */
   owner?: string;
+  /** Where the agents' notebooks live. A Garufile with `memory: true` gets its own; without a store here, memory stays off. */
+  memory?: Memory;
   /** A catch-up: when the schedule meant this run to happen. The model is told, so "today" means that day. */
   dueAt?: Date;
   /**
@@ -186,7 +189,9 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
   if (parked) removeParked(opts.logRoot, g.name, parked.runId);
   const recorder = new Recorder({ root: opts.logRoot, agent: g.name, ...(parked ? { runId: parked.runId, resume: true } : {}), ...(opts.sink ? { sink: opts.sink } : {}) });
   const policy = new PolicyEngine(g.policy);
-  const bus = new ToolBus({ policy, recorder, approver: opts.approver, agent: g.name, parkable: opts.park === true, ...(g.sandbox ? { sandbox: g.sandbox } : {}), ...(opts.ask ? { builtins: [askTool(g.name, opts.ask)] } : {}) });
+  const memory = g.memory ? opts.memory : undefined;
+  const builtins = [...(opts.ask ? [askTool(g.name, opts.ask)] : []), ...(memory ? memoryTools(memory, g.name) : [])];
+  const bus = new ToolBus({ policy, recorder, approver: opts.approver, agent: g.name, parkable: opts.park === true, ...(g.sandbox ? { sandbox: g.sandbox } : {}), ...(builtins.length ? { builtins } : {}) });
   const release = holdAwake();
   // A nap mid-run goes in the log, so an hour-long step reads as what it was. A recorder that can't
   // write fails the run loudly at its next event; a timer callback isn't the place to throw.
@@ -258,6 +263,7 @@ export async function runAgent(opts: RunOptions): Promise<RunResult> {
       `Agent: ${g.name}${g.description ? ` — ${g.description}` : ""}`,
       ...(owner ? [`Your owner: ${owner}.`] : []),
       ...(g.language ? [`Language: write everything meant for your owner (summaries, documents, notes, chat replies) in ${languageName(g.language)}. Answer an email in the language it was written in.`] : []),
+      ...(memory ? [memoryPrompt(memory.read(g.name))] : []),
       `Trigger: ${trigger}`,
       `Current time: ${local}, ${tz} (local date ${localDate}; UTC ${now.toISOString()}). Use this for any date, day of the week or timestamp; never work them out or guess.`,
       ...(due ? [`This run was due at ${spell(due)} (local date ${dayOf(due)}; UTC ${due.toISOString()}) and is running late: the computer was asleep or off. "Today", "tonight" and the local date your instructions refer to mean the due time's day, not the current one.`] : []),

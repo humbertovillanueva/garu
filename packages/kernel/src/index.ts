@@ -10,6 +10,7 @@ export * from "./awake.js";
 export * from "./scheduler.js";
 export * from "./inbox.js";
 export * from "./park.js";
+export * from "./memory.js";
 export * from "./sandbox.js";
 export * from "./store.js";
 export * from "./discover.js";

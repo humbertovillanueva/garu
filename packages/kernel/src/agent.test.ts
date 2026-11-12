@@ -7,6 +7,7 @@ import { runAgent } from "./agent.js";
 import { parseGarufile } from "./garufile.js";
 import { readParked } from "./park.js";
 import { FakeProvider } from "./providers/fake.js";
+import { Memory } from "./memory.js";
 import type { CompleteRequest, CompleteResponse } from "./provider.js";
 import { readRun } from "./recorder.js";
 
@@ -122,6 +123,70 @@ policy:
     const res = await runAgent({ garufile: asking, logRoot: mkdtempSync(join(tmpdir(), "garu-")), provider, approver: async () => ({ approved: false, by: "t" }) });
     expect(res.status).toBe("ok");
     expect(provider.calls[0]!.tools).toEqual([]);
+  });
+});
+
+describe("runAgent with a memory", () => {
+  const remembering = parseGarufile(`
+name: bea-test
+model: fake/any
+prompt: sort the inbox
+maxTurns: 4
+memory: true
+policy:
+  - tool: garu.remember
+    action: allow
+  - tool: garu.forget
+    action: allow
+  - tool: "*"
+    action: block
+`);
+
+  it("shows the notebook in the prompt, and the tools add to it and drop from it", async () => {
+    const logRoot = mkdtempSync(join(tmpdir(), "garu-"));
+    const memory = new Memory(join(logRoot, "memory"));
+    memory.add("bea-test", "Lena's newsletters go under FYI", "2026-11-10");
+    const provider = new FakeProvider([
+      { stopReason: "tool_use", content: [
+        { type: "tool_use", id: "m1", name: "garu__remember", input: { note: "Replies to Priya: casual, first names" } },
+        { type: "tool_use", id: "m2", name: "garu__forget", input: { note: "Lena's newsletters go under FYI" } },
+        { type: "tool_use", id: "m3", name: "garu__forget", input: { note: "never written" } },
+      ] },
+      { stopReason: "end_turn", content: [{ type: "text", text: "noted" }] },
+    ]);
+    const res = await runAgent({ garufile: remembering, logRoot, memory, provider, approver: async () => ({ approved: false, by: "t" }) });
+    expect(res.status).toBe("ok");
+    expect(provider.calls[0]!.system).toContain("Your memory");
+    expect(provider.calls[0]!.system).toContain("- 2026-11-10 · Lena's newsletters go under FYI");
+    expect(provider.calls[0]!.tools.map((t) => t.name).sort()).toEqual(["garu__forget", "garu__remember"]);
+    expect(provider.calls[1]!.messages.at(-1)!.content).toEqual([
+      { type: "tool_result", toolUseId: "m1", content: "remembered" },
+      { type: "tool_result", toolUseId: "m2", content: "forgotten" },
+      { type: "tool_result", toolUseId: "m3", isError: true, content: expect.stringMatching(/^ERROR: no such note/) },
+    ]);
+    expect(memory.read("bea-test").map((n) => n.text)).toEqual(["Replies to Priya: casual, first names"]);
+    // Every note went through the recorder like any other call.
+    expect(readRun(res.logPath).filter((e) => e.event.type === "tool.request").map((e) => (e.event as { request: { tool: string } }).request.tool)).toEqual(["remember", "forget", "forget"]);
+  });
+
+  it("without memory: true, or without a store, the notebook and its tools stay out of the run", async () => {
+    const logRoot = mkdtempSync(join(tmpdir(), "garu-"));
+    const off = parseGarufile(`
+name: quiet
+model: fake/any
+prompt: hi
+policy:
+  - tool: "*"
+    action: allow
+`);
+    const p1 = new FakeProvider([{ stopReason: "end_turn", content: [{ type: "text", text: "a" }] }]);
+    await runAgent({ garufile: off, logRoot, memory: new Memory(join(logRoot, "memory")), provider: p1, approver: async () => ({ approved: false, by: "t" }) });
+    expect(p1.calls[0]!.system).not.toContain("Your memory");
+    expect(p1.calls[0]!.tools).toEqual([]);
+    const p2 = new FakeProvider([{ stopReason: "end_turn", content: [{ type: "text", text: "a" }] }]);
+    await runAgent({ garufile: remembering, logRoot, provider: p2, approver: async () => ({ approved: false, by: "t" }) });
+    expect(p2.calls[0]!.system).not.toContain("Your memory");
+    expect(p2.calls[0]!.tools).toEqual([]);
   });
 });
 

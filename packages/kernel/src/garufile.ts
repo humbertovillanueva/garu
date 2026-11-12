@@ -195,6 +195,8 @@ export const Garufile = z
     description: z.string().default(""),
     /** What the agent writes to its owner in, as a code ("es", "pt-BR"). Garu hands it the date in that language and tells it to write in it. Unset: English. */
     language: z.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/, "language must be a code like es or pt-BR").optional(),
+    /** A small notebook the agent keeps between runs (garu.remember / garu.forget, policed like any tool; the owner edits it on the agent's page). Off unless asked for. */
+    memory: z.boolean().default(false),
     persona: Persona.optional(),
     /** "<provider>/<model>" e.g. "anthropic/claude-sonnet-4-5". */
     model: z.string().regex(/^[a-z0-9-]+\/.+$/, "model must look like provider/model-id"),
