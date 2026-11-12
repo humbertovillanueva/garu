@@ -219,6 +219,26 @@ offered only when the run happens on the control room (`garu ui`), where the oth
 can't ask itself, a chain stops after two asks in a row, and a busy agent says so instead of queueing.
 With `action: ask` instead of `allow`, each question waits for your tap in the inbox first.
 
+### Memory
+
+An agent forgets everything between runs unless you give it a notebook:
+
+```yaml
+memory: true
+policy:
+  - tool: "garu.remember"
+    action: allow
+  - tool: "garu.forget"
+    action: allow
+```
+
+The notebook is `.garu/memory/<agent>.md`: one short note per line, with the day it was written. The
+model is shown it at the start of every run and keeps it with two built-in tools, `garu.remember` and
+`garu.forget`, which go through the policy like any other call (with `ask`, each note waits for your
+tap). Forty notes at most, so it stays a notebook, not a database. You read and edit it on the agent's
+page, or in any text editor. Bea uses hers for senders to always file one way and for what your notes on
+her drafts taught her; Tomay for who matters and what you told him to always do.
+
 ## Approvals that get smarter
 
 The complaint practitioners make about always-on agents is that *their* throughput becomes the bottleneck: the agent works all night and you spend the morning clicking Approve. Garu treats approval as the product, not a dialog box.

@@ -30,7 +30,7 @@ Repo: https://github.com/humbertovillanueva/garu · Site: https://garuagents.com
 
 ```
 packages/kernel     Garufile schema (zod) · policy engine · flight recorder · MCP bus · agent loop
-                    scheduler (with catch-up) · inbox · grants · suggestions · chat · store · sandbox
+                    scheduler (with catch-up) · inbox · grants · suggestions · chat · memory · store · sandbox
 packages/cli        the `garu` command; ui-server.ts (control room API), ui-auth.ts, service.ts
 packages/ui         control room, Svelte 5 runes + Tailwind v4 + Vite; also the phone PWA
 packages/app        Capacitor 8 wrapper of the UI: android/ and ios/ (appId io.github.humbertovillanueva.garu)
@@ -141,6 +141,11 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   the run has `ask:` from the control room) that rings another agent's door and returns its reply; policed by
   `tool: garu.ask` + `when: { agent }`; the target runs with trigger `ask:<asker>`; rules in `askRefusal`
   (not itself, door required, `MAX_ASK_HOPS` = 2, busy = refused).
+- Memory: a Garufile with `memory: true` gets a notebook at `.garu/memory/<agent>.md` (`kernel/src/memory.ts`:
+  one `- YYYY-MM-DD · note` per line, 40 notes of 240 chars at most; a hand-typed `- note` line counts too).
+  Shown to the model in the system prompt; kept through the built-ins `garu.remember` / `garu.forget`
+  (policed, counted as writes). The owner reads and edits it on the agent's page
+  (`GET/POST /api/agents/<agent>/memory`, `POST …/memory/forget`). Bea and Tomay have one, both editions.
 - On macOS a run holds the Mac out of idle sleep while it works (`kernel/src/awake.ts`, caffeinate), and a
   local server that signs in gets its access token renewed mid-run when it's about to run out (`bus.ts`).
 - UI: black and white, no orange, in a dark and a light theme: every color is a token in `app.css`

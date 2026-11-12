@@ -221,6 +221,27 @@ control (`garu ui`), donde viven los demás agentes. Un agente no puede pregunta
 cadena se corta después de dos preguntas seguidas, y un agente ocupado lo dice en vez de encolar. Con
 `action: ask` en lugar de `allow`, cada pregunta espera primero tu toque en la bandeja.
 
+### Memoria
+
+Un agente lo olvida todo entre ejecuciones, salvo que le des una libreta:
+
+```yaml
+memory: true
+policy:
+  - tool: "garu.remember"
+    action: allow
+  - tool: "garu.forget"
+    action: allow
+```
+
+La libreta es `.garu/memory/<agente>.md`: una nota corta por línea, con el día en que se escribió. El
+modelo la ve al empezar cada ejecución y la mantiene con dos herramientas propias de Garu,
+`garu.remember` y `garu.forget`, que pasan por la política como cualquier otra llamada (con `ask`, cada
+nota espera tu toque). Cuarenta notas como máximo, para que siga siendo una libreta y no una base de
+datos. La lees y la editas en la página del agente, o en cualquier editor de texto. Bea usa la suya para
+remitentes que siempre van a la misma etiqueta y para lo que le enseñaron tus notas en sus borradores;
+Tomay, para quién importa y lo que le dijiste que haga siempre.
+
 ## Aprobaciones que aprenden
 
 La queja de quienes usan agentes siempre activos es que *su propio* ritmo se vuelve el cuello de botella: el agente trabaja toda la noche y tú pasas la mañana haciendo clic en Aprobar. Garu trata la aprobación como el producto, no como un cuadro de diálogo.

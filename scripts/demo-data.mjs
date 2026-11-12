@@ -122,6 +122,7 @@ const TEXT = {
     pipDeclined: "You declined the write, so I left the summary in this message instead.",
     pipReason: "writing outside the notes folder",
     tick: "Nothing new: 2 files.",
+    memory: ["Newsletters from Lena's studio go under FYI: my owner reads them.", "Replies to Priya: casual, first names, no sign-off.", "Receipts from the 3rd Street Thai place are lunch with Priya, every other Monday."],
     chatQ: "what's on today?",
     chatA: "Three meetings: the design review at 10, lunch with Priya at 12:30 and your 1:1 with Jordan at 3. The review needs the most prep; it's all in today's brief.",
   },
@@ -158,6 +159,7 @@ const TEXT = {
     pipDeclined: "Rechazaste la escritura, así que dejé el resumen en este mensaje.",
     pipReason: "escribir fuera de la carpeta de notas",
     tick: "Nada nuevo: 2 archivos.",
+    memory: ["Los boletines del estudio de Lena van a Para saber: mi dueño los lee.", "Respuestas a Priya: informales, de tú, sin despedida.", "Los recibos del tailandés de la calle 3 son la comida con Priya, un lunes sí y otro no."],
     chatQ: "¿qué hay hoy?",
     chatA: "Tres reuniones: la revisión de diseño a las 10, la comida con Priya a las 12:30 y tu 1:1 con Jordan a las 3. La revisión es la que más preparación necesita; está todo en la nota de hoy.",
   },
@@ -313,6 +315,10 @@ writeFileSync(join(inbox.root, `${req.id}.json`), JSON.stringify(req, null, 2));
 appendFileSync(join(root, "grants.jsonl"), JSON.stringify({ id: hex().slice(0, 6), agent: "tick", tool: "fs.write_file", scope: { key: "path", value: "examples/tick/workspace/tick.log" }, createdBy: "Humberto (ui)", createdAt: minutesAgo(600).toISOString(), expiresAt: new Date(Date.now() + 14 * 3600_000).toISOString(), uses: 6 }) + "\n");
 
 // Chat with tomay.
+// Bea's notebook: what she learned on earlier days, as garu.remember writes it.
+mkdirSync(join(root, "memory"), { recursive: true });
+writeFileSync(join(root, "memory", "bea.md"), TEXT.memory.map((note, i) => `- ${minutesAgo((3 - i) * 1440).toISOString().slice(0, 10)} · ${note}\n`).join(""));
+
 const chat = new ChatStore(join(root, "chat"));
 chat.append("tomay", { role: "user", text: TEXT.chatQ, kind: "chat", ts: minutesAgo(50).toISOString() });
 chat.append("tomay", { role: "agent", text: TEXT.chatA, kind: "chat", ts: minutesAgo(49.8).toISOString() });
