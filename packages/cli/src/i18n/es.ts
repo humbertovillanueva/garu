@@ -261,6 +261,7 @@ export const es: Record<string, string> = {
   "{agent}: was due {time} (cron {cron}) while garu was not running; catching up": "{agent}: tocaba a las {time} (cron {cron}) mientras garu no estaba corriendo; recuperando",
   "{agent}: previous run still going, skipped this tick": "{agent}: la ejecución anterior sigue en curso, se saltó este turno",
   "{agent}: no network, will catch up": "{agent}: sin red, se recuperará después",
+  "{agent} (cron {cron}, {min} min late)": "{agent} (cron {cron}, {min} min tarde)",
   "{agent}: the model is busy, will try again in 10 min": "{agent}: el modelo está ocupado, lo intentará de nuevo en 10 min",
   "unpriced": "sin precio",
   "{agent}: {status} in {turns} turn(s), {cost} — {path}": "{agent}: {status} en {turns} turno(s), {cost} — {path}",

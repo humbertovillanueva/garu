@@ -955,7 +955,7 @@ function printSchedulerEvent(e: SchedulerEvent): void {
       stderr.write(`${now} ⏰ ${t("{agent}: \"{cron}\" next at {time}", { agent: e.agent, cron: e.cron, time: e.nextRun ? localTime(e.nextRun, { date: true, seconds: false }) : "?" })}\n`);
       break;
     case "fire":
-      stderr.write(`${now} ▶ ${t("{agent} (cron {cron})", { agent: e.agent, cron: e.cron })}\n`);
+      stderr.write(`${now} ▶ ${e.dueAt ? t("{agent} (cron {cron}, {min} min late)", { agent: e.agent, cron: e.cron, min: Math.round((Date.now() - e.dueAt.getTime()) / 60_000) }) : t("{agent} (cron {cron})", { agent: e.agent, cron: e.cron })}\n`);
       break;
     case "catch-up":
       stderr.write(`${now} ↺ ${t("{agent}: was due {time} (cron {cron}) while garu was not running; catching up", { agent: e.agent, time: localTime(e.missedAt, { seconds: false }), cron: e.cron })}\n`);

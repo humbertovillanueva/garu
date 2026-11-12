@@ -292,7 +292,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       // A run started from the control room or chat is just as much "running" as a scheduled one.
       isBusy: (name) => live.has(name),
       onEvent: (e) => {
-        if (e.type === "fire") opts.log(`▶ ${e.agent} (cron ${e.cron})`);
+        if (e.type === "fire") opts.log(`▶ ${e.agent} (cron ${e.cron}${e.dueAt ? `, ${Math.round((Date.now() - e.dueAt.getTime()) / 60_000)} min late` : ""})`);
         else if (e.type === "offline") opts.log(e.reason === "busy" ? `⏸ ${e.agent}: the model is busy, will try again in 10 min` : `⏸ ${e.agent}: no network, will catch up`);
         else if (e.type === "catch-up") opts.log(`↺ ${e.agent}: missed ${e.missedAt.toLocaleTimeString()} (cron ${e.cron}), catching up`);
         else if (e.type === "run.done") opts.log(`■ ${e.agent}: ${e.result.status} in ${e.result.turns} turn(s)`);
