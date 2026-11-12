@@ -37,6 +37,7 @@ triggers:
 
 budget:
   maxCostUsd: 0.05
+  maxRunsPerDay: 8                # la clasificación de la mañana, las preguntas de Tomay, tus mensajes; nunca un desbocado
 
 maxTurns: 24
 

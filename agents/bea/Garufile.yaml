@@ -30,6 +30,7 @@ triggers:
 
 budget:
   maxCostUsd: 0.05
+  maxRunsPerDay: 8                # the morning sort, Tomay's questions, your messages; never a runaway
 
 maxTurns: 24
 
