@@ -1,10 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer } from "node:net";
+import { createServer as httpServer } from "node:http";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Inbox, Recorder, readRun, suggestRules, writeParked, readParked } from "@garu/kernel";
-import { startUiServer, askRefusal, MAX_ASK_HOPS } from "./ui-server.js";
+import { startUiServer, askRefusal, MAX_ASK_HOPS, notify } from "./ui-server.js";
 
 /**
  * The control room, booted for real on a free port over a temporary folder with one agent,
@@ -39,6 +40,9 @@ policy:
 
 let root = "", inboxRoot = "", base = "", token = "";
 let srv: ReturnType<typeof startUiServer>;
+let pingServer: ReturnType<typeof httpServer>;
+let pingPort = 0;
+const pings: { title: string; click: string; body: string }[] = [];
 const logLines: string[] = [];
 /** Looks like a proxy is in front: the server must then insist on the token. */
 const viaProxy = { "x-forwarded-for": "100.64.0.9" };
@@ -77,6 +81,9 @@ beforeAll(async () => {
   writeFileSync(join(root, ".env"), "SECRET=hunter2\n");
   inboxRoot = join(root, ".garu", "inbox");
   for (const d of ["runs", "inbox", "chat"]) mkdirSync(join(root, ".garu", d), { recursive: true });
+  // Where the pushes land: a tiny server that keeps every body it is sent.
+  pingPort = await freePort();
+  await new Promise<void>((r) => { pingServer = httpServer((req, res) => { let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => { pings.push({ title: String(req.headers["title"] ?? ""), click: String(req.headers["click"] ?? ""), body: b }); res.end("ok"); }); }).listen(pingPort, "127.0.0.1", r); });
   const port = await freePort();
   srv = startUiServer({
     port, host: "127.0.0.1", root, logRoot: join(root, ".garu", "runs"), inboxRoot, chatRoot: join(root, ".garu", "chat"), memoryRoot: join(root, ".garu", "memory"),
@@ -90,7 +97,7 @@ beforeAll(async () => {
     await new Promise((r) => setTimeout(r, 50));
   }
 });
-afterAll(async () => { await srv.close(); });
+afterAll(async () => { await srv.close(); pingServer.close(); });
 
 describe("who gets in", () => {
   it("a browser on this computer is let in; a page from another local origin, or anything behind a proxy, is not", async () => {
@@ -248,6 +255,20 @@ describe("the daily cap", () => {
     expect((await post("/api/agents/once/hooks/nudge", { message: "hi" })).status).toBe(429);
     expect((await post("/api/agents/once/chat", { text: "hi" })).status).toBe(429);
   }, 15_000);
+});
+
+describe("the push", () => {
+  it("an ask is pushed with the agent, the tool and the reason, never the arguments", async () => {
+    const now = new Date();
+    await notify(`http://127.0.0.1:${pingPort}/garu-test`, { id: "t99", agent: "pip", runId: "r1", callId: "c1", tool: "fs.write_file", args: { path: "secret/notes.md", content: "hunter2 and the whole letter" }, reason: "writing", createdAt: now.toISOString(), expiresAt: new Date(now.getTime() + 60_000).toISOString() }, "https://mac.example.ts.net");
+    const p = pings.at(-1)!;
+    expect(p.title).toBe("Garu: approval needed (pip)");
+    expect(p.click).toBe("https://mac.example.ts.net/#/inbox");
+    expect(p.body).toContain("pip wants fs.write_file");
+    expect(p.body).toContain("reason: writing");
+    expect(p.body).not.toContain("hunter2");
+    expect(p.body).not.toContain("notes.md");
+  });
 });
 
 describe("the notebook", () => {

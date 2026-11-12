@@ -176,7 +176,7 @@ program
   .argument("<files...>", t("Garufiles to keep running on their cron triggers"))
   .option("--on-ask <mode>", t("what to do with `ask` decisions: inbox (pause for `garu approve`) | deny | allow | terminal"), "inbox")
   .option("--ask-timeout <time>", t("inbox mode: deny a request nobody answers after this long (30m, 24h, 7d; a bare number is minutes)"), "30")
-  .option("--notify <url>", t("inbox mode: POST each approval request to this URL (ntfy.sh topic URLs work)"))
+  .option("--notify <url>", t("inbox mode: POST each approval request to this URL (ntfy.sh topic URLs work; GARU_NOTIFY_URL in .env is the default)"))
   .option("--inbox-root <dir>", t("where approval requests live"), DEFAULT_INBOX_ROOT)
   .option("--log-root <dir>", t("where run logs go"), DEFAULT_LOG_ROOT)
   .option("-q, --quiet", t("only print scheduler events, not every run step"))
@@ -204,7 +204,8 @@ program
           onRequest: async (r) => {
             stderr.write(`\n┌ ${t("APPROVAL NEEDED  (expires {time})", { time: localTime(r.expiresAt, { seconds: false }) })}\n│ ${formatRequest(r)}\n└ garu approve ${r.id}   ·   garu deny ${r.id}\n\n`);
             // A control room served by Tailscale on the usual port is where a tap on the push should land.
-            if (opts.notify) await notify(opts.notify, r, (await tailscaleAddresses(DEFAULT_UI_PORT))[0]);
+            const pushUrl = opts.notify ?? process.env["GARU_NOTIFY_URL"];
+            if (pushUrl) await notify(pushUrl, r, (await tailscaleAddresses(DEFAULT_UI_PORT))[0]);
           },
         })
       : undefined;
@@ -438,7 +439,7 @@ program
   .option("--host <host>", t("bind address (localhost only by default)"), "127.0.0.1")
   .option("--up", t("also run cron schedules for every Garufile found under this directory"))
   .option("--ask-timeout <time>", t("deny approvals nobody answers after this long (30m, 24h, 7d; a bare number is minutes)"), "24h")
-  .option("--notify <url>", t("POST approval requests to this URL (ntfy.sh topic URLs work)"))
+  .option("--notify <url>", t("POST approval requests to this URL (ntfy.sh topic URLs work; GARU_NOTIFY_URL in .env is the default)"))
   .option("--log-root <dir>", t("where run logs live"), DEFAULT_LOG_ROOT)
   .option("--inbox-root <dir>", t("where approval requests live"), DEFAULT_INBOX_ROOT)
   .option("--as <name>", t("your name — how approvals are recorded and how agents address you"), process.env["GARU_USER"] ?? process.env["USER"] ?? "you")
@@ -465,7 +466,7 @@ program
       up: Boolean(opts.up) && !opts.demo,
       demo: Boolean(opts.demo),
       askTimeoutMs: askTimeoutMs(opts.askTimeout),
-      ...(opts.notify ? { notify: opts.notify } : {}),
+      ...((opts.notify ?? process.env["GARU_NOTIFY_URL"]) ? { notify: opts.notify ?? process.env["GARU_NOTIFY_URL"]! } : {}),
       tokenPath: DEFAULT_TOKEN_PATH,
       requireLogin: Boolean(opts.requireLogin),
       log,
@@ -928,8 +929,9 @@ const unattendedDeny: Approver = async () => ({ approved: false, by: "unattended
  * so instead of printing commands on a phone. The control room's own copy lives in ui-server.ts;
  * the two must send the same thing.
  */
+/** The push names the agent, the tool and the reason, never the arguments: an email's body or a file's content stays on this computer. */
 async function notify(url: string, r: ApprovalRequest, link?: string): Promise<void> {
-  const body = `${t("{agent} wants {tool}", { agent: r.agent, tool: r.tool })}\n${JSON.stringify(r.args).slice(0, 300)}\n${t("reason: {reason}", { reason: r.reason })}\n\n${link ? t("Tap to review.") : `garu approve ${r.id} · garu deny ${r.id}`}`;
+  const body = `${t("{agent} wants {tool}", { agent: r.agent, tool: r.tool })}\n${t("reason: {reason}", { reason: r.reason })}\n\n${link ? t("Tap to review.") : `garu approve ${r.id} · garu deny ${r.id}`}`;
   try {
     const res = await fetch(url, {
       method: "POST",

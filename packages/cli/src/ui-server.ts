@@ -827,10 +827,11 @@ async function readBody(req: import("node:http").IncomingMessage): Promise<Recor
 
 /**
  * Push an approval request to a URL. Plain text so ntfy.sh (free push to your phone) shows it as-is;
- * with a control-room address, a tap opens the Inbox there (ntfy's Click header).
+ * with a control-room address, a tap opens the Inbox there (ntfy's Click header). It names the agent,
+ * the tool and the reason, never the arguments: an email's body or a file's content stays on this computer.
  */
-async function notify(url: string, r: ApprovalRequest, link?: string): Promise<void> {
-  const body = `${r.agent} wants ${r.tool}\n${JSON.stringify(r.args).slice(0, 300)}\nreason: ${r.reason}\n\n${link ? "Tap to review." : `garu approve ${r.id} · garu deny ${r.id}`}`;
+export async function notify(url: string, r: ApprovalRequest, link?: string): Promise<void> {
+  const body = `${t("{agent} wants {tool}", { agent: r.agent, tool: r.tool })}\n${t("reason: {reason}", { reason: r.reason })}\n\n${link ? t("Tap to review.") : `garu approve ${r.id} · garu deny ${r.id}`}`;
   try {
     await fetch(url, {
       method: "POST",

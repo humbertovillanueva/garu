@@ -49,7 +49,7 @@ export const es: Record<string, string> = {
   "Garufiles to keep running on their cron triggers": "Garufiles que deben seguir corriendo con sus disparadores cron",
   "what to do with `ask` decisions: inbox (pause for `garu approve`) | deny | allow | terminal": "qué hacer con las decisiones `ask`: inbox (pausar hasta `garu approve`) | deny | allow | terminal",
   "inbox mode: deny a request nobody answers after this long (30m, 24h, 7d; a bare number is minutes)": "modo inbox: rechazar una petición que nadie responde tras este tiempo (30m, 24h, 7d; un número a secas son minutos)",
-  "inbox mode: POST each approval request to this URL (ntfy.sh topic URLs work)": "modo inbox: enviar por POST cada petición de aprobación a esta URL (sirven las URL de temas de ntfy.sh)",
+  "inbox mode: POST each approval request to this URL (ntfy.sh topic URLs work; GARU_NOTIFY_URL in .env is the default)": "modo bandeja: envía cada petición de aprobación por POST a esta URL (sirven las URL de tema de ntfy.sh; GARU_NOTIFY_URL en .env es el valor por defecto)",
   "where approval requests live": "dónde viven las peticiones de aprobación",
   "only print scheduler events, not every run step": "mostrar solo los eventos del programador, no cada paso de las ejecuciones",
   "fire every cron agent once right now, then exit (for testing)": "disparar cada agente con cron una vez ahora mismo y salir (para probar)",
@@ -112,7 +112,7 @@ export const es: Record<string, string> = {
   // ---- garu ui
   "bind address (localhost only by default)": "dirección de escucha (solo localhost por defecto)",
   "also run cron schedules for every Garufile found under this directory": "ejecutar también los horarios cron de cada Garufile que haya bajo esta carpeta",
-  "POST approval requests to this URL (ntfy.sh topic URLs work)": "enviar por POST las peticiones de aprobación a esta URL (sirven las URL de temas de ntfy.sh)",
+  "POST approval requests to this URL (ntfy.sh topic URLs work; GARU_NOTIFY_URL in .env is the default)": "envía las peticiones de aprobación por POST a esta URL (sirven las URL de tema de ntfy.sh; GARU_NOTIFY_URL en .env es el valor por defecto)",
   "where run logs live": "dónde viven los registros de las ejecuciones",
   "your name — how approvals are recorded and how agents address you": "tu nombre — cómo se registran las aprobaciones y cómo te llaman los agentes",
   "ask for the token even in the browser on this computer": "pedir el token incluso en el navegador de esta computadora",
