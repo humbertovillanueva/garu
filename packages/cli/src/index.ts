@@ -41,6 +41,7 @@ import {
   readRun,
   runAgent,
   Memory,
+  capReached,
   type ApprovalRequest,
   type Approver,
   type Envelope,
@@ -128,6 +129,7 @@ program
     } else if (g.tools.some((t) => !isRemoteServer(t))) {
       stdout.write(`  ⚠ ${t("no sandbox: local tool servers run directly on this machine. Add a `sandbox:` block to containerise them.")}\n`);
     }
+    if (g.budget.maxRunsPerDay !== undefined) stdout.write(`  ${t("budget: at most {n} runs a day", { n: g.budget.maxRunsPerDay })}\n`);
     const price = g.budget.pricing ?? priceFor(g.model);
     if (g.budget.maxCostUsd !== undefined) {
       stdout.write(`  ${t("budget: cap {cap} per run", { cap: formatUsd(g.budget.maxCostUsd) })}${price ? ` ${t("at ${input}/${output} per MTok", { input: price.inputPerMTok, output: price.outputPerMTok })}` : ` — ✖ ${t("model has no known price, add budget.pricing")}`}\n`);
@@ -221,8 +223,10 @@ program
           return r ? new Date(r.startedAt) : null;
         },
       },
-      runner: (a, trigger, dueAt) =>
-        runAgent({
+      runner: async (a, trigger, dueAt) => {
+        const c = capReached(a.garufile, upStore);
+        if (c) throw new Error(t("{name} has already run {runs} times today (its cap is {cap} a day); it can run again tomorrow", { name: a.garufile.name, runs: c.runs, cap: c.cap }));
+        return runAgent({
           garufile: a.garufile,
           logRoot: opts.logRoot,
           memory: new Memory(DEFAULT_MEMORY_ROOT),
@@ -231,7 +235,8 @@ program
           ...(dueAt ? { dueAt } : {}),
           ...(opts.quiet ? {} : { sink: (e) => stderr.write(`  [${a.garufile.name}] ${formatEvent(e)}\n`) }),
           ...(process.env["GARU_USER"] ? { owner: process.env["GARU_USER"] } : {}),
-        }),
+        });
+      },
     });
 
     const n = scheduler.start(agents);

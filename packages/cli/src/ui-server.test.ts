@@ -68,6 +68,9 @@ beforeAll(async () => {
   // half a second before exiting (the bus gives it one more try after three seconds, then the run fails).
   mkdirSync(join(root, "agents", "slow"), { recursive: true });
   writeFileSync(join(root, "agents", "slow", "Garufile.yaml"), GARUFILE.replace("name: pip", "name: slow").replace("model: fake/any", "model: ollama/test").replace('args: ["-e", "0"]', 'args: ["-e", "setTimeout(() => {}, 500)"]'));
+  // An agent allowed one run a day.
+  mkdirSync(join(root, "agents", "once"), { recursive: true });
+  writeFileSync(join(root, "agents", "once", "Garufile.yaml"), GARUFILE.replace("name: pip", "name: once\nbudget:\n  maxRunsPerDay: 1"));
   mkdirSync(join(root, "ui"));
   writeFileSync(join(root, "ui", "index.html"), "<!doctype html><title>Garu test</title>");
   writeFileSync(join(root, "notes.md"), "old\n");
@@ -93,7 +96,7 @@ describe("who gets in", () => {
   it("a browser on this computer is let in; a page from another local origin, or anything behind a proxy, is not", async () => {
     const mine = await get("/api/agents");
     expect(mine.status).toBe(200);
-    expect(((await mine.json()) as { agents: { name: string }[] }).agents.map((a) => a.name)).toEqual(["pip", "slow", "vault"]);
+    expect(((await mine.json()) as { agents: { name: string }[] }).agents.map((a) => a.name)).toEqual(["once", "pip", "slow", "vault"]);
     const other = await get("/api/pair", { headers: { origin: "http://localhost:5173" } });
     expect(other.status).toBe(401);
     expect(await other.json()).toMatchObject({ signIn: true });
@@ -228,6 +231,23 @@ describe("one agent asking another", () => {
     expect(q({ hop: MAX_ASK_HOPS - 1 })).toBeNull();
     expect(q({ busy: true })).toMatch(/bea is busy/);
   });
+});
+
+describe("the daily cap", () => {
+  it("once today's runs reach the cap, nothing starts it until tomorrow: not Run now, not its door, not a message", async () => {
+    const agent = async () => ((await (await get("/api/agents")).json()) as { agents: { name: string; capped: boolean; budget: { maxRunsPerDay: number | null } }[] }).agents.find((a) => a.name === "once")!;
+    expect(await agent()).toMatchObject({ capped: false, budget: { maxRunsPerDay: 1 } });
+    // One run today, as the recorder leaves it.
+    const r = new Recorder({ root: join(root, ".garu", "runs"), agent: "once" });
+    r.record({ type: "run.start", agent: "once", model: "fake/any", trigger: "ui" });
+    r.record({ type: "run.end", status: "ok" });
+    expect((await agent()).capped).toBe(true);
+    const again = await post("/api/agents/once/run", {});
+    expect(again.status).toBe(429);
+    expect(((await again.json()) as { error: string }).error).toContain("once has already run 1 times today");
+    expect((await post("/api/agents/once/hooks/nudge", { message: "hi" })).status).toBe(429);
+    expect((await post("/api/agents/once/chat", { text: "hi" })).status).toBe(429);
+  }, 15_000);
 });
 
 describe("the notebook", () => {

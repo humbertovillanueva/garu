@@ -38,6 +38,7 @@ import {
   lineDiff,
   diffStats,
   localDay,
+  capReached,
   listParked,
   type AskAgents,
   type ParkedRun,
@@ -160,6 +161,12 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
    * How a run reaches the other agents. `hop` is how many asks deep this run already is: a run a person
    * or a schedule started is 0, the agent it asks runs at 1, and so on, up to MAX_ASK_HOPS.
    */
+  /** The day's cap, once reached: the sentence every door answers with, and the log line. */
+  const cappedToday = (a: DiscoveredAgent): string | null => {
+    const c = capReached(a.garufile, store);
+    return c ? t("{name} has already run {runs} times today (its cap is {cap} a day); it can run again tomorrow", { name: a.garufile.name, runs: c.runs, cap: c.cap }) : null;
+  };
+
   const askFrom = (asker: DiscoveredAgent, hop: number): AskAgents => ({
     agents: () => discover().agents.filter((x) => x.garufile.name !== asker.garufile.name && hasDoor(x)).map((x) => x.garufile.name),
     ask: async (target, message) => {
@@ -167,6 +174,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       const refusal = askRefusal({ asker: asker.garufile.name, target, hop, agents: agents.map((x) => ({ name: x.garufile.name, door: hasDoor(x) })), busy: live.has(target) });
       if (refusal) throw new Error(refusal);
       const to = agents.find((x) => x.garufile.name === target)!;
+      const capped = cappedToday(to);
+      if (capped) throw new Error(capped);
       opts.log(`▶ ${target} (asked by ${asker.garufile.name})`);
       const input = `Another of your owner's agents, "${asker.garufile.name}", asks you:\n\n${message}\n\nAnswer it in your reply: what you write is what ${asker.garufile.name} gets back. Use your tools as your standing instructions allow, and nothing beyond them.`;
       const r = await startRun(to, `ask:${asker.garufile.name}`, input, undefined, hop + 1);
@@ -181,6 +190,11 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
    */
   const startRun = async (a: DiscoveredAgent, trigger: string, input?: string, dueAt?: Date, hop = 0, resume?: ParkedRun): Promise<RunResult> => {
     const name = a.garufile.name;
+    // A resumed run is the same run, not another; everything else counts against the day's cap.
+    if (!resume) {
+      const capped = cappedToday(a);
+      if (capped) throw new Error(capped);
+    }
     const started = new Date().toISOString();
     // Busy from this very moment, before the first await: a second start in the same instant sees it
     // and is refused, instead of two runs of the same agent racing each other.
@@ -351,7 +365,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       tools: g?.tools.map((t) => t.name) ?? [],
       policy: g ? { rules: g.policy.length, allow: g.policy.filter((r) => r.action === "allow").length, ask: g.policy.filter((r) => r.action === "ask").length, block: g.policy.filter((r) => r.action === "block").length } : null,
       sandbox: g?.sandbox ? { image: g.sandbox.image, network: g.sandbox.network } : null,
-      budget: g ? { maxCostUsd: g.budget.maxCostUsd ?? null, free: price ? price.inputPerMTok === 0 && price.outputPerMTok === 0 : false } : null,
+      budget: g ? { maxCostUsd: g.budget.maxCostUsd ?? null, free: price ? price.inputPerMTok === 0 && price.outputPerMTok === 0 : false, maxRunsPerDay: g.budget.maxRunsPerDay ?? null } : null,
+      capped: Boolean(g?.budget.maxRunsPerDay && todays.filter((r) => !r.offline).length >= g.budget.maxRunsPerDay),
       maxTurns: g?.maxTurns ?? null,
       memory: g?.memory ?? false,
       runs: runs.length,
@@ -450,6 +465,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         // Checked after the body is read, with nothing to wait on between here and startRun marking the
         // agent busy, so two "Run now" taps in the same instant start one run and the other is refused.
         if (live.has(name)) return json(res, { error: t("{name} is already running", { name }) }, 409);
+        const capped = cappedToday(a);
+        if (capped) return json(res, { error: capped }, 429);
         opts.log(`▶ ${name} (from the control room${note ? ", with a note" : ""})`);
         void startRun(a, "ui", note || undefined)
           .then((r) => opts.log(`■ ${name}: ${r.status} in ${r.turns} turn(s)`))
@@ -476,6 +493,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         const message = typeof body.message === "string" ? body.message.trim() : "";
         if (message.length > 8000) return json(res, { error: t("message is too long (8000 characters at most)") }, 400);
         if (live.has(name)) return json(res, { error: t("{name} is already running", { name }) }, 409);
+        const capped = cappedToday(a);
+        if (capped) return json(res, { error: capped }, 429);
         opts.log(`▶ ${name} (webhook ${hookName}${message ? ", with a message" : ""})`);
         const input = message ? `A webhook named "${hookName}" brought this message:\n\n${message}\n\nCarry out your standing instructions with it in mind.` : undefined;
         void startRun(a, `webhook:${hookName}`, input)
@@ -518,6 +537,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           if (!text) return json(res, { error: t("empty message") }, 400);
           // Same as Run now: the busy check comes after the body, right before the run is started.
           if (live.has(name)) return json(res, { error: t("{name} is still working on the last message", { name }) }, 409);
+          const capped = cappedToday(a);
+          if (capped) return json(res, { error: capped }, 429);
           const displayName = name.charAt(0).toUpperCase() + name.slice(1);
           const view = agentView(a, name);
           const input = chat.transcript(name, opts.userName, displayName, text, 20, {

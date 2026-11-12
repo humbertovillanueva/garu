@@ -28,6 +28,8 @@ export const es: Record<string, string> = {
   "workspace {path}": "carpeta de trabajo {path}",
   "no sandbox: local tool servers run directly on this machine. Add a `sandbox:` block to containerise them.": "sin aislamiento: los servidores de herramientas locales corren directamente en esta máquina. Agrega un bloque `sandbox:` para meterlos en un contenedor.",
   "budget: cap {cap} per run": "presupuesto: tope {cap} por ejecución",
+  "budget: at most {n} runs a day": "presupuesto: como máximo {n} ejecuciones al día",
+  "{name} has already run {runs} times today (its cap is {cap} a day); it can run again tomorrow": "{name} ya se ejecutó {runs} veces hoy (su tope es {cap} al día); puede volver a ejecutarse mañana",
   "at ${input}/${output} per MTok": "a ${input}/${output} por MTok",
   "model has no known price, add budget.pricing": "el modelo no tiene precio conocido; agrega budget.pricing",
   "budget: model is priced at $0 (local/free), no cap needed": "presupuesto: el modelo cuesta $0 (local/gratis), no hace falta tope",
