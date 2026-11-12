@@ -76,9 +76,11 @@ policy:
   - tool: "gmail.*"
     action: block
     reason: Bea only reads, files and drafts
-  # Her notebook: hers to keep, nothing leaves the computer.
+  # Her notebook: a note shapes every later run, and an email must not get to write one, so each
+  # waits for you. After a few approvals in a row, Garu offers to let them through.
   - tool: "garu.remember"
-    action: allow
+    action: ask
+    reason: a note in her memory shapes every later run
   - tool: "garu.forget"
     action: allow
   - tool: "*"

@@ -83,9 +83,11 @@ policy:
   - tool: "gmail.*"
     action: block
     reason: Bea solo lee, clasifica y redacta
-  # Su libreta: suya para guardar; nada sale de la computadora.
+  # Su libreta: una nota moldea todas las ejecuciones siguientes, y un correo no debe poder escribir
+  # una, así que cada una espera tu visto bueno. Tras unas aprobaciones seguidas, Garu ofrece dejarlas pasar.
   - tool: "garu.remember"
-    action: allow
+    action: ask
+    reason: una nota en su memoria moldea todas las ejecuciones siguientes
   - tool: "garu.forget"
     action: allow
   - tool: "*"
