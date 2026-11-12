@@ -83,7 +83,10 @@ export function dayLabel(iso: string): string {
 /** How long a run took, in words: "a few seconds", "under a minute", "3 min", "1 h 5 min". Never seconds. */
 export function duration(a: string, b: string | null): string {
   if (!b) return t("running");
-  const ms = new Date(b).getTime() - new Date(a).getTime();
+  return span(new Date(b).getTime() - new Date(a).getTime());
+}
+/** A length of time in words, same scale as `duration`. */
+export function span(ms: number): string {
   if (ms < 10_000) return t("a few seconds");
   if (ms < 60_000) return t("under a minute");
   const m = Math.round(ms / 60_000);

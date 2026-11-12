@@ -18,6 +18,8 @@ export type GaruEvent =
   /** The run put itself away, waiting on these inbox requests; it resumes in this same log when they are answered. */
   | { type: "run.parked"; requests: string[] }
   | { type: "run.resumed"; parkedAt: string }
+  /** The machine slept while the run was waiting on something; the run carried on when it woke. */
+  | { type: "host.slept"; since: string; ms: number }
   | { type: "model.turn"; turn: number; inputTokens?: number; outputTokens?: number; text?: string; costUsd?: number; totalCostUsd?: number }
   | { type: "budget.exceeded"; costUsd: number; maxCostUsd: number; pendingToolCalls: number }
   | { type: "tool.request"; callId: string; request: ToolCallRequest }
@@ -157,6 +159,10 @@ export function formatEvent(env: Envelope): string {
       return `${t} ⏸ parked: waiting on ${e.requests.length === 1 ? "an answer" : `${e.requests.length} answers`} in the inbox (${e.requests.join(", ")}); the run resumes when it comes`;
     case "run.resumed":
       return `${t} ▶ resumed: the answer came (parked since ${localTime(e.parkedAt, { date: true, seconds: false })})`;
+    case "host.slept": {
+      const min = Math.round(e.ms / 60_000);
+      return `${t} 💤 the computer slept ${min < 1 ? "under a minute" : `${min} min`} (since ${localTime(e.since, { seconds: false })}); the run waited for it`;
+    }
     case "tool.result":
       return `${t} ← ${e.ok ? "ok" : "ERROR"} in ${e.durationMs}ms${e.error ? `: ${e.error}` : ""}`;
     case "model.retry":

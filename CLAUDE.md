@@ -197,7 +197,8 @@ day six and `garu auth <Garufile> <server>` renews one in place. Last renewed Mo
 
 His Mac is a laptop that sleeps after a minute idle, on power too, and spends nights on battery
 napping every quarter hour; runs that fire in a nap are late or cut off, and catch-up, the awake hold
-and the read-only retry are the seatbelts. He declined changing the setting; don't re-ask.
+and the read-only retry are the seatbelts. A nap mid-run is recorded (`host.slept`, from `watchSleep` in
+`kernel/src/awake.ts`: a timer that fires late knows the machine slept) and the run timeline shows it. He declined changing the setting; don't re-ask.
 
 ## The App Store
 

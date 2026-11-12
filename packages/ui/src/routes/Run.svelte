@@ -2,7 +2,7 @@
   import { api, live, agentByName, loader, HttpError } from "../lib/api.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, duration, humanTime, cronLabel, triggerLabel, plainTimes, until } from "../lib/format";
+  import { usd, duration, span, humanTime, cronLabel, triggerLabel, plainTimes, until } from "../lib/format";
   import { renderMarkdown } from "../lib/md";
   import Mark from "../lib/components/Mark.svelte";
   import Status from "../lib/components/Status.svelte";
@@ -43,6 +43,8 @@
     return (last?.event["totalCostUsd"] as number | undefined) ?? 0;
   });
   const turns = $derived((events ?? []).filter((e) => e.event.type === "model.turn").length);
+  /** Time the computer spent asleep mid-run: part of "took 1 h", none of it the agent's. */
+  const asleep = $derived((events ?? []).filter((e) => e.event.type === "host.slept").reduce((n, e) => n + (e.event["ms"] as number), 0));
   /** How the run started, in words: "Scheduled, Weekdays 7:00 AM", "Catch-up for Daily 9:00 AM", "From a message". */
   const how = $derived.by(() => {
     const trigger = String(start?.event["trigger"] ?? "");
@@ -86,7 +88,7 @@
         {#if events}<Status {status} />{/if}
       </div>
       {#if start}
-        <div class="mt-0.5 text-[13px] text-fg-2">{[how, humanTime(start.ts), end ? t("took {duration}", { duration: duration(start.ts, end.ts) }) : "", turns === 1 ? t("1 turn") : t("{n} turns", { n: turns })].filter(Boolean).join(" · ")}</div>
+        <div class="mt-0.5 text-[13px] text-fg-2">{[how, humanTime(start.ts), end ? (asleep ? t("took {duration}, {asleep} of it with the computer asleep", { duration: duration(start.ts, end.ts), asleep: span(asleep) }) : t("took {duration}", { duration: duration(start.ts, end.ts) })) : "", turns === 1 ? t("1 turn") : t("{n} turns", { n: turns })].filter(Boolean).join(" · ")}</div>
         <div class="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-mute" title={t("run {id}", { id: runId })}>
           <span class="mono">{start.event["model"]}</span>
           {#if sandbox}<span>· {t("sandboxed, network {network}", { network: sandbox.network })}</span>{/if}

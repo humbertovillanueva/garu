@@ -77,5 +77,6 @@ describe("a resumed run's log", () => {
     const base = { seq: 1, ts: "2026-01-01T12:34:56.000Z", runId: "r", agent: "a" } as const;
     expect(formatEvent({ ...base, event: { type: "run.parked", requests: ["x1", "x2"] } })).toContain("parked: waiting on 2 answers");
     expect(formatEvent({ ...base, event: { type: "run.resumed", parkedAt: "2026-01-01T12:00:00.000Z" } })).toContain("resumed");
+    expect(formatEvent({ ...base, event: { type: "host.slept", since: "2026-01-01T12:00:00.000Z", ms: 34 * 60_000 } })).toContain("the computer slept 34 min");
   });
 });

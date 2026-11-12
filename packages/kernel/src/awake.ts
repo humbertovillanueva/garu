@@ -27,3 +27,32 @@ export function holdAwake(opts: { platform?: string; spawn?: typeof nodeSpawn } 
     }
   };
 }
+
+/**
+ * Notices when this machine sleeps during a run. A timer can't fire while the machine is asleep, so a
+ * tick that arrives long after it was due means the time in between was spent asleep: a closed lid, a
+ * battery nap. `onSlept` gets each such stretch once it's over, with when it began and how long it
+ * lasted, so the flight recorder can say why a step took an hour. Hiccups shorter than `thresholdMs`
+ * (a busy machine, a slow disk) are ignored.
+ */
+export function watchSleep(
+  onSlept: (slept: { since: Date; ms: number }) => void,
+  opts: { tickMs?: number; thresholdMs?: number; now?: () => number } = {},
+): () => void {
+  const tickMs = opts.tickMs ?? 5_000;
+  const thresholdMs = opts.thresholdMs ?? 30_000;
+  const now = opts.now ?? Date.now;
+  let last = now();
+  let timer: NodeJS.Timeout | undefined;
+  const tick = () => {
+    const t = now();
+    const lost = t - last - tickMs;
+    if (lost >= thresholdMs) onSlept({ since: new Date(last), ms: lost });
+    last = t;
+    timer = setTimeout(tick, tickMs);
+    timer.unref();
+  };
+  timer = setTimeout(tick, tickMs);
+  timer.unref();
+  return () => clearTimeout(timer);
+}
