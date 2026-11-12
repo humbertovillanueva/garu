@@ -130,7 +130,8 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   English one (discovery ignores it; `docs/google.md` says how to switch; the Spanish demo runs on them). Spanish no-reply address words live
   in `mcp-google/src/google.ts` and in Bea's block rule, both editions.
 - Scheduler catch-up: a cron fire missed in the last 6 h (machine asleep/off) runs once on start,
-  trigger `catch-up:<cron>`. Don't double-fire; don't run catch-ups in parallel. A run the network cut
+  trigger `catch-up:<cron>`. A cron fire more than `LATE_FIRE_MS` (90 s) after its minute (the Mac slept
+  through it) also passes `dueAt`: the model's "today" is the due day and the run header says "started 33 min late". Don't double-fire; don't run catch-ups in parallel. A run the network cut
   off (the Mac slept) before any call to a tool its server doesn't mark read-only (MCP `readOnlyHint`;
   `bus.sentSoFar()`) ends `offline`: not counted as the agent's run, backed off 10 min, caught up.
   A Gemini model busy through every retry (503 high demand / 429 rate limit: `ModelBusyError`) rides the

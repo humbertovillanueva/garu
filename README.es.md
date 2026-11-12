@@ -187,7 +187,7 @@ Un servidor local también puede iniciar sesión: dale `auth: oauth` y un bloque
 
 Un Garufile puede tener más de un disparador, y existen tres tipos:
 
-- `cron: "0 8 * * 1-5"` corre en un horario, en tu hora local. Un disparo perdido mientras la computadora dormía se recupera una vez. Una ejecución que la red cortó, o que el modelo rechazó por estar ocupado en todos los reintentos, antes de cambiar nada no cuenta y se intenta de nuevo diez minutos después.
+- `cron: "0 8 * * 1-5"` corre en un horario, en tu hora local. Un disparo perdido mientras la computadora dormía se recupera una vez, y uno que la computadora durmió por minutos corre al despertar, sabiendo cuánto llega tarde. Una ejecución que la red cortó, o que el modelo rechazó por estar ocupado en todos los reintentos, antes de cambiar nada no cuenta y se intenta de nuevo diez minutos después.
 - `manual: true` corre cuando pulsas Ejecutar ahora o escribes `garu run`. Todo agente lo tiene.
 - `webhook: ask` abre una puerta en la sala de control. Cualquier cosa que pueda hacer una petición HTTP puede iniciar una ejecución por ahí, con un mensaje que el agente lee como su entrada:
 

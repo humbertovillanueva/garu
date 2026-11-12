@@ -187,7 +187,7 @@ A local server can sign in too: give it `auth: oauth` and an `oauth:` block that
 
 A Garufile can have more than one trigger, and three kinds exist:
 
-- `cron: "0 8 * * 1-5"` runs on a schedule, in your local time. A fire missed while the computer slept is caught up once. A run the network cut off, or one the model refused as busy through every retry, before it changed anything is not counted and is tried again ten minutes later.
+- `cron: "0 8 * * 1-5"` runs on a schedule, in your local time. A fire missed while the computer slept is caught up once, and one the computer slept through by minutes runs when it wakes, told how late it is. A run the network cut off, or one the model refused as busy through every retry, before it changed anything is not counted and is tried again ten minutes later.
 - `manual: true` runs when you press Run now or type `garu run`. Every agent has it.
 - `webhook: ask` opens a door on the control room. Anything that can make an HTTP request can start a run through it, with a message the agent reads as its input:
 
