@@ -76,7 +76,7 @@ beforeAll(async () => {
   mkdirSync(join(root, "agents", "once"), { recursive: true });
   writeFileSync(join(root, "agents", "once", "Garufile.yaml"), GARUFILE.replace("name: pip", "name: once\nbudget:\n  maxRunsPerDay: 1"));
   mkdirSync(join(root, "ui"));
-  writeFileSync(join(root, "ui", "index.html"), "<!doctype html><title>Garu test</title>");
+  writeFileSync(join(root, "ui", "index.html"), '<!doctype html><meta name="garu-build" content="0.1.0 · abc1234 · 2026-11-12 23:00 UTC" /><title>Garu test</title>');
   writeFileSync(join(root, "notes.md"), "old\n");
   writeFileSync(join(root, ".env"), "SECRET=hunter2\n");
   inboxRoot = join(root, ".garu", "inbox");
@@ -255,6 +255,18 @@ describe("the daily cap", () => {
     expect((await post("/api/agents/once/hooks/nudge", { message: "hi" })).status).toBe(429);
     expect((await post("/api/agents/once/chat", { text: "hi" })).status).toBe(429);
   }, 15_000);
+});
+
+describe("the live stream", () => {
+  it("says hello with the build of the page it serves, so a stale page can reload itself", async () => {
+    const res = await fetch(`${base}/api/events?token=${token}`);
+    expect(res.status).toBe(200);
+    const reader = res.body!.getReader();
+    const first = new TextDecoder().decode((await reader.read()).value);
+    await reader.cancel();
+    expect(first).toContain("event: hello");
+    expect(first).toContain('data: {"build":"0.1.0 · abc1234 · 2026-11-12 23:00 UTC"}');
+  });
 });
 
 describe("the push", () => {

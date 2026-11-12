@@ -460,7 +460,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         return json(res, { token, direct: isDirectLoopback(req), addresses: await addresses() });
       }
 
-      if (path === "/api/events") return sse(res, clients);
+      if (path === "/api/events") return sse(res, clients, servedBuild(opts.staticDir));
 
       if (path === "/api/agents") {
         const { agents, problems } = discover();
@@ -876,9 +876,19 @@ function json(res: ServerResponse, body: unknown, status = 200): void {
   res.end(JSON.stringify(body));
 }
 
-function sse(res: ServerResponse, clients: Set<ServerResponse>): void {
+/** The build stamp of the page on disk (vite writes it into index.html), or null before the UI is built. */
+function servedBuild(staticDir: string): string | null {
+  try {
+    return /<meta name="garu-build" content="([^"]*)"/.exec(readFileSync(join(staticDir, "index.html"), "utf8"))?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function sse(res: ServerResponse, clients: Set<ServerResponse>, build: string | null): void {
   res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-store", connection: "keep-alive" });
-  res.write(`event: hello\ndata: ok\n\n`);
+  // The hello names the build being served: a browser page from an earlier one reloads itself.
+  res.write(`event: hello\ndata: ${JSON.stringify({ build })}\n\n`);
   clients.add(res);
   const keepalive = setInterval(() => res.write(`: ping\n\n`), 25_000);
   res.on("close", () => {
