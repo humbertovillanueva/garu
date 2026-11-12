@@ -41,6 +41,7 @@ import {
   listParked,
   type AskAgents,
   type ParkedRun,
+  Memory,
 } from "@garu/kernel";
 
 /**
@@ -64,6 +65,8 @@ export interface UiServerOptions {
   logRoot: string;
   inboxRoot: string;
   chatRoot: string;
+  /** The agents' notebooks, one Markdown file each. */
+  memoryRoot: string;
   grantsPath: string;
   dismissedPath: string;
   staticDir: string;
@@ -106,6 +109,7 @@ const MIME: Record<string, string> = {
 
 export function startUiServer(opts: UiServerOptions): { close: () => Promise<void>; url: string; token: string; agents: number } {
   const store = new RunStore(opts.logRoot);
+  const memory = new Memory(opts.memoryRoot);
   const chat = new ChatStore(opts.chatRoot);
   const grants = new GrantStore(opts.grantsPath);
   const dismissed = new Set<string>(existsSync(opts.dismissedPath) ? (JSON.parse(readFileSync(opts.dismissedPath, "utf8")) as string[]) : []);
@@ -198,7 +202,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         }
       }
       result = await runAgent({
-        garufile: a.garufile, logRoot: opts.logRoot, approver, trigger, sink, ask: askFrom(a, hop),
+        garufile: a.garufile, logRoot: opts.logRoot, approver, trigger, sink, ask: askFrom(a, hop), memory,
         park: !opts.demo, host: { hop },
         ...(input ? { input } : {}), ...(dueAt ? { dueAt } : {}), ...(opts.userName && opts.userName !== "you" ? { owner: opts.userName } : {}),
         ...(resume ? { resume: { parked: resume, answers } } : {}),
@@ -349,6 +353,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       sandbox: g?.sandbox ? { image: g.sandbox.image, network: g.sandbox.network } : null,
       budget: g ? { maxCostUsd: g.budget.maxCostUsd ?? null, free: price ? price.inputPerMTok === 0 && price.outputPerMTok === 0 : false } : null,
       maxTurns: g?.maxTurns ?? null,
+      memory: g?.memory ?? false,
       runs: runs.length,
       runsToday: todays.length,
       costTodayUsd: todays.reduce((s, r) => s + r.costUsd, 0),
@@ -478,6 +483,27 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           .catch((e: unknown) => opts.log(`✖ ${name}: ${(e as Error).message}`));
         await new Promise((r) => setTimeout(r, 250));
         return json(res, { started: true, runId: live.get(name)?.runId ?? null }, 202);
+      }
+
+      // The agent's notebook: read it, add a note, or drop one. The run's own writes go through the
+      // bus; these are the owner's, from the agent's page.
+      const memM = /^\/api\/agents\/([^/]+)\/memory(\/forget)?$/.exec(path);
+      if (memM) {
+        const name = decodeURIComponent(memM[1]!);
+        if (!/^[a-z][a-z0-9-]*$/.test(name)) return json(res, { error: t("bad agent name") }, 400);
+        if (req.method === "GET" && !memM[2]) {
+          const a = discover().agents.find((x) => x.garufile.name === name);
+          return json(res, { enabled: a?.garufile.memory ?? false, notes: memory.read(name), path: memory.path(name) });
+        }
+        if (req.method === "POST") {
+          const body = (await readBody(req)) as { note?: string };
+          const note = body.note?.trim();
+          if (!note) return json(res, { error: t("empty note") }, 400);
+          if (memM[2]) return memory.forget(name, note) ? json(res, { notes: memory.read(name) }) : json(res, { error: t("no such note") }, 404);
+          const r = memory.add(name, note);
+          if (!r.ok) return json(res, { error: r.reason }, 400);
+          return json(res, { notes: memory.read(name) });
+        }
       }
 
       const chatM = /^\/api\/agents\/([^/]+)\/chat$/.exec(path);

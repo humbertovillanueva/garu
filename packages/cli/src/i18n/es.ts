@@ -322,6 +322,8 @@ export const es: Record<string, string> = {
   "message is too long (8000 characters at most)": "el mensaje es demasiado largo (8000 caracteres como máximo)",
   "{name} is still working on the last message": "{name} sigue trabajando en el último mensaje",
   "empty message": "mensaje vacío",
+  "empty note": "nota vacía",
+  "no such note": "no hay tal nota",
   "bad agent name": "nombre de agente no válido",
   "no such run": "esa ejecución no existe",
   "not pending": "ya no está pendiente",

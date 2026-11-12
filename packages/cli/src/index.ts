@@ -40,6 +40,7 @@ import {
   priceFor,
   readRun,
   runAgent,
+  Memory,
   type ApprovalRequest,
   type Approver,
   type Envelope,
@@ -57,6 +58,7 @@ import { launchdLabel, launchdPlist, launchdPlistPath, logPath, serviceEnv, serv
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
 const DEFAULT_INBOX_ROOT = resolve(process.cwd(), ".garu", "inbox");
 const DEFAULT_CHAT_ROOT = resolve(process.cwd(), ".garu", "chat");
+const DEFAULT_MEMORY_ROOT = resolve(process.cwd(), ".garu", "memory");
 const DEFAULT_TOKEN_PATH = resolve(process.cwd(), ".garu", "ui-token");
 const DEFAULT_GRANTS_PATH = resolve(process.cwd(), ".garu", "grants.jsonl");
 const DEFAULT_DISMISSED_PATH = resolve(process.cwd(), ".garu", "suggestions-dismissed.json");
@@ -152,6 +154,7 @@ program
     const res = await runAgent({
       garufile: g,
       logRoot: opts.logRoot,
+      memory: new Memory(DEFAULT_MEMORY_ROOT),
       approver,
       trigger: "manual",
       ...(opts.input ? { input: opts.input } : {}),
@@ -222,6 +225,7 @@ program
         runAgent({
           garufile: a.garufile,
           logRoot: opts.logRoot,
+          memory: new Memory(DEFAULT_MEMORY_ROOT),
           approver,
           trigger,
           ...(dueAt ? { dueAt } : {}),
@@ -447,6 +451,7 @@ program
       logRoot: opts.logRoot,
       inboxRoot: opts.inboxRoot,
       chatRoot: DEFAULT_CHAT_ROOT,
+      memoryRoot: DEFAULT_MEMORY_ROOT,
       grantsPath: DEFAULT_GRANTS_PATH,
       dismissedPath: DEFAULT_DISMISSED_PATH,
       staticDir,

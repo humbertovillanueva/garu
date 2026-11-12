@@ -76,7 +76,7 @@ beforeAll(async () => {
   for (const d of ["runs", "inbox", "chat"]) mkdirSync(join(root, ".garu", d), { recursive: true });
   const port = await freePort();
   srv = startUiServer({
-    port, host: "127.0.0.1", root, logRoot: join(root, ".garu", "runs"), inboxRoot, chatRoot: join(root, ".garu", "chat"),
+    port, host: "127.0.0.1", root, logRoot: join(root, ".garu", "runs"), inboxRoot, chatRoot: join(root, ".garu", "chat"), memoryRoot: join(root, ".garu", "memory"),
     grantsPath: join(root, ".garu", "grants.jsonl"), dismissedPath: join(root, ".garu", "dismissed.json"), staticDir: join(root, "ui"),
     userName: "Test", decider: "Test (ui)", up: false, askTimeoutMs: 60_000, tokenPath: join(root, ".garu", "ui-token"), log: (l) => logLines.push(l),
   });
@@ -230,6 +230,21 @@ describe("one agent asking another", () => {
   });
 });
 
+describe("the notebook", () => {
+  it("the owner reads, adds and drops notes from the agent's page; a bad name or an empty note is refused", async () => {
+    expect((await get("/api/agents/..%2Fx/memory")).status).toBe(400);
+    const empty = await (await get("/api/agents/pip/memory")).json() as { enabled: boolean; notes: unknown[] };
+    expect(empty).toMatchObject({ enabled: false, notes: [] });
+    expect((await post("/api/agents/pip/memory", { note: "  " })).status).toBe(400);
+    const added = await (await post("/api/agents/pip/memory", { note: "Maria is out on Fridays" })).json() as { notes: { text: string; at?: string }[] };
+    expect(added.notes).toEqual([{ text: "Maria is out on Fridays", at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) }]);
+    expect((await post("/api/agents/pip/memory", { note: "Maria is out on Fridays" })).status).toBe(400);
+    expect((await post("/api/agents/pip/memory/forget", { note: "nothing like it" })).status).toBe(404);
+    const gone = await (await post("/api/agents/pip/memory/forget", { note: "Maria is out on Fridays" })).json() as { notes: unknown[] };
+    expect(gone.notes).toEqual([]);
+  });
+});
+
 describe("the rest", () => {
   it("Run now on a Garufile the loop refuses is logged, and the server lives on", async () => {
     const res = await post("/api/agents/pip/run", {});
@@ -337,7 +352,7 @@ describe("the public demo", () => {
   it("lets people look around and answer asks, but nothing else writes: no runs, edits, grants, dismissals or new key", async () => {
     const port = await freePort();
     const demo = startUiServer({
-      port, host: "127.0.0.1", root, logRoot: join(root, ".garu", "runs"), inboxRoot, chatRoot: join(root, ".garu", "chat"),
+      port, host: "127.0.0.1", root, logRoot: join(root, ".garu", "runs"), inboxRoot, chatRoot: join(root, ".garu", "chat"), memoryRoot: join(root, ".garu", "memory"),
       grantsPath: join(root, ".garu", "grants.jsonl"), dismissedPath: join(root, ".garu", "dismissed.json"), staticDir: join(root, "ui"),
       userName: "Test", decider: "Test (ui)", up: false, demo: true, askTimeoutMs: 60_000, tokenPath: join(root, ".garu", "ui-token"), log: () => {},
     });
