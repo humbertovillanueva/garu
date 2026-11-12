@@ -120,6 +120,13 @@ body {
 .chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 10px; font-size: 12px; border: 1px solid var(--color-line-2); background: var(--color-panel-2); color: var(--color-fg-2); white-space: nowrap; }
 /* A box you can find before you focus it: the border clears 3:1 against the page (the hairline doesn't). */
 .field-border { border-color: color-mix(in oklab, var(--color-mute) 60%, var(--color-bg)); }
+/* A chat bubble must never be wider than the phone: a long path, URL or token in it wraps anywhere. On
+   Android, one unbreakable word past the edge makes the browser widen its whole layout viewport, and
+   the fixed bottom bar and the sticky top bar size to that: the bar slides off-screen and the page
+   scrolls under the clock. Clipping sideways overflow on the root is the belt to that brace. */
+html { overflow-x: hidden; }
+.md, .md code, .md a { overflow-wrap: anywhere; }
+.md pre { max-width: 100%; overflow-x: auto; }
 textarea.field, input.field { width: 100%; resize: vertical; min-height: 44px; border-radius: 10px; padding: 10px 12px; background: var(--color-bg); border: 1px solid color-mix(in oklab, var(--color-mute) 60%, var(--color-bg)); color: var(--color-fg); font-size: 14px; outline: none; }
 textarea.field:focus, input.field:focus { border-color: color-mix(in oklab, var(--color-accent) 60%, var(--color-line-2)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 15%, transparent); }
 .navitem { position: relative; display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 9px; color: var(--color-fg-2); font-size: 14px; transition: background .12s ease, color .12s ease; }
