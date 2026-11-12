@@ -146,6 +146,8 @@ describe("GeminiProvider (mocked fetch)", () => {
     p.sleep = async () => {}; p.onRetry = undefined; p.maxAttempts = 3;
     await expect(p.complete({ model: "m", system: "", messages: [], tools: [] })).rejects.toThrow(/quota/);
     expect(calls).toBe(3);
+    // Busy through every retry is its own kind of error, so a run can say "nothing was done, try again later".
+    await expect(p.complete({ model: "m", system: "", messages: [], tools: [] })).rejects.toMatchObject({ name: "ModelBusyError", model: "m", reason: "rate limited" });
 
     let calls400 = 0;
     const bad = (async () => { calls400++; return new Response(JSON.stringify({ error: { message: "bad schema" } }), { status: 400 }); }) as typeof fetch;

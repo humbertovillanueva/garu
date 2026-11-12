@@ -44,6 +44,18 @@ export class ModelQuotaError extends Error {
   }
 }
 
+/**
+ * The model is busy (503 "high demand", or a 429 rate limit) and stayed busy through every retry. Not
+ * the network, not the quota: trying again in a few minutes usually works, so the run can say "nothing
+ * was done" and let the schedule come back, the way a run cut off by the network does.
+ */
+export class ModelBusyError extends Error {
+  constructor(readonly model: string, apiMessage: string, readonly reason: "high demand" | "rate limited") {
+    super(`gemini ${model}: ${apiMessage}`);
+    this.name = "ModelBusyError";
+  }
+}
+
 export class GeminiProvider implements ModelProvider {
   readonly id = "gemini";
   private readonly apiKey: string;
@@ -156,6 +168,7 @@ export class GeminiProvider implements ModelProvider {
   private async postWithRetry(model: string, body: unknown, onRetry?: CompleteRequest["onRetry"]): Promise<{ res: Response; json: GeminiResponse }> {
     const maxAttempts = this.maxAttempts;
     let lastMsg = "";
+    let lastBusy: "high demand" | "rate limited" | null = null;
     let netTries = 0;
     let patient = false; // once the machine is seen to have slept, every network failure in this call gets the patient treatment
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -184,6 +197,7 @@ export class GeminiProvider implements ModelProvider {
       if (res.ok && !json.error) return { res, json };
       lastMsg = json.error?.message ?? `HTTP ${res.status}`;
       const retryable = res.status === 429 || res.status === 503;
+      lastBusy = retryable ? (res.status === 503 ? "high demand" : "rate limited") : null;
       if (!retryable) break;
       // "Please retry in 9h27m42s" is a daily quota, not a rate limit: waiting won't help and every retry counts, so stop and say so.
       const hintedS = retryHintSeconds(lastMsg);
@@ -197,6 +211,7 @@ export class GeminiProvider implements ModelProvider {
       onRetry?.({ attempt, maxAttempts, waitMs, reason: res.status === 503 ? "high demand" : "rate limited" });
       await this.sleep(waitMs);
     }
+    if (lastBusy) throw new ModelBusyError(model, lastMsg, lastBusy);
     throw new Error(`gemini ${model}: ${lastMsg}`);
   }
 
