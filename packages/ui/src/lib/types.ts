@@ -44,7 +44,9 @@ export interface Agent {
   tools: string[];
   policy: { rules: number; allow: number; ask: number; block: number } | null;
   sandbox: { image: string; network: string } | null;
-  budget: { maxCostUsd: number | null; free: boolean } | null;
+  budget: { maxCostUsd: number | null; free: boolean; maxRunsPerDay: number | null } | null;
+  /** Today's runs have reached budget.maxRunsPerDay: nothing more starts until tomorrow. */
+  capped: boolean;
   maxTurns: number | null;
   /** The Garufile gave it a notebook (memory: true). */
   memory: boolean;

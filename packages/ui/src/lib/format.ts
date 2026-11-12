@@ -108,9 +108,10 @@ export function statusLabel(s: string): string {
 }
 
 /** First-person status line, the way a colleague would say it. */
-export function statusLine(a: { status: string; inFlight: { turn: number } | null; pending: number; nextRun: string | null; lastRun: { status: string; startedAt: string; offline?: boolean } | null; cron: string | null; configured: boolean; needs?: string[]; signIn?: string[] }): string {
+export function statusLine(a: { status: string; inFlight: { turn: number } | null; pending: number; nextRun: string | null; lastRun: { status: string; startedAt: string; offline?: boolean } | null; cron: string | null; configured: boolean; needs?: string[]; signIn?: string[]; capped?: boolean; budget?: { maxRunsPerDay: number | null } | null }): string {
   if (a.status === "waiting") return a.pending === 1 ? t("Waiting for you to approve one action") : t("Waiting for you on {n} actions", { n: a.pending });
   if (a.status === "working") return a.inFlight ? t("Working — turn {turn}", { turn: a.inFlight.turn }) : t("Working");
+  if (a.capped && a.budget?.maxRunsPerDay) return t("Done for today — at its cap of {n} runs a day; it runs again tomorrow", { n: a.budget.maxRunsPerDay });
   if (a.status === "scheduled") return t("Sleeping — next run {until}", { until: until(a.nextRun) });
   if (a.status === "needs-setup") {
     // The fix happens on the computer; the phone says so instead of showing commands it can't run.

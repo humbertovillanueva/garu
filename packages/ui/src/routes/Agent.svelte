@@ -172,7 +172,7 @@
             <span class="text-[11.5px] leading-tight text-mute">{policyText}</span>
           </div>
         </div>
-        <div class="fact"><div class="k">{t("Limits")}</div><div class="v">{a.budget?.maxCostUsd ? t("{cost} per run", { cost: usd(a.budget.maxCostUsd) }) : a.budget?.free ? t("free model") : t("no cap")}<span class="text-mute">&nbsp;· {a.sandbox ? t("sandboxed, net {network}", { network: a.sandbox.network }) : t("no sandbox")}</span></div></div>
+        <div class="fact"><div class="k">{t("Limits")}</div><div class="v">{a.budget?.maxCostUsd ? t("{cost} per run", { cost: usd(a.budget.maxCostUsd) }) : a.budget?.free ? t("free model") : t("no cap")}{#if a.budget?.maxRunsPerDay}<span class="text-mute">&nbsp;· {a.budget.maxRunsPerDay === 1 ? t("1 run a day") : t("{n} runs a day", { n: a.budget.maxRunsPerDay })}</span>{/if}<span class="text-mute">&nbsp;· {a.sandbox ? t("sandboxed, net {network}", { network: a.sandbox.network }) : t("no sandbox")}</span></div></div>
       </div>
     {/if}
 
@@ -250,10 +250,10 @@
       <div class="panel-raised rise sticky p-2" style="bottom: calc(0.75rem + var(--tabbar))">
         <div class="flex items-end gap-2">
           <textarea class="field min-h-[42px] flex-1 resize-none" rows="1" placeholder={busy ? (a.status === "working" ? t("{name} is working…", { name: a.name }) : t("Waiting for your decision above")) : hasKeyboard ? t("Message {name}  ({key}↵)", { name: a.name, key: modKey }) : t("Message {name}", { name: a.name })} aria-label={t("Message {name}", { name: a.name })} bind:value={note} bind:this={box} onkeydown={onKey} disabled={busy}></textarea>
-          <button class="btn btn-primary grid h-11 w-11 flex-none place-items-center rounded-full p-0" disabled={starting || !note.trim() || busy} onclick={send} aria-label={t("Send")}><Icon name="send" size={18} /></button>
+          <button class="btn btn-primary grid h-11 w-11 flex-none place-items-center rounded-full p-0" disabled={starting || !note.trim() || busy || a.capped} onclick={send} aria-label={t("Send")}><Icon name="send" size={18} /></button>
         </div>
         <div class="mt-1.5 flex items-center gap-2 px-1">
-          <button class="btn py-1 text-[12.5px]" disabled={starting || busy} onclick={run} title={t("Run the agent's standing job now; a message above goes along as a note")}><span class="inline-flex items-center gap-1"><Icon name="play" size={13} /> {t("Run now")}</span></button>
+          <button class="btn py-1 text-[12.5px]" disabled={starting || busy || a.capped} onclick={run} title={t("Run the agent's standing job now; a message above goes along as a note")}><span class="inline-flex items-center gap-1"><Icon name="play" size={13} /> {t("Run now")}</span></button>
           {#if error}<span class="text-[12.5px]" role="alert" style="color: var(--color-bad)">{error}</span>{/if}
         </div>
       </div>
