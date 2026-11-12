@@ -12,7 +12,7 @@ import type { Decision, ToolCallRequest } from "./policy.js";
 import { formatUsd } from "./pricing.js";
 
 export type GaruEvent =
-  | { type: "run.start"; agent: string; model: string; trigger: string; sandbox?: { image: string; network: string }; /** A catch-up: when the schedule meant it to run (ISO). */ dueAt?: string }
+  | { type: "run.start"; agent: string; model: string; trigger: string; sandbox?: { image: string; network: string }; /** A catch-up, or a cron fire that came late (the machine slept through its minute): when the schedule meant it to run (ISO). */ dueAt?: string }
   | { type: "tools.offered"; offered: string[]; hidden: string[] }
   | { type: "run.end"; status: "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded"; summary?: string; costUsd?: number; priced?: boolean; offline?: boolean; /** With offline: the model, not the network, was the reason (busy through every retry). */ busy?: { model: string; reason: string }; quota?: { model: string; retryAt: string; limit?: number } }
   /** The run put itself away, waiting on these inbox requests; it resumes in this same log when they are answered. */

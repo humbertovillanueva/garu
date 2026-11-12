@@ -64,6 +64,30 @@ describe("Scheduler", () => {
     expect(events.map((e) => e.type)).toEqual(["scheduled", "scheduled", "fire", "run.done"]);
   });
 
+  it("a cron fire that comes late (the machine slept through its minute) tells the runner when it was due", async () => {
+    const m = manualCron();
+    const got: (Date | undefined)[] = [];
+    const events: SchedulerEvent[] = [];
+    let now = new Date(2026, 10, 12, 7, 33); // local 7:33 for a 7:00 schedule
+    const s = new Scheduler({
+      runner: async (_a, _t, dueAt) => { got.push(dueAt); return ok("d"); },
+      onEvent: (e) => events.push(e),
+      cronFactory: m.factory,
+      now: () => now,
+    });
+    const daily = { source: "d.yaml", garufile: parseGarufile("name: d\nmodel: fake/x\nprompt: p\ntriggers:\n  - cron: \"0 7 * * *\"\n") };
+    s.start([daily]);
+    await s.fire(daily, "0 7 * * *");
+    expect(got).toEqual([new Date(2026, 10, 12, 7, 0)]);
+    expect(events.find((e) => e.type === "fire")).toMatchObject({ type: "fire", dueAt: new Date(2026, 10, 12, 7, 0) });
+    // On time (a few seconds after the minute): nothing to say.
+    now = new Date(2026, 10, 13, 7, 0, 5);
+    await s.fire(daily, "0 7 * * *");
+    expect(got[1]).toBeUndefined();
+    expect(events.filter((e) => e.type === "fire").at(-1)).not.toHaveProperty("dueAt");
+    await s.stop();
+  });
+
   it("never overlaps runs of the same agent", async () => {
     const m = manualCron();
     const events: SchedulerEvent[] = [];
@@ -193,6 +217,8 @@ triggers:
       onEvent: (e) => events.push(e),
       cronFactory: m.factory,
       catchUp: { lastRunAt: () => local(8, 7, 0), now, everyMs: 0 },
+      // The fire below happens at its own minute: on time, so it carries no due time.
+      now: () => local(9, 7, 0),
     });
     s.start([brief]);
     await new Promise((r) => setTimeout(r, 5)); // the queued catch-up starts on the next tick

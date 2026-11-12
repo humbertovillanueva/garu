@@ -19,7 +19,7 @@ export interface ScheduledAgent {
 
 export type SchedulerEvent =
   | { type: "scheduled"; agent: string; cron: string; nextRun: Date | null }
-  | { type: "fire"; agent: string; cron: string }
+  | { type: "fire"; agent: string; cron: string; /** The fire came late (the machine slept through its time): when it was due. */ dueAt?: Date }
   | { type: "catch-up"; agent: string; cron: string; missedAt: Date }
   | { type: "skip.overlap"; agent: string; cron: string }
   | { type: "offline"; agent: string; cron: string; /** No network, or the model busy through every retry. */ reason: "network" | "busy" }
@@ -115,7 +115,12 @@ export interface CatchUpOptions {
   everyMs?: number;
 }
 
+/** A cron fire this much after its time is "late": the machine was asleep at the minute it was due. */
+export const LATE_FIRE_MS = 90_000;
+
 export interface SchedulerOptions {
+  /** Clock, injectable for tests. */
+  now?: () => Date;
   runner: Runner;
   onEvent?: (e: SchedulerEvent) => void;
   cronFactory?: CronFactory;
@@ -230,11 +235,18 @@ export class Scheduler {
       return;
     }
     if (this.stopping || this.inFlight.has(name)) return;
+    // A laptop asleep at 7:00 fires its 7:00 when it wakes at 7:33. The run is told when it was due, the
+    // way a catch-up is, so the model's "today" is the due day and the run page can say it started late.
+    const now = (this.opts.now ?? this.opts.catchUp?.now ?? (() => new Date()))();
+    const handle = kind === "cron" ? this.jobs.find((j) => j.agent.garufile.name === name && j.cron === cron)?.handle : undefined;
+    const due = handle?.lastDue(now, new Date(now.getTime() - 24 * 3600_000)) ?? null;
+    const late = due && now.getTime() - due.getTime() >= LATE_FIRE_MS ? due : undefined;
+    const dueAt = kind === "catch-up" ? missedAt : late;
     // Said only now, once the network is there: a wake without network says "no network, will catch up" and nothing else.
     if (kind === "catch-up" && missedAt) this.emit({ type: "catch-up", agent: name, cron, missedAt });
-    this.emit({ type: "fire", agent: name, cron });
+    this.emit({ type: "fire", agent: name, cron, ...(late ? { dueAt: late } : {}) });
     const p = this.opts
-      .runner(a, `${kind}:${cron}`, kind === "catch-up" ? missedAt : undefined)
+      .runner(a, `${kind}:${cron}`, dueAt)
       .then((result) => {
         this.emit({ type: "run.done", agent: name, result });
         // The lookup passed but the network went away before the run changed anything (a provider down, a
