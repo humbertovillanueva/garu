@@ -186,21 +186,22 @@
         {#if memory === null}
           <Skeleton rows={2} h={32} />
         {:else}
-          {#if memory.length === 0}<p class="text-[13px] text-mute">{t("Nothing yet. {name} writes a note here when it learns something worth keeping for later runs; you can add one too.", { name: a.name })}</p>{/if}
-          <ul class="space-y-1.5">
+          <div class="panel divide-y divide-line">
+            {#if memory.length === 0}<p class="px-3 py-2.5 text-[13px] text-mute">{t("Nothing yet. {name} writes a note here when it learns something worth keeping for later runs; you can add one too.", { name: a.name })}</p>{/if}
             {#each memory as n (n.text)}
-              <li class="flex items-start gap-2 text-[13.5px]">
-                <span class="flex-1 [overflow-wrap:anywhere]">{n.text}{#if n.at}<span class="text-mute">&nbsp;· {dayLabel(n.at + "T12:00:00")}</span>{/if}</span>
-                {#if !live.demo}<button class="tap flex-none px-1 text-mute hover:text-fg" onclick={() => forget(n.text)} aria-label={t("Forget this note")} title={t("Forget this note")}>×</button>{/if}
-              </li>
+              <div class="group flex items-start gap-3 px-3 py-2.5 text-[13.5px]">
+                <span class="min-w-0 flex-1 [overflow-wrap:anywhere]">{n.text}</span>
+                {#if n.at}<span class="flex-none pt-px text-[12px] text-mute">{dayLabel(n.at + "T12:00:00")}</span>{/if}
+                {#if !live.demo}<button class="tap -my-1 flex-none px-1.5 text-mute hover:text-fg sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100" onclick={() => forget(n.text)} aria-label={t("Forget this note")} title={t("Forget this note")}>×</button>{/if}
+              </div>
             {/each}
-          </ul>
-          {#if !live.demo}
-            <form class="mt-2 flex gap-2" onsubmit={(e) => { e.preventDefault(); void remember(); }}>
-              <input class="field flex-1" placeholder={t("A note {name} should keep in mind", { name: a.name })} aria-label={t("A note {name} should keep in mind", { name: a.name })} bind:value={newNote} maxlength="240" />
-              <button class="btn py-1 text-[12.5px]" disabled={!newNote.trim() || memoryBusy}>{t("Remember")}</button>
-            </form>
-          {/if}
+            {#if !live.demo}
+              <form class="flex gap-2 px-3 py-2" onsubmit={(e) => { e.preventDefault(); void remember(); }}>
+                <input class="field flex-1 !min-h-[36px] !py-1.5 !text-[13px]" placeholder={t("A note {name} should keep in mind", { name: a.name })} aria-label={t("A note {name} should keep in mind", { name: a.name })} bind:value={newNote} maxlength="240" />
+                <button class="btn py-1 text-[12.5px]" disabled={!newNote.trim() || memoryBusy}>{t("Remember")}</button>
+              </form>
+            {/if}
+          </div>
           {#if memoryError}<p class="mt-1 text-[12.5px]" style="color: var(--color-bad)">{memoryError}</p>{/if}
         {/if}
       </div>
