@@ -254,9 +254,43 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
   const unresumable = new Set<string>();
   // Asks already given their last call, so each gets one. A restart may repeat one; that's the whole cost.
   const lastCalled = new Set<string>();
+  /** Each Google sign-in of an agent, with its age in days: Google ends one at seven while the OAuth app is in Testing. */
+  const googleSignIns = (g: DiscoveredAgent["garufile"]) =>
+    g.tools.flatMap((tl) => {
+      if (tl.auth !== "oauth" || !/^https:\/\/accounts\.google\.com/.test(tl.oauth?.issuer ?? "")) return [];
+      const at = signInFor(tl, authRoot).signedInAt();
+      return at ? [{ server: tl.name, at, days: Math.floor((Date.now() - at.getTime()) / 86_400_000) }] : [];
+    });
+  // A push on day six, once per sign-in: the sign-ins pinged are kept in a file, so a restart doesn't ring twice.
+  const signInPingsPath = join(opts.root, ".garu", "signin-pings.json");
+  const checkSignIns = () => {
+    if (!opts.notify) return;
+    let pinged: Record<string, string> = {};
+    try { pinged = JSON.parse(readFileSync(signInPingsPath, "utf8")) as Record<string, string>; } catch { /* none yet */ }
+    const due: { agent: string; server: string; days: number; key: string }[] = [];
+    for (const a of discover().agents) {
+      for (const s of googleSignIns(a.garufile)) {
+        const key = `${a.garufile.name}/${s.server}@${s.at.toISOString()}`;
+        if (s.days >= 6 && !pinged[key]) due.push({ agent: a.garufile.name, server: s.server, days: s.days, key });
+      }
+    }
+    if (!due.length) return;
+    for (const d of due) {
+      pinged[d.key] = new Date().toISOString();
+      opts.log(`🔑 ${d.agent}: its ${d.server} sign-in is ${d.days} days old and Google ends it at 7; push sent`);
+    }
+    try { writeFileSync(signInPingsPath, JSON.stringify(pinged, null, 2) + "\n"); } catch { /* best effort */ }
+    void addresses().then(async (addr) => {
+      for (const d of due) {
+        const body = `${t("{agent}'s {server} sign-in is {days} days old; Google ends it at 7. Sign in again on your computer.", { agent: d.agent, server: d.server, days: d.days })}\n\n${addr[0]?.url ? t("Tap to review.") : ""}`;
+        await pushText(opts.notify!, `Garu: sign-in expiring (${d.agent})`, body.trimEnd(), addr[0]?.url, "key");
+      }
+    }).catch(() => {});
+  };
   const checkParked = () => {
     if (opts.demo) return;
     for (const r of inbox.expireOverdue()) opts.log(`✖ ${r.agent}: nobody answered about ${r.tool} in time (${r.id}); declined`);
+    checkSignIns();
     if (opts.notify) {
       const soon = Date.now() + LAST_CALL_MS;
       const due = inbox.pending().filter((r) => !lastCalled.has(r.id) && Date.parse(r.expiresAt) <= soon);
@@ -372,16 +406,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     const signIn = g && !opts.demo ? g.tools.filter((t) => t.auth === "oauth" && !signInFor(t, authRoot).signedIn()).map((t) => t.name) : [];
     // Google ends a sign-in after seven days while the OAuth app is in Testing (docs/google.md). From the
     // sixth day the home screen says so, so the owner signs in again before a morning run fails.
-    const signInExpiring =
-      g && !opts.demo
-        ? g.tools.flatMap((tl) => {
-            if (tl.auth !== "oauth" || !/^https:\/\/accounts\.google\.com/.test(tl.oauth?.issuer ?? "")) return [];
-            const at = signInFor(tl, authRoot).signedInAt();
-            if (!at) return [];
-            const days = Math.floor((Date.now() - at.getTime()) / 86_400_000);
-            return days >= 6 ? [{ server: tl.name, days }] : [];
-          })
-        : [];
+    const signInExpiring = g && !opts.demo ? googleSignIns(g).filter((s) => s.days >= 6).map(({ server, days }) => ({ server, days })) : [];
     const status = pending.length ? "waiting" : inFlight ? "working" : needs.length || signIn.length ? "needs-setup" : cron && (opts.up || opts.demo) ? "scheduled" : "idle";
     const price = g ? (g.budget.pricing ?? priceFor(g.model)) : null;
     return {
@@ -874,14 +899,19 @@ export async function notify(url: string, r: ApprovalRequest, link?: string, kin
     ? t("{agent} still waits on {tool}; with no answer it becomes a deny at {time}", { agent: r.agent, tool: r.tool, time: localTime(r.expiresAt, { seconds: false }) })
     : t("{agent} wants {tool}", { agent: r.agent, tool: r.tool });
   const body = `${first}\n${t("reason: {reason}", { reason: r.reason })}\n\n${link ? t("Tap to review.") : `garu approve ${r.id} · garu deny ${r.id}`}`;
+  await pushText(url, kind === "last-call" ? `Garu: last call (${r.agent})` : `Garu: approval needed (${r.agent})`, body, link, kind === "last-call" ? "hourglass" : "lock");
+}
+
+/** One push: plain text so ntfy shows it as-is, with a tap that opens the control room's inbox when its address is known. Best effort. */
+async function pushText(url: string, title: string, body: string, link: string | undefined, tags: string): Promise<void> {
   try {
     await fetch(url, {
       method: "POST",
       headers: {
         "content-type": "text/plain",
-        Title: kind === "last-call" ? `Garu: last call (${r.agent})` : `Garu: approval needed (${r.agent})`,
+        Title: title,
         Priority: "high",
-        Tags: kind === "last-call" ? "hourglass" : "lock",
+        Tags: tags,
         ...(link ? { Click: `${link.replace(/\/$/, "")}/#/inbox` } : {}),
       },
       body,

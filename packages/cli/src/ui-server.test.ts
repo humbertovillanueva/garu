@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer } from "node:net";
 import { createServer as httpServer } from "node:http";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Inbox, Recorder, readRun, suggestRules, writeParked, readParked } from "@garu/kernel";
+import { Inbox, Recorder, readRun, suggestRules, writeParked, readParked, parseGarufile, signInFor } from "@garu/kernel";
 import { startUiServer, askRefusal, MAX_ASK_HOPS, notify } from "./ui-server.js";
 
 /**
@@ -72,6 +72,19 @@ beforeAll(async () => {
   // half a second before exiting (the bus gives it one more try after three seconds, then the run fails).
   mkdirSync(join(root, "agents", "slow"), { recursive: true });
   writeFileSync(join(root, "agents", "slow", "Garufile.yaml"), GARUFILE.replace("name: pip", "name: slow").replace("model: fake/any", "model: ollama/test").replace('args: ["-e", "0"]', 'args: ["-e", "setTimeout(() => {}, 500)"]'));
+  // An agent with a Google sign-in six days old: Google ends it at seven, so the phone hears about it once.
+  mkdirSync(join(root, "agents", "gog"), { recursive: true });
+  const GOG = `name: gog\nmodel: fake/any\nprompt: p\ntools:\n  - name: calendar\n    command: node\n    args: ["-e", "0"]\n    auth: oauth\n    oauth:\n      issuer: https://accounts.google.com\n      clientId: id\n      clientSecret: secret\n      scopes: [https://www.googleapis.com/auth/calendar.readonly]\npolicy:\n  - tool: "*"\n    action: block\n`;
+  writeFileSync(join(root, "agents", "gog", "Garufile.yaml"), GOG);
+  const authRoot = join(root, ".garu", "auth");
+  mkdirSync(authRoot, { recursive: true });
+  signInFor(parseGarufile(GOG).tools[0]!, authRoot).saveTokens({ access_token: "a", refresh_token: "r", token_type: "bearer" });
+  for (const f of readdirSync(authRoot)) {
+    const p = join(authRoot, f);
+    const st = JSON.parse(readFileSync(p, "utf8")) as { signedInAt?: string };
+    st.signedInAt = new Date(Date.now() - 6 * 86_400_000 - 60_000).toISOString();
+    writeFileSync(p, JSON.stringify(st));
+  }
   // An agent allowed one run a day.
   mkdirSync(join(root, "agents", "once"), { recursive: true });
   writeFileSync(join(root, "agents", "once", "Garufile.yaml"), GARUFILE.replace("name: pip", "name: once\nbudget:\n  maxRunsPerDay: 1"));
@@ -103,7 +116,7 @@ describe("who gets in", () => {
   it("a browser on this computer is let in; a page from another local origin, or anything behind a proxy, is not", async () => {
     const mine = await get("/api/agents");
     expect(mine.status).toBe(200);
-    expect(((await mine.json()) as { agents: { name: string }[] }).agents.map((a) => a.name)).toEqual(["once", "pip", "slow", "vault"]);
+    expect(((await mine.json()) as { agents: { name: string }[] }).agents.map((a) => a.name)).toEqual(["gog", "once", "pip", "slow", "vault"]);
     const other = await get("/api/pair", { headers: { origin: "http://localhost:5173" } });
     expect(other.status).toBe(401);
     expect(await other.json()).toMatchObject({ signIn: true });
@@ -294,6 +307,20 @@ describe("the last call", () => {
     // The sweeper runs again on every decision; the same ask is not called twice.
     await post(`/api/inbox/${id}/deny`, {});
     await new Promise((r) => setTimeout(r, 700));
+    expect(mine().length).toBe(1);
+  }, 15_000);
+});
+
+describe("the sign-in ping", () => {
+  it("a Google sign-in six days old gets one push, and only one across sweeps", async () => {
+    const mine = () => pings.filter((p) => p.title === "Garu: sign-in expiring (gog)");
+    for (let i = 0; i < 200 && mine().length === 0; i++) await new Promise((r) => setTimeout(r, 50));
+    expect(mine().length).toBe(1);
+    expect(mine()[0]!.body).toMatch(/^gog's calendar sign-in is 6 days old; Google ends it at 7\. Sign in again on your computer\./);
+    expect(Object.keys(JSON.parse(readFileSync(join(root, ".garu", "signin-pings.json"), "utf8")) as Record<string, string>).some((k) => k.startsWith("gog/calendar@"))).toBe(true);
+    // Another sweep (a new ask triggers one): no second push for the same sign-in.
+    pending("fs.write_file", { path: "x.md", content: "y" }, "pip");
+    await new Promise((r) => setTimeout(r, 900));
     expect(mine().length).toBe(1);
   }, 15_000);
 });

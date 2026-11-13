@@ -253,6 +253,7 @@ export const es: Record<string, string> = {
   // ---- approvals in the terminal, notifications, scheduler events
   "{agent} wants {tool}": "{agent} quiere {tool}",
   "{agent} still waits on {tool}; with no answer it becomes a deny at {time}": "{agent} sigue esperando por {tool}; sin respuesta se convierte en un no a las {time}",
+  "{agent}'s {server} sign-in is {days} days old; Google ends it at 7. Sign in again on your computer.": "El inicio de sesión de {server} de {agent} tiene {days} días; Google lo termina a los 7. Vuelve a iniciar sesión en tu computadora.",
   "reason: {reason}": "motivo: {reason}",
   "Tap to review.": "Toca para revisar.",
   "notify: {url} answered HTTP {status}": "notificación: {url} respondió HTTP {status}",
