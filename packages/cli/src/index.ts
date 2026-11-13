@@ -42,6 +42,8 @@ import {
   runAgent,
   Memory,
   capReached,
+  weeklyStats,
+  discoverGarufiles,
   planPrune,
   applyPrune,
   type ApprovalRequest,
@@ -51,7 +53,7 @@ import {
   type SchedulerEvent,
 } from "@garu/kernel";
 
-import { startUiServer } from "./ui-server.js";
+import { startUiServer, weeklyText, postToChannel } from "./ui-server.js";
 import { tailscaleAddresses } from "./ui-addresses.js";
 import { detectLocale, locale, setLocale, t } from "./i18n.js";
 import { VERSION } from "./version.js";
@@ -474,6 +476,7 @@ program
       askTimeoutMs: askTimeoutMs(opts.askTimeout),
       ...((opts.notify ?? process.env["GARU_NOTIFY_URL"]) ? { notify: opts.notify ?? process.env["GARU_NOTIFY_URL"]! } : {}),
       ...(pruneMs ? { pruneMs } : {}),
+      ...(process.env["GARU_WEEKLY_WEBHOOK_URL"] ? { weeklyUrl: process.env["GARU_WEEKLY_WEBHOOK_URL"] } : {}),
       tokenPath: DEFAULT_TOKEN_PATH,
       requireLogin: Boolean(opts.requireLogin),
       log,
@@ -560,6 +563,24 @@ grantsCmd
   .action((id: string) => {
     try { const g = new GrantStore(DEFAULT_GRANTS_PATH).revoke(id); stdout.write(`${t("revoked {id}: {what}", { id: g.id, what: describeGrant(g) })}\n`); }
     catch (e) { fail((e as Error).message); }
+  });
+
+program
+  .command("weekly")
+  .description(t("The week in numbers, as the control room posts it on Sunday evening; --post sends it now."))
+  .option("--post", t("post it to GARU_WEEKLY_WEBHOOK_URL now"))
+  .option("--log-root <dir>", t("where run logs live"), DEFAULT_LOG_ROOT)
+  .action(async (opts: { post?: boolean; logRoot: string }) => {
+    loadDotEnv();
+    const agents = discoverGarufiles(process.cwd()).agents.map((a) => a.garufile.name);
+    const text = weeklyText(weeklyStats(new RunStore(opts.logRoot), { memory: new Memory(DEFAULT_MEMORY_ROOT), agents }));
+    stdout.write(text + "\n");
+    if (!opts.post) return;
+    const url = process.env["GARU_WEEKLY_WEBHOOK_URL"];
+    if (!url) fail(t("GARU_WEEKLY_WEBHOOK_URL is not set in .env"));
+    const r = await postToChannel(url, text);
+    if (!r.ok) fail(t("could not post: {error}", { error: r.error }));
+    stdout.write(`✔ ${t("posted to {host}", { host: r.host })}\n`);
   });
 
 program

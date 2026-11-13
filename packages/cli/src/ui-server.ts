@@ -46,6 +46,10 @@ import {
   Memory,
   planPrune,
   applyPrune,
+  weeklyStats,
+  weeklyDue,
+  formatUsd,
+  type WeeklyStats,
 } from "@garu/kernel";
 
 /**
@@ -58,7 +62,7 @@ export const ASK_HOLD_MS = 2 * 60_000;
 export const LAST_CALL_MS = 60 * 60_000;
 /** The sweeper's pace: a decision written by `garu approve` or a request past its time is noticed within this. */
 const PARKED_CHECK_MS = 30_000;
-import { t } from "./i18n.js";
+import { t, locale } from "./i18n.js";
 import { VERSION } from "./version.js";
 import { authenticate, clearSessionCookie, corsHeaders, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, rotateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
 import { SeenHosts, tailscaleAddresses, type Address } from "./ui-addresses.js";
@@ -86,6 +90,8 @@ export interface UiServerOptions {
   notify?: string;
   /** Delete run logs (and settled inbox requests) older than this, at start and once a day. Unset: keep everything. */
   pruneMs?: number;
+  /** A Slack or Discord incoming webhook: the week in numbers is posted there on Sunday at six in the evening. */
+  weeklyUrl?: string;
   /** Where the sign-in token lives (created on first start). */
   tokenPath: string;
   /** Make even the browser on this computer sign in. */
@@ -384,6 +390,25 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
   prune();
   const pruneTicker = opts.pruneMs && !opts.demo ? setInterval(prune, 24 * 3600_000) : undefined;
   pruneTicker?.unref();
+
+  // The week in numbers, posted on Sunday evening to the channel named in the env. The Sundays already
+  // posted are kept in a file, so a restart that evening doesn't post twice.
+  const weeklyPostedPath = join(opts.root, ".garu", "weekly-posted.json");
+  const postWeekly = async () => {
+    if (!opts.weeklyUrl || opts.demo) return;
+    let posted: string[] = [];
+    try { posted = JSON.parse(readFileSync(weeklyPostedPath, "utf8")) as string[]; } catch { /* none yet */ }
+    const key = weeklyDue(new Date(), new Set(posted));
+    if (!key) return;
+    posted.push(key);
+    try { writeFileSync(weeklyPostedPath, JSON.stringify(posted) + "\n"); } catch { /* best effort */ }
+    const text = weeklyText(weeklyStats(store, { memory, agents: discover().agents.map((a) => a.garufile.name) }));
+    const r = await postToChannel(opts.weeklyUrl, text);
+    opts.log(r.ok ? `📬 the week in numbers posted to ${r.host}` : `✖ weekly note: ${r.error}`);
+  };
+  void postWeekly();
+  const weeklyTicker = opts.weeklyUrl && !opts.demo ? setInterval(() => void postWeekly(), 3600_000) : undefined;
+  weeklyTicker?.unref();
 
   const agentView = (a: DiscoveredAgent | undefined, name: string) => {
     const g = a?.garufile;
@@ -780,6 +805,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           askTimeoutMin: Math.round((opts.askTimeoutMs ?? 24 * 60 * 60_000) / 60_000),
           askHoldMin: Math.round(ASK_HOLD_MS / 60_000),
           pruneDays: opts.pruneMs ? Math.round(opts.pruneMs / 86_400_000) : null,
+          weekly: Boolean(opts.weeklyUrl),
           login: { required: requireLogin, direct: isDirectLoopback(req), tokenPath: opts.tokenPath },
         });
       }
@@ -809,6 +835,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       clearTimeout(parkedTimer);
       if (parkedTicker) clearInterval(parkedTicker);
       if (pruneTicker) clearInterval(pruneTicker);
+      if (weeklyTicker) clearInterval(weeklyTicker);
       // A restart shouldn't wait for an answer nobody is giving right now: a run waiting on an ask
       // parks (the ask stays open and the run comes back for it), and runs get ten seconds to wrap up.
       inbox.close();
@@ -900,6 +927,31 @@ export async function notify(url: string, r: ApprovalRequest, link?: string, kin
     : t("{agent} wants {tool}", { agent: r.agent, tool: r.tool });
   const body = `${first}\n${t("reason: {reason}", { reason: r.reason })}\n\n${link ? t("Tap to review.") : `garu approve ${r.id} · garu deny ${r.id}`}`;
   await pushText(url, kind === "last-call" ? `Garu: last call (${r.agent})` : `Garu: approval needed (${r.agent})`, body, link, kind === "last-call" ? "hourglass" : "lock");
+}
+
+/** The week in numbers, as the note reads in the channel. */
+export function weeklyText(w: WeeklyStats): string {
+  const cost = w.priced ? formatUsd(w.costUsd) : `${formatUsd(w.costUsd)}+`;
+  const day = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale() === "es" ? "es" : "en-US", { month: "short", day: "numeric" });
+  const head = t("Garu, {from} to {to}: {runs} run(s), {actions} action(s) without asking, {asked} that asked you, {cost}.", { from: day(w.from), to: day(w.to), runs: w.runs, actions: w.actions, asked: w.asked, cost });
+  const notes = w.notes ? ` ${w.notes === 1 ? t("1 note remembered.") : t("{n} notes remembered.", { n: w.notes })}` : "";
+  const lines = w.agents.map((a) => {
+    const parts = [a.ok ? t("{n} ok", { n: a.ok }) : "", a.failed ? t("{n} failed", { n: a.failed }) : "", a.offline ? t("{n} cut off", { n: a.offline }) : "", a.waiting ? t("{n} waiting on you", { n: a.waiting }) : ""].filter(Boolean).join(", ");
+    return `• ${a.agent}: ${a.runs === 1 ? t("1 run") : t("{n} runs", { n: a.runs })}${parts ? ` (${parts})` : ""}${a.asked ? `, ${a.asked === 1 ? t("asked you once") : t("asked you {n} times", { n: a.asked })}` : ""}, ${formatUsd(a.costUsd)}`;
+  });
+  return [head + notes, ...lines].join("\n");
+}
+
+/** Post a text to a Slack or Discord incoming webhook (or anything that takes JSON), the way Tomay's post_message does. */
+export async function postToChannel(url: string, text: string, fetchFn: typeof fetch = fetch): Promise<{ ok: true; host: string } | { ok: false; error: string }> {
+  const u = new URL(url);
+  const body = /discord\.com$|discordapp\.com$/.test(u.hostname) ? { content: text } : { text };
+  try {
+    const res = await fetchFn(u, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    return res.ok ? { ok: true, host: u.hostname } : { ok: false, error: `${u.hostname} answered HTTP ${res.status}` };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
 }
 
 /** One push: plain text so ntfy shows it as-is, with a tap that opens the control room's inbox when its address is known. Best effort. */
