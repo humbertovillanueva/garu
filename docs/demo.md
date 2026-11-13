@@ -38,8 +38,9 @@ cd ~/garu-demo-es && npm run garu -- service status|logs|restart|uninstall   # t
 tailscale funnel status                                                   # the public address
 ```
 
-After `npm run build` in the repo, restart both demos too (`service restart` from each folder):
-they run the repo's `packages/` through the symlink. After editing a `Garufile.es.yaml`, copy it
+After a build in the repo, restart both demos too (`service restart` from each folder): they run the
+repo's `packages/` through the symlink. `npm run deploy` in the repo does the build and all three
+restarts in one go. After editing a `Garufile.es.yaml`, copy it
 over the matching `Garufile.yaml` in `~/garu-demo-es` again. A new sign-in token
 (`rm ~/garu-demo/.garu/ui-token` and restart) needs `docs/demo.json` updated and the site pushed.
 

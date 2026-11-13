@@ -54,6 +54,7 @@ npx svelte-check --workspace packages/ui
 npm run garu -- <cmd>                 # the CLI from the repo (no global install yet)
 npm run garu -- service install|status|logs|restart|uninstall   # Garu as a login service (launchd)
 npm run garu -- prune [--keep 90d] [--yes]                       # old run logs: dry run, then delete
+npm run deploy                        # build, then restart the service here and every ~/garu-demo* (scripts/deploy.mjs)
 npm run sync -w @garu/app             # the phone UI, built and copied into android/ and ios/
 ```
 
@@ -88,7 +89,8 @@ paired, but only with the `&` escaped: the phone's shell parses the line again, 
 before the token, so the app ignores it without a word (`docs/android.md` has the form).
 
 Garu on Humberto's Mac runs as the login service: after a build or a Garufile schedule change,
-`npm run build && npm run garu -- service restart`. Control room: http://localhost:4000. Phone pairs
+`npm run deploy` (builds, restarts the service and both public demos; `npm run garu -- service restart`
+alone for a Garufile change). Control room: http://localhost:4000. Phone pairs
 over Tailscale (the address is in `tailscale serve status`; don't write it into the repo).
 
 Seeded screens without touching the real `.garu/`: copy `agents/ examples/ scripts/ package.json` to a
