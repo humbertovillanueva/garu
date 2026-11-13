@@ -32,6 +32,9 @@
     return { d, approval, waiting, result };
   }
   const pretty = (v: unknown) => JSON.stringify(v, null, 2);
+  /** The rows that tell the run's story get a mark instead of a dot, the ones the terminal log uses. */
+  const glyph = (e: Record<string, unknown> & { type: string }) =>
+    e.type === "run.parked" ? "⏸" : e.type === "run.resumed" ? "▶" : e.type === "host.slept" ? "☾" : e.type === "run.end" && e["busy"] ? "⌛" : e.type === "run.end" && e["offline"] ? "⌁" : null;
   /** Garu's own tools name the thing: the note remembered or forgotten, the question asked. Other calls show their tool id. */
   function said(req: { server: string; tool: string; args: Record<string, unknown> }): { verb: string; text: string } | null {
     if (req.server !== "garu") return null;
@@ -47,8 +50,12 @@
   {#each rows as row (row.env.seq)}
     {@const e = row.env.event}
     <li class="rise relative pl-6" class:pb-3={compact} class:pb-4={!compact}>
-      <span class="absolute -left-[5px] top-1.5 dot"
-            style="background: {row.kind === 'call' ? 'var(--color-fg-2)' : row.kind === 'turn' ? 'var(--color-accent)' : e.type === 'error' || e.type === 'budget.exceeded' ? 'var(--color-bad)' : 'var(--color-line-2)'}"></span>
+      {#if row.kind === "other" && glyph(e)}
+        <span class="absolute -left-[7px] top-[3px] w-[13px] bg-bg text-center text-[11px] leading-none text-mute" aria-hidden="true">{glyph(e)}</span>
+      {:else}
+        <span class="absolute -left-[5px] top-1.5 dot"
+              style="background: {row.kind === 'call' ? 'var(--color-fg-2)' : row.kind === 'turn' ? 'var(--color-accent)' : e.type === 'error' || e.type === 'budget.exceeded' ? 'var(--color-bad)' : 'var(--color-line-2)'}"></span>
+      {/if}
 
       {#if row.kind === "turn"}
         <div class="flex flex-wrap items-baseline gap-x-3 text-[13px]">
