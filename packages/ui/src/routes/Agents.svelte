@@ -27,8 +27,8 @@
               <span class="truncate text-[15px] font-semibold">{a.name}</span>
               <span class="text-[11.5px] text-mute">{a.runsToday ? t("{n} today", { n: a.runsToday }) : ""}</span>
             </div>
-            <div class="mt-0.5 truncate text-[13px] text-fg-2">{a.description || "—"}</div>
-            <div class="mt-1 truncate text-[12.5px] text-mute">{statusLine(a)}</div>
+            <div class="mt-0.5 line-clamp-2 text-[13px] text-fg-2">{a.description || "—"}</div>
+            <div class="mt-1 line-clamp-2 text-[12.5px] text-mute">{statusLine(a)}</div>
           </div>
         </a>
       {/each}
