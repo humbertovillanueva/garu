@@ -155,10 +155,11 @@
   {#if today?.results.length}
     <div>
       <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Latest from your agents")}</h2>
-      <div class="grid gap-3 md:grid-cols-2">
+      <!-- Two columns the cards flow down, each as tall as what it holds: a one-line result is a short card, a brief a tall one. -->
+      <div class="gap-3 md:columns-2">
         {#each today.results.slice(0, 4) as r (r.agent + r.runId)}
           {@const waiting = live.pending.filter((p) => p.agent === r.agent).length}
-          <div class="panel-raised rise flex min-w-0 flex-col p-4">
+          <div class="panel-raised rise mb-3 flex min-w-0 flex-col p-4 [break-inside:avoid]">
             <div class="flex items-center gap-3">
               <Mark name={r.agent} size={30} />
               <div class="min-w-0 flex-1">
