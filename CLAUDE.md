@@ -122,7 +122,8 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   awake hold and tool servers released) and the control room's sweeper (`checkParked`, every 30 s,
   on each decision, at start) resumes it in the same log (`run.resumed`, the answer recorded under the
   original callId, `bus.callDecided`); the state file is deleted first thing on resume so an approved
-  call never goes out twice; a stop parks waiting runs instead of declining them. `garu up` (no
+  call never goes out twice; a stop parks waiting runs instead of declining them. With a push URL set, the
+  sweeper also sends a last call (`LAST_CALL_MS`, 1 h before expiry, once per ask, in memory). `garu up` (no
   control room) still waits in memory. Approving the same
   agent → tool 3 times with no decline makes Garu suggest the rule (`kernel/src/suggest.ts`,
   `ui/.../SuggestionCard.svelte`); "Add to Garufile" inserts it above the existing ask rule.
