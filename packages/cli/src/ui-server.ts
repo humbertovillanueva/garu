@@ -339,10 +339,10 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
   const prune = () => {
     if (!opts.pruneMs || opts.demo) return;
     try {
-      const plan = planPrune({ logRoot: opts.logRoot, inboxRoot: opts.inboxRoot, keepMs: opts.pruneMs });
-      if (!plan.runs.length && !plan.requests.length) return;
+      const plan = planPrune({ logRoot: opts.logRoot, inboxRoot: opts.inboxRoot, chatRoot: opts.chatRoot, keepMs: opts.pruneMs });
+      if (!plan.runs.length && !plan.requests.length && !plan.chats.length) return;
       const n = applyPrune(plan);
-      opts.log(`🧹 pruned ${n.runs} run log(s) and ${n.requests} settled inbox request(s) older than ${Math.round(opts.pruneMs / 86_400_000)} days`);
+      opts.log(`🧹 pruned ${n.runs} run log(s), ${n.requests} settled inbox request(s) and ${n.messages} chat message(s) older than ${Math.round(opts.pruneMs / 86_400_000)} days`);
     } catch (e) {
       opts.log(`✖ prune: ${(e as Error).message}`);
     }

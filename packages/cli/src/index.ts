@@ -569,23 +569,25 @@ program
   .option("--yes", t("delete; without it, a dry run"))
   .option("--log-root <dir>", t("where run logs live"), DEFAULT_LOG_ROOT)
   .option("--inbox-root <dir>", t("where approval requests live"), DEFAULT_INBOX_ROOT)
-  .action((opts: { keep: string; yes?: boolean; logRoot: string; inboxRoot: string }) => {
+  .option("--chat-root <dir>", t("where chat threads live"), DEFAULT_CHAT_ROOT)
+  .action((opts: { keep: string; yes?: boolean; logRoot: string; inboxRoot: string; chatRoot: string }) => {
     const ms = keepMs(opts.keep);
-    const plan = planPrune({ logRoot: opts.logRoot, inboxRoot: opts.inboxRoot, keepMs: ms });
+    const plan = planPrune({ logRoot: opts.logRoot, inboxRoot: opts.inboxRoot, chatRoot: opts.chatRoot, keepMs: ms });
     const days = Math.round(ms / 86_400_000);
-    if (!plan.runs.length && !plan.requests.length) {
+    const messages = plan.chats.reduce((n, c) => n + c.drop, 0);
+    if (!plan.runs.length && !plan.requests.length && !messages) {
       stdout.write(`${t("nothing older than {days} days to prune", { days })}${plan.spared ? ` (${t("{n} old run(s) kept: running or parked", { n: plan.spared })})` : ""}\n`);
       return;
     }
     const first = plan.runs[0];
     const last = plan.runs.at(-1);
-    stdout.write(`${t("{runs} run log(s) and {requests} settled inbox request(s) older than {days} days", { runs: plan.runs.length, requests: plan.requests.length, days })}${first && last ? ` (${localTime(first.startedAt, { date: true, seconds: false })} – ${localTime(last.startedAt, { date: true, seconds: false })})` : ""}${plan.spared ? `; ${t("{n} old run(s) kept: running or parked", { n: plan.spared })}` : ""}\n`);
+    stdout.write(`${t("{runs} run log(s), {requests} settled inbox request(s) and {messages} chat message(s) older than {days} days", { runs: plan.runs.length, requests: plan.requests.length, messages, days })}${first && last ? ` (${localTime(first.startedAt, { date: true, seconds: false })} – ${localTime(last.startedAt, { date: true, seconds: false })})` : ""}${plan.spared ? `; ${t("{n} old run(s) kept: running or parked", { n: plan.spared })}` : ""}\n`);
     if (!opts.yes) {
       stdout.write(`${t("Nothing deleted. Run again with --yes to delete them.")}\n`);
       return;
     }
     const n = applyPrune(plan);
-    stdout.write(`✔ ${t("deleted {runs} run log(s) and {requests} inbox request(s)", { runs: n.runs, requests: n.requests })}\n`);
+    stdout.write(`✔ ${t("deleted {runs} run log(s), {requests} inbox request(s) and {messages} chat message(s)", { runs: n.runs, requests: n.requests, messages: n.messages })}\n`);
   });
 
 program
