@@ -638,6 +638,8 @@ export const es: Record<string, string> = {
   "denied after {d} days": "denegado tras {d} días",
   "While it waits": "Mientras espera",
   "Old runs": "Ejecuciones antiguas",
+  "Weekly note": "Nota semanal",
+  "Sundays at 6 PM, to your channel": "los domingos a las 6 PM, a tu canal",
   "deleted after {d} days": "se borran a los {d} días",
   "kept forever": "se guardan para siempre",
   "the run parks after {min} min and picks up when you answer": "la ejecución se aparca a los {min} min y retoma cuando respondes",

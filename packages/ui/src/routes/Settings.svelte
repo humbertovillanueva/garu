@@ -254,6 +254,7 @@
             <dt class="text-mute">{t("Unanswered asks")}</dt><dd>{s.askTimeoutMin % 1440 === 0 ? (s.askTimeoutMin === 1440 ? t("denied after a day") : t("denied after {d} days", { d: s.askTimeoutMin / 1440 })) : s.askTimeoutMin % 60 === 0 ? t("denied after {h} h", { h: s.askTimeoutMin / 60 }) : t("denied after {min} min", { min: s.askTimeoutMin })}</dd>
             <dt class="text-mute">{t("While it waits")}</dt><dd>{t("the run parks after {min} min and picks up when you answer", { min: s.askHoldMin })}</dd>
             <dt class="text-mute">{t("Push")}</dt><dd>{s.notify ? t("on (ntfy)") : t("off")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">GARU_NOTIFY_URL</span></span>{/if}</dd>
+            <dt class="text-mute">{t("Weekly note")}</dt><dd>{s.weekly ? t("Sundays at 6 PM, to your channel") : t("off")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">GARU_WEEKLY_WEBHOOK_URL</span></span>{/if}</dd>
             <dt class="text-mute">{t("Old runs")}</dt><dd>{s.pruneDays ? t("deleted after {d} days", { d: s.pruneDays }) : t("kept forever")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--prune</span></span>{/if}</dd>
             <dt class="text-mute">{t("Folder")}</dt><dd class="mono break-all">{shortRoot(s.root)}</dd>
           </dl>
