@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -32,13 +32,24 @@ describe("prune", () => {
     const expired = join(inbox, "a2.json"); writeFileSync(expired, JSON.stringify({ id: "a2", createdAt: at(110), expiresAt: at(109) }));
     const recent = join(inbox, "a3.json"); writeFileSync(recent, JSON.stringify({ id: "a3", createdAt: at(1), expiresAt: at(0), decision: { approved: false } }));
     writeFileSync(join(inbox, "junk.json"), "not json");
+    // Chat: Bea's thread has old and new lines, and an unreadable one that stays; Pip's is all old; a stray file is not a thread.
+    const chat = join(root, "chat");
+    mkdirSync(chat);
+    const line = (daysAgo: number, text: string) => JSON.stringify({ id: text, ts: at(daysAgo), role: "agent", kind: "run", text });
+    writeFileSync(join(chat, "bea.jsonl"), [line(120, "old one"), line(95, "old two"), "not json", line(3, "new one")].join("\n") + "\n");
+    writeFileSync(join(chat, "pip.jsonl"), [line(100, "gone"), line(91, "gone too")].join("\n") + "\n");
+    writeFileSync(join(chat, "tomay.jsonl.before-demo"), line(200, "kept") + "\n");
 
-    const plan = planPrune({ logRoot: logs, inboxRoot: inbox, keepMs: 90 * DAY, now });
+    const plan = planPrune({ logRoot: logs, inboxRoot: inbox, chatRoot: chat, keepMs: 90 * DAY, now });
     expect(plan.runs.map((r) => r.runId)).toEqual(["20260801-070000-a0000001", "20260810-070000-a0000002"]);
     expect(plan.spared).toBe(1);
     expect(plan.requests.sort()).toEqual([settled, expired].sort());
+    expect(plan.chats.map((c) => [c.agent, c.drop, c.keep.length])).toEqual([["bea", 2, 2], ["pip", 2, 0]]);
 
-    expect(applyPrune(plan)).toEqual({ runs: 2, requests: 2 });
+    expect(applyPrune(plan)).toEqual({ runs: 2, requests: 2, messages: 4 });
+    expect(readFileSync(join(chat, "bea.jsonl"), "utf8")).toBe(`not json\n${line(3, "new one")}\n`);
+    expect(existsSync(join(chat, "pip.jsonl"))).toBe(false);
+    expect(existsSync(join(chat, "tomay.jsonl.before-demo"))).toBe(true);
     expect(existsSync(oldOk)).toBe(false);
     expect(existsSync(oldDead)).toBe(false);
     expect(existsSync(oldParked)).toBe(true);
@@ -47,6 +58,6 @@ describe("prune", () => {
     expect(existsSync(recent)).toBe(true);
     expect(existsSync(join(inbox, "junk.json"))).toBe(true);
     // Nothing left to do: a second plan is empty.
-    expect(planPrune({ logRoot: logs, inboxRoot: inbox, keepMs: 90 * DAY, now })).toMatchObject({ runs: [], requests: [], spared: 1 });
+    expect(planPrune({ logRoot: logs, inboxRoot: inbox, chatRoot: chat, keepMs: 90 * DAY, now })).toMatchObject({ runs: [], requests: [], chats: [], spared: 1 });
   });
 });
