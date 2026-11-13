@@ -17,7 +17,7 @@ Repo: https://github.com/humbertovillanueva/garu · Site: https://garuagents.com
 - Never force-push or rewrite history unless Humberto asks for it in so many words.
 - Never print, log or paste secrets. They live in `.env` (gitignored): `GEMINI_API_KEY`, `GITHUB_TOKEN`,
   `GARU_USER`, `BRIEF_WEBHOOK_URL`, `REPO_WATCH_WEBHOOK_URL`, `GARU_NOTIFY_URL` (the ntfy topic; the push
-  carries agent, tool and reason, never arguments). The control-room sign-in token is
+  carries agent, tool and reason, never arguments), `GARU_WEEKLY_WEBHOOK_URL` (the Sunday note's channel). The control-room sign-in token is
   `.garu/ui-token`; never show it in screenshots or recordings.
 - Nothing gets posted, published or purchased without Humberto saying so. Launch posts in
   `docs/launch/` are drafts. Pushing to GitHub counts: commit when asked, and before any push show
@@ -159,6 +159,10 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   when none is left; a line that can't be read stays); `applyPrune` deletes. `garu prune` is a dry run without `--yes`; `--prune 90d`
   on `garu ui` / `service install` runs it at start and once a day (the plist bakes it in). Humberto's service
   keeps 90 days. Off by default: without the flag every run is kept.
+- Weekly note (`kernel/src/weekly.ts`: `weeklyStats` per agent over the last 7 days, `weeklyDue` = Sunday from
+  18:00 local, once): with `GARU_WEEKLY_WEBHOOK_URL` the control room posts `weeklyText` (`cli/src/ui-server.ts`,
+  Slack `text` / Discord `content`) at start and hourly when due; posted Sundays live in `.garu/weekly-posted.json`.
+  `garu weekly` prints it, `--post` sends it now.
 - Memory: a Garufile with `memory: true` gets a notebook at `.garu/memory/<agent>.md` (`kernel/src/memory.ts`:
   one `- YYYY-MM-DD · note` per line, 40 notes of 240 chars at most; a hand-typed `- note` line counts too).
   Shown to the model in the system prompt; kept through the built-ins `garu.remember` / `garu.forget`
