@@ -38,6 +38,7 @@ import {
   lineDiff,
   diffStats,
   localDay,
+  localTime,
   capReached,
   listParked,
   type AskAgents,
@@ -53,6 +54,8 @@ import {
  * held awake, with a tool server open, for an answer that comes tomorrow.
  */
 export const ASK_HOLD_MS = 2 * 60_000;
+/** A second push this long before an ask expires: a last call, so silence is a choice and not a miss. */
+export const LAST_CALL_MS = 60 * 60_000;
 /** The sweeper's pace: a decision written by `garu approve` or a request past its time is noticed within this. */
 const PARKED_CHECK_MS = 30_000;
 import { t } from "./i18n.js";
@@ -249,9 +252,23 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
    * never knew (a restart in between) are found the same way: the state is a file.
    */
   const unresumable = new Set<string>();
+  // Asks already given their last call, so each gets one. A restart may repeat one; that's the whole cost.
+  const lastCalled = new Set<string>();
   const checkParked = () => {
     if (opts.demo) return;
     for (const r of inbox.expireOverdue()) opts.log(`✖ ${r.agent}: nobody answered about ${r.tool} in time (${r.id}); declined`);
+    if (opts.notify) {
+      const soon = Date.now() + LAST_CALL_MS;
+      const due = inbox.pending().filter((r) => !lastCalled.has(r.id) && Date.parse(r.expiresAt) <= soon);
+      if (due.length) {
+        for (const r of due) {
+          lastCalled.add(r.id);
+          opts.log(`⏳ ${r.agent}: still waiting on ${r.tool} (${r.id}); last call sent, it expires ${localTime(r.expiresAt, { seconds: false })}`);
+        }
+        // One address lookup for the batch; the pushes go out one after another.
+        void addresses().then(async (a) => { for (const r of due) await notify(opts.notify!, r, a[0]?.url, "last-call"); }).catch(() => {});
+      }
+    }
     for (const p of listParked(opts.logRoot)) {
       if (live.has(p.agent)) continue;
       if (!p.step.every((s) => s.kind === "done" || inbox.get(s.call.requestId)?.decision)) continue;
@@ -852,16 +869,19 @@ async function readBody(req: import("node:http").IncomingMessage): Promise<Recor
  * with a control-room address, a tap opens the Inbox there (ntfy's Click header). It names the agent,
  * the tool and the reason, never the arguments: an email's body or a file's content stays on this computer.
  */
-export async function notify(url: string, r: ApprovalRequest, link?: string): Promise<void> {
-  const body = `${t("{agent} wants {tool}", { agent: r.agent, tool: r.tool })}\n${t("reason: {reason}", { reason: r.reason })}\n\n${link ? t("Tap to review.") : `garu approve ${r.id} · garu deny ${r.id}`}`;
+export async function notify(url: string, r: ApprovalRequest, link?: string, kind: "new" | "last-call" = "new"): Promise<void> {
+  const first = kind === "last-call"
+    ? t("{agent} still waits on {tool}; with no answer it becomes a deny at {time}", { agent: r.agent, tool: r.tool, time: localTime(r.expiresAt, { seconds: false }) })
+    : t("{agent} wants {tool}", { agent: r.agent, tool: r.tool });
+  const body = `${first}\n${t("reason: {reason}", { reason: r.reason })}\n\n${link ? t("Tap to review.") : `garu approve ${r.id} · garu deny ${r.id}`}`;
   try {
     await fetch(url, {
       method: "POST",
       headers: {
         "content-type": "text/plain",
-        Title: `Garu: approval needed (${r.agent})`,
+        Title: kind === "last-call" ? `Garu: last call (${r.agent})` : `Garu: approval needed (${r.agent})`,
         Priority: "high",
-        Tags: "lock",
+        Tags: kind === "last-call" ? "hourglass" : "lock",
         ...(link ? { Click: `${link.replace(/\/$/, "")}/#/inbox` } : {}),
       },
       body,

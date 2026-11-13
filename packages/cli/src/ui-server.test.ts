@@ -86,7 +86,7 @@ beforeAll(async () => {
   await new Promise<void>((r) => { pingServer = httpServer((req, res) => { let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => { pings.push({ title: String(req.headers["title"] ?? ""), click: String(req.headers["click"] ?? ""), body: b }); res.end("ok"); }); }).listen(pingPort, "127.0.0.1", r); });
   const port = await freePort();
   srv = startUiServer({
-    port, host: "127.0.0.1", root, logRoot: join(root, ".garu", "runs"), inboxRoot, chatRoot: join(root, ".garu", "chat"), memoryRoot: join(root, ".garu", "memory"),
+    port, host: "127.0.0.1", root, logRoot: join(root, ".garu", "runs"), inboxRoot, chatRoot: join(root, ".garu", "chat"), memoryRoot: join(root, ".garu", "memory"), notify: `http://127.0.0.1:${pingPort}/garu-test`,
     grantsPath: join(root, ".garu", "grants.jsonl"), dismissedPath: join(root, ".garu", "dismissed.json"), staticDir: join(root, "ui"),
     userName: "Test", decider: "Test (ui)", up: false, askTimeoutMs: 60_000, tokenPath: join(root, ".garu", "ui-token"), log: (l) => logLines.push(l),
   });
@@ -273,14 +273,29 @@ describe("the push", () => {
   it("an ask is pushed with the agent, the tool and the reason, never the arguments", async () => {
     const now = new Date();
     await notify(`http://127.0.0.1:${pingPort}/garu-test`, { id: "t99", agent: "pip", runId: "r1", callId: "c1", tool: "fs.write_file", args: { path: "secret/notes.md", content: "hunter2 and the whole letter" }, reason: "writing", createdAt: now.toISOString(), expiresAt: new Date(now.getTime() + 60_000).toISOString() }, "https://mac.example.ts.net");
-    const p = pings.at(-1)!;
-    expect(p.title).toBe("Garu: approval needed (pip)");
+    const p = [...pings].reverse().find((x) => x.title === "Garu: approval needed (pip)")!;
+    expect(p).toBeTruthy();
     expect(p.click).toBe("https://mac.example.ts.net/#/inbox");
     expect(p.body).toContain("pip wants fs.write_file");
     expect(p.body).toContain("reason: writing");
     expect(p.body).not.toContain("hunter2");
     expect(p.body).not.toContain("notes.md");
   });
+});
+
+describe("the last call", () => {
+  it("an ask with under an hour left gets one more push, saying when it becomes a deny; never a second one", async () => {
+    const mine = () => pings.filter((p) => p.title === "Garu: last call (pip)" && p.body.startsWith("pip still waits on fs.last_call_tool;"));
+    const id = pending("fs.last_call_tool", { path: "notes.md", content: "hunter2" }, "pip"); // expires in a minute: well inside the last hour
+    for (let i = 0; i < 200 && mine().length === 0; i++) await new Promise((r) => setTimeout(r, 50));
+    expect(mine().length).toBe(1);
+    expect(mine()[0]!.body).toMatch(/^pip still waits on fs.last_call_tool; with no answer it becomes a deny at \d/);
+    expect(mine()[0]!.body).not.toContain("hunter2");
+    // The sweeper runs again on every decision; the same ask is not called twice.
+    await post(`/api/inbox/${id}/deny`, {});
+    await new Promise((r) => setTimeout(r, 700));
+    expect(mine().length).toBe(1);
+  }, 15_000);
 });
 
 describe("the notebook", () => {
