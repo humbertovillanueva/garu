@@ -264,7 +264,7 @@ The complaint practitioners make about always-on agents is that *their* throughp
 | `garu inbox` · `garu approve <id> [--for 24h]` · `garu deny <id>` | The inbox from the terminal. |
 | `garu grants [list\|revoke <id>]` | Temporary allows. |
 | `garu log [agent] [run]` | Replay a flight recorder. |
-| `garu prune [--keep 90d] [--yes]` | Say which run logs are older than the window, and delete them with `--yes`. `--prune 90d` on `garu ui` or `service install` does it once a day; a parked run is never touched. Without it, every run is kept forever. |
+| `garu prune [--keep 90d] [--yes]` | Say which run logs, settled inbox requests and chat messages are older than the window, and delete them with `--yes`. `--prune 90d` on `garu ui` or `service install` does it once a day; a parked run is never touched. Without it, every run is kept forever. |
 | `garu validate <Garufile>` | Lint policy, cron, budget, sandbox. |
 | `garu auth <Garufile> <server>` | Sign in to a remote tool server once, in your browser. `--forget` removes it. |
 | `garu sandbox build` | Build the default Docker image for tool servers. |

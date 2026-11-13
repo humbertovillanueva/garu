@@ -153,7 +153,8 @@ browser's clock and schedules follow the server's `TZ`, so set both to the same 
   logs the sentence and skips); a parked run resuming is the same run and is never counted. The agent page
   shows "{n} runs a day" under Limits and "Done for today" once reached.
 - Pruning (`kernel/src/prune.ts`): `planPrune` lists run logs older than a keep window (never running or parked
-  ones) and settled inbox requests; `applyPrune` deletes. `garu prune` is a dry run without `--yes`; `--prune 90d`
+  ones), settled inbox requests and chat messages (a thread is rewritten with its newer lines, or deleted
+  when none is left; a line that can't be read stays); `applyPrune` deletes. `garu prune` is a dry run without `--yes`; `--prune 90d`
   on `garu ui` / `service install` runs it at start and once a day (the plist bakes it in). Humberto's service
   keeps 90 days. Off by default: without the flag every run is kept.
 - Memory: a Garufile with `memory: true` gets a notebook at `.garu/memory/<agent>.md` (`kernel/src/memory.ts`:
