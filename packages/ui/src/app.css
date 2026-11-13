@@ -125,7 +125,9 @@ body {
    the fixed bottom bar and the sticky top bar size to that: the bar slides off-screen and the page
    scrolls under the clock. Clipping sideways overflow on the root is the belt to that brace. */
 html { overflow-x: hidden; }
-.md, .md code, .md a { overflow-wrap: anywhere; }
+/* break-word, not anywhere: "anywhere" also lets a box shrink to one letter per line (a Home card read
+   "nud / ged"); break-word only breaks a word that would otherwise overflow its line. */
+.md, .md code, .md a { overflow-wrap: break-word; min-width: 0; }
 .md pre { max-width: 100%; overflow-x: auto; }
 textarea.field, input.field { width: 100%; resize: vertical; min-height: 44px; border-radius: 10px; padding: 10px 12px; background: var(--color-bg); border: 1px solid color-mix(in oklab, var(--color-mute) 60%, var(--color-bg)); color: var(--color-fg); font-size: 14px; outline: none; }
 textarea.field:focus, input.field:focus { border-color: color-mix(in oklab, var(--color-accent) 60%, var(--color-line-2)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 15%, transparent); }
