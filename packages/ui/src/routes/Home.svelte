@@ -2,7 +2,8 @@
   import { api, live, loader, agentByName } from "../lib/api.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, clock, dayLabel, statusLabel, statusLine, until, cronLabel, humanTime, plainTimes } from "../lib/format";
+  import { usd, clock, dayLabel, longDate, statusLabel, statusLine, until, cronLabel, humanTime, plainTimes } from "../lib/format";
+  import { KIND_COLOR, NO_FACE_COLOR } from "../lib/colors";
   import Mark from "../lib/components/Mark.svelte";
   import ReviewCard from "../lib/components/ReviewCard.svelte";
   import SuggestionCard from "../lib/components/SuggestionCard.svelte";
@@ -39,6 +40,11 @@
   // What fires next, across every scheduled agent, soonest first; one waiting on you still has its next run.
   const comingUp = $derived(live.agents.filter((a) => a.nextRun && a.status !== "needs-setup" && !a.needs.length && !a.signIn.length).sort((a, b) => a.nextRun!.localeCompare(b.nextRun!)).slice(0, 6));
   const week = $derived(today?.week ?? null);
+  /** The agent's color, for the stripe on its card. */
+  const colorOf = (name: string) => { const k = agentByName(name)?.persona?.kind; return k ? KIND_COLOR[k] : NO_FACE_COLOR; };
+  /** The dot under an avatar: what the agent is up to, at a glance. */
+  const dotColor = (s: string) => s === "working" ? "var(--color-ok)" : s === "waiting" || s === "needs-setup" ? "var(--color-ask)" : "var(--color-mute)";
+  const ratio = (v: number, max: number) => (max > 0 ? Math.max(v / max, v > 0 ? 0.12 : 0) : 0);
 
   // Feed minus pending approvals (they get their own cards up top), grouped by day. An agent that
   // finished several runs in a row with the same outcome takes one line, so a heartbeat doesn't bury the day.
@@ -78,13 +84,29 @@
 
 <section class="space-y-8">
   <div class="rise">
-    <h1 class="title">{greeting}.</h1>
-    <p class="mt-1 text-[14px] text-fg-2">
+    <h1 class="display">{greeting}.</h1>
+    <div class="mt-1.5 text-[13px] text-mute">{longDate(new Date(ticker.now))}</div>
+    <p class="mt-2 text-[14.5px] text-fg-2">
       {#if live.loaded && live.pending.length === 1}{#each parts("{n} decision is waiting for you.", { n: 1 }) as p}{#if p.name}<span class="font-medium text-fg">{p.text}</span>{:else}{p.text}{/if}{/each}
       {:else if live.loaded && live.pending.length}{#each parts("{n} decisions are waiting for you.", { n: live.pending.length }) as p}{#if p.name}<span class="font-medium text-fg">{p.text}</span>{:else}{p.text}{/if}{/each}
       {:else}{statusText}{/if}
     </p>
   </div>
+
+  {#if live.loaded && live.agents.length}
+    <!-- Every agent in a row: a face, a name, and a dot for what it is up to. -->
+    <div class="rise -mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+      {#each live.agents as a (a.name)}
+        <a href={href("agent", a.name)} class="tap flex w-[68px] flex-none flex-col items-center gap-1.5 rounded-xl py-2 text-center hover:bg-panel" title={statusLine(a)}>
+          <span class="relative">
+            <Mark name={a.name} size={44} status={a.status} />
+            <span class="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-bg" style="background: {dotColor(a.status)}"></span>
+          </span>
+          <span class="w-full truncate text-[11.5px] text-fg-2">{a.name}</span>
+        </a>
+      {/each}
+    </div>
+  {/if}
 
   {#if live.loaded}
     <div class="rise space-y-2">
@@ -116,7 +138,7 @@
 
   {#if signInSoon.length}
     <div>
-      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Sign in again soon")}</h2>
+      <h2 class="label mb-3">{t("Sign in again soon")}</h2>
       <div class="panel divide-y divide-line">
         {#each signInSoon as a (a.name)}
           <a href={href("agent", a.name)} class="card-hover flex items-center gap-3 px-3 py-2.5 first:rounded-t-xl last:rounded-b-xl">
@@ -131,7 +153,7 @@
 
   {#if needsSetup.length}
     <div>
-      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Needs setup")}</h2>
+      <h2 class="label mb-3">{t("Needs setup")}</h2>
       <div class="panel divide-y divide-line">
         {#each needsSetup as a (a.name)}
           <a href={href("agent", a.name)} class="card-hover flex items-center gap-3 px-3 py-2.5 first:rounded-t-xl last:rounded-b-xl">
@@ -146,7 +168,7 @@
 
   {#if live.pending.length || live.suggestions.length}
     <div class="space-y-3">
-      <h2 class="text-[11px] uppercase tracking-wider text-mute">{t("Needs you")}</h2>
+      <h2 class="label">{t("Needs you")}</h2>
       {#each live.pending as r (r.id)}<ReviewCard req={r} />{/each}
       {#each live.suggestions.slice(0, 2) as s (s.id)}<SuggestionCard {s} />{/each}
     </div>
@@ -154,12 +176,12 @@
 
   {#if today?.results.length}
     <div>
-      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Latest from your agents")}</h2>
+      <h2 class="label mb-3">{t("Latest from your agents")}</h2>
       <!-- Two columns the cards flow down, each as tall as what it holds: a one-line result is a short card, a brief a tall one. -->
       <div class="gap-3 md:columns-2">
         {#each today.results.slice(0, 4) as r (r.agent + r.runId)}
           {@const waiting = live.pending.filter((p) => p.agent === r.agent).length}
-          <div class="panel-raised rise mb-3 flex min-w-0 flex-col p-4 [break-inside:avoid]">
+          <div class="panel-raised rise mb-3 flex min-w-0 flex-col p-4 [break-inside:avoid]" style="box-shadow: inset 3px 0 0 {colorOf(r.agent)}, var(--shadow-panel)">
             <div class="flex items-center gap-3">
               <Mark name={r.agent} size={30} />
               <div class="min-w-0 flex-1">
@@ -186,7 +208,7 @@
 
   {#if working.length}
     <div>
-      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Right now")}</h2>
+      <h2 class="label mb-3">{t("Right now")}</h2>
       <div class="grid gap-2 sm:grid-cols-2">
         {#each working as a (a.name)}
           <a href={href("agent", a.name)} class="panel card-hover rise flex items-center gap-3 px-3 py-2.5">
@@ -203,7 +225,7 @@
 
   {#if live.up && comingUp.length}
     <div>
-      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Coming up")}</h2>
+      <h2 class="label mb-3">{t("Coming up")}</h2>
       <div class="flex flex-wrap gap-2">
         {#each comingUp as a (a.name)}
           <a href={href("agent", a.name)} class="chip card-hover tap gap-2 py-1 pl-1 pr-3" title={a.description || cronLabel(a.cron)}>
@@ -217,12 +239,21 @@
 
   {#if week && week.runs}
     <div>
-      <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("This week")}</h2>
+      <h2 class="label mb-3">{t("This week")}</h2>
       <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {#each [[t("Runs"), String(week.runs)], [t("Done without asking"), String(week.actions)], [t("Asked you"), String(week.asked)], [t("Spent"), usd(week.costUsd, week.priced)]] as [label, value] (label)}
-          <div class="panel px-3 py-2.5">
-            <div class="text-[12px] text-mute">{label}</div>
-            <div class="mt-0.5 text-[20px] font-semibold tracking-tight tabular-nums">{value}</div>
+        {#each [[t("Runs"), String(week.runs), week.days.map((d) => d.runs)], [t("Done without asking"), String(week.actions), week.days.map((d) => d.actions)], [t("Asked you"), String(week.asked), week.days.map((d) => d.asked)], [t("Spent"), usd(week.costUsd, week.priced), week.days.map((d) => d.costUsd)]] as [label, value, series] (label)}
+          {@const max = Math.max(...(series as number[]))}
+          <div class="panel flex items-end justify-between gap-3 px-3 py-2.5">
+            <div class="min-w-0">
+              <div class="text-[12px] text-mute">{label}</div>
+              <div class="mt-0.5 text-[22px] font-semibold tracking-tight tabular-nums">{value}</div>
+            </div>
+            <!-- Seven bars, one per day, today last and in the foreground color. -->
+            <div class="flex h-7 flex-none items-end gap-[3px]" aria-hidden="true">
+              {#each series as number[] as v, i (i)}
+                <span class="w-[5px] rounded-sm" style="height: {Math.round(ratio(v, max) * 100)}%; min-height: 2px; background: {i === 6 ? 'var(--color-fg)' : 'var(--color-line-2)'}"></span>
+              {/each}
+            </div>
           </div>
         {/each}
       </div>
@@ -230,7 +261,7 @@
   {/if}
 
   <div>
-    <h2 class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("Activity")}</h2>
+    <h2 class="label mb-3">{t("Activity")}</h2>
     {#if feed === null}
       {#if feedError}<LoadError message={feedError} />{:else}<Skeleton rows={4} h={52} />{/if}
     {:else if groups.length === 0}
