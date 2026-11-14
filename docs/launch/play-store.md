@@ -347,6 +347,11 @@ once an agent reaches its runs-a-day cap; a run's timeline shows when the comput
 run started late, and what an agent remembered, forgot or asked; an ask stays open for a day and the
 run parks meanwhile; "model busy" instead of a red error when the model was overloaded.
 
+The app also opens on a "What's new in this version" card the first time after the update (Home, until
+"Got it"; again from Settings), listing the same changes in the phone's language: the reviewer's
+feedback-and-update cycle, visible in the app itself. The list lives in `packages/ui/src/lib/whatsnew.ts`;
+bump its id with each release that deserves a word.
+
 Release notes, 500 characters at most each (Play Console → the release → Release notes). The first
 line stays empty until a tester's reply names the change it came from:
 
