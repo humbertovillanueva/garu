@@ -72,6 +72,8 @@ export interface AgentsResponse {
   root: string;
   /** A public demo with made-up data: look around, answer the sample asks, nothing else. */
   demo?: boolean;
+  /** The person's name as the control room knows it (--as / GARU_USER), for the greeting. */
+  you?: string;
 }
 
 export interface Envelope {

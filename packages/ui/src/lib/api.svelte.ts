@@ -107,6 +107,7 @@ export const live = $state({
   up: false,
   root: "",
   demo: false,
+  you: "" as string,
   problems: [] as { source: string; error: string }[],
   pending: [] as ApprovalRequest[],
   suggestions: [] as import("./types").Suggestion[],
@@ -167,6 +168,7 @@ async function fetchCore(current: () => boolean): Promise<void> {
   live.up = a.up;
   live.root = a.root;
   live.demo = Boolean(a.demo);
+  live.you = a.you ?? "";
   live.problems = a.problems;
   live.pending = i.pending;
   live.suggestions = i.suggestions ?? [];

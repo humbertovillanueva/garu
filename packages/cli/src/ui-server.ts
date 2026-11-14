@@ -539,6 +539,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           up: opts.up || Boolean(opts.demo),
           root: opts.root,
           demo: Boolean(opts.demo),
+          // The person's name, for the greeting; "you" is the CLI's default when no name was given.
+          ...(opts.userName && opts.userName !== "you" ? { you: opts.userName } : {}),
         });
       }
 
