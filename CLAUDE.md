@@ -96,8 +96,11 @@ over Tailscale (the address is in `tailscale serve status`; don't write it into 
 Seeded screens without touching the real `.garu/`: copy `agents/ examples/ scripts/ package.json` to a
 temp dir, symlink `packages` and `node_modules` into it, run `node scripts/demo-data.mjs` there (it
 refuses a `.garu` that looks real; `--force` reseeds the demo copy), then
-`npm run garu -- ui -p 4100` from it. The greeting ("Still up" / "Good morning" …) follows the
-browser's clock and schedules follow the server's `TZ`, so set both to the same zone for captures.
+`npm run garu -- ui -p 4199 --demo --as Humberto` from it (--demo so nothing reads "needs setup"; 4100 and 4101
+are the public demos). The greeting ("Still up" / "Good morning" …) follows the browser's clock and schedules
+follow the server's `TZ`, so set both to the same zone for captures. `scripts/readme-shots.mjs --server … --run
+<agent>/<runId>` retakes the six README screenshots from it over Chrome's DevTools (dark, the demo banner and the
+temp path hidden); `scripts/play-shots.mjs` makes the Play and App Store cards from the public demos.
 
 ## Working with Humberto
 
