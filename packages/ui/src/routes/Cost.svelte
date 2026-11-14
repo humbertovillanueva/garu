@@ -47,6 +47,14 @@
   const colorFor = (agent: string) => { const k = agent === "other" ? undefined : live.agents.find((a) => a.name === agent)?.persona?.kind; return k ? KIND_COLOR[k] : NO_FACE_COLOR; };
   // One bar, in words: what the legend line shows on hover, and what a keyboard or a screen reader gets from the bar itself.
   const barLabel = (r: CostRow) => `${dayWord(r.day)} · ${r.agent} · ${usd(r.costUsd)} · ${r.runs === 1 ? t("1 run") : t("{n} runs", { n: r.runs })}`;
+  // One row per agent: its spend and runs over the window, and a small bar per day, scaled to that agent's busiest day.
+  const perAgent = $derived(agentOrder.map((agent) => {
+    const mine = (rows ?? []).filter((r) => r.agent === agent);
+    const byD = new Map(mine.map((r) => [r.day, r]));
+    const series = daysList.map((d) => byD.get(d) ?? { day: d, agent, costUsd: 0, runs: 0 });
+    const max = Math.max(1e-9, ...series.map((r) => r.costUsd));
+    return { agent, cost: mine.reduce((s, r) => s + r.costUsd, 0), runs: mine.reduce((s, r) => s + r.runs, 0), series, max };
+  }));
 </script>
 
 <section class="space-y-5">
@@ -101,6 +109,25 @@
       <div class="mt-2 flex justify-between text-[11px] text-mute">
         <span>{dayWord(daysList[0]!)}</span><span>{t("Today")}</span>
       </div>
+    </div>
+
+    <div class="panel rise divide-y divide-line">
+      <h2 class="label px-4 pt-3 pb-2">{t("By agent")}</h2>
+      {#each perAgent as p (p.agent)}
+        <div class="flex items-center gap-3 px-4 py-2.5">
+          <Mark name={p.agent} size={26} />
+          <div class="min-w-0 w-28 flex-none">
+            <div class="truncate text-[13.5px] font-medium">{p.agent}</div>
+            <div class="text-[12px] text-mute">{p.runs === 1 ? t("1 run") : t("{n} runs", { n: p.runs })}</div>
+          </div>
+          <div class="flex h-8 min-w-0 flex-1 items-end gap-[3px]" role="group" aria-label={t("Daily spend by agent")}>
+            {#each p.series as r (r.day)}
+              <span class="min-w-[3px] flex-1 rounded-sm" style="height: {Math.max(r.costUsd > 0 ? 8 : 3, Math.round((r.costUsd / p.max) * 100))}%; background: {r.costUsd > 0 ? colorFor(p.agent) : 'var(--color-line)'}" title={barLabel(r)}></span>
+            {/each}
+          </div>
+          <div class="w-16 flex-none text-right text-[13.5px] font-medium tabular-nums">{usd(p.cost)}</div>
+        </div>
+      {/each}
     </div>
 
     <div class="panel overflow-hidden">

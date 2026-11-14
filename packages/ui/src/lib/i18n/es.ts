@@ -654,6 +654,7 @@ export const es: Record<string, string> = {
   "your answer came; parked since {when}": "llegó tu respuesta; aparcada desde {when}",
   "The computer was asleep for {span}": "La computadora estuvo dormida {span}",
   "What it remembers": "Lo que recuerda",
+  "What you told it": "Lo que le dijiste",
   "1 note": "1 nota",
   "{n} notes": "{n} notas",
   "Nothing yet. {name} writes a note here when it learns something worth keeping for later runs; you can add one too.": "Nada todavía. {name} escribe aquí una nota cuando aprende algo que vale la pena guardar para otras ejecuciones; tú también puedes añadir una.",
@@ -673,6 +674,7 @@ export const es: Record<string, string> = {
   "call cut off, trying once more ({reason})": "llamada cortada, se intenta una vez más ({reason})",
 
   // ---- cost
+  "By agent": "Por agente",
   "Daily spend by agent": "Gasto diario por agente",
   "Estimated from real token counts at list price. Free tiers and local models bill $0; the estimate still shows what it would cost.": "Estimado a partir de los tokens reales a precio de lista. Los niveles gratis y los modelos locales cobran $0; la estimación muestra igual lo que costaría.",
   "No spend recorded in this window": "Sin gasto registrado en este periodo",
