@@ -127,6 +127,9 @@ prompt: |
   - **Pendiente:** preguntas, promesas o fechas límite de esos hilos. Di "nada pendiente" si no hay.
   - **Lleva:** lo que los hilos digan que hay que preparar o enviar. Omítelo si no hay nada.
 
+  Si algo de tu memoria influyó en este resumen (una preferencia fija, una persona que importa), termina
+  el resumen con una línea corta **De memoria** diciendo qué aplicaste, para que tu dueño lo vea. Sin nada
+  en memoria, o sin nada que aplicara: sin esa línea.
   Todo el resumen en menos de 400 palabras. Claro, sin adornos. No cites nada privado más allá de lo
   que una nota de preparación necesita. Nunca inventes personas, hilos ni hechos; si no encontraste
   correo con alguien, dilo.
