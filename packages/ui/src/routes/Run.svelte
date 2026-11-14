@@ -2,7 +2,7 @@
   import { api, live, agentByName, loader, HttpError } from "../lib/api.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, duration, span, humanTime, clock, cronLabel, triggerLabel, plainTimes, until } from "../lib/format";
+  import { usd, span, humanTime, clock, cronLabel, triggerLabel, plainTimes, until } from "../lib/format";
   import { renderMarkdown } from "../lib/md";
   import Mark from "../lib/components/Mark.svelte";
   import Status from "../lib/components/Status.svelte";
@@ -68,6 +68,17 @@
   const lateMs = $derived(due && start ? new Date(start.ts).getTime() - new Date(due).getTime() : 0);
   /** Time the computer spent asleep mid-run: part of "took 1 h", none of it the agent's. */
   const asleep = $derived((events ?? []).filter((e) => e.event.type === "host.slept").reduce((n, e) => n + (e.event["ms"] as number), 0));
+  // Time the run sat parked for your answer: on the clock, but none of it the agent's work.
+  const parkedMs = $derived.by(() => {
+    let total = 0;
+    let since: number | null = null;
+    for (const e of events ?? []) {
+      if (e.event.type === "run.parked") since = new Date(e.ts).getTime();
+      else if (e.event.type === "run.resumed" && since !== null) { total += new Date(e.ts).getTime() - since; since = null; }
+    }
+    return total;
+  });
+  const tookMs = $derived(end && start ? Math.max(0, new Date(end.ts).getTime() - new Date(start.ts).getTime() - parkedMs) : 0);
   /** How the run started, in words: "Scheduled, Weekdays 7:00 AM", "Catch-up for Daily 9:00 AM", "From a message". */
   const how = $derived.by(() => {
     const trigger = String(start?.event["trigger"] ?? "");
@@ -111,7 +122,7 @@
         {#if events}<Status {status} />{/if}
       </div>
       {#if start}
-        <div class="mt-0.5 text-[13px] text-fg-2">{[how, humanTime(start.ts), lateMs >= 60_000 && due ? t("started {span} late, due {time}", { span: span(lateMs), time: clock(due) }) : "", end ? (asleep ? t("took {duration}, {asleep} of it with the computer asleep", { duration: duration(start.ts, end.ts), asleep: span(asleep) }) : t("took {duration}", { duration: duration(start.ts, end.ts) })) : "", turns === 1 ? t("1 turn") : t("{n} turns", { n: turns })].filter(Boolean).join(" · ")}</div>
+        <div class="mt-0.5 text-[13px] text-fg-2">{[how, humanTime(start.ts), lateMs >= 60_000 && due ? t("started {span} late, due {time}", { span: span(lateMs), time: clock(due) }) : "", end ? (asleep ? t("took {duration}, {asleep} of it with the computer asleep", { duration: span(tookMs), asleep: span(asleep) }) : t("took {duration}", { duration: span(tookMs) })) : "", parkedMs >= 60_000 ? t("parked {span} for your answer", { span: span(parkedMs) }) : "", turns === 1 ? t("1 turn") : t("{n} turns", { n: turns })].filter(Boolean).join(" · ")}</div>
         <div class="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-mute" title={t("run {id}", { id: runId })}>
           <span class="mono">{start.event["model"]}</span>
           {#if sandbox}<span>· {t("sandboxed, network {network}", { network: sandbox.network })}</span>{/if}

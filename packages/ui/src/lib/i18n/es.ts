@@ -607,6 +607,7 @@ export const es: Record<string, string> = {
   "Started with Run now": "Iniciada con Ejecutar ahora",
   "took {duration}": "duró {duration}",
   "took {duration}, {asleep} of it with the computer asleep": "duró {duration}, {asleep} con la computadora dormida",
+  "parked {span} for your answer": "aparcada {span} esperando tu respuesta",
   "1 turn": "1 turno",
   "{n} turns": "{n} turnos",
   "Turn {n}": "Turno {n}",
