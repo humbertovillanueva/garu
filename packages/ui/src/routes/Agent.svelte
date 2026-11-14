@@ -12,7 +12,7 @@
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
   import Thread from "../lib/components/Thread.svelte";
-  import type { ChatMessage, Envelope, RunSummary, MemoryNote } from "../lib/types";
+  import type { ChatMessage, Envelope, RunSummary, MemoryNote, ToldNote } from "../lib/types";
   import { tick } from "svelte";
   import { isApp } from "../lib/server.svelte";
   import Icon from "../lib/components/Icon.svelte";
@@ -31,10 +31,12 @@
   let showAllRuns = $state(false);
   // The agent's notebook, shown only for a Garufile that gave it one. Reloaded with the rest after each run.
   let memory = $state<MemoryNote[] | null>(null);
+  // The last notes you wrote on its asks: what you told it, beside what it remembers.
+  let told = $state<ToldNote[]>([]);
   let newNote = $state("");
   let memoryBusy = $state(false);
   let memoryError = $state<string | null>(null);
-  $effect(() => { live.tick; if (a?.memory) void api.memory(name).then((m) => (memory = m.notes), () => {}); });
+  $effect(() => { live.tick; if (a?.memory) void api.memory(name).then((m) => { memory = m.notes; told = m.told ?? []; }, () => {}); });
   async function remember() {
     const text = newNote.trim();
     if (!text || memoryBusy) return;
@@ -203,6 +205,18 @@
             {/if}
           </div>
           {#if memoryError}<p class="mt-1 text-[12.5px]" style="color: var(--color-bad)">{memoryError}</p>{/if}
+          {#if told.length}
+            <!-- What you told it: the notes you wrote on its asks. It read each one; the ones that held became notebook lines. -->
+            <h3 class="label mb-2 mt-5">{t("What you told it")}</h3>
+            <ul class="space-y-1.5">
+              {#each told as n (n.at + n.note)}
+                <li class="flex items-start gap-3 text-[13px]">
+                  <span class="min-w-0 flex-1 italic text-fg-2 [overflow-wrap:anywhere]">“{n.note}”</span>
+                  <span class="flex-none text-[12px] text-mute">{n.approved ? t("approved") : t("declined")} · {humanTime(n.at)}</span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
         {/if}
       </div>
     {/if}

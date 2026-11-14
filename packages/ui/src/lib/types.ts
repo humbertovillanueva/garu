@@ -58,6 +58,14 @@ export interface Agent {
   lastRun: RunSummary | null;
 }
 
+/** A note the owner wrote on one of the agent's asks: what they told it, when, on which tool. */
+export interface ToldNote {
+  note: string;
+  tool: string;
+  approved: boolean;
+  at: string;
+}
+
 /** One line of an agent's notebook. */
 export interface MemoryNote {
   text: string;

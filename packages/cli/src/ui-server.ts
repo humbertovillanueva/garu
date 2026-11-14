@@ -601,7 +601,10 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         if (!/^[a-z][a-z0-9-]*$/.test(name)) return json(res, { error: t("bad agent name") }, 400);
         if (req.method === "GET" && !memM[2]) {
           const a = discover().agents.find((x) => x.garufile.name === name);
-          return json(res, { enabled: a?.garufile.memory ?? false, notes: memory.read(name), path: memory.path(name) });
+          // The last notes the owner wrote on this agent's asks (a decline with a note, mostly), newest first.
+          const told = inbox.all().filter((r) => r.agent === name && r.decision?.note).slice(-3).reverse()
+            .map((r) => ({ note: r.decision!.note!, tool: r.tool, approved: r.decision!.approved, at: r.decision!.at }));
+          return json(res, { enabled: a?.garufile.memory ?? false, notes: memory.read(name), told, path: memory.path(name) });
         }
         if (req.method === "POST") {
           const body = (await readBody(req)) as { note?: string };
