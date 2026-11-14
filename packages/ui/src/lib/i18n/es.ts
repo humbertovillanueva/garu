@@ -164,6 +164,7 @@ export const es: Record<string, string> = {
 
   // ---- home
   "Still up": "Trasnochando",
+  "{greeting}, {name}.": "{greeting}, {name}.",
   "Good morning": "Buenos días",
   "Good afternoon": "Buenas tardes",
   "Good evening": "Buenas noches",

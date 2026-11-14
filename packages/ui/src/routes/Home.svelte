@@ -84,7 +84,7 @@
 
 <section class="space-y-8">
   <div class="rise">
-    <h1 class="display">{greeting}.</h1>
+    <h1 class="display">{live.you ? t("{greeting}, {name}.", { greeting, name: live.you }) : `${greeting}.`}</h1>
     <div class="mt-1.5 text-[13px] text-mute">{longDate(new Date(ticker.now))}</div>
     <p class="mt-2 text-[14.5px] text-fg-2">
       {#if live.loaded && live.pending.length === 1}{#each parts("{n} decision is waiting for you.", { n: 1 }) as p}{#if p.name}<span class="font-medium text-fg">{p.text}</span>{:else}{p.text}{/if}{/each}
@@ -94,8 +94,8 @@
   </div>
 
   {#if live.loaded && live.agents.length}
-    <!-- Every agent in a row: a face, a name, and a dot for what it is up to. -->
-    <div class="rise -mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+    <!-- Every agent in a row: a face, a name, and a dot for what it is up to. Only where the sidebar isn't: the phone. -->
+    <div class="rise -mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] lg:hidden">
       {#each live.agents as a (a.name)}
         <a href={href("agent", a.name)} class="tap flex w-[68px] flex-none flex-col items-center gap-1.5 rounded-xl py-2 text-center hover:bg-panel" title={statusLine(a)}>
           <span class="relative">
@@ -177,11 +177,11 @@
   {#if today?.results.length}
     <div>
       <h2 class="label mb-3">{t("Latest from your agents")}</h2>
-      <!-- Two columns the cards flow down, each as tall as what it holds: a one-line result is a short card, a brief a tall one. -->
-      <div class="gap-3 md:columns-2">
+      <!-- Two aligned columns; a document preview is capped so the rows stay close in height. -->
+      <div class="grid gap-3 md:grid-cols-2">
         {#each today.results.slice(0, 4) as r (r.agent + r.runId)}
           {@const waiting = live.pending.filter((p) => p.agent === r.agent).length}
-          <div class="panel-raised rise mb-3 flex min-w-0 flex-col p-4 [break-inside:avoid]" style="box-shadow: inset 3px 0 0 {colorOf(r.agent)}, var(--shadow-panel)">
+          <div class="panel-raised rise flex min-w-0 flex-col p-4" style="box-shadow: inset 3px 0 0 {colorOf(r.agent)}, var(--shadow-panel)">
             <div class="flex items-center gap-3">
               <Mark name={r.agent} size={30} />
               <div class="min-w-0 flex-1">
@@ -192,7 +192,7 @@
             {#if r.summary}<div class="md result mt-3 space-y-1 text-[13.5px] text-fg-2">{@html renderMarkdown(plainTimes(r.summary), { breaks: true })}</div>{/if}
             {#if r.doc}
               <!-- The document it wrote (Tomay's brief), the top of it; the rest is one tap away. -->
-              <div class="doc relative mt-3 overflow-hidden rounded-lg border hairline bg-bg/60 px-3 py-2">
+              <div class="doc relative mt-3 max-h-36 overflow-hidden rounded-lg border hairline bg-bg/60 px-3 py-2">
                 <div class="md space-y-1 text-[13px]">{@html renderMarkdown(plainTimes(r.doc.content), { breaks: true })}</div>
               </div>
             {/if}
