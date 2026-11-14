@@ -12,6 +12,7 @@
   import Empty from "../lib/components/Empty.svelte";
   import type { Envelope } from "../lib/types";
   import { t } from "../lib/i18n.svelte";
+  import { explainRun } from "../lib/why";
 
   let { agent, runId }: { agent: string; runId: string } = $props();
   let events = $state<Envelope[] | null>(null);
@@ -46,6 +47,22 @@
     return (last?.event["totalCostUsd"] as number | undefined) ?? 0;
   });
   const turns = $derived((events ?? []).filter((e) => e.event.type === "model.turn").length);
+  // Why it did what it did, from the log: the question you ask when a run looks odd, answered before the steps.
+  const why = $derived(events ? explainRun(events) : null);
+  const times = (n: number) => (n > 1 ? ` ×${n}` : "");
+  const allowedList = $derived((why?.allowed ?? []).map((a) => `${a.tool}${times(a.n)}${a.rule !== a.tool ? ` (${t("rule {rule}", { rule: a.rule })})` : ""}`).join(", "));
+  const askedOutcome = (a: { approved: number; declined: number; expired: number; grant: number; notes: string[] }) =>
+    [a.approved ? `${t("approved by {who}", { who: t("you") })}${times(a.approved)}` : "", a.declined ? `${t("declined by {who}", { who: t("you") })}${times(a.declined)}${a.notes.length ? ` (“${a.notes.join("”, “")}”)` : ""}` : "", a.expired ? `${t("expired, no answer")}${times(a.expired)}` : "", a.grant ? `${t("allowed by your 24h approval")}${times(a.grant)}` : ""].filter(Boolean).join(", ") || t("waiting for you");
+  const stoppedText = $derived.by(() => {
+    const s = why?.stopped;
+    if (!s) return "";
+    if (s === "busy") return t("It stopped because the model was busy; nothing was changed, and the schedule tries again.");
+    if (s === "offline") return t("It stopped because the network went away; nothing was changed, and the schedule tries again.");
+    if (s === "budget") return t("It stopped at its budget cap.");
+    if (s === "max_turns") return t("It stopped at its turn limit.");
+    if (s === "blocked") return t("It stopped: the policy blocked what it needed.");
+    return t("It stopped with an error: {message}", { message: s.replace(/^error: /, "") });
+  });
   // A catch-up, or a fire the computer slept through: the schedule meant it for earlier.
   const due = $derived(start?.event["dueAt"] as string | undefined);
   const lateMs = $derived(due && start ? new Date(start.ts).getTime() - new Date(due).getTime() : 0);
@@ -128,6 +145,20 @@
       <div class="panel rise p-4">
         <div class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("What it said")}</div>
         <div class="md space-y-2 text-[14px] text-fg-2">{@html renderMarkdown(plainTimes(reply))}</div>
+      </div>
+    {/if}
+    {#if why && (why.calls || why.hidden.length || why.stopped)}
+      {@const nAllowed = why.allowed.reduce((s, a) => s + a.n, 0)}
+      {@const nBlocked = why.blocked.reduce((s, b) => s + b.n, 0)}
+      <div class="panel rise p-4">
+        <h2 class="label mb-2">{t("Why it did that")}</h2>
+        <ul class="list-disc space-y-1.5 pl-5 text-[13.5px] text-fg-2">
+          {#if nAllowed}<li>{nAllowed === 1 ? t("1 call went through on its own: {list}", { list: allowedList }) : t("{n} calls went through on their own: {list}", { n: nAllowed, list: allowedList })}</li>{/if}
+          {#each why.asked as a (a.tool)}<li>{a.n === 1 ? t("{tool} asked you once: {outcome}", { tool: a.tool, outcome: askedOutcome(a) }) : t("{tool} asked you {n} times: {outcome}", { tool: a.tool, n: a.n, outcome: askedOutcome(a) })}</li>{/each}
+          {#if nBlocked}<li>{nBlocked === 1 ? t("1 call was blocked by the policy: {list}", { list: why.blocked.map((b) => `${b.tool} (${b.reason})`).join(", ") }) : t("{n} calls were blocked by the policy: {list}", { n: nBlocked, list: why.blocked.map((b) => `${b.tool}${times(b.n)} (${b.reason})`).join(", ") })}</li>{/if}
+          {#if why.hidden.length}<li>{why.hidden.length === 1 ? t("1 tool was never offered, since no rule could allow it: {list}", { list: why.hidden.join(", ") }) : t("{n} tools were never offered, since no rule could allow them: {list}", { n: why.hidden.length, list: why.hidden.join(", ") })}</li>{/if}
+          {#if why.stopped}<li style="color: var(--color-bad)">{stoppedText}</li>{/if}
+        </ul>
       </div>
     {/if}
     <details class="panel" bind:open={steps}>
