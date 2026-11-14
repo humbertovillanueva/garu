@@ -131,7 +131,7 @@
         {#if isApp}<button class="tap ml-auto underline" onclick={() => { forget(); location.reload(); }}>{t("Leave the demo")}</button>{/if}
       </div>
     {/if}
-    <div class="mx-auto max-w-5xl px-4 py-5 pb-24 sm:px-6 lg:px-10 lg:py-8 lg:pb-8 xl:max-w-[1380px]">
+    <div class="mx-auto max-w-5xl px-4 py-5 pb-24 sm:px-6 lg:px-10 lg:py-8 lg:pb-8">
       <svelte:boundary>
       {#snippet failed(error, reset)}
         <Crash message={(error as Error)?.message ?? String(error)} onRetry={() => { location.hash = href("home"); reset(); }} />
