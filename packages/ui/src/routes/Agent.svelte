@@ -133,7 +133,10 @@
 {:else if !a}
   <Empty title={t("No agent called “{name}”", { name })} />
 {:else}
-  <section class="space-y-6">
+  <!-- From 1280px up: the character, its facts and its notebook on the left with its history under them; the
+       conversation on the right, staying put and scrolling on its own. Below that, one column in this order. -->
+  <section class="space-y-6 xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(420px,46%)] xl:items-start xl:gap-8 xl:space-y-0">
+  <div class="min-w-0 space-y-6">
     <!-- Header: the character -->
     <div class="rise flex items-start gap-4">
       <Mark name={a.name} size={52} status={a.status} />
@@ -207,6 +210,9 @@
       </div>
     {/if}
 
+  </div>
+
+  <div class="min-w-0 space-y-6 xl:sticky xl:top-8 xl:max-h-[calc(100vh-4rem)] xl:overflow-y-auto xl:pr-1">
     <!-- Conversation -->
     {#if messages === null}
       {#if loadError}<LoadError message={loadError} />{:else}<Skeleton rows={2} h={56} />{/if}
@@ -260,9 +266,10 @@
       </div>
     {/if}
     <div bind:this={bottom}></div>
+  </div>
 
     <!-- History -->
-    <div>
+    <div class="min-w-0">
       <div class="mb-2 flex items-center justify-between">
         <h2 class="text-[11px] uppercase tracking-wider text-mute">{t("Runs")}</h2>
         {#if a.runs > RECENT}<button class="tap text-[11.5px] text-mute hover:text-fg" onclick={() => (showAllRuns = !showAllRuns)}>{showAllRuns ? t("show fewer") : t("show all {n}", { n: a.runs })}</button>{/if}
