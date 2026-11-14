@@ -93,6 +93,10 @@
     </p>
   </div>
 
+  <!-- From 1280px up: the main column on the left, and on the right a column that stays put with what needs you,
+       what is coming up and the week; the activity runs under the main column. Below that, one column in this order. -->
+  <div class="space-y-8 xl:grid xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start xl:gap-8 xl:space-y-0">
+  <div class="min-w-0 space-y-8">
   {#if live.loaded && live.agents.length}
     <!-- Every agent in a row: a face, a name, and a dot for what it is up to. Only where the sidebar isn't: the phone. -->
     <div class="rise -mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] lg:hidden">
@@ -167,7 +171,7 @@
   {/if}
 
   {#if live.pending.length || live.suggestions.length}
-    <div class="space-y-3">
+    <div class="space-y-3 xl:hidden">
       <h2 class="label">{t("Needs you")}</h2>
       {#each live.pending as r (r.id)}<ReviewCard req={r} />{/each}
       {#each live.suggestions.slice(0, 2) as s (s.id)}<SuggestionCard {s} />{/each}
@@ -223,6 +227,17 @@
     </div>
   {/if}
 
+  </div>
+
+  <aside class="min-w-0 space-y-8 xl:sticky xl:top-8 xl:row-span-2">
+  {#if live.pending.length || live.suggestions.length}
+    <div class="hidden space-y-3 xl:block">
+      <h2 class="label">{t("Needs you")}</h2>
+      {#each live.pending as r (r.id)}<ReviewCard req={r} />{/each}
+      {#each live.suggestions.slice(0, 2) as s (s.id)}<SuggestionCard {s} />{/each}
+    </div>
+  {/if}
+
   {#if live.up && comingUp.length}
     <div>
       <h2 class="label mb-3">{t("Coming up")}</h2>
@@ -240,7 +255,7 @@
   {#if week && week.runs}
     <div>
       <h2 class="label mb-3">{t("This week")}</h2>
-      <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div class="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-2">
         {#each [[t("Runs"), String(week.runs), week.days.map((d) => d.runs)], [t("Done without asking"), String(week.actions), week.days.map((d) => d.actions)], [t("Asked you"), String(week.asked), week.days.map((d) => d.asked)], [t("Spent"), usd(week.costUsd, week.priced), week.days.map((d) => d.costUsd)]] as [label, value, series] (label)}
           {@const max = Math.max(...(series as number[]))}
           <div class="panel flex items-end justify-between gap-3 px-3 py-2.5">
@@ -260,7 +275,9 @@
     </div>
   {/if}
 
-  <div>
+  </aside>
+
+  <div class="min-w-0">
     <h2 class="label mb-3">{t("Activity")}</h2>
     {#if feed === null}
       {#if feedError}<LoadError message={feedError} />{:else}<Skeleton rows={4} h={52} />{/if}
@@ -302,6 +319,7 @@
         </div>
       {/each}
     {/if}
+  </div>
   </div>
 </section>
 
