@@ -80,6 +80,10 @@ export function dayLabel(iso: string): string {
   if (same(d, y)) return t("Yesterday");
   return d.toLocaleDateString(dateLocale(), { weekday: "long", month: "short", day: "numeric" });
 }
+/** "Friday, November 13", for the line under the greeting. */
+export function longDate(at: string | Date): string {
+  return new Date(at).toLocaleDateString(dateLocale(), { weekday: "long", month: "long", day: "numeric" });
+}
 /** How long a run took, in words: "a few seconds", "under a minute", "3 min", "1 h 5 min". Never seconds. */
 export function duration(a: string, b: string | null): string {
   if (!b) return t("running");

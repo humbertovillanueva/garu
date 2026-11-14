@@ -72,6 +72,13 @@ body {
 
 /* One size for every page title (Home, Inbox, Runs, Settings…). A run's header is a sub-page of its agent and stays smaller. */
 .title { font-size: 24px; font-weight: 600; letter-spacing: -.025em; }
+/* Home's greeting: the one line that may be bigger than a title. */
+.display { font-size: 32px; font-weight: 650; letter-spacing: -.03em; line-height: 1.1; }
+/* A section label: small caps, with a rule running to the edge. */
+.label { display: flex; align-items: center; gap: 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-mute); }
+.label::after { content: ""; flex: 1; height: 1px; background: var(--color-line); }
+/* A little more type on a wide screen; the phone keeps 14px, where every point of width counts. */
+@media (min-width: 1024px) { body { font-size: 15px; } }
 
 /* Surfaces */
 .panel { background: var(--color-panel); border: 1px solid var(--color-line); border-radius: 12px; }
