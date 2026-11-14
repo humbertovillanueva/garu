@@ -14,6 +14,8 @@
   import { renderMarkdown } from "../lib/md";
   import { t, parts } from "../lib/i18n.svelte";
   import { ticker } from "../lib/clock.svelte";
+  import { prefs, setPref } from "../lib/prefs.svelte";
+  import { latest } from "../lib/whatsnew";
   import { announce } from "../lib/a11y.svelte";
 
   let feed = $state<FeedItem[] | null>(null);
@@ -92,6 +94,20 @@
       {:else}{statusText}{/if}
     </p>
   </div>
+
+  {#if isApp && prefs.seenRelease !== latest.id}
+    <!-- What the update brought, once per release: the phone's way to see the change a tester's remark made. -->
+    <div class="panel-raised rise p-4" role="region" aria-label={t("What's new")}>
+      <div class="flex items-baseline justify-between gap-3">
+        <div class="text-[15px] font-semibold">{t("What's new in this version")}</div>
+        <div class="text-[12px] text-mute">{latest.version}</div>
+      </div>
+      <ul class="mt-2 list-disc space-y-1 pl-5 text-[13.5px] text-fg-2">
+        {#each latest.lines() as line}<li>{line}</li>{/each}
+      </ul>
+      <div class="mt-3"><button class="btn py-1 text-[12.5px]" onclick={() => setPref("seenRelease", latest.id)}>{t("Got it")}</button></div>
+    </div>
+  {/if}
 
   {#if live.loaded && live.agents.length}
     <!-- Every agent in a row: a face, a name, and a dot for what it is up to. Only where the sidebar isn't: the phone. -->

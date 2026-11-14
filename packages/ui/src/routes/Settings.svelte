@@ -9,6 +9,7 @@
   import { build, forget, isApp, markIntroSeen, server } from "../lib/server.svelte";
   import { prefs, setPref } from "../lib/prefs.svelte";
   import { buildText } from "../lib/format";
+  import { latest } from "../lib/whatsnew";
   import { haptic } from "../lib/native";
   import { appPairLink } from "../lib/pairlink";
   import { t, parts } from "../lib/i18n.svelte";
@@ -247,7 +248,7 @@
           <h3 class="mb-3 flex items-center gap-2 text-[11px] font-normal uppercase tracking-wider text-mute"><Icon name="spark" size={14} /> {t("The control room")}</h3>
           <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[13.5px] [&>dd]:min-w-0 [&>dd]:[overflow-wrap:anywhere]">
             <dt class="text-mute">Garu</dt><dd>{t("version {version}", { version: s.version })}</dd>
-            <dt class="text-mute">{isApp ? t("This app") : t("This page")}</dt><dd class="text-[12.5px]">{buildText(build)}</dd>
+            <dt class="text-mute">{isApp ? t("This app") : t("This page")}</dt><dd class="text-[12.5px]">{buildText(build)}{#if isApp} · <button class="tap underline decoration-mute underline-offset-2 hover:text-fg" onclick={() => { setPref("seenRelease", ""); location.hash = "#/home"; }}>{t("What's new")}</button>{/if}</dd>
             <dt class="text-mute">{t("Deciding as")}</dt><dd>{s.user}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--as</span> {t("to change")}</span>{/if}</dd>
             <dt class="text-mute">{t("Schedules")}</dt><dd>{s.up ? t("running") : t("off")}{#if !s.up && !isApp}<span class="text-mute">&nbsp;· <span class="mono">npm run garu -- service install</span> {t("runs them at login")}</span>{/if}</dd>
             <dt class="text-mute">{t("Listening on")}</dt><dd class="mono">{s.host}:{s.port}</dd>

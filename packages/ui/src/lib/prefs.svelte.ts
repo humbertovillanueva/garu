@@ -9,8 +9,10 @@ export interface Prefs {
   theme: "auto" | "dark" | "light";
   /** English, Spanish, or whatever the device speaks. */
   language: "auto" | "en" | "es";
+  /** The last release whose "what's new" card was dismissed; the card shows while it isn't the latest. */
+  seenRelease: string;
 }
-const defaults: Prefs = { haptics: true, landOnInbox: true, theme: "auto", language: "auto" };
+const defaults: Prefs = { haptics: true, landOnInbox: true, theme: "auto", language: "auto", seenRelease: "" };
 function load(): Prefs {
   try {
     const raw = localStorage.getItem(KEY);
