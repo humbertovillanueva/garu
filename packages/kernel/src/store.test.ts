@@ -72,6 +72,10 @@ describe("RunStore", () => {
     expect(results.find((r) => r.agent === "bea")!.doc).toBeNull();
     expect(week).toMatchObject({ runs: 4, actions: 4, asked: 0, priced: true });
     expect(week.costUsd).toBeCloseTo(0.006);
+    // Day by day: seven entries, today last, and today holds every run made just now.
+    expect(week.days).toHaveLength(7);
+    expect(week.days.at(-1)).toMatchObject({ day: localDay(new Date()), runs: 4, actions: 4 });
+    expect(week.days.slice(0, 6).every((d) => d.runs === 0)).toBe(true);
   });
 
   it("lastScheduledRun: the newest cron or catch-up run that reached the model; an offline attempt doesn't count", () => {

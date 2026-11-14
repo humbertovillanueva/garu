@@ -52,6 +52,8 @@ export interface WeekStats {
   asked: number;
   costUsd: number;
   priced: boolean;
+  /** The same numbers day by day, the last seven local days, oldest first, today last. */
+  days: { day: string; runs: number; actions: number; asked: number; costUsd: number }[];
 }
 
 export interface AgentSummary {
@@ -244,7 +246,9 @@ export class RunStore {
   today(now = new Date(), skip: ReadonlySet<string> = new Set()): { results: TodayResult[]; week: WeekStats } {
     const weekAgo = now.getTime() - 7 * 86_400_000;
     const results: TodayResult[] = [];
-    const week: WeekStats = { runs: 0, actions: 0, asked: 0, costUsd: 0, priced: true };
+    const days = Array.from({ length: 7 }, (_, i) => ({ day: localDay(new Date(now.getTime() - (6 - i) * 86_400_000)), runs: 0, actions: 0, asked: 0, costUsd: 0 }));
+    const byDay = new Map(days.map((d) => [d.day, d]));
+    const week: WeekStats = { runs: 0, actions: 0, asked: 0, costUsd: 0, priced: true, days };
     for (const agent of this.agents()) {
       const runs = this.runs(agent);
       for (const r of runs) {
@@ -254,6 +258,8 @@ export class RunStore {
         week.asked += r.toolCalls.ask;
         week.costUsd += r.costUsd;
         if (!r.priced) week.priced = false;
+        const d = byDay.get(localDay(r.startedAt));
+        if (d) { d.runs++; d.actions += r.toolCalls.allow; d.asked += r.toolCalls.ask; d.costUsd += r.costUsd; }
       }
       if (skip.has(agent)) continue;
       const last = runs.find((r) => Date.parse(r.startedAt) >= weekAgo && r.endedAt && r.status === "ok" && r.summary);
