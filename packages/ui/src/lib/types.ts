@@ -10,6 +10,8 @@ export interface RunSummary {
   offline?: boolean;
   /** The offline run's reason was a busy model, not the network. */
   busy?: { model: string; reason: string };
+  /** The tools the policy blocked, each once. */
+  blocked?: string[];
   trigger: string;
   model: string;
   sandbox: { image: string; network: string } | null;

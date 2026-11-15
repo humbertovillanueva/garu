@@ -294,6 +294,10 @@
               <span class="text-[12px] text-mute">{triggerLabel(r.trigger)}</span>
               <span class="min-w-0 flex-1 truncate text-[13px] text-fg-2">{plainTimes(r.summary ?? "")}</span>
               <span class="hidden text-[12px] text-mute sm:inline">{usd(r.costUsd, r.priced)}{r.endedAt ? ` · ${duration(r.startedAt, r.endedAt)}` : ""}</span>
+              {#if r.toolCalls.ask || r.blocked?.length}
+                <!-- Why, in a breath: the run page has the whole story; this is enough to know which runs to open. -->
+                <span class="basis-full text-[12px] text-mute">{[r.toolCalls.ask ? (r.toolCalls.ask === 1 ? t("asked you once") : t("asked you {n} times", { n: r.toolCalls.ask })) : "", r.blocked?.length ? t("blocked: {list}", { list: r.blocked.join(", ") }) : ""].filter(Boolean).join(" · ")}</span>
+              {/if}
             </a>
           {/each}
         </div>
