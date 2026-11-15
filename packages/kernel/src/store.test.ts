@@ -238,4 +238,18 @@ describe("a parked run", () => {
     r.record({ type: "run.end", status: "ok", costUsd: 0.002, priced: true, summary: "filed 3" });
     expect(summarizeRun(r.path, readRun(r.path))).toMatchObject({ status: "ok", summary: "filed 3", costUsd: 0.002 });
   });
+
+  it("knows how long it sat parked, which is on the clock but none of the agent's work", () => {
+    const at = (h: number) => new Date(Date.UTC(2026, 10, 14, 15 + h)).toISOString();
+    const line = (seq: number, ts: string, event: Record<string, unknown>) => ({ seq, ts, runId: "r", agent: "bea", event }) as unknown as ReturnType<typeof readRun>[number];
+    const events = [
+      line(1, at(0), { type: "run.start", agent: "bea", model: "m", trigger: "cron:0 8 * * 1-5" }),
+      line(2, at(0), { type: "approval.requested", callId: "c" }),
+      line(3, at(0), { type: "run.parked", requests: ["ab12cd"] }),
+      line(4, at(3), { type: "run.resumed", parkedAt: at(0) }),
+      line(5, at(3), { type: "run.end", status: "ok", costUsd: 0, priced: true, summary: "done" }),
+    ];
+    expect(summarizeRun("p", events)).toMatchObject({ status: "ok", parkedMs: 3 * 3_600_000 });
+    expect(summarizeRun("p", events.slice(0, 2).concat(line(3, at(1), { type: "run.end", status: "ok", costUsd: 0, priced: true })))).not.toHaveProperty("parkedMs");
+  });
 });

@@ -33,6 +33,8 @@ export interface RunSummary {
   busy?: { model: string; reason: string };
   /** The tools the policy blocked, each once, in the order they were first refused; absent when none was. */
   blocked?: string[];
+  /** Time the run sat parked for an answer: on the clock between start and end, none of it the agent's work. Absent when it never parked. */
+  parkedMs?: number;
   path: string;
 }
 
@@ -94,6 +96,7 @@ export function summarizeRun(path: string, events: Envelope[], now = Date.now())
     path,
   };
   const toolOf = new Map<string, string>();
+  let parkedAt: number | null = null;
   for (const { ts, event: e } of events) {
     switch (e.type) {
       case "tool.request":
@@ -114,9 +117,12 @@ export function summarizeRun(path: string, events: Envelope[], now = Date.now())
       // Parked is quiet on purpose, for as long as the ask is open: never "interrupted".
       case "run.parked":
         s.status = "parked";
+        parkedAt = Date.parse(ts);
         break;
       case "run.resumed":
         s.status = "running";
+        if (parkedAt !== null) s.parkedMs = (s.parkedMs ?? 0) + Math.max(0, Date.parse(ts) - parkedAt);
+        parkedAt = null;
         break;
       case "run.end":
         s.endedAt = ts;
