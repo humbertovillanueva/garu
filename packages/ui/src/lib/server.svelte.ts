@@ -8,7 +8,8 @@
  */
 export const isApp = import.meta.env["VITE_GARU_APP"] === "1";
 /** version · commit · build time, stamped at build. */
-export const build = (import.meta.env["VITE_GARU_BUILD"] as string | undefined) ?? "dev";
+// The dev server's page is never the one the control room serves, so it must not reload to "match" it.
+export const build = import.meta.env.DEV ? "dev" : ((import.meta.env["VITE_GARU_BUILD"] as string | undefined) ?? "dev");
 
 const KEY = "garu.server";
 
