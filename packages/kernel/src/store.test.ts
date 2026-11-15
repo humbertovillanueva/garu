@@ -20,6 +20,7 @@ function makeRun(root: string, agent: string, opts: { status?: "ok" | "error"; c
   r.record({ type: "model.turn", turn: 1, inputTokens: 100, outputTokens: 10, costUsd: 0.001, totalCostUsd: 0.001 });
   r.record({ type: "tool.request", callId: "c", request: { server: "fs", tool: "read", args: {} } });
   r.record({ type: "policy.decision", callId: "c", decision: { action: "allow", ruleIndex: 0, matched: "fs.*", reason: "r" } });
+  r.record({ type: "tool.request", callId: "d", request: { server: "fs", tool: "write", args: {} } });
   r.record({ type: "policy.decision", callId: "d", decision: { action: "block", ruleIndex: 1, matched: "*", reason: "r" } });
   r.record({ type: "run.end", status: opts.status ?? "ok", costUsd: opts.cost ?? 0.001, priced: true, summary: "done" });
   return r;
@@ -40,12 +41,12 @@ describe("RunStore", () => {
     const errored = runs.find((r) => r.runId === second.runId)!;
     expect(errored).toMatchObject({
       agent: "a", status: "error", trigger: "manual", model: "gemini/x", turns: 1,
-      toolCalls: { allow: 1, ask: 0, block: 1 }, inputTokens: 100, outputTokens: 10, costUsd: 0.02, summary: "done",
+      toolCalls: { allow: 1, ask: 0, block: 1 }, blocked: ["fs.write"], inputTokens: 100, outputTokens: 10, costUsd: 0.02, summary: "done",
       sandbox: { image: "garu-sandbox", network: "none" },
     });
     expect(errored.endedAt).not.toBeNull();
 
-    expect(store.run("a", second.runId)!.length).toBe(6);
+    expect(store.run("a", second.runId)!.length).toBe(7);
     expect(store.run("a", "nope")).toBeNull();
     expect(store.run("../etc", "x")).toBeNull();
   });

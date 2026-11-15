@@ -31,6 +31,8 @@ export interface RunSummary {
   offline?: boolean;
   /** The offline run's reason was a busy model, not the network. */
   busy?: { model: string; reason: string };
+  /** The tools the policy blocked, each once, in the order they were first refused; absent when none was. */
+  blocked?: string[];
   path: string;
 }
 
@@ -91,17 +93,24 @@ export function summarizeRun(path: string, events: Envelope[], now = Date.now())
     summary: null,
     path,
   };
+  const toolOf = new Map<string, string>();
   for (const { ts, event: e } of events) {
     switch (e.type) {
+      case "tool.request":
+        toolOf.set(e.callId, `${e.request.server}.${e.request.tool}`);
+        break;
       case "model.turn":
         s.turns++;
         s.inputTokens += e.inputTokens ?? 0;
         s.outputTokens += e.outputTokens ?? 0;
         if (e.totalCostUsd !== undefined) s.costUsd = e.totalCostUsd;
         break;
-      case "policy.decision":
+      case "policy.decision": {
         s.toolCalls[e.decision.action]++;
+        const tool = toolOf.get(e.callId);
+        if (e.decision.action === "block" && tool && !s.blocked?.includes(tool)) (s.blocked ??= []).push(tool);
         break;
+      }
       // Parked is quiet on purpose, for as long as the ask is open: never "interrupted".
       case "run.parked":
         s.status = "parked";
