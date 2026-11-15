@@ -85,9 +85,10 @@ export function longDate(at: string | Date): string {
   return new Date(at).toLocaleDateString(dateLocale(), { weekday: "long", month: "long", day: "numeric" });
 }
 /** How long a run took, in words: "a few seconds", "under a minute", "3 min", "1 h 5 min". Never seconds. */
-export function duration(a: string, b: string | null): string {
+/** How long a run took, `lessMs` (time parked for an answer) left out: that was the clock's, not the agent's. */
+export function duration(a: string, b: string | null, lessMs = 0): string {
   if (!b) return t("running");
-  return span(new Date(b).getTime() - new Date(a).getTime());
+  return span(new Date(b).getTime() - new Date(a).getTime() - lessMs);
 }
 /** A length of time in words, same scale as `duration`. */
 export function span(ms: number): string {

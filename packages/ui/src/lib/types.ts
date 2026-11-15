@@ -12,6 +12,8 @@ export interface RunSummary {
   busy?: { model: string; reason: string };
   /** The tools the policy blocked, each once. */
   blocked?: string[];
+  /** Time the run sat parked for an answer: on the clock, none of it the agent's work. */
+  parkedMs?: number;
   trigger: string;
   model: string;
   sandbox: { image: string; network: string } | null;
