@@ -661,7 +661,7 @@ function whyLines(events: Envelope[]): string[] {
     out.push(a.n === 1 ? t("{tool} asked you once: {outcome}", { tool: a.tool, outcome }) : t("{tool} asked you {n} times: {outcome}", { tool: a.tool, n: a.n, outcome }));
   }
   const nBlocked = why.blocked.reduce((s, b) => s + b.n, 0);
-  const blocked = why.blocked.map((b) => `${b.tool}${times(b.n)} (${b.reason})`).join(", ");
+  const blocked = why.blocked.map((b) => `${b.tool}${times(b.n)}${b.reason ? ` (${b.reason})` : ""}`).join(", ");
   if (nBlocked) out.push(nBlocked === 1 ? t("1 call was blocked by the policy: {list}", { list: blocked }) : t("{n} calls were blocked by the policy: {list}", { n: nBlocked, list: blocked }));
   if (why.hidden.length) out.push(why.hidden.length === 1 ? t("1 tool was never offered, since no rule could allow it: {list}", { list: why.hidden.join(", ") }) : t("{n} tools were never offered, since no rule could allow them: {list}", { n: why.hidden.length, list: why.hidden.join(", ") }));
   const s = why.stopped;

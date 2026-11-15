@@ -51,6 +51,7 @@
   const why = $derived(events ? explainRun(events) : null);
   const times = (n: number) => (n > 1 ? ` ×${n}` : "");
   const allowedList = $derived((why?.allowed ?? []).map((a) => `${a.tool}${times(a.n)}${a.rule !== a.tool ? ` (${t("rule {rule}", { rule: a.rule })})` : ""}`).join(", "));
+  const blockedList = $derived((why?.blocked ?? []).map((b) => `${b.tool}${times(b.n)}${b.reason ? ` (${b.reason})` : ""}`).join(", "));
   const askedOutcome = (a: { approved: number; declined: number; expired: number; grant: number; notes: string[] }) =>
     [a.approved ? `${t("approved by {who}", { who: t("you") })}${times(a.approved)}` : "", a.declined ? `${t("declined by {who}", { who: t("you") })}${times(a.declined)}${a.notes.length ? ` (“${a.notes.join("”, “")}”)` : ""}` : "", a.expired ? `${t("expired, no answer")}${times(a.expired)}` : "", a.grant ? `${t("allowed by your 24h approval")}${times(a.grant)}` : ""].filter(Boolean).join(", ") || t("waiting for you");
   const stoppedText = $derived.by(() => {
@@ -166,7 +167,7 @@
         <ul class="list-disc space-y-1.5 pl-5 text-[13.5px] text-fg-2">
           {#if nAllowed}<li>{nAllowed === 1 ? t("1 call went through on its own: {list}", { list: allowedList }) : t("{n} calls went through on their own: {list}", { n: nAllowed, list: allowedList })}</li>{/if}
           {#each why.asked as a (a.tool)}<li>{a.n === 1 ? t("{tool} asked you once: {outcome}", { tool: a.tool, outcome: askedOutcome(a) }) : t("{tool} asked you {n} times: {outcome}", { tool: a.tool, n: a.n, outcome: askedOutcome(a) })}</li>{/each}
-          {#if nBlocked}<li>{nBlocked === 1 ? t("1 call was blocked by the policy: {list}", { list: why.blocked.map((b) => `${b.tool} (${b.reason})`).join(", ") }) : t("{n} calls were blocked by the policy: {list}", { n: nBlocked, list: why.blocked.map((b) => `${b.tool}${times(b.n)} (${b.reason})`).join(", ") })}</li>{/if}
+          {#if nBlocked}<li>{nBlocked === 1 ? t("1 call was blocked by the policy: {list}", { list: blockedList }) : t("{n} calls were blocked by the policy: {list}", { n: nBlocked, list: blockedList })}</li>{/if}
           {#if why.hidden.length}<li>{why.hidden.length === 1 ? t("1 tool was never offered, since no rule could allow it: {list}", { list: why.hidden.join(", ") }) : t("{n} tools were never offered, since no rule could allow them: {list}", { n: why.hidden.length, list: why.hidden.join(", ") })}</li>{/if}
           {#if why.stopped}<li style="color: var(--color-bad)">{stoppedText}</li>{/if}
         </ul>
