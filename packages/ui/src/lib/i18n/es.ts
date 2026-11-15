@@ -684,6 +684,8 @@ export const es: Record<string, string> = {
   "An ask waits a day for you instead of half an hour; the run parks meanwhile and picks up when you answer.": "Una petición te espera un día en vez de media hora; la ejecución se aparca mientras tanto y retoma cuando respondes.",
   "An agent can have a cap on runs a day, and says \"Done for today\" when it reaches it.": "Un agente puede tener un tope de ejecuciones al día, y dice \"Listo por hoy\" cuando lo alcanza.",
   "Home greets you by name, with a card per agent and the week in small bars.": "Inicio te saluda por tu nombre, con una tarjeta por agente y la semana en barras pequeñas.",
+  "A run's page says why it did that: what went through on its own, what asked you, what was blocked, what stopped it.": "La página de una ejecución dice por qué hizo eso: qué pasó por su cuenta, qué te preguntó, qué se bloqueó, qué la detuvo.",
+  "A run that waited for your answer says how long it waited, apart from its own work.": "Una ejecución que esperó tu respuesta dice cuánto esperó, aparte de su propio trabajo.",
   "What you told it": "Lo que le dijiste",
   "1 note": "1 nota",
   "{n} notes": "{n} notas",

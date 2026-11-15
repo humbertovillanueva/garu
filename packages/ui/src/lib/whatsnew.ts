@@ -24,6 +24,8 @@ export const RELEASES: Release[] = [
       t("An ask waits a day for you instead of half an hour; the run parks meanwhile and picks up when you answer."),
       t("An agent can have a cap on runs a day, and says \"Done for today\" when it reaches it."),
       t("Home greets you by name, with a card per agent and the week in small bars."),
+      t("A run's page says why it did that: what went through on its own, what asked you, what was blocked, what stopped it."),
+      t("A run that waited for your answer says how long it waited, apart from its own work."),
     ],
   },
 ];
