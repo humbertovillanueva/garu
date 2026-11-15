@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { Inbox } from "./inbox.js";
 import { Memory } from "./memory.js";
 import { RunStore } from "./store.js";
 import { weeklyDue, weeklyStats } from "./weekly.js";
@@ -31,12 +32,20 @@ describe("weekly", () => {
     memory.add("bea", "fresh", "2026-11-12");
     memory.add("bea", "old", "2026-10-01");
     memory.add("tomay", "no runs but a note", "2026-11-14");
-    const w = weeklyStats(store, { memory, agents: ["tomay"], now });
-    expect(w).toMatchObject({ from: "2026-11-09", to: "2026-11-15", runs: 4, actions: 4, asked: 2, notes: 2, priced: true });
+    const inbox = new Inbox({ root: join(root, "inbox") });
+    const ask = (id: string, agent: string, by: string, daysAgo: number) =>
+      writeFileSync(join(root, "inbox", `${id}.json`), JSON.stringify({ id, agent, runId: "r", callId: id, tool: "gmail.create_draft", args: {}, reason: "r", createdAt: at(daysAgo + 1), expiresAt: at(daysAgo), decision: { approved: false, by, at: at(daysAgo) } }));
+    ask("e1", "bea", "inbox: expired", 2);
+    ask("e2", "bea", "inbox: expired", 10); // last week: out
+    ask("d1", "bea", "Humberto (ui)", 1); // declined by a person: not expired
+    ask("e3", "rook", "inbox: expired", 4); // an agent with no run this week still shows for its expired ask
+    const w = weeklyStats(store, { memory, inbox, agents: ["tomay"], now });
+    expect(w).toMatchObject({ from: "2026-11-09", to: "2026-11-15", runs: 4, actions: 4, asked: 2, expired: 2, notes: 2, priced: true });
     expect(w.costUsd).toBeCloseTo(0.013, 6);
     expect(w.agents).toEqual([
-      { agent: "bea", runs: 3, ok: 1, failed: 1, offline: 1, waiting: 0, asked: 2, costUsd: expect.closeTo(0.012, 6) },
-      { agent: "tick", runs: 1, ok: 1, failed: 0, offline: 0, waiting: 0, asked: 0, costUsd: 0.001 },
+      { agent: "bea", runs: 3, ok: 1, failed: 1, offline: 1, waiting: 0, asked: 2, expired: 1, costUsd: expect.closeTo(0.012, 6) },
+      { agent: "rook", runs: 0, ok: 0, failed: 0, offline: 0, waiting: 0, asked: 0, expired: 1, costUsd: 0 },
+      { agent: "tick", runs: 1, ok: 1, failed: 0, offline: 0, waiting: 0, asked: 0, expired: 0, costUsd: 0.001 },
     ]);
   });
 
