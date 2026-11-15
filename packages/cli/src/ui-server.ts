@@ -784,6 +784,10 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         const lines = readFileSync(p, "utf8").split("\n").filter((l) => l.trim()).slice(-n).map(redactLogLine);
         return json(res, { lines, path: p });
       }
+      if (path === "/api/weekly") {
+        // The Sunday note as it would post this minute: the owner sees it before the channel does.
+        return json(res, { text: weeklyText(weeklyStats(store, { memory, inbox, agents: discover().agents.map((a) => a.garufile.name) })), posts: Boolean(opts.weeklyUrl) && !opts.demo });
+      }
       if (path === "/api/settings") {
         // Only whether a key is set — never its value.
         const isSet = (k: string) => Boolean(process.env[k]);

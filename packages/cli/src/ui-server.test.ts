@@ -430,6 +430,12 @@ describe("the rest", () => {
     expect((await get("/api/nothing-here")).status).toBe(404);
   });
 
+  it("shows the week's note before Sunday posts it", async () => {
+    const w = (await (await get("/api/weekly")).json()) as { text: string; posts: boolean };
+    expect(w.text).toMatch(/^Garu, /);
+    expect(w.posts).toBe(false);
+  });
+
   it("rotating the token keeps the caller signed in and signs everyone else out", async () => {
     const old = token;
     const res = await post("/api/pair", {}, { ...viaProxy, ...bearer() });
