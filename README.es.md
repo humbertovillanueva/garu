@@ -255,6 +255,12 @@ La queja de quienes usan agentes siempre activos es que *su propio* ritmo se vue
 
 <p align="center"><img src="docs/screenshots/inbox.png" alt="La bandeja: aprobaciones pendientes, una sugerencia de regla aprendida y permisos temporales" width="900"></p>
 
+### Por qué hizo eso
+
+Una ejecución que se ve rara no debería obligarte a leer su registro línea por línea. La página de la ejecución responde primero, a partir del registro y nada más: qué llamadas pasaron por su cuenta y bajo qué regla, cuáles te preguntaron y cómo acabó eso (aprobada, rechazada con tu nota, expirada, cubierta por un permiso temporal), cuáles bloqueó la política, qué herramientas nunca vio el modelo porque ninguna regla podía permitirlas, y qué la detuvo antes de tiempo (el modelo ocupado, la red caída, un tope, un bloqueo). La misma respuesta en la terminal: `garu why <agent> [run]`. El historial del agente dice bajo cada ejecución cuándo te preguntó y qué se le negó, para que las que vale la pena abrir salten a la vista.
+
+La cabecera de la ejecución lleva un reloj honesto: "tardó 1 h 10 min, 59 min con la computadora dormida · aparcada 8 h esperando tu respuesta", y "empezó 33 min tarde" cuando la computadora durmió durante el minuto del horario, para que lo que hizo el agente y lo que hizo la máquina no se mezclen.
+
 ## Comandos
 
 | Comando | Qué hace |
@@ -267,6 +273,7 @@ La queja de quienes usan agentes siempre activos es que *su propio* ritmo se vue
 | `garu inbox` · `garu approve <id> [--for 24h]` · `garu deny <id>` | La bandeja desde la terminal. |
 | `garu grants [list\|revoke <id>]` | Permisos temporales. |
 | `garu log [agent] [run]` | Repasa una caja negra. |
+| `garu why <agent> [run]` | Por qué una ejecución hizo lo que hizo: qué pasó, qué te preguntó, qué se bloqueó, qué la detuvo. |
 | `garu weekly [--post]` | La semana en números, por agente: ejecuciones, cómo terminaron, cuáles te preguntaron, lo que costó, notas recordadas. Con `GARU_WEEKLY_WEBHOOK_URL` en `.env`, la sala de control la publica en ese canal cada domingo a las seis; `--post` la envía ahora. |
 | `garu prune [--keep 90d] [--yes]` | Dice qué registros de ejecución, peticiones resueltas de la bandeja y mensajes de chat son más antiguos que la ventana, y los borra con `--yes`. `--prune 90d` en `garu ui` o `service install` lo hace una vez al día; una ejecución aparcada nunca se toca. Sin esto, todas las ejecuciones se guardan para siempre. |
 | `garu validate <Garufile>` | Revisa política, cron, presupuesto y aislamiento. |
