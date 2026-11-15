@@ -252,6 +252,12 @@ The complaint practitioners make about always-on agents is that *their* throughp
 
 <p align="center"><img src="docs/screenshots/inbox.png" alt="The inbox: pending approvals, a learned-rule suggestion, and temporary grants" width="900"></p>
 
+### Why it did that
+
+A run that looks odd shouldn't need its log read line by line. The run's page answers first, from the log and nothing else: which calls went through on their own and under which rule, which asked you and how that went (approved, declined with your note, expired, covered by a grant), which the policy blocked, which tools the model never saw because no rule could allow them, and what stopped it early (the model busy, the network gone, a cap, a block). The same answer in the terminal: `garu why <agent> [run]`. The agent's history says under each run when it asked you and what it was refused, so the runs worth opening stand out.
+
+The run's header keeps an honest clock: "took 1 h 10 min, 59 min of it with the computer asleep · parked 8 h for your answer", and "started 33 min late" when the computer slept through the schedule's minute, so what the agent did and what the machine did stay apart.
+
 ## Commands
 
 | Command | What it does |
@@ -264,6 +270,7 @@ The complaint practitioners make about always-on agents is that *their* throughp
 | `garu inbox` · `garu approve <id> [--for 24h]` · `garu deny <id>` | The inbox from the terminal. |
 | `garu grants [list\|revoke <id>]` | Temporary allows. |
 | `garu log [agent] [run]` | Replay a flight recorder. |
+| `garu why <agent> [run]` | Why a run did what it did: what went through, what asked you, what was blocked, what stopped it. |
 | `garu weekly [--post]` | The week in numbers, per agent: runs, how they ended, what asked you, what it cost, notes remembered. With `GARU_WEEKLY_WEBHOOK_URL` in `.env`, the control room posts it to that channel every Sunday at six; `--post` sends it now. |
 | `garu prune [--keep 90d] [--yes]` | Say which run logs, settled inbox requests and chat messages are older than the window, and delete them with `--yes`. `--prune 90d` on `garu ui` or `service install` does it once a day; a parked run is never touched. Without it, every run is kept forever. |
 | `garu validate <Garufile>` | Lint policy, cron, budget, sandbox. |
