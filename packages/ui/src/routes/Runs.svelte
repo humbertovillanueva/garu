@@ -111,11 +111,14 @@
                 {#if open[k]}
                   <div class="divide-y divide-line border-t hairline bg-bg/40">
                     {#each row.runs as r (r.runId)}
-                      <a href={href("run", r.agent, r.runId)} class="card-hover flex items-center gap-3 py-2 pl-12 pr-3 text-[12.5px]">
+                      <a href={href("run", r.agent, r.runId)} class="card-hover flex flex-wrap items-center gap-x-3 gap-y-0.5 py-2 pl-12 pr-3 text-[12.5px]">
                         <span class="text-fg-2">{clock(r.startedAt)}</span>
                         <span class="text-mute">{triggerLabel(r.trigger)}</span>
                         <span class="min-w-0 flex-1 truncate text-mute">{summary(r)}</span>
                         <span class="hidden flex-none text-mute sm:inline">{r.endedAt ? duration(r.startedAt, r.endedAt, r.parkedMs) : ""}</span>
+                        {#if r.toolCalls.ask || r.blocked?.length}
+                          <span class="basis-full text-[12px] text-mute">{[r.toolCalls.ask ? (r.toolCalls.ask === 1 ? t("asked you once") : t("asked you {n} times", { n: r.toolCalls.ask })) : "", r.blocked?.length ? t("blocked: {list}", { list: r.blocked.join(", ") }) : ""].filter(Boolean).join(" · ")}</span>
+                        {/if}
                       </a>
                     {/each}
                   </div>
