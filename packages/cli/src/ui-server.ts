@@ -402,7 +402,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     if (!key) return;
     posted.push(key);
     try { writeFileSync(weeklyPostedPath, JSON.stringify(posted) + "\n"); } catch { /* best effort */ }
-    const text = weeklyText(weeklyStats(store, { memory, agents: discover().agents.map((a) => a.garufile.name) }));
+    const text = weeklyText(weeklyStats(store, { memory, inbox, agents: discover().agents.map((a) => a.garufile.name) }));
     const r = await postToChannel(opts.weeklyUrl, text);
     opts.log(r.ok ? `📬 the week in numbers posted to ${r.host}` : `✖ weekly note: ${r.error}`);
   };
@@ -939,12 +939,13 @@ export function weeklyText(w: WeeklyStats): string {
   const cost = w.priced ? formatUsd(w.costUsd) : `${formatUsd(w.costUsd)}+`;
   const day = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale() === "es" ? "es" : "en-US", { month: "short", day: "numeric" });
   const head = t("Garu, {from} to {to}: {runs} run(s), {actions} action(s) without asking, {asked} that asked you, {cost}.", { from: day(w.from), to: day(w.to), runs: w.runs, actions: w.actions, asked: w.asked, cost });
+  const expired = w.expired ? ` ${w.expired === 1 ? t("1 ask expired unanswered, so it became a no.") : t("{n} asks expired unanswered, so they became a no.", { n: w.expired })}` : "";
   const notes = w.notes ? ` ${w.notes === 1 ? t("1 note remembered.") : t("{n} notes remembered.", { n: w.notes })}` : "";
   const lines = w.agents.map((a) => {
-    const parts = [a.ok ? t("{n} ok", { n: a.ok }) : "", a.failed ? t("{n} failed", { n: a.failed }) : "", a.offline ? t("{n} cut off", { n: a.offline }) : "", a.waiting ? t("{n} waiting on you", { n: a.waiting }) : ""].filter(Boolean).join(", ");
+    const parts = [a.ok ? t("{n} ok", { n: a.ok }) : "", a.failed ? t("{n} failed", { n: a.failed }) : "", a.offline ? t("{n} cut off", { n: a.offline }) : "", a.waiting ? t("{n} waiting on you", { n: a.waiting }) : "", a.expired ? t("{n} expired unanswered", { n: a.expired }) : ""].filter(Boolean).join(", ");
     return `• ${a.agent}: ${a.runs === 1 ? t("1 run") : t("{n} runs", { n: a.runs })}${parts ? ` (${parts})` : ""}${a.asked ? `, ${a.asked === 1 ? t("asked you once") : t("asked you {n} times", { n: a.asked })}` : ""}, ${formatUsd(a.costUsd)}`;
   });
-  return [head + notes, ...lines].join("\n");
+  return [head + expired + notes, ...lines].join("\n");
 }
 
 /** Post a text to a Slack or Discord incoming webhook (or anything that takes JSON), the way Tomay's post_message does. */

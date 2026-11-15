@@ -571,10 +571,11 @@ program
   .description(t("The week in numbers, as the control room posts it on Sunday evening; --post sends it now."))
   .option("--post", t("post it to GARU_WEEKLY_WEBHOOK_URL now"))
   .option("--log-root <dir>", t("where run logs live"), DEFAULT_LOG_ROOT)
-  .action(async (opts: { post?: boolean; logRoot: string }) => {
+  .option("--inbox-root <dir>", t("where approval requests live"), DEFAULT_INBOX_ROOT)
+  .action(async (opts: { post?: boolean; logRoot: string; inboxRoot: string }) => {
     loadDotEnv();
     const agents = discoverGarufiles(process.cwd()).agents.map((a) => a.garufile.name);
-    const text = weeklyText(weeklyStats(new RunStore(opts.logRoot), { memory: new Memory(DEFAULT_MEMORY_ROOT), agents }));
+    const text = weeklyText(weeklyStats(new RunStore(opts.logRoot), { memory: new Memory(DEFAULT_MEMORY_ROOT), inbox: new Inbox({ root: opts.inboxRoot }), agents }));
     stdout.write(text + "\n");
     if (!opts.post) return;
     const url = process.env["GARU_WEEKLY_WEBHOOK_URL"];
