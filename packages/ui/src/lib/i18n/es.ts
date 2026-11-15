@@ -673,7 +673,7 @@ export const es: Record<string, string> = {
   "Remembered": "Recordó",
   "Forgot": "Olvidó",
   "Asked {agent}": "Preguntó a {agent}",
-  "your answer came; parked since {when}": "llegó tu respuesta; aparcada desde {when}",
+  "your answer came after {span}; parked since {when}": "tu respuesta llegó tras {span}; aparcada desde {when}",
   "The computer was asleep for {span}": "La computadora estuvo dormida {span}",
   "What it remembers": "Lo que recuerda",
   "What's new": "Novedades",
