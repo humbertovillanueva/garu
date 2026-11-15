@@ -14,6 +14,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./why": {
+      "types": "./dist/why.d.ts",
+      "import": "./dist/why.js"
     }
   },
   "files": [
