@@ -109,6 +109,9 @@ const TEXT = {
       "9 new: 1 needs a reply (draft ready), 2 receipts, 5 newsletters, 1 FYI\nPriya Nair: asks if Monday lunch still works.",
       "11 new: 1 needs a reply (draft ready), 1 receipt, 7 newsletters, 2 FYI\nSam Park: asks whether the hero image slows the page.",
     ],
+    beaParked: "11 new: 2 need a reply (1 draft ready), 2 receipts, 6 newsletters, 1 FYI\nPriya Nair: asks if Monday lunch still works. Acme Billing's invoice came from a no-reply address, so no draft there.",
+    noreply: { subject: "Re: Your invoice #4471 is ready", body: "Thanks, received. We'll pay it by the due date." },
+    noreplyReason: "a reply to an address no one reads",
     pipSummary: `# Summary — week 41
 ## Shipped
 - The new login flow, on Tuesday. Two bug reports so far, both about the password-reset email.
@@ -146,6 +149,9 @@ const TEXT = {
       "9 nuevos: 1 por responder (borrador listo), 2 recibos, 5 boletines, 1 para saber\nPriya Nair: pregunta si sigue en pie la comida del lunes.",
       "11 nuevos: 1 por responder (borrador listo), 1 recibo, 7 boletines, 2 para saber\nSam Park: pregunta si la imagen principal hace lenta la página.",
     ],
+    beaParked: "11 nuevos: 2 por responder (1 borrador listo), 2 recibos, 6 boletines, 1 para saber\nPriya Nair: pregunta si sigue en pie la comida del lunes. La factura de Acme Billing llegó de una dirección no-reply, así que ahí no hay borrador.",
+    noreply: { subject: "Re: Tu factura #4471 está lista", body: "Gracias, recibida. La pagaremos antes de la fecha límite." },
+    noreplyReason: "una respuesta a una dirección que nadie lee",
     pipSummary: `# Resumen — semana 41
 ## Entregado
 - El nuevo flujo de inicio de sesión, el martes. Dos reportes de error hasta ahora, los dos sobre el correo para restablecer la contraseña.
@@ -175,12 +181,15 @@ const DRAFT = {
 /** Write one run as the kernel would, with timestamps spread over `secs` seconds ending `endMinutesAgo` ago. */
 function run(agent, { model, trigger, offered, hidden = [], steps, status = "ok", summary, cost, endMinutesAgo, secs = 6 }) {
   const end = minutesAgo(endMinutesAgo);
-  const start = new Date(end.getTime() - secs * 1000);
+  // An ask step with `parkedMin` parks the run that long (and `sleptMin` of it with the computer asleep) before the answer comes.
+  const parkedMs = steps.reduce((n, s) => n + (s.parkedMin ?? 0) * 60_000, 0);
+  const start = new Date(end.getTime() - secs * 1000 - parkedMs);
   const runId = `${stamp(start)}-${hex()}`;
   const rec = new Recorder({ root: runs, agent, runId });
   const total = steps.length * 4 + 3;
   let i = 0;
-  const at = () => new Date(start.getTime() + ((end.getTime() - start.getTime()) * Math.min(i++, total)) / total).toISOString();
+  let shift = 0;
+  const at = () => new Date(start.getTime() + shift + ((end.getTime() - parkedMs - start.getTime()) * Math.min(i++, total)) / total).toISOString();
   const lines = [];
   const push = (event) => lines.push(JSON.stringify({ seq: lines.length + 1, ts: at(), runId, agent, event }));
   push({ type: "run.start", agent, model, trigger });
@@ -196,6 +205,13 @@ function run(agent, { model, trigger, offered, hidden = [], steps, status = "ok"
     if (s.action === "ask") {
       push({ type: "approval.requested", callId });
       if (s.pending) break;
+      if (s.parkedMin) {
+        const parkedAt = at();
+        lines.push(JSON.stringify({ seq: lines.length + 1, ts: parkedAt, runId, agent, event: { type: "run.parked", requests: [callId] } }));
+        shift += s.parkedMin * 60_000;
+        if (s.sleptMin) push({ type: "host.slept", since: new Date(Date.parse(parkedAt) + 5 * 60_000).toISOString(), ms: s.sleptMin * 60_000 });
+        push({ type: "run.resumed", parkedAt });
+      }
       push({ type: "approval.resolved", callId, approved: s.approved ?? true, by: "Humberto (ui)" });
       if (!(s.approved ?? true)) { push({ type: "tool.result", callId, ok: false, durationMs: 0, error: "declined by Humberto (ui)" }); continue; }
     }
@@ -281,6 +297,11 @@ earlier.forEach((ago, i) => {
   const id = run("bea", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron:0 8 * * 1-5", ...BEA_TOOLS, endMinutesAgo: ago - 0.25, secs: 14, steps: beaSteps(d.counts, d.drafts), summary: d.summary });
   for (const s of d.drafts) approved("bea", id, s, ago - 0.2);
 });
+// Yesterday: a draft to a no-reply address blocked by the policy, the other parked three hours (forty of them asleep) until the answer came.
+const NOREPLY = draft("Acme Billing <no-reply@example.com>", TEXT.noreply.subject, TEXT.noreply.body, "18c2a1e0f4b7c903", { action: "block", rule: 3, reason: TEXT.noreplyReason });
+const parkedRun = run("bea", { model: "gemini/gemini-3.5-flash-lite", trigger: "cron:0 8 * * 1-5", ...BEA_TOOLS, endMinutesAgo: 60 * 22 + 11, secs: 13, summary: TEXT.beaParked,
+  steps: beaSteps({ [L.newsletters]: 6, [L.receipts]: 2, [L.fyi]: 1, [L.reply]: 2 }, [NOREPLY, { ...PRIYA, parkedMin: 183, sleptMin: 40 }]) });
+approved("bea", parkedRun, PRIYA, 60 * 22 + 11.5);
 // Right now: 18 new threads filed, Jordan's draft approved, paused on Lena's, waiting for you.
 const pausedRun = run("bea", { model: "gemini/gemini-3.5-flash-lite", trigger: "ui", ...BEA_TOOLS, endMinutesAgo: 0.5, secs: 12,
   steps: beaSteps({ [L.newsletters]: 11, [L.receipts]: 3, [L.fyi]: 2, [L.reply]: 2 }, [JORDAN, { ...draft(DRAFT.to[0], DRAFT.subject, DRAFT.body, DRAFT.threadId), pending: true }]) });
