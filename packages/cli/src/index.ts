@@ -645,11 +645,22 @@ program
 
 program
   .command("why")
-  .argument("<agent>", t("agent name"))
+  .argument("[agent]", t("agent name (omit for every agent's latest run)"))
   .argument("[run]", t("run id (omit for the latest)"))
   .option("--log-root <dir>", t("where run logs live"), DEFAULT_LOG_ROOT)
   .description(t("Why a run did what it did: what went through, what asked you, what was blocked, what stopped it"))
-  .action((agent: string, run: string | undefined, opts: { logRoot: string }) => {
+  .action((agent: string | undefined, run: string | undefined, opts: { logRoot: string }) => {
+    if (!existsSync(opts.logRoot)) fail(t("no runs yet under {dir}", { dir: opts.logRoot }));
+    if (!agent) {
+      // Every agent's latest run, the way the agent page's history reads: enough to know which to open.
+      for (const a of readdirSync(opts.logRoot).sort()) {
+        const latest = readdirSync(join(opts.logRoot, a)).filter((f) => f.endsWith(".jsonl")).sort().at(-1);
+        if (!latest) continue;
+        stdout.write(`${a} · ${latest.replace(/\.jsonl$/, "")}\n`);
+        for (const line of whyLines(readRun(join(opts.logRoot, a, latest)))) stdout.write(`  · ${line}\n`);
+      }
+      return;
+    }
     const dir = join(opts.logRoot, agent);
     if (!existsSync(dir)) fail(t("no runs for agent \"{agent}\"", { agent }));
     const runs = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();

@@ -393,6 +393,6 @@ export const es: Record<string, string> = {
   "It stopped with an error: {message}": "Se detuvo con un error: {message}",
   "you": "ti",
   "It made no tool calls and ran to the end.": "No llamó a ninguna herramienta y llegó al final.",
-  "agent name": "nombre del agente",
+  "agent name (omit for every agent's latest run)": "nombre del agente (omítelo para la última ejecución de cada agente)",
   "Why a run did what it did: what went through, what asked you, what was blocked, what stopped it": "Por qué una ejecución hizo lo que hizo: qué pasó, qué te preguntó, qué se bloqueó, qué la detuvo",
 };
