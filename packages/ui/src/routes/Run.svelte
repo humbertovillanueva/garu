@@ -12,7 +12,7 @@
   import Empty from "../lib/components/Empty.svelte";
   import type { Envelope } from "../lib/types";
   import { t } from "../lib/i18n.svelte";
-  import { explainRun } from "../lib/why";
+  import { explainRun } from "@garu/kernel/why";
 
   let { agent, runId }: { agent: string; runId: string } = $props();
   let events = $state<Envelope[] | null>(null);
