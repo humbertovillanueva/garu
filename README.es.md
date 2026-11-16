@@ -298,7 +298,9 @@ Garu tiene tres semanas de vida y ya ejecuta los agentes del autor todos los dí
 2. **Garu alojado:** agentes que siguen corriendo con la laptop cerrada, aprobar con un toque desde donde sea, pensado para la UE de forma predeterminada.
 3. Delegación entre agentes por A2A; memoria transparente y editable.
 
-Hecho desde el primer commit: Gmail y Google Calendar a través del servidor propio de Garu, con inicio de sesión para servidores locales; servidores MCP remotos (Streamable HTTP + OAuth), la app del teléfono por Tailscale con un token de inicio de sesión ([docs/phone.es.md](docs/phone.es.md)), la sala de control como app nativa para Android y iPhone ([docs/android.md](docs/android.md), [docs/ios.md](docs/ios.md)), `garu new`, personajes, rechazar con nota.
+Hecho desde el primer commit: Gmail y Google Calendar a través del servidor propio de Garu, con inicio de sesión para servidores locales; servidores MCP remotos (Streamable HTTP + OAuth), la app del teléfono por Tailscale con un token de inicio de sesión ([docs/phone.es.md](docs/phone.es.md)), la sala de control como app nativa para Android y iPhone ([docs/android.md](docs/android.md), [docs/ios.md](docs/ios.md)), `garu new`, personajes, rechazar con nota; después una libreta por agente, un tope de ejecuciones al día, preguntas que esperan un día mientras la ejecución se aparca, "Por qué hizo eso" en cada ejecución y en `garu why`, un reloj honesto (dormida, aparcada, empezó tarde), la nota del domingo, la limpieza, `garu doctor` y `garu status`, y un aviso cuando Tailscale deja de servir al teléfono.
+
+La app de Android está en prueba cerrada en Google Play desde el 2026-10-15 con doce probadores; la segunda solicitud de producción va después del 2026-11-15, con las respuestas de los probadores y la versión que salió de ellas. La app de iPhone corre en el simulador y espera una cuenta de desarrollador de Apple.
 
 ## Estructura
 
