@@ -95,12 +95,12 @@
     </p>
   </div>
 
-  {#if isApp && prefs.seenRelease !== latest.id}
-    <!-- What the update brought, once per release: the phone's way to see the change a tester's remark made. -->
+  {#if prefs.seenRelease !== latest.id}
+    <!-- What the update brought, once per release: on the phone the change a tester's remark made, on the desktop what the last deploy changed. -->
     <div class="panel-raised rise p-4" role="region" aria-label={t("What's new")}>
       <div class="flex items-baseline justify-between gap-3">
-        <div class="text-[15px] font-semibold">{t("What's new in this version")}</div>
-        <div class="text-[12px] text-mute">{latest.version}</div>
+        <div class="text-[15px] font-semibold">{isApp ? t("What's new in this version") : t("What's new")}</div>
+        {#if isApp}<div class="text-[12px] text-mute">{latest.version}</div>{/if}
       </div>
       <ul class="mt-2 list-disc space-y-1 pl-5 text-[13.5px] text-fg-2">
         {#each latest.lines() as line}<li>{line}</li>{/each}
