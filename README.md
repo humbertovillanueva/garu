@@ -295,7 +295,9 @@ Garu is three weeks old and already runs the author's own agents every day. Expe
 2. **Hosted Garu:** agents that keep running when your laptop is closed, tap-to-approve from anywhere, EU-friendly by default.
 3. Delegation between agents over A2A; transparent, editable memory.
 
-Done since the first commit: Gmail and Google Calendar through Garu's own server, with sign-in for local servers; remote MCP servers (Streamable HTTP + OAuth), the phone app over Tailscale with a sign-in token ([docs/phone.md](docs/phone.md)), the control room as a native app for Android and iPhone ([docs/android.md](docs/android.md), [docs/ios.md](docs/ios.md)), `garu new`, personas, decline-with-a-note.
+Done since the first commit: Gmail and Google Calendar through Garu's own server, with sign-in for local servers; remote MCP servers (Streamable HTTP + OAuth), the phone app over Tailscale with a sign-in token ([docs/phone.md](docs/phone.md)), the control room as a native app for Android and iPhone ([docs/android.md](docs/android.md), [docs/ios.md](docs/ios.md)), `garu new`, personas, decline-with-a-note; then a notebook per agent, a cap on runs a day, asks that wait a day while the run parks, "Why it did that" on every run and in `garu why`, an honest clock (asleep, parked, started late), the Sunday note, pruning, `garu doctor` and `garu status`, and a notice when Tailscale stops serving the phone.
+
+The Android app is in closed testing on Google Play since 2026-10-15 with twelve testers; the second application for production goes in after 2026-11-15, with the testers' replies and the build that came from them. The iPhone app runs in the Simulator and waits for an Apple developer account.
 
 ## Layout
 
