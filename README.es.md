@@ -267,7 +267,7 @@ La cabecera de la ejecución lleva un reloj honesto: "tardó 1 h 10 min, 59 min 
 
 | Comando | Qué hace |
 |---|---|
-| `garu new [name]` | Crea tu propio agente: unas preguntas y luego un Garufile con una política cerrada. Flags para scripts (`--task`, `--when`, `--web`, `--fs`, `-y`). |
+| `garu new [name]` | Crea tu propio agente: unas preguntas y luego un Garufile con una política cerrada. Flags para scripts (`--task`, `--when`, `--web`, `--fs`, `--memory`, `--runs-per-day`, `-y`). |
 | `garu ui [--up] [--as Name] [--notify URL]` | La sala de control en localhost:4000. `--up` además ejecuta cada horario cron que encuentre bajo la carpeta actual. |
 | `garu service install` · `status` · `logs` · `restart` · `uninstall` | Ejecuta `garu ui --up` para esta carpeta como servicio de inicio de sesión (launchd en macOS, systemd en Linux), para que un reinicio no tumbe a tus agentes. Un horario que se perdió mientras la máquina dormía o estaba apagada se ejecuta una vez cuando vuelve. `restart` después de compilar o de cambiar un horario. |
 | `garu run <Garufile> [-i note]` | Ejecuta un agente una vez, aprobando en la terminal. |
