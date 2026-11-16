@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The README's screenshots, retaken from a seeded control room: five desktop screens at 1456×829 in
+// The README's screenshots, retaken from a seeded control room: six desktop screens at 1456×829 in
 // the dark theme, and the phone's Inbox at 375×812 (2×). Driven through Chrome's DevTools, the way
 // play-shots.mjs is, because the page keeps a live stream open and a one-shot headless capture never
 // sees it settle.
@@ -77,6 +77,8 @@ const SCREENS = [
   ["home", "#/home", { width: 1456, height: 1040, deviceScaleFactor: 1, mobile: false }],
   ["inbox", "#/inbox", { width: 1456, height: 829, deviceScaleFactor: 1, mobile: false }],
   ["agent", "#/agent/tomay", { width: 1456, height: 829, deviceScaleFactor: 1, mobile: false }],
+  // The top of the run page: the header's honest clock and "Why it did that", before the timeline.
+  ["why", `#/run/${RUN}`, { width: 1456, height: 520, deviceScaleFactor: 1, mobile: false }],
   ["run", `#/run/${RUN}`, { width: 1456, height: 829, deviceScaleFactor: 1, mobile: false }],
   ["cost", "#/cost", { width: 1456, height: 829, deviceScaleFactor: 1, mobile: false }],
   ["phone-approve", "#/inbox", { width: 375, height: 812, deviceScaleFactor: 2, mobile: true }],
