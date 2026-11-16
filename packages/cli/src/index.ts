@@ -59,6 +59,8 @@ import { tailscaleAddresses } from "./ui-addresses.js";
 import { detectLocale, locale, setLocale, t } from "./i18n.js";
 import { whyLines } from "./why.js";
 import { doctor, MARK } from "./doctor.js";
+import { statusLines, type AgentFacts } from "./status.js";
+import { Cron } from "croner";
 import { Reach } from "./ui-reach.js";
 import { VERSION } from "./version.js";
 import { KINDS, SCHEDULES, cronFor, isFreeModel, renderGarufile, suggestModel, type Kind, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
@@ -675,6 +677,51 @@ program
     if (!pick || !existsSync(join(dir, pick))) fail(t("no run {run} for agent \"{agent}\"", { run: run ?? "", agent }));
     stdout.write(`${agent} · ${pick.replace(/\.jsonl$/, "")}\n`);
     for (const line of whyLines(readRun(join(dir, pick)))) stdout.write(`  · ${line}\n`);
+  });
+
+// ---------------------------------------------------------------------------
+// garu status — Home, for the terminal
+// ---------------------------------------------------------------------------
+
+program
+  .command("status")
+  .description(t("Every agent in one screen: what it's doing, when it runs next, how its last run went, what's waiting on you"))
+  .option("--log-root <dir>", t("where run logs live"), DEFAULT_LOG_ROOT)
+  .option("--inbox-root <dir>", t("where approval requests live"), DEFAULT_INBOX_ROOT)
+  .action(async (opts: { logRoot: string; inboxRoot: string }) => {
+    loadDotEnv();
+    const root = process.cwd();
+    const { agents } = discoverGarufiles(root);
+    const store = new RunStore(opts.logRoot);
+    const inbox = new Inbox({ root: opts.inboxRoot });
+    const authRoot = resolve(root, ".garu", "auth");
+    const parked = listParked(opts.logRoot);
+    const pending = inbox.pending();
+    // The schedules run when the login service does (garu ui --up by hand looks the same from here only while it runs; the service is the usual way).
+    const installed = process.platform === "darwin" ? existsSync(launchdPlistPath(root)) : process.platform === "linux" ? existsSync(systemdUnitPath(root)) : false;
+    const up = installed && (await serviceRunning(root));
+    const byName = new Map(agents.map((a) => [a.garufile.name, a.garufile]));
+    const summaries = new Map(store.agentSummaries().map((s) => [s.name, s]));
+    const names = [...new Set([...byName.keys(), ...summaries.keys()])].sort();
+    const facts: AgentFacts[] = names.map((name) => {
+      const g = byName.get(name);
+      const s = summaries.get(name);
+      const cron = g?.triggers.find((tr) => tr.cron)?.cron ?? null;
+      let nextRun: Date | null = null;
+      if (cron && up) { try { nextRun = new Cron(cron, { paused: true }).nextRun(); } catch { /* reported by validate */ } }
+      const last = s?.lastRun ?? null;
+      return {
+        name, cron, nextRun,
+        last: last ? { startedAt: last.startedAt, endedAt: last.endedAt, status: last.status, offline: last.offline ?? false, busy: Boolean(last.busy), asked: last.toolCalls.ask, blocked: last.blocked ?? [], summary: last.summary } : null,
+        pending: pending.filter((p) => p.agent === name).length,
+        parked: parked.filter((p) => p.agent === name).length,
+        runsToday: s?.runsToday ?? 0,
+        cap: g?.budget.maxRunsPerDay ?? null,
+        costTodayUsd: s?.costTodayUsd ?? 0,
+        needs: g ? [...missingEnv(g.tools, process.env), ...g.tools.filter((tl) => tl.auth === "oauth" && !signInFor(tl, authRoot).signedIn()).map((tl) => t("sign in to {server}", { server: tl.name }))] : [],
+      };
+    });
+    for (const line of statusLines({ agents: facts, up })) stdout.write(line + "\n");
   });
 
 // ---------------------------------------------------------------------------
