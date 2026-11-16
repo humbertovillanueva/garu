@@ -794,11 +794,13 @@ program
   .option("--web <hosts>", t("comma-separated hosts it may fetch from, 'ask' to review each fetch, or 'none'"))
   .option("--fs <path>", t("a folder it can use, or 'none'"))
   .option("--write <mode>", t("allow | ask — whether it may write in that folder without asking"))
+  .option("--runs-per-day <n>", t("at most this many runs a day; 'none' for no cap"))
+  .option("--memory", t("give it a notebook between runs"))
   .option("--webhook <ENV_VAR>", t("post to a Slack/Discord webhook kept in this .env variable"))
   .option("--budget <usd>", t("cap per run in USD"))
   .option("-y, --yes", t("accept defaults for anything not given"))
   .option("--force", t("overwrite an existing Garufile"))
-  .action(async (nameArg: string | undefined, opts: { task?: string; kind?: string; tagline?: string; when?: string; model?: string; web?: string; fs?: string; write?: string; webhook?: string; budget?: string; yes?: boolean; force?: boolean }) => {
+  .action(async (nameArg: string | undefined, opts: { task?: string; kind?: string; tagline?: string; when?: string; model?: string; web?: string; fs?: string; write?: string; webhook?: string; budget?: string; yes?: boolean; force?: boolean; runsPerDay?: string; memory?: boolean }) => {
     loadDotEnv();
     const interactive = !opts.yes && stdin.isTTY;
     const rl = interactive ? createInterface({ input: stdin, output: stdout }) : null;
@@ -938,7 +940,18 @@ program
         if (!Number.isFinite(maxCostUsd) || maxCostUsd < 0) fail(t("budget must be a non-negative number"));
       }
 
-      const answers: ScaffoldAnswers = { name, task, model, schedule, web, fs, webhook, maxCostUsd, fetchServerPath: fetchServerPath(), ...(kind ? { kind } : {}), ...(tagline ? { tagline } : {}) };
+      // A cap on runs a day, and a notebook
+      let maxRunsPerDay: number | null = null;
+      if (opts.runsPerDay !== undefined) {
+        if (opts.runsPerDay !== "none") { maxRunsPerDay = Number(opts.runsPerDay); if (!Number.isInteger(maxRunsPerDay) || maxRunsPerDay < 1) fail(t("--runs-per-day must be a whole number, or 'none'")); }
+      } else if (rl) {
+        const r = (await ask(t("Runs a day at most (empty = no cap):"), "")).trim();
+        if (r) { maxRunsPerDay = Number(r); if (!Number.isInteger(maxRunsPerDay) || maxRunsPerDay < 1) fail(t("runs a day must be a whole number")); }
+      }
+      let memory = Boolean(opts.memory);
+      if (!opts.memory && rl) memory = await yesNo(t("Should it keep a notebook between runs (a few short notes it writes; you read and edit them on its page)?"), false);
+
+      const answers: ScaffoldAnswers = { name, task, model, schedule, web, fs, webhook, maxCostUsd, maxRunsPerDay, memory, fetchServerPath: fetchServerPath(), ...(kind ? { kind } : {}), ...(tagline ? { tagline } : {}) };
       const text = renderGarufile(answers);
       const g = parseGarufile(text, file); // never write a file the kernel would reject
 

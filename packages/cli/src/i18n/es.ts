@@ -467,4 +467,14 @@ export const es: Record<string, string> = {
   "1 ask is waiting for you: garu inbox": "1 pregunta te espera: garu inbox",
   "{n} asks are waiting for you: garu inbox": "{n} preguntas te esperan: garu inbox",
   "schedules are off: `garu ui --up`, or `garu service install` to run them at login": "los horarios están apagados: `garu ui --up`, o `garu service install` para correrlos al iniciar sesión",
+  // garu new: notebook and cap
+  "at most this many runs a day; 'none' for no cap": "como mucho tantas ejecuciones al día; 'none' para no poner tope",
+  "give it a notebook between runs": "dale una libreta entre ejecuciones",
+  "--runs-per-day must be a whole number, or 'none'": "--runs-per-day debe ser un número entero, o 'none'",
+  "Runs a day at most (empty = no cap):": "Ejecuciones al día como mucho (vacío = sin tope):",
+  "runs a day must be a whole number": "las ejecuciones al día deben ser un número entero",
+  "Should it keep a notebook between runs (a few short notes it writes; you read and edit them on its page)?": "¿Debe guardar una libreta entre ejecuciones (unas notas cortas que escribe; tú las lees y editas en su página)?",
+  "after that many runs in a day it says \"Done for today\"": "tras tantas ejecuciones en un día dice \"Lista por hoy\"",
+  "a notebook it keeps between runs; read and edit it on its page": "una libreta que guarda entre ejecuciones; léela y edítala en su página",
+  "Its notebook: a note shapes every later run, so writing one asks; dropping one is fine.": "Su libreta: una nota moldea cada ejecución posterior, así que escribir una pregunta; borrar una está bien.",
 };
