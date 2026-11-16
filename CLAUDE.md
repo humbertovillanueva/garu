@@ -55,6 +55,7 @@ npm run garu -- <cmd>                 # the CLI from the repo (no global install
 npm run garu -- service install|status|logs|restart|uninstall   # Garu as a login service (launchd)
 npm run garu -- prune [--keep 90d] [--yes]                       # old run logs: dry run, then delete
 npm run garu -- why <agent> [run]                                # the run page's "Why it did that", in the terminal
+npm run garu -- doctor                                           # Node, .env keys, Garufiles, sign-ins, service, Tailscale, what's waiting
 npm run deploy                        # build, then restart the service here and every ~/garu-demo* (scripts/deploy.mjs)
 npm run sync -w @garu/app             # the phone UI, built and copied into android/ and ios/
 ```
@@ -167,6 +168,10 @@ temp path hidden); `scripts/play-shots.mjs` makes the Play and App Store cards f
   so the browser bundle takes just that file), read by the run page's panel, by `garu why`, and in one line under each
   run on the agent page (`blocked` on `RunSummary`). The dev server's page has build stamp `dev`, so the stale-page
   reload never fires against a running service.
+- Reach (`cli/src/ui-reach.ts`): the control room keeps the Tailscale address it was last served on in `.garu/reach.json`;
+  the sweeper asks Tailscale every half minute and the first time the address is gone it logs it, pushes once through ntfy,
+  and `/api/agents` carries `reach: {since, url}` until it's back (Home shows the red notice; `garu doctor` says it too).
+  Never warns on a computer that never had Tailscale.
 - Weekly note (`kernel/src/weekly.ts`: `weeklyStats` per agent over the last 7 days, `weeklyDue` = Sunday from
   18:00 local, once, with the asks that expired unanswered from the inbox): with `GARU_WEEKLY_WEBHOOK_URL` the control room posts `weeklyText` (`cli/src/ui-server.ts`,
   Slack `text` / Discord `content`) at start and hourly when due; posted Sundays live in `.garu/weekly-posted.json`.
