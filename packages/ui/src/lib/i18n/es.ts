@@ -651,7 +651,7 @@ export const es: Record<string, string> = {
   "Resumed": "Retomada",
   "Why it did that": "Por qué hizo eso",
   "Your phone can't reach this computer": "Tu teléfono no puede llegar a esta computadora",
-  "Tailscale stopped serving Garu {since}. Open Tailscale on this computer and it comes back on its own.": "Tailscale dejó de servir a Garu {since}. Abre Tailscale en esta computadora y vuelve solo.",
+  "Tailscale hasn't served Garu since {since}. Open Tailscale on this computer and it comes back on its own.": "Tailscale no sirve a Garu desde {since}. Abre Tailscale en esta computadora y vuelve solo.",
   "preview this week's": "ver la de esta semana",
   "hide": "ocultar",
   "asked you once": "te preguntó una vez",
