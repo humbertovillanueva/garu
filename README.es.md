@@ -261,6 +261,8 @@ Una ejecución que se ve rara no debería obligarte a leer su registro línea po
 
 La cabecera de la ejecución lleva un reloj honesto: "tardó 1 h 10 min, 59 min con la computadora dormida · aparcada 8 h esperando tu respuesta", y "empezó 33 min tarde" cuando la computadora durmió durante el minuto del horario, para que lo que hizo el agente y lo que hizo la máquina no se mezclen.
 
+<p align="center"><img src="docs/screenshots/why.png" alt="La página de una ejecución: la cabecera dice que tardó unos segundos, 40 minutos de ellos con la computadora dormida, y aparcada 3 horas esperando tu respuesta; debajo, por qué hizo eso: ocho llamadas pasaron por su cuenta, una preguntó y fue aprobada, una fue bloqueada" width="900"></p>
+
 ## Comandos
 
 | Comando | Qué hace |
