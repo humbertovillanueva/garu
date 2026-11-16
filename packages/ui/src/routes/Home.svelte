@@ -208,7 +208,7 @@
               <Mark name={r.agent} size={30} />
               <div class="min-w-0 flex-1">
                 <div class="text-[14px] font-medium">{r.agent}</div>
-                <div class="text-[12px] text-mute">{humanTime(r.endedAt)}</div>
+                <div class="text-[12px] text-mute">{humanTime(r.endedAt)}{#if r.asked || r.blocked?.length} · {[r.asked ? (r.asked === 1 ? t("asked you once") : t("asked you {n} times", { n: r.asked })) : "", r.blocked?.length ? t("blocked: {list}", { list: r.blocked.join(", ") }) : ""].filter(Boolean).join(" · ")}{/if}</div>
               </div>
             </div>
             {#if r.summary}<div class="md result mt-3 space-y-1 text-[13.5px] text-fg-2">{@html renderMarkdown(plainTimes(r.summary), { breaks: true })}</div>{/if}
