@@ -46,6 +46,9 @@ export interface TodayResult {
   summary: string | null;
   costUsd: number;
   priced: boolean;
+  /** How many calls asked the owner, and which tools the policy blocked: the run's why, in a breath. */
+  asked: number;
+  blocked: string[];
   /** The markdown file the run wrote (a brief, a summary), cut at 4,000 characters. */
   doc: { path: string; content: string } | null;
 }
@@ -279,7 +282,7 @@ export class RunStore {
       if (skip.has(agent)) continue;
       const last = runs.find((r) => Date.parse(r.startedAt) >= weekAgo && r.endedAt && r.status === "ok" && r.summary);
       if (!last) continue;
-      results.push({ agent, runId: last.runId, endedAt: last.endedAt!, summary: last.summary, costUsd: last.costUsd, priced: last.priced, doc: this.documentOf(agent, last.runId) });
+      results.push({ agent, runId: last.runId, endedAt: last.endedAt!, summary: last.summary, costUsd: last.costUsd, priced: last.priced, asked: last.toolCalls.ask, blocked: last.blocked ?? [], doc: this.documentOf(agent, last.runId) });
     }
     results.sort((a, b) => b.endedAt.localeCompare(a.endedAt));
     return { results, week };
