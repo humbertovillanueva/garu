@@ -54,7 +54,7 @@ import {
   type SchedulerEvent,
 } from "@garu/kernel";
 
-import { startUiServer, weeklyText, postToChannel } from "./ui-server.js";
+import { startUiServer, weeklyText, postToChannel, pushText } from "./ui-server.js";
 import { tailscaleAddresses } from "./ui-addresses.js";
 import { detectLocale, locale, setLocale, t } from "./i18n.js";
 import { whyLines } from "./why.js";
@@ -588,7 +588,14 @@ program
     stdout.write(text + "\n");
     if (!opts.post) return;
     const url = process.env["GARU_WEEKLY_WEBHOOK_URL"];
-    if (!url) fail(t("GARU_WEEKLY_WEBHOOK_URL is not set in .env"));
+    if (!url) {
+      // No channel: the phone gets it, the way the control room does on Sunday.
+      const push = process.env["GARU_NOTIFY_URL"];
+      if (!push) fail(t("neither GARU_WEEKLY_WEBHOOK_URL nor GARU_NOTIFY_URL is set in .env"));
+      await pushText(push, "Garu: the week in numbers", text, undefined, "calendar");
+      stdout.write(`✔ ${t("pushed to the phone")}\n`);
+      return;
+    }
     const r = await postToChannel(url, text);
     if (!r.ok) fail(t("could not post: {error}", { error: r.error }));
     stdout.write(`✔ ${t("posted to {host}", { host: r.host })}\n`);

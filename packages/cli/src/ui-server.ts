@@ -407,7 +407,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
   // posted are kept in a file, so a restart that evening doesn't post twice.
   const weeklyPostedPath = join(opts.root, ".garu", "weekly-posted.json");
   const postWeekly = async () => {
-    if (!opts.weeklyUrl || opts.demo) return;
+    // To the channel when one is set; to the phone through ntfy otherwise, so the Sunday numbers reach the owner either way.
+    if ((!opts.weeklyUrl && !opts.notify) || opts.demo) return;
     let posted: string[] = [];
     try { posted = JSON.parse(readFileSync(weeklyPostedPath, "utf8")) as string[]; } catch { /* none yet */ }
     const key = weeklyDue(new Date(), new Set(posted));
@@ -415,6 +416,11 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     posted.push(key);
     try { writeFileSync(weeklyPostedPath, JSON.stringify(posted) + "\n"); } catch { /* best effort */ }
     const text = weeklyText(weeklyStats(store, { memory, inbox, agents: discover().agents.map((a) => a.garufile.name) }));
+    if (!opts.weeklyUrl) {
+      await pushText(opts.notify!, "Garu: the week in numbers", text, (await addresses())[0]?.url, "calendar");
+      opts.log("📬 the week in numbers pushed to the phone");
+      return;
+    }
     const r = await postToChannel(opts.weeklyUrl, text);
     opts.log(r.ok ? `📬 the week in numbers posted to ${r.host}` : `✖ weekly note: ${r.error}`);
   };
@@ -979,7 +985,7 @@ export async function postToChannel(url: string, text: string, fetchFn: typeof f
 }
 
 /** One push: plain text so ntfy shows it as-is, with a tap that opens the control room's inbox when its address is known. Best effort. */
-async function pushText(url: string, title: string, body: string, link: string | undefined, tags: string): Promise<void> {
+export async function pushText(url: string, title: string, body: string, link: string | undefined, tags: string): Promise<void> {
   try {
     await fetch(url, {
       method: "POST",
