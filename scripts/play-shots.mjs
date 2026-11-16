@@ -11,7 +11,7 @@
 // Needs Google Chrome. The server is a seeded control room (scripts/demo-data.mjs); reseed it first so
 // the inbox has a fresh ask. Nothing on the server is changed: the screens are only read.
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -33,6 +33,8 @@ if (!FRAME) {
   console.error("--frame must be play or ios");
   process.exit(2);
 }
+// The "What's new" card would cover Home on a fresh phone: mark the current release as seen, the way a tester who tapped Got it is.
+const RELEASE = /id: "([^"]+)"/.exec(readFileSync(new URL("../packages/ui/src/lib/whatsnew.ts", import.meta.url), "utf8"))?.[1] ?? "";
 const OUT = arg("out", FRAME.w === 1080 ? `docs/launch/play/${LANG}` : `docs/launch/app-store/${LANG}`);
 const CHROME = arg("chrome", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome");
 const PORT = 9333;
@@ -157,7 +159,7 @@ async function main() {
     // Paired to the server, Spanish or English pinned, dark, intro seen, home first.
     await page.eval(`(() => {
       localStorage.setItem("garu.server", JSON.stringify({ base: ${JSON.stringify(SERVER)}, token: ${JSON.stringify(TOKEN)} }));
-      localStorage.setItem("garu.prefs", JSON.stringify({ haptics: true, landOnInbox: false, theme: "dark", language: ${JSON.stringify(LANG)} }));
+      localStorage.setItem("garu.prefs", JSON.stringify({ haptics: true, landOnInbox: false, theme: "dark", language: ${JSON.stringify(LANG)}, seenRelease: ${JSON.stringify(RELEASE)} }));
       localStorage.setItem("garu.intro", "1");
       location.hash = "#/";
       location.reload();
