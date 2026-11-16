@@ -86,6 +86,8 @@ export interface AgentsResponse {
   demo?: boolean;
   /** The person's name as the control room knows it (--as / GARU_USER), for the greeting. */
   you?: string;
+  /** Tailscale stopped serving this control room: since when, and the address that went missing. */
+  reach?: { since: string; url: string } | null;
 }
 
 export interface Envelope {

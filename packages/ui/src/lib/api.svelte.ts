@@ -109,6 +109,8 @@ export const live = $state({
   root: "",
   demo: false,
   you: "" as string,
+  /** Tailscale stopped serving the control room: since when. Null while the phone's way in is fine. */
+  reach: null as { since: string; url: string } | null,
   problems: [] as { source: string; error: string }[],
   pending: [] as ApprovalRequest[],
   suggestions: [] as import("./types").Suggestion[],
@@ -170,6 +172,7 @@ async function fetchCore(current: () => boolean): Promise<void> {
   live.root = a.root;
   live.demo = Boolean(a.demo);
   live.you = a.you ?? "";
+  live.reach = a.reach ?? null;
   live.problems = a.problems;
   live.pending = i.pending;
   live.suggestions = i.suggestions ?? [];

@@ -126,6 +126,12 @@
 
   {#if live.loaded}
     <div class="rise space-y-2">
+      {#if live.reach}
+        <div class="panel flex items-center gap-3 px-4 py-3 text-[13.5px]" style="border-color: color-mix(in oklab, var(--color-bad) 35%, var(--color-line))">
+          <span class="dot" style="background: var(--color-bad)"></span>
+          <div class="min-w-0"><div class="font-medium">{t("Your phone can't reach this computer")}</div><div class="text-[12.5px] text-fg-2">{t("Tailscale stopped serving Garu {since}. Open Tailscale on this computer and it comes back on its own.", { since: humanTime(live.reach.since) })}</div></div>
+        </div>
+      {/if}
       {#if !live.up}
         <div class="panel flex items-center gap-3 px-4 py-3 text-[13.5px]" style="border-color: color-mix(in oklab, var(--color-ask) 35%, var(--color-line))">
           <span class="dot" style="background: var(--color-ask)"></span>
