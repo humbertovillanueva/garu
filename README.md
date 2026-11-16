@@ -258,6 +258,8 @@ A run that looks odd shouldn't need its log read line by line. The run's page an
 
 The run's header keeps an honest clock: "took 1 h 10 min, 59 min of it with the computer asleep · parked 8 h for your answer", and "started 33 min late" when the computer slept through the schedule's minute, so what the agent did and what the machine did stay apart.
 
+<p align="center"><img src="docs/screenshots/why.png" alt="A run's page: the header says it took a few seconds, 40 minutes of it with the computer asleep, and parked 3 hours for your answer; below, why it did that: eight calls went through on their own, one asked and was approved, one was blocked" width="900"></p>
+
 ## Commands
 
 | Command | What it does |
