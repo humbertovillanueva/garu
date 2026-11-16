@@ -264,7 +264,7 @@ The run's header keeps an honest clock: "took 1 h 10 min, 59 min of it with the 
 
 | Command | What it does |
 |---|---|
-| `garu new [name]` | Make your own agent: a few questions, then a Garufile with a closed policy. Flags for scripting (`--task`, `--when`, `--web`, `--fs`, `-y`). |
+| `garu new [name]` | Make your own agent: a few questions, then a Garufile with a closed policy. Flags for scripting (`--task`, `--when`, `--web`, `--fs`, `--memory`, `--runs-per-day`, `-y`). |
 | `garu ui [--up] [--as Name] [--notify URL]` | Control room at localhost:4000. `--up` also runs every cron schedule found under the current folder. |
 | `garu service install` · `status` · `logs` · `restart` · `uninstall` | Run `garu ui --up` for this folder as a login service (launchd on macOS, systemd on Linux), so a reboot doesn't take your agents down. A schedule missed while the machine was asleep or off is run once when it comes back. `restart` after a build or a schedule change. |
 | `garu run <Garufile> [-i note]` | Run an agent once, approving in the terminal. |
