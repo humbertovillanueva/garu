@@ -66,6 +66,7 @@ import { t, locale } from "./i18n.js";
 import { VERSION } from "./version.js";
 import { authenticate, clearSessionCookie, corsHeaders, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, rotateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
 import { SeenHosts, tailscaleAddresses, type Address } from "./ui-addresses.js";
+import { Reach } from "./ui-reach.js";
 
 export interface UiServerOptions {
   port: number;
@@ -269,6 +270,16 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     });
   // A push on day six, once per sign-in: the sign-ins pinged are kept in a file, so a restart doesn't ring twice.
   const signInPingsPath = join(opts.root, ".garu", "signin-pings.json");
+  // The phone's way in: when Tailscale stops serving us, say so once, in the log, on Home, and on the phone (ntfy needs no Tailscale).
+  const reach = new Reach(join(opts.root, ".garu", "reach.json"));
+  const checkReach = async () => {
+    const ev = reach.note(await tailscaleAddresses(opts.port));
+    if (ev === "back") opts.log("📶 Tailscale is serving the control room again; the phone can reach it");
+    if (ev !== "lost") return;
+    const since = localTime(reach.lost()!.since, { seconds: false });
+    opts.log(`📵 Tailscale stopped serving the control room (${since}); the phone and the demos can't reach it until it's back`);
+    if (opts.notify) await pushText(opts.notify, "Garu: your phone can't reach your computer", t("Tailscale stopped serving Garu at {time}. Open Tailscale on the computer and it comes back on its own.", { time: since }), undefined, "no_mobile_phones");
+  };
   const checkSignIns = () => {
     if (!opts.notify) return;
     let pinged: Record<string, string> = {};
@@ -297,6 +308,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     if (opts.demo) return;
     for (const r of inbox.expireOverdue()) opts.log(`✖ ${r.agent}: nobody answered about ${r.tool} in time (${r.id}); declined`);
     checkSignIns();
+    void checkReach().catch(() => {});
     if (opts.notify) {
       const soon = Date.now() + LAST_CALL_MS;
       const due = inbox.pending().filter((r) => !lastCalled.has(r.id) && Date.parse(r.expiresAt) <= soon);
@@ -539,6 +551,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           up: opts.up || Boolean(opts.demo),
           root: opts.root,
           demo: Boolean(opts.demo),
+          // An outage of the phone's way in, so the desktop says it (the phone can't load this while it lasts).
+          reach: opts.demo ? null : reach.lost(),
           // The person's name, for the greeting; "you" is the CLI's default when no name was given.
           ...(opts.userName && opts.userName !== "you" ? { you: opts.userName } : {}),
         });

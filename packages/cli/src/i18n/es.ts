@@ -395,4 +395,5 @@ export const es: Record<string, string> = {
   "It made no tool calls and ran to the end.": "No llamó a ninguna herramienta y llegó al final.",
   "agent name (omit for every agent's latest run)": "nombre del agente (omítelo para la última ejecución de cada agente)",
   "Why a run did what it did: what went through, what asked you, what was blocked, what stopped it": "Por qué una ejecución hizo lo que hizo: qué pasó, qué te preguntó, qué se bloqueó, qué la detuvo",
+  "Tailscale stopped serving Garu at {time}. Open Tailscale on the computer and it comes back on its own.": "Tailscale dejó de servir a Garu a las {time}. Abre Tailscale en la computadora y vuelve solo.",
 };

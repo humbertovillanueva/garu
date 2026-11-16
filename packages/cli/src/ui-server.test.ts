@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer } from "node:net";
 import { createServer as httpServer } from "node:http";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Inbox, Recorder, readRun, suggestRules, writeParked, readParked, parseGarufile, signInFor } from "@garu/kernel";
@@ -428,6 +428,17 @@ describe("the rest", () => {
     expect(s.version).toBe((JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version);
     expect(JSON.stringify(s)).not.toContain("hunter2");
     expect((await get("/api/nothing-here")).status).toBe(404);
+  });
+
+  it("says when Tailscale stopped serving it, from the file the sweeper keeps", async () => {
+    expect(((await (await get("/api/agents")).json()) as { reach: unknown }).reach).toBeNull();
+    const file = join(root, ".garu", "reach.json");
+    writeFileSync(file, JSON.stringify({ url: "https://mac.ts.net/", lastSeenAt: "2026-11-15T17:00:00.000Z", lostAt: "2026-11-15T17:05:00.000Z" }));
+    try {
+      // The server caches the file once read; this process read it as "none" at start, so ask a fresh reader.
+      const { Reach } = await import("./ui-reach.js");
+      expect(new Reach(file).lost()).toEqual({ since: "2026-11-15T17:05:00.000Z", url: "https://mac.ts.net/" });
+    } finally { rmSync(file); }
   });
 
   it("shows the week's note before Sunday posts it", async () => {
