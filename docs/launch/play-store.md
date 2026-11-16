@@ -334,9 +334,15 @@ because of it. Still true, just with a test that actually happened.
    with a 2027-02-01 deadline; the app earns nothing.
 6. On or after 11-15, apply again.
 
-**Feedback received** (fill in as it comes)
+**Feedback received** (one row per reply, in the tester's words, the day it came; the note that asked for
+them is `testers.md`)
 
-- _none yet_
+| Date | Tester | What they said | What changed because of it | Build |
+|---|---|---|---|---|
+| | | | | |
+
+A reply that led to no change still gets its row, with "no change: …" and why, so the count of replies
+is honest and the reasoning is on record.
 
 ## Build 5 (prepared 2026-11-12, not uploaded)
 
