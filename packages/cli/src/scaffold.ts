@@ -40,6 +40,10 @@ export interface ScaffoldAnswers {
   webhook: { envVar: string } | null;
   /** Per-run cap in USD; null for free/local models. */
   maxCostUsd: number | null;
+  /** At most this many runs a day; null for no cap. */
+  maxRunsPerDay?: number | null;
+  /** A notebook between runs: garu.remember asks, garu.forget is allowed. */
+  memory?: boolean;
   /** Repo-relative path to the fetch server, so the generated file works from the repo root. */
   fetchServerPath?: string;
 }
@@ -139,12 +143,14 @@ export function renderGarufile(a: ScaffoldAnswers): string {
     out.push(`  - manual: true          # ${t("runs when you press Run job, send it a message, or `garu run`")}`);
   }
   out.push(``);
-  if (a.maxCostUsd !== null) {
+  if (a.maxCostUsd !== null || a.maxRunsPerDay) {
     out.push(`budget:`);
-    out.push(`  maxCostUsd: ${a.maxCostUsd}        # ${t("a run stops before it crosses this")}`);
+    if (a.maxCostUsd !== null) out.push(`  maxCostUsd: ${a.maxCostUsd}        # ${t("a run stops before it crosses this")}`);
+    if (a.maxRunsPerDay) out.push(`  maxRunsPerDay: ${a.maxRunsPerDay}         # ${t("after that many runs in a day it says \"Done for today\"")}`);
     out.push(``);
   }
   out.push(`maxTurns: 10`);
+  if (a.memory) out.push(`memory: true              # ${t("a notebook it keeps between runs; read and edit it on its page")}`);
   out.push(``);
 
   const tools: string[] = [];
@@ -215,6 +221,14 @@ export function renderGarufile(a: ScaffoldAnswers): string {
     out.push(`  - tool: "fs.create_directory"`);
     out.push(`    action: ${a.fs.write}`);
     if (a.fs.write === "ask") out.push(`    reason: creating a folder`);
+  }
+  if (a.memory) {
+    out.push(`  # ${t("Its notebook: a note shapes every later run, so writing one asks; dropping one is fine.")}`);
+    out.push(`  - tool: "garu.remember"`);
+    out.push(`    action: ask`);
+    out.push(`    reason: a note in its memory`);
+    out.push(`  - tool: "garu.forget"`);
+    out.push(`    action: allow`);
   }
   out.push(`  - tool: "*"`);
   out.push(`    action: block`);

@@ -49,6 +49,17 @@ describe("garu new scaffold", () => {
     expect(new PolicyEngine(g.policy).decide({ server: "web", tool: "fetch_text", args: { url: "https://a.b/" } }).action).toBe("ask");
   });
 
+  it("a notebook and a daily cap, when asked for", () => {
+    const g = parseGarufile(renderGarufile({ ...base, memory: true, maxRunsPerDay: 4 }), "agents/notes-keeper/Garufile.yaml");
+    expect(g.memory).toBe(true);
+    expect(g.budget.maxRunsPerDay).toBe(4);
+    expect(g.policy.find((r) => r.tool === "garu.remember")?.action).toBe("ask");
+    expect(g.policy.find((r) => r.tool === "garu.forget")?.action).toBe("allow");
+    const plain = parseGarufile(renderGarufile(base), "agents/notes-keeper/Garufile.yaml");
+    expect(plain.memory).toBe(false);
+    expect(plain.policy.some((r) => r.tool.startsWith("garu."))).toBe(false);
+  });
+
   it("writes allowed inside the folder when asked for", () => {
     const g = parseGarufile(renderGarufile({ ...base, fs: { path: "./ws", write: "allow" }, schedule: { cron: "*/30 * * * *" } }));
     expect(new PolicyEngine(g.policy).decide({ server: "fs", tool: "write_file", args: { path: "a", content: "" } }).action).toBe("allow");
