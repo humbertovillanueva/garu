@@ -508,4 +508,6 @@ export const es: Record<string, string> = {
   "the demo control room: {url}": "la sala de control de la demo: {url}",
   "write a backup of .garu once a day and keep them this long (7d); unset means none": "escribe un respaldo de .garu una vez al día y guárdalos este tiempo (7d); sin esto, ninguno",
   "where the backups go (a synced folder is the point)": "dónde van los respaldos (una carpeta sincronizada es la idea)",
+  "redraw every few seconds (10 by default), for a terminal left open on the side": "redibuja cada pocos segundos (10 por defecto), para una terminal abierta a un lado",
+  "{time} · every {n} s · Ctrl-C to stop": "{time} · cada {n} s · Ctrl-C para parar",
 };

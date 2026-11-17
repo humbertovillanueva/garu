@@ -767,9 +767,12 @@ program
   .description(t("Every agent in one screen: what it's doing, when it runs next, how its last run went, what's waiting on you"))
   .option("--log-root <dir>", t("where run logs live"), DEFAULT_LOG_ROOT)
   .option("--inbox-root <dir>", t("where approval requests live"), DEFAULT_INBOX_ROOT)
-  .action(async (opts: { logRoot: string; inboxRoot: string }) => {
+  .option("-w, --watch [seconds]", t("redraw every few seconds (10 by default), for a terminal left open on the side"))
+  .action(async (opts: { logRoot: string; inboxRoot: string; watch?: string | boolean }) => {
     loadDotEnv();
     const root = process.cwd();
+    const every = opts.watch === undefined ? 0 : Math.max(2, Number(opts.watch === true ? 10 : opts.watch) || 10);
+    for (;;) {
     const { agents } = discoverGarufiles(root);
     const store = new RunStore(opts.logRoot);
     const inbox = new Inbox({ root: opts.inboxRoot });
@@ -800,7 +803,12 @@ program
         needs: g ? [...missingEnv(g.tools, process.env), ...g.tools.filter((tl) => tl.auth === "oauth" && !signInFor(tl, authRoot).signedIn()).map((tl) => t("sign in to {server}", { server: tl.name }))] : [],
       };
     });
-    for (const line of statusLines({ agents: facts, up })) stdout.write(line + "\n");
+    const lines = statusLines({ agents: facts, up });
+    if (!every) { for (const line of lines) stdout.write(line + "\n"); return; }
+    // The screen again, with the time, every few seconds; Ctrl-C ends it.
+    stdout.write(`\x1b[2J\x1b[H${lines.join("\n")}\n\n${t("{time} · every {n} s · Ctrl-C to stop", { time: localTime(new Date(), { seconds: false }), n: every })}\n`);
+    await new Promise((r) => setTimeout(r, every * 1000));
+    }
   });
 
 // ---------------------------------------------------------------------------
