@@ -26,6 +26,16 @@
   let liveEvents = $state<Envelope[] | null>(null);
   let messages = $state<ChatMessage[] | null>(null);
   let note = $state("");
+  // Two or three openers from the agent's own job, by its face: a tap fills the box, you send it.
+  const chips = $derived.by((): string[] => {
+    const k = a?.persona?.kind;
+    if (k === "fox") return [t("What's on today?"), t("Who am I meeting, and what should I know?")];
+    if (k === "bee") return [t("Anything that needs a reply?"), t("What came in overnight?")];
+    if (k === "owl") return [t("How's the repo this week?"), t("Anything to worry about?")];
+    if (k === "octopus") return [t("What's next on the backlog?"), t("What's blocked?")];
+    if (k === "rabbit") return [t("Did I commit today?")];
+    return [t("What did you do last time?"), t("What can you do?")];
+  });
   let starting = $state(false);
   let error = $state<string | null>(null);
   let showAllRuns = $state(false);
@@ -371,6 +381,9 @@
     {:else if a.configured && pending.length === 0}
       {@const busy = a.status === "working" || a.status === "waiting"}
       <div class="panel-raised rise sticky p-2" style="bottom: calc(0.75rem + var(--tabbar))">
+        {#if !note.trim() && !busy && !live.demo}
+          <div class="mb-2 flex flex-wrap gap-1.5">{#each chips as c (c)}<button class="tap rounded-full border hairline px-3 py-1 text-[12.5px] text-fg-2 hover:text-fg" onclick={() => { note = c; box?.focus(); }}>{c}</button>{/each}</div>
+        {/if}
         <div class="flex items-end gap-2">
           <textarea class="field min-h-[42px] flex-1 resize-none" rows="1" placeholder={busy ? (a.status === "working" ? t("{name} is working…", { name: a.name }) : t("Waiting for your decision above")) : hasKeyboard ? t("Message {name}  ({key}↵)", { name: a.name, key: modKey }) : t("Message {name}", { name: a.name })} aria-label={t("Message {name}", { name: a.name })} bind:value={note} bind:this={box} onkeydown={onKey} disabled={busy}></textarea>
           <button class="btn btn-primary grid h-11 w-11 flex-none place-items-center rounded-full p-0" disabled={starting || !note.trim() || busy || a.capped} onclick={send} aria-label={t("Send")}><Icon name="send" size={18} /></button>
