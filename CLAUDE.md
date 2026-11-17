@@ -203,6 +203,9 @@ temp path hidden); `scripts/play-shots.mjs` makes the Play and App Store cards f
   returns "in 25 min", so never write "in {until(...)}". Monospace is for code, ids and paths only.
   No CLI commands or shell flags on phone screens; say "needs setup on your computer" and keep the
   commands under Settings → Advanced on the desktop.
+- Edited approvals: `inbox.decide(id, true, by, note, args)` keeps the owner's arguments on the decision; the bus (`afterAsk`)
+  records `approval.resolved.edited`, runs the policy on the edited args (a block still blocks) and sends them; a parked run's
+  answers carry them too. `POST …/approve {args}` takes them, never with `for`. The card's Edit covers email, post, note and ask shapes.
 - Review cards name the thing ("wants to post a message", "an email", the file name) with the tool id
   as a small tag beside it, never "wants to post post_message". Long mono labels (grants, paths) must
   wrap: the Inbox has to fit a 240 pt-wide phone (large display zoom) without sideways scroll.
