@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api, live, agentByName, loader } from "../lib/api.svelte";
+  import { api, live, agentByName, loader, refreshCore, errorText } from "../lib/api.svelte";
   import { scrollBehavior } from "../lib/a11y.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
@@ -67,6 +67,25 @@
   // The history shows five rows, so five (plus one in case the current run is among them) is all that
   // is fetched on every tick; "show all" asks for the whole history once.
   const RECENT = 5;
+  // Change it from its page: schedule, runs a day, cap per run, notebook; the Garufile keeps its comments.
+  let editing = $state(false);
+  let form = $state({ cron: "", runs: "", cap: "", memory: false });
+  let saving = $state(false);
+  let saveError = $state<string | null>(null);
+  function startEdit() {
+    form = { cron: a?.cron ?? "", runs: a?.budget?.maxRunsPerDay ? String(a.budget.maxRunsPerDay) : "", cap: a?.budget?.maxCostUsd ? String(a.budget.maxCostUsd) : "", memory: Boolean(a?.memory) };
+    saveError = null; editing = true;
+  }
+  async function save() {
+    if (saving || !a) return;
+    saving = true; saveError = null;
+    try {
+      await api.editAgent(a.name, { cron: form.cron.trim() || null, maxRunsPerDay: form.runs.trim() ? Number(form.runs) : null, maxCostUsd: form.cap.trim() ? Number(form.cap) : null, memory: form.memory });
+      editing = false;
+      live.tick++;
+      void refreshCore().catch(() => {});
+    } catch (e) { saveError = errorText(e); } finally { saving = false; }
+  }
   $effect(() => { live.tick; name; loadRuns(api.runs(name, showAllRuns ? {} : { limit: RECENT + 1 }), (r) => (runs = r), (m) => (loadError = m)); });
   $effect(() => {
     live.tick; name;
@@ -176,6 +195,27 @@
         </div>
         <div class="fact"><div class="k">{t("Limits")}</div><div class="v">{a.budget?.maxCostUsd ? t("{cost} per run", { cost: usd(a.budget.maxCostUsd) }) : a.budget?.free ? t("free model") : t("no cap")}{#if a.budget?.maxRunsPerDay}<span class="text-mute">&nbsp;· {a.budget.maxRunsPerDay === 1 ? t("1 run a day") : t("{n} runs a day", { n: a.budget.maxRunsPerDay })}</span>{/if}<span class="text-mute">&nbsp;· {a.sandbox ? t("sandboxed, net {network}", { network: a.sandbox.network }) : t("no sandbox")}</span></div></div>
       </div>
+      {#if !live.demo && a.configured}
+        {#if editing}
+          <div class="panel rise p-4">
+            <h3 class="label mb-3">{t("Change {name}", { name: a.name })}</h3>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label class="block text-[13px]"><span class="text-mute">{t("Schedule (cron; empty = only when asked)")}</span><input class="field mt-1 w-full" bind:value={form.cron} placeholder="0 8 * * 1-5" />{#if form.cron.trim()}<span class="mt-1 block text-[12px] text-mute">{cronLabel(form.cron.trim())}</span>{/if}</label>
+              <label class="block text-[13px]"><span class="text-mute">{t("Runs a day at most (empty = no cap)")}</span><input class="field mt-1 w-full" inputmode="numeric" bind:value={form.runs} /></label>
+              <label class="block text-[13px]"><span class="text-mute">{t("Cap per run, in dollars (empty = no cap)")}</span><input class="field mt-1 w-full" inputmode="decimal" bind:value={form.cap} /></label>
+              <label class="flex items-center gap-3 text-[13px] sm:mt-6"><input type="checkbox" class="toggle" bind:checked={form.memory} /><span>{t("Keeps a notebook between runs")}</span></label>
+            </div>
+            {#if saveError}<p class="mt-2 text-[12.5px]" style="color: var(--color-bad)">{saveError}</p>{/if}
+            <div class="mt-3 flex gap-2">
+              <button class="btn btn-primary" disabled={saving} onclick={save}>{t("Save to the Garufile")}</button>
+              <button class="btn" disabled={saving} onclick={() => (editing = false)}>{t("Cancel")}</button>
+            </div>
+            <p class="mt-2 text-[12px] text-mute">{t("The file keeps your comments. A new schedule starts right away; a notebook needs its garu.remember and garu.forget rules in the policy to be used.")}</p>
+          </div>
+        {:else}
+          <button class="tap text-[12px] text-mute hover:text-fg" onclick={startEdit}>{t("Change schedule, caps or notebook")}</button>
+        {/if}
+      {/if}
     {/if}
 
     <!-- Memory -->

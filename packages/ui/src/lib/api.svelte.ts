@@ -93,6 +93,7 @@ export const api = {
   remember: (agent: string, note: string) => post<{ notes: import("./types").MemoryNote[] }>(`/api/agents/${encodeURIComponent(agent)}/memory`, { note }),
   forget: (agent: string, note: string) => post<{ notes: import("./types").MemoryNote[] }>(`/api/agents/${encodeURIComponent(agent)}/memory/forget`, { note }),
   settings: () => get<import("./types").Settings>("/api/settings"),
+  editAgent: (agent: string, edits: { cron?: string | null; maxRunsPerDay?: number | null; maxCostUsd?: number | null; memory?: boolean }) => post<import("./types").Agent>(`/api/agents/${encodeURIComponent(agent)}/settings`, edits),
   weekly: () => get<{ text: string; posts: boolean }>("/api/weekly"),
   logs: (n = 200) => get<{ lines: string[]; path: string }>(`/api/logs?n=${n}`),
   pair: () => get<import("./types").Pair>("/api/pair"),
