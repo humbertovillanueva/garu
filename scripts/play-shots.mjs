@@ -23,6 +23,8 @@ const APP = arg("app", "http://localhost:5174");
 const SERVER = arg("server", "http://127.0.0.1:4101");
 const TOKEN = arg("token", "");
 const LANG = arg("lang", "en");
+// --theme light captures the light theme, for a pass over every screen in it; the store cards stay dark.
+const THEME = arg("theme", "dark");
 const FRAME = {
   // The card, and the phone it shows: Play's is a 390×844 phone at 3× in a 894-px frame; the App
   // Store's is the 6.9-inch iPhone (440×956 at 3× is exactly 1320×2868) in a 1094-px frame.
@@ -65,7 +67,10 @@ if (!CAPTIONS) {
   console.error(`no captions for --lang ${LANG}`);
   process.exit(2);
 }
-const SCREENS = [
+// --screens name=hash,name=hash captures other screens instead (a theme pass, say); a name without a caption gets a plain one.
+const SCREENS = arg("screens", "")
+  ? arg("screens", "").split(",").map((pair) => { const [name, hash] = pair.split("="); return [name, hash ?? `#/${name}`]; })
+  : [
   ["home", "#/"],
   ["inbox", "#/inbox"],
   ["agent", "#/agent/tomay"],
@@ -159,7 +164,7 @@ async function main() {
     // Paired to the server, Spanish or English pinned, dark, intro seen, home first.
     await page.eval(`(() => {
       localStorage.setItem("garu.server", JSON.stringify({ base: ${JSON.stringify(SERVER)}, token: ${JSON.stringify(TOKEN)} }));
-      localStorage.setItem("garu.prefs", JSON.stringify({ haptics: true, landOnInbox: false, theme: "dark", language: ${JSON.stringify(LANG)}, seenRelease: ${JSON.stringify(RELEASE)} }));
+      localStorage.setItem("garu.prefs", JSON.stringify({ haptics: true, landOnInbox: false, theme: ${JSON.stringify(THEME)}, language: ${JSON.stringify(LANG)}, seenRelease: ${JSON.stringify(RELEASE)} }));
       localStorage.setItem("garu.intro", "1");
       location.hash = "#/";
       location.reload();
@@ -191,7 +196,7 @@ async function main() {
     await sleep(500);
     const { frameTree } = await page.send("Page.getFrameTree");
     for (const name of Object.keys(raw)) {
-      const [title, sub] = CAPTIONS[name];
+      const [title, sub] = CAPTIONS[name] ?? [name, ""];
       const html = `<!doctype html><html><head><meta charset="utf-8"><style>
         html,body{margin:0;width:${W}px;height:${H}px;background:#0b0d12;overflow:hidden;font-family:-apple-system,"SF Pro Display","Inter","Helvetica Neue",sans-serif;color:#e9edf3}
         .t{position:absolute;left:0;right:0;top:${tTop}px;text-align:center;font-size:${tSize}px;line-height:1.02;font-weight:700;letter-spacing:-0.025em;white-space:pre-line}
