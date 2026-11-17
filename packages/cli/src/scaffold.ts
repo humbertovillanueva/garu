@@ -64,6 +64,7 @@ export function suggestModel(env: NodeJS.ProcessEnv): { model: string; why: stri
   const out: { model: string; why: string }[] = [];
   if (env["GEMINI_API_KEY"]) out.push({ model: "gemini/gemini-3.5-flash-lite", why: t("GEMINI_API_KEY is set · free tier") });
   if (env["ANTHROPIC_API_KEY"]) out.push({ model: "anthropic/claude-haiku-4-5", why: t("ANTHROPIC_API_KEY is set") });
+  if (env["OPENAI_API_KEY"]) out.push({ model: "openai/gpt-5-mini", why: env["OPENAI_BASE_URL"] ? t("OPENAI_API_KEY is set · OPENAI_BASE_URL points at {host}", { host: new URL(env["OPENAI_BASE_URL"]).host }) : t("OPENAI_API_KEY is set") });
   out.push({ model: "ollama/qwen3:8b", why: env["OLLAMA_HOST"] ? t("OLLAMA_HOST is set · local, $0") : t("local via Ollama, $0 (needs `ollama pull qwen3:8b`)") });
   if (!env["GEMINI_API_KEY"]) out.push({ model: "gemini/gemini-3.5-flash-lite", why: t("free tier · add GEMINI_API_KEY to .env") });
   return out;

@@ -753,6 +753,7 @@ program
     for (const a of agents) {
       if (a.garufile.model.startsWith("gemini/")) referenced.add("GEMINI_API_KEY");
       if (a.garufile.model.startsWith("anthropic/")) referenced.add("ANTHROPIC_API_KEY");
+      if (a.garufile.model.startsWith("openai/") && !/^https?:\/\/(127\.0\.0\.1|localhost)/.test(process.env["OPENAI_BASE_URL"] ?? "")) referenced.add("OPENAI_API_KEY");
     }
     const installed = process.platform === "darwin" ? existsSync(launchdPlistPath(root)) : process.platform === "linux" ? existsSync(systemdUnitPath(root)) : null;
     const reach = new Reach(join(root, ".garu", "reach.json")).lost();
@@ -790,7 +791,7 @@ program
   .option("--kind <kind>", t("its face: owl | fox | turtle | bee | cat | octopus | rabbit | bear | frog | penguin | raccoon | whale"))
   .option("--tagline <text>", t("one line of character shown under its name"))
   .option("--when <schedule>", t("manual | weekday-morning | hourly | daily | a cron expression"))
-  .option("--model <provider/model>", t("e.g. gemini/gemini-3.5-flash-lite, ollama/qwen3:8b"))
+  .option("--model <provider/model>", t("e.g. gemini/gemini-3.5-flash-lite, ollama/qwen3:8b, openai/gpt-5-mini"))
   .option("--web <hosts>", t("comma-separated hosts it may fetch from, 'ask' to review each fetch, or 'none'"))
   .option("--fs <path>", t("a folder it can use, or 'none'"))
   .option("--write <mode>", t("allow | ask — whether it may write in that folder without asking"))
