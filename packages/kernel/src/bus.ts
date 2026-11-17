@@ -54,7 +54,7 @@ export interface ApprovalContext {
 }
 
 /** A yes or a no, or "parked": the request stays open and the run will come back for the answer. */
-export type ApprovalAnswer = { approved: boolean; by: string; note?: string } | { parked: string };
+export type ApprovalAnswer = { approved: boolean; by: string; note?: string; /** The owner approved an edited version: these arguments, not the model's. */ args?: Record<string, unknown> } | { parked: string };
 
 export interface Approver {
   /** Return true to let the call through. Called only for `ask` decisions. */
@@ -305,9 +305,27 @@ export class ToolBus {
       rec.record({ type: "approval.requested", callId });
       const answer = await this.opts.approver(req, decision, { agent: rec.agent, runId: rec.runId, callId, parkable: this.opts.parkable === true });
       if ("parked" in answer) return { status: "parked", decision, requestId: answer.parked, callId };
-      const { approved, by, note } = answer;
-      rec.record({ type: "approval.resolved", callId, approved, by, ...(note ? { note } : {}) });
-      if (!approved) return { status: "denied", decision, by, callId, ...(note ? { note } : {}) };
+      return this.afterAsk(target, qualified, args, callId, decision, answer);
+    }
+    return this.execute(target, qualified, args, callId);
+  }
+
+  /**
+   * The owner's answer, recorded, then the call or not. An approval with edited arguments goes out
+   * with the owner's version, after the policy has seen it: an edit can't reach what a rule blocks.
+   */
+  private async afterAsk(target: { server: string; tool: string }, qualified: string, args: Record<string, unknown>, callId: string, decision: Decision, answer: { approved: boolean; by: string; note?: string; args?: Record<string, unknown> }): Promise<CallOutcome & { callId: string }> {
+    const rec = this.opts.recorder;
+    const { approved, by, note } = answer;
+    rec.record({ type: "approval.resolved", callId, approved, by, ...(note ? { note } : {}), ...(answer.args ? { edited: answer.args } : {}) });
+    if (!approved) return { status: "denied", decision, by, callId, ...(note ? { note } : {}) };
+    if (answer.args) {
+      const again = this.opts.policy.decide({ server: target.server, tool: target.tool, args: answer.args });
+      if (again.action === "block") {
+        rec.record({ type: "policy.decision", callId, decision: again });
+        return { status: "blocked", decision: again, callId };
+      }
+      return this.execute(target, qualified, answer.args, callId);
     }
     return this.execute(target, qualified, args, callId);
   }
@@ -316,17 +334,17 @@ export class ToolBus {
    * A call whose ask was answered after the run parked. The answer is recorded under the call's
    * original id, then the call goes out, or doesn't, exactly as if the answer had come at once.
    */
-  async callDecided(qualified: string, args: Record<string, unknown>, callId: string, decision: Decision, answer: { approved: boolean; by: string; note?: string }): Promise<CallOutcome & { callId: string }> {
+  async callDecided(qualified: string, args: Record<string, unknown>, callId: string, decision: Decision, answer: { approved: boolean; by: string; note?: string; args?: Record<string, unknown> }): Promise<CallOutcome & { callId: string }> {
     const rec = this.opts.recorder;
-    rec.record({ type: "approval.resolved", callId, approved: answer.approved, by: answer.by, ...(answer.note ? { note: answer.note } : {}) });
-    if (!answer.approved) return { status: "denied", decision, by: answer.by, callId, ...(answer.note ? { note: answer.note } : {}) };
     const target = this.resolve(qualified);
     if (!target) {
+      rec.record({ type: "approval.resolved", callId, approved: answer.approved, by: answer.by, ...(answer.note ? { note: answer.note } : {}) });
+      if (!answer.approved) return { status: "denied", decision, by: answer.by, callId, ...(answer.note ? { note: answer.note } : {}) };
       const error = `unknown tool "${qualified}" (its server is no longer in the Garufile)`;
       rec.record({ type: "tool.result", callId, ok: false, durationMs: 0, error });
       return { status: "error", error, callId };
     }
-    return this.execute(target, qualified, args, callId);
+    return this.afterAsk(target, qualified, args, callId, decision, answer);
   }
 
   /** Past the policy and past any ask: the call itself, to a server or a built-in. */

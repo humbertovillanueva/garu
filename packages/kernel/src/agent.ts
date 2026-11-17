@@ -53,7 +53,7 @@ export interface RunOptions {
   /** Kept in the parked state for the host, untouched (the control room stores the ask depth). */
   host?: Record<string, unknown>;
   /** A parked run coming back: its saved state, and the answer to each request it waited on, by request id. */
-  resume?: { parked: ParkedRun; answers: Record<string, { approved: boolean; by: string; note?: string }> };
+  resume?: { parked: ParkedRun; answers: Record<string, { approved: boolean; by: string; note?: string; args?: Record<string, unknown> }> };
 }
 
 /** How a run reaches the owner's other agents. The control room supplies it; a bare `garu run` has none. */

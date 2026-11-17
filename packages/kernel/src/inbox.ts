@@ -28,7 +28,14 @@ export interface ApprovalRequest {
   reason: string;
   createdAt: string;
   expiresAt: string;
-  decision?: { approved: boolean; by: string; at: string; note?: string };
+  decision?: {
+    approved: boolean;
+    by: string;
+    at: string;
+    note?: string;
+    /** The arguments as the owner edited them before approving; the call goes out with these, not the model's. */
+    args?: Record<string, unknown>;
+  };
 }
 
 export interface InboxOptions {
@@ -105,7 +112,7 @@ export class Inbox {
     for (;;) {
       const r = this.get(id);
       if (!r) return { approved: false, by: "inbox: request vanished" };
-      if (r.decision) return { approved: r.decision.approved, by: r.decision.by, ...(r.decision.note ? { note: r.decision.note } : {}) };
+      if (r.decision) return { approved: r.decision.approved, by: r.decision.by, ...(r.decision.note ? { note: r.decision.note } : {}), ...(r.decision.args ? { args: r.decision.args } : {}) };
       if (this.closedReason) {
         if (wait.parkable) return { parked: id };
         try { this.decide(id, false, this.closedReason); } catch { /* decided in the meantime */ }
@@ -138,12 +145,14 @@ export class Inbox {
   }
 
   /** Record a human decision. Throws if the request is unknown or already decided. */
-  decide(id: string, approved: boolean, by: string, note?: string): ApprovalRequest {
+  decide(id: string, approved: boolean, by: string, note?: string, args?: Record<string, unknown>): ApprovalRequest {
     const r = this.get(id);
     if (!r) throw new Error(`no approval request "${id}"`);
     if (r.decision) throw new Error(`request "${id}" was already ${r.decision.approved ? "approved" : "denied"} by ${r.decision.by}`);
     const n = note?.trim().slice(0, 500);
-    r.decision = { approved, by, at: this.now().toISOString(), ...(n ? { note: n } : {}) };
+    // An edit only means something on an approval, and only when it changes something.
+    const edited = approved && args && typeof args === "object" && !Array.isArray(args) && JSON.stringify(args) !== JSON.stringify(r.args) ? args : undefined;
+    r.decision = { approved, by, at: this.now().toISOString(), ...(n ? { note: n } : {}), ...(edited ? { args: edited } : {}) };
     writeAtomic(this.path(id), r);
     return r;
   }

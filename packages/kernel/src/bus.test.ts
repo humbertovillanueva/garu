@@ -68,6 +68,41 @@ describe("ToolBus answering a parked call", () => {
   });
 });
 
+describe("ToolBus with the owner's edits", () => {
+  it("an edited approval goes out with the owner's arguments, says so in the log, and can't reach what a rule blocks", async () => {
+    const rec = new Recorder({ root: mkdtempSync(join(tmpdir(), "garu-")), agent: "edit-test" });
+    let edit: Record<string, unknown> | undefined;
+    const bus = new ToolBus({
+      policy: new PolicyEngine([
+        { tool: "echo.add", when: { a: { eq: 13 } }, action: "block", reason: "never thirteen" },
+        { tool: "echo.add", action: "ask" },
+        { tool: "*", action: "block" },
+      ]),
+      recorder: rec,
+      approver: async () => ({ approved: true, by: "humberto", ...(edit ? { args: edit } : {}) }),
+    });
+    await bus.connect([{ name: "echo", command: "node", args: [serverPath], env: {} }]);
+    try {
+      edit = { a: 10, b: 5 };
+      const ok = await bus.call("echo.add", { a: 2, b: 3 });
+      expect(ok.status).toBe("ok");
+      if (ok.status === "ok") expect(ok.result).toEqual([{ type: "text", text: "15" }]);
+      edit = { a: 13, b: 0 };
+      const blocked = await bus.call("echo.add", { a: 2, b: 3 });
+      expect(blocked.status).toBe("blocked");
+      if (blocked.status === "blocked") expect(blocked.decision.reason).toBe("never thirteen");
+      const events = readRun(rec.path).map((e) => e.event);
+      const resolved = events.filter((e) => e.type === "approval.resolved") as { edited?: Record<string, unknown> }[];
+      expect(resolved.map((e) => e.edited)).toEqual([{ a: 10, b: 5 }, { a: 13, b: 0 }]);
+      // the second call: ask, approved with edits, then the policy saw the edit and blocked it; nothing went to the server
+      const types = events.map((e) => e.type);
+      expect(types.slice(types.lastIndexOf("tool.request"))).toEqual(["tool.request", "policy.decision", "approval.requested", "approval.resolved", "policy.decision"]);
+    } finally {
+      await bus.close();
+    }
+  }, 30_000);
+});
+
 describe("ToolBus (real MCP server over stdio)", () => {
   let bus: ToolBus;
   let rec: Recorder;

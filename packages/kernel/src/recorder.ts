@@ -25,7 +25,7 @@ export type GaruEvent =
   | { type: "tool.request"; callId: string; request: ToolCallRequest }
   | { type: "policy.decision"; callId: string; decision: Decision }
   | { type: "approval.requested"; callId: string }
-  | { type: "approval.resolved"; callId: string; approved: boolean; by: string; note?: string }
+  | { type: "approval.resolved"; callId: string; approved: boolean; by: string; note?: string; /** The arguments the owner edited before approving: the call went out with these. */ edited?: Record<string, unknown> }
   | { type: "tool.result"; callId: string; ok: boolean; durationMs: number; result?: unknown; error?: string }
   | { type: "tool.retry"; callId: string; reason: string }
   | { type: "model.retry"; attempt: number; maxAttempts: number; waitMs: number; reason: string }
@@ -154,7 +154,7 @@ export function formatEvent(env: Envelope): string {
     case "approval.requested":
       return `${t}   waiting for approval…`;
     case "approval.resolved":
-      return `${t}   ${e.approved ? "approved" : "denied"} by ${e.by}${e.note ? ` — "${e.note}"` : ""}`;
+      return `${t}   ${e.approved ? "approved" : "denied"} by ${e.by}${e.edited ? " (with your edits)" : ""}${e.note ? ` — "${e.note}"` : ""}`;
     case "run.parked":
       return `${t} ⏸ parked: waiting on ${e.requests.length === 1 ? "an answer" : `${e.requests.length} answers`} in the inbox (${e.requests.join(", ")}); the run resumes when it comes`;
     case "run.resumed":

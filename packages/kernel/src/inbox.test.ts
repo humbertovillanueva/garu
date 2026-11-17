@@ -27,6 +27,24 @@ describe("Inbox", () => {
     expect(inbox.get(pending[0]!.id)?.decision).toMatchObject({ approved: true, by: "humberto" });
   });
 
+  it("an approval can carry the owner's edited arguments, and only when they differ", async () => {
+    const inbox = new Inbox({ root: mkdtempSync(join(tmpdir(), "inbox-")), pollMs: 5 });
+    const approve = inbox.approver();
+    const waiting = approve(req, decision, ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    const id = inbox.pending()[0]!.id;
+    inbox.decide(id, true, "humberto", undefined, { to: "a@b.c", body: "fixed by hand" });
+    await expect(waiting).resolves.toEqual({ approved: true, by: "humberto", args: { to: "a@b.c", body: "fixed by hand" } });
+    expect(inbox.get(id)?.decision?.args).toEqual({ to: "a@b.c", body: "fixed by hand" });
+
+    const same = approve(req, decision, ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    const id2 = inbox.pending()[0]!.id;
+    inbox.decide(id2, true, "humberto", undefined, { ...req.args });
+    await expect(same).resolves.toEqual({ approved: true, by: "humberto" });
+    expect(inbox.get(id2)?.decision).not.toHaveProperty("args");
+  });
+
   it("deny resumes with approved=false", async () => {
     const inbox = new Inbox({ root: mkdtempSync(join(tmpdir(), "inbox-")), pollMs: 5 });
     const waiting = inbox.approver()(req, decision, ctx);
