@@ -150,22 +150,7 @@ export class Scheduler {
   /** Register every cron trigger of every agent. Agents without cron triggers are ignored (they're `garu run` agents). */
   start(agents: readonly ScheduledAgent[]): number {
     let count = 0;
-    for (const a of agents) {
-      for (const t of a.garufile.triggers) {
-        if (!t.cron) continue;
-        assertValidCron(t.cron);
-        const cron = t.cron;
-        // Nothing a tick throws (a reachability check, a listener) may escape: an unhandled rejection
-        // would take the whole service down with it. It is reported as that agent's failed run instead.
-        const handle = (this.opts.cronFactory ?? defaultCronFactory)(cron, () => {
-          this.fire(a, cron).catch((e: unknown) => this.emit({ type: "run.failed", agent: a.garufile.name, error: (e as Error).message }));
-        });
-        this.handles.push(handle);
-        this.jobs.push({ agent: a, cron, handle });
-        this.emit({ type: "scheduled", agent: a.garufile.name, cron, nextRun: handle.nextRun() });
-        count++;
-      }
-    }
+    for (const a of agents) count += this.schedule(a);
     if (this.opts.catchUp && count > 0) {
       this.checkMissed();
       const every = this.opts.catchUp.everyMs ?? 60_000;
@@ -181,6 +166,44 @@ export class Scheduler {
       }
     }
     return count;
+  }
+
+  /** One agent's cron triggers, as jobs. */
+  private schedule(a: ScheduledAgent): number {
+    let count = 0;
+    for (const t of a.garufile.triggers) {
+      if (!t.cron) continue;
+      assertValidCron(t.cron);
+      const cron = t.cron;
+      // Nothing a tick throws (a reachability check, a listener) may escape: an unhandled rejection
+      // would take the whole service down with it. It is reported as that agent's failed run instead.
+      const handle = (this.opts.cronFactory ?? defaultCronFactory)(cron, () => {
+        this.fire(a, cron).catch((e: unknown) => this.emit({ type: "run.failed", agent: a.garufile.name, error: (e as Error).message }));
+      });
+      this.handles.push(handle);
+      this.jobs.push({ agent: a, cron, handle });
+      this.emit({ type: "scheduled", agent: a.garufile.name, cron, nextRun: handle.nextRun() });
+      count++;
+    }
+    return count;
+  }
+
+  /**
+   * An agent's schedule changed (edited from its page): its old jobs stop and the new Garufile's
+   * crons take their place, with no restart and nothing else touched. Returns how many it has now.
+   */
+  reschedule(a: ScheduledAgent): number {
+    const name = a.garufile.name;
+    for (const j of this.jobs) if (j.agent.garufile.name === name) { j.handle.stop(); const i = this.handles.indexOf(j.handle); if (i >= 0) this.handles.splice(i, 1); }
+    const kept = this.jobs.filter((j) => j.agent.garufile.name !== name);
+    this.jobs.length = 0;
+    this.jobs.push(...kept);
+    return this.schedule(a);
+  }
+
+  /** The crons scheduled right now, per agent, for a test or a status line. */
+  scheduledCrons(): { agent: string; cron: string }[] {
+    return this.jobs.map((j) => ({ agent: j.agent.garufile.name, cron: j.cron }));
   }
 
   /** Fire every trigger that was due inside the catch-up window and has no run since. Returns how many were queued. */

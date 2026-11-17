@@ -26,6 +26,31 @@ triggers:
   - cron: "*/5 * * * *"
   - cron: "0 9 * * 1-5"
 `) };
+describe("rescheduling one agent", () => {
+  it("stops its old crons and starts the new ones, leaving the others alone", () => {
+    const cron = manualCron();
+    const s = new Scheduler({ runner: async () => ok("x"), cronFactory: cron.factory });
+    const agentB = { source: "b.yaml", garufile: parseGarufile(`
+name: b
+model: fake/x
+prompt: p
+triggers:
+  - cron: "0 7 * * *"
+`) };
+    expect(s.start([agentA, agentB])).toBe(3);
+    const edited = { source: "b.yaml", garufile: parseGarufile(`
+name: b
+model: fake/x
+prompt: p
+triggers:
+  - cron: "30 7 * * 1-5"
+`) };
+    expect(s.reschedule(edited)).toBe(1);
+    expect(cron.stopped).toEqual(["0 7 * * *"]);
+    expect(s.scheduledCrons()).toEqual([{ agent: "a", cron: "*/5 * * * *" }, { agent: "a", cron: "0 9 * * 1-5" }, { agent: "b", cron: "30 7 * * 1-5" }]);
+  });
+});
+
 const manualOnly = { source: "m.yaml", garufile: parseGarufile(`
 name: m
 model: fake/x
