@@ -47,3 +47,6 @@ docs/video/remotion/public/audio/voice-raw.*
 
 # the desktop app's own folder (previews, worktrees)
 .claude/
+# garu backup writes here by default
+garu-backup-*.tgz
+.garu.before-restore-*

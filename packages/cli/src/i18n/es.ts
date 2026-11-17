@@ -480,4 +480,17 @@ export const es: Record<string, string> = {
   "a notebook it keeps between runs; read and edit it on its page": "una libreta que guarda entre ejecuciones; léela y edítala en su página",
   "Its notebook: a note shapes every later run, so writing one asks; dropping one is fine.": "Su libreta: una nota moldea cada ejecución posterior, así que escribir una pregunta; borrar una está bien.",
   "An edited approval can't also be a 24h approval: the edit is yours, the grant would cover the model's version.": "Una aprobación con cambios no puede ser también de 24 h: el cambio es tuyo, el permiso cubriría la versión del modelo.",
+  // garu backup / restore
+  "where to write it (default: garu-backup-<date>.tgz in this folder)": "dónde escribirlo (por defecto: garu-backup-<fecha>.tgz en esta carpeta)",
+  "One file with everything under .garu: runs, inbox, grants, notebooks, sign-ins, the token": "Un archivo con todo lo que hay bajo .garu: ejecuciones, bandeja, permisos, libretas, inicios de sesión, el token",
+  "wrote {file}: {runs} run(s), {requests} inbox request(s), {notebooks} notebook(s), {signIns} sign-in(s), {mb} MB before packing": "escrito {file}: {runs} ejecución(es), {requests} petición(es) de la bandeja, {notebooks} libreta(s), {signIns} inicio(s) de sesión, {mb} MB antes de empacar",
+  "Keep it somewhere else than this computer. It holds the sign-in token and the Google sign-ins: anyone with it is you to Garu.": "Guárdalo en otro sitio que esta computadora. Lleva el token de inicio de sesión y los inicios de sesión de Google: quien lo tenga es tú para Garu.",
+  "a backup made by garu backup": "un respaldo hecho con garu backup",
+  "replace the .garu that is here (it is moved aside, not deleted)": "reemplaza el .garu que hay aquí (se aparta, no se borra)",
+  "Put a backup's .garu into this folder": "Pone el .garu de un respaldo en esta carpeta",
+  "no such file: {file}": "no existe el archivo: {file}",
+  "there is a .garu here already; --yes moves it aside (to .garu.before-restore-<date>) and restores over it": "ya hay un .garu aquí; --yes lo aparta (a .garu.before-restore-<fecha>) y restaura encima",
+  "the old .garu is at {path}": "el .garu anterior está en {path}",
+  "restored .garu from {file}: {list}": "restaurado .garu desde {file}: {list}",
+  "If the login service runs here, restart it: garu service restart": "Si el servicio de inicio corre aquí, reinícialo: garu service restart",
 };

@@ -60,6 +60,7 @@ import { detectLocale, locale, setLocale, t } from "./i18n.js";
 import { whyLines } from "./why.js";
 import { doctor, MARK } from "./doctor.js";
 import { statusLines, type AgentFacts } from "./status.js";
+import { backupName, peekBackup, planBackup, restoreBackup, writeBackup } from "./backup.js";
 import { Cron } from "croner";
 import { Reach } from "./ui-reach.js";
 import { VERSION } from "./version.js";
@@ -684,6 +685,42 @@ program
     if (!pick || !existsSync(join(dir, pick))) fail(t("no run {run} for agent \"{agent}\"", { run: run ?? "", agent }));
     stdout.write(`${agent} · ${pick.replace(/\.jsonl$/, "")}\n`);
     for (const line of whyLines(readRun(join(dir, pick)))) stdout.write(`  · ${line}\n`);
+  });
+
+// ---------------------------------------------------------------------------
+// garu backup / restore — .garu in one file, and the way back
+// ---------------------------------------------------------------------------
+
+program
+  .command("backup")
+  .argument("[file]", t("where to write it (default: garu-backup-<date>.tgz in this folder)"))
+  .description(t("One file with everything under .garu: runs, inbox, grants, notebooks, sign-ins, the token"))
+  .action(async (file: string | undefined) => {
+    const root = process.cwd();
+    let plan;
+    try { plan = planBackup(root); } catch (e) { fail((e as Error).message); }
+    const out = file ?? backupName();
+    await writeBackup(plan, out);
+    const mb = (plan.bytes / 1_048_576).toFixed(1);
+    stdout.write(`✔ ${t("wrote {file}: {runs} run(s), {requests} inbox request(s), {notebooks} notebook(s), {signIns} sign-in(s), {mb} MB before packing", { file: out, runs: plan.runs, requests: plan.requests, notebooks: plan.notebooks, signIns: plan.signIns, mb })}\n`);
+    stdout.write(`  ${t("Keep it somewhere else than this computer. It holds the sign-in token and the Google sign-ins: anyone with it is you to Garu.")}\n`);
+  });
+
+program
+  .command("restore")
+  .argument("<file>", t("a backup made by garu backup"))
+  .option("--yes", t("replace the .garu that is here (it is moved aside, not deleted)"))
+  .description(t("Put a backup's .garu into this folder"))
+  .action(async (file: string, opts: { yes?: boolean }) => {
+    const root = process.cwd();
+    if (!existsSync(file)) fail(t("no such file: {file}", { file }));
+    let tops: string[];
+    try { tops = await peekBackup(file); } catch (e) { fail((e as Error).message); }
+    if (existsSync(join(root, ".garu")) && !opts.yes) fail(t("there is a .garu here already; --yes moves it aside (to .garu.before-restore-<date>) and restores over it"));
+    const { movedAside } = await restoreBackup(file, root);
+    if (movedAside) stdout.write(`  ${t("the old .garu is at {path}", { path: movedAside })}\n`);
+    stdout.write(`✔ ${t("restored .garu from {file}: {list}", { file, list: tops.join(", ") })}\n`);
+    stdout.write(`  ${t("If the login service runs here, restart it: garu service restart")}\n`);
   });
 
 // ---------------------------------------------------------------------------
