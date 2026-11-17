@@ -3,7 +3,9 @@
  * Node, .env and the keys the agents reference, the Garufiles, every sign-in and its age, the login
  * service, Tailscale and the reach file, what waits in the inbox and what sits parked.
  */
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { join, resolve } from "node:path";
 import { Inbox, discoverGarufiles, isRemoteServer, listParked, localTime, missingEnv, signInFor } from "@garu/kernel";
 import type { DoctorFacts } from "./doctor.js";
@@ -27,6 +29,24 @@ export async function serviceRunning(root: string): Promise<boolean> {
   }
   if (process.platform === "linux") return quiet("systemctl", ["--user", "is-active", "--quiet", `${serviceName(root)}.service`]);
   return false;
+}
+
+/** The build stamp a page carries, from its HTML. */
+const stampIn = (html: string): string | null => /<meta name="garu-build" content="([^"]*)"/.exec(html)?.[1] ?? null;
+
+/** The control room's build on disk (the UI built beside this CLI) and the one the control room on `port` serves right now. */
+export async function buildStamps(port: number): Promise<{ onDisk: string | null; served: string | null }> {
+  const here = dirname(fileURLToPath(import.meta.url)); // packages/cli/dist
+  let onDisk: string | null = null;
+  for (const dir of [resolve(here, "..", "..", "ui", "dist"), resolve(here, "ui")]) {
+    try { onDisk = stampIn(readFileSync(join(dir, "index.html"), "utf8")); break; } catch { /* not here */ }
+  }
+  let served: string | null = null;
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(2000) });
+    if (res.ok) served = stampIn(await res.text());
+  } catch { /* no control room answering */ }
+  return { onDisk, served };
 }
 
 export async function gatherFacts(root: string, port: number): Promise<DoctorFacts> {
@@ -62,5 +82,6 @@ export async function gatherFacts(root: string, port: number): Promise<DoctorFac
     reachLost: reach ? { since: localTime(reach.since, { seconds: false }) } : null,
     pending: new Inbox({ root: join(root, ".garu", "inbox") }).all().filter((r) => !r.decision).map((r) => ({ agent: r.agent, tool: r.tool, expiresAt: r.expiresAt })),
     parked: listParked(join(root, ".garu", "runs")).length,
+    build: await buildStamps(port),
   };
 }

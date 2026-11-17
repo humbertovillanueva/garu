@@ -31,6 +31,8 @@ export interface DoctorFacts {
   pending: { agent: string; tool: string; expiresAt: string }[];
   /** Runs parked for an answer. */
   parked: number;
+  /** The control room's build stamp on disk, and the one the running control room serves (null when it isn't answering). */
+  build?: { onDisk: string | null; served: string | null };
   now?: Date;
 }
 
@@ -69,6 +71,10 @@ export function doctor(f: DoctorFacts): Check[] {
   else if (!f.service.running) say("bad", t("the login service is installed but not running; `garu service restart` starts it"));
   else say("ok", t("the login service is running"));
 
+  if (f.build?.served && f.build.onDisk) {
+    if (f.build.served === f.build.onDisk) say("ok", t("the control room serves the build in this folder ({build})", { build: f.build.onDisk }));
+    else say("warn", t("the control room serves an older build ({served}) than this folder has ({onDisk}); `npm run deploy` restarts it on the new one", { served: f.build.served, onDisk: f.build.onDisk }));
+  }
   if (f.reachLost) say("bad", t("Tailscale hasn't served the control room since {since}; the phone can't reach it. Open Tailscale on this computer.", { since: f.reachLost.since }));
   else if (f.tailscale.length) say("ok", t("Tailscale serves the control room at {url}", { url: f.tailscale[0]! }));
   else say("warn", t("Tailscale isn't serving the control room, so a phone can't reach it from outside this computer (docs/phone.md)"));

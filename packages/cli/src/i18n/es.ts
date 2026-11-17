@@ -498,4 +498,6 @@ export const es: Record<string, string> = {
   "nothing to change": "nada que cambiar",
   "Open the inbox to decide.": "Abre la bandeja para decidir.",
   "blocked {list}": "bloqueó {list}",
+  "the control room serves the build in this folder ({build})": "la sala de control sirve la versión que hay en esta carpeta ({build})",
+  "the control room serves an older build ({served}) than this folder has ({onDisk}); `npm run deploy` restarts it on the new one": "la sala de control sirve una versión más vieja ({served}) que la de esta carpeta ({onDisk}); `npm run deploy` la reinicia con la nueva",
 };

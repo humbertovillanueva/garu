@@ -49,6 +49,14 @@ describe("garu doctor", () => {
     expect(checks.filter((c) => c.verdict === "warn").map((c) => c.text)).toContain("1 run is parked for your answer");
   });
 
+  it("says when the running control room is behind the build on disk", () => {
+    const same = doctor({ ...fine, build: { onDisk: "0.1.0 · abc · 2026-11-17 18:00 UTC", served: "0.1.0 · abc · 2026-11-17 18:00 UTC" } });
+    expect(same.find((c) => /serves the build/.test(c.text))).toMatchObject({ verdict: "ok" });
+    const behind = doctor({ ...fine, build: { onDisk: "0.1.0 · def · 2026-11-17 19:00 UTC", served: "0.1.0 · abc · 2026-11-17 18:00 UTC" } });
+    expect(behind.find((c) => /older build/.test(c.text))).toMatchObject({ verdict: "warn" });
+    expect(doctor({ ...fine, build: { onDisk: "x", served: null } }).some((c) => /build/.test(c.text))).toBe(false);
+  });
+
   it("a sign-in Google already ended is a fault, not a warning", () => {
     const c = doctor({ ...fine, signIns: [{ agent: "bea", source: "a.yaml", server: "gmail", at: new Date("2026-11-07T18:00:00.000Z"), google: true }] });
     expect(c.find((x) => x.text.startsWith("bea's"))).toMatchObject({ verdict: "bad" });
