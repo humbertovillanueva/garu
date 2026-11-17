@@ -138,6 +138,8 @@ Rules are evaluated top to bottom; the first match wins; nothing matching means 
 
 Other fields: `sandbox:` (image, network, workspace, memory, cpus), `modelOptions:` (provider knobs, e.g. Ollama `think: false`), `maxTurns:`.
 
+Models: `gemini/…` (a free tier at aistudio.google.com), `anthropic/…`, `ollama/…` (local, $0), and `openai/…` for OpenAI or anything that speaks its API: Groq, OpenRouter, Mistral, LM Studio, with `OPENAI_BASE_URL` in `.env` pointing at it. Garu has no price table for `openai/` models, so they run unpriced unless the Garufile's `budget.pricing` says what they cost.
+
 ### Remote tool servers
 
 A tool server can be a URL instead of a command. Garu speaks MCP's Streamable HTTP transport, so any hosted server works: GitHub's, Linear's, Notion's, your own. API keys come from `.env`; servers that want a login use OAuth, which you do once in a browser with `garu auth`.
