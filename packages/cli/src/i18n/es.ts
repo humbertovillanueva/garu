@@ -500,4 +500,10 @@ export const es: Record<string, string> = {
   "blocked {list}": "bloqueó {list}",
   "the control room serves the build in this folder ({build})": "la sala de control sirve la versión que hay en esta carpeta ({build})",
   "the control room serves an older build ({served}) than this folder has ({onDisk}); `npm run deploy` restarts it on the new one": "la sala de control sirve una versión más vieja ({served}) que la de esta carpeta ({onDisk}); `npm run deploy` la reinicia con la nueva",
+  "A control room full of made-up runs and a waiting ask, in a temporary folder: look around before you make an agent": "Una sala de control llena de ejecuciones inventadas y una pregunta esperando, en una carpeta temporal: mira antes de crear un agente",
+  "en or es: the agents and the sample mail in that language": "en o es: los agentes y el correo de muestra en ese idioma",
+  "don't open the browser": "no abrir el navegador",
+  "garu demo needs the repo (its agents/ and scripts/demo-data.mjs); run it from a checkout": "garu demo necesita el repo (sus agents/ y scripts/demo-data.mjs); ejecútalo desde una copia",
+  "seeding a demo in {folder}…": "sembrando una demo en {folder}…",
+  "the demo control room: {url}": "la sala de control de la demo: {url}",
 };

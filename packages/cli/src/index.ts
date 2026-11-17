@@ -2,10 +2,11 @@
 import { Command } from "commander";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync, cpSync, rmSync } from "node:fs";
 import { execFile, spawn } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { promisify } from "node:util";
+import { tmpdir } from "node:os";
 import { createServer as createHttpServer } from "node:http";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -674,6 +675,43 @@ program
     if (!pick || !existsSync(join(dir, pick))) fail(t("no run {run} for agent \"{agent}\"", { run: run ?? "", agent }));
     stdout.write(`${agent} · ${pick.replace(/\.jsonl$/, "")}\n`);
     for (const line of whyLines(readRun(join(dir, pick)))) stdout.write(`  · ${line}\n`);
+  });
+
+// ---------------------------------------------------------------------------
+// garu demo — a seeded control room in thirty seconds, no key, no agents of your own
+// ---------------------------------------------------------------------------
+
+program
+  .command("demo")
+  .description(t("A control room full of made-up runs and a waiting ask, in a temporary folder: look around before you make an agent"))
+  .option("-p, --port <n>", t("port"), "4199")
+  .option("--lang <code>", t("en or es: the agents and the sample mail in that language"), locale())
+  .option("--as <name>", t("your name — how approvals are recorded and how agents address you"), process.env["GARU_USER"] ?? process.env["USER"] ?? "you")
+  .option("--no-open", t("don't open the browser"))
+  .action(async (opts: { port: string; lang: string; as: string; open: boolean }) => {
+    const here = dirname(fileURLToPath(import.meta.url)); // packages/cli/dist
+    const repo = resolve(here, "..", "..", "..");
+    const seeder = join(repo, "scripts", "demo-data.mjs");
+    if (!existsSync(seeder) || !existsSync(join(repo, "agents"))) fail(t("garu demo needs the repo (its agents/ and scripts/demo-data.mjs); run it from a checkout"));
+    const lang = opts.lang === "es" ? "es" : "en";
+    const folder = join(tmpdir(), `garu-demo-${lang}`);
+    rmSync(folder, { recursive: true, force: true });
+    mkdirSync(folder, { recursive: true });
+    // The real agents and examples, so the demo's rules and schedules are the real ones; the Spanish demo runs the .es editions.
+    for (const dir of ["agents", "examples"]) {
+      cpSync(join(repo, dir), join(folder, dir), { recursive: true, filter: (src) => !/node_modules|\.garu/.test(src) });
+      if (lang === "es") for (const a of readdirSync(join(folder, dir))) {
+        const es = join(folder, dir, a, "Garufile.es.yaml");
+        if (existsSync(es)) cpSync(es, join(folder, dir, a, "Garufile.yaml"));
+      }
+    }
+    stdout.write(`${t("seeding a demo in {folder}…", { folder })}\n`);
+    await run("node", [seeder, `--lang=${lang}`, "--force"], { cwd: folder });
+    const url = `http://127.0.0.1:${opts.port}/`;
+    stdout.write(`${t("the demo control room: {url}", { url })}\n`);
+    const child = spawn(process.execPath, [join(here, "index.js"), "ui", "-p", opts.port, "--demo", "--as", opts.as, "--log-root", join(folder, ".garu", "runs"), "--inbox-root", join(folder, ".garu", "inbox")], { cwd: folder, stdio: "inherit", env: { ...process.env, GARU_LANG: lang } });
+    if (opts.open) setTimeout(() => { const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open"; execFile(cmd, process.platform === "win32" ? ["/c", "start", url] : [url], () => {}); }, 1500);
+    await new Promise<void>((res) => child.on("exit", () => res()));
   });
 
 // ---------------------------------------------------------------------------
