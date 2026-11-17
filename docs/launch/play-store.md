@@ -355,6 +355,9 @@ run parks meanwhile; "model busy" instead of a red error when the model was over
 before the upload: the run page's "Why it did that" (what went through, what asked, what was blocked,
 what stopped it), the same in one line under each run in an agent's history, and a run that waited for
 an answer says how long it waited apart from its own work.
+Added 2026-11-17: swipe a card to decide, edit a draft before approving, the asks waiting on the app's icon,
+the faces move (and an agent at work breathes, one waiting on you knocks), two openers above the message
+box, the rules editable from the agent's page on the desktop, and `openai/` models.
 
 The app also opens on a "What's new in this version" card the first time after the update (Home, until
 "Got it"; again from Settings), listing the same changes in the phone's language: the reviewer's
@@ -367,17 +370,16 @@ line stays empty until a tester's reply names the change it came from:
 - en-US:
   ```
   From tester feedback: …
-  Each agent now keeps a small notebook you can read and edit. A run's page says why it did that:
-  what went through, what asked you, what was blocked. The timeline says when your computer was
-  asleep and how long a run waited for your answer. Asks wait a day for you instead of half an hour.
+  Swipe a card to approve or decline, or edit the draft and approve your version. The icon shows how
+  many asks wait. The faces move. Each agent keeps a notebook you can read and edit. A run's page says
+  why it did that. Asks wait a day for you instead of half an hour.
   ```
 - es-419:
   ```
   De los comentarios de los probadores: …
-  Cada agente guarda ahora una libreta que puedes leer y editar. La página de una ejecución dice por
-  qué hizo eso: qué pasó, qué te preguntó, qué se bloqueó. La línea de tiempo dice cuándo la
-  computadora estaba dormida y cuánto esperó tu respuesta. Las peticiones te esperan un día en vez de
-  media hora.
+  Desliza una tarjeta para aprobar o rechazar, o edita el borrador y aprueba tu versión. El ícono
+  muestra cuántas preguntas esperan. Las caras se mueven. Cada agente guarda una libreta que puedes
+  leer y editar. La página de una ejecución dice por qué hizo eso. Las peticiones te esperan un día.
   ```
 
 Upload: Play Console → Testing → Closed testing → Alpha → Create new release → upload the bundle →
