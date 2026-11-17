@@ -59,6 +59,7 @@ import { tailscaleAddresses } from "./ui-addresses.js";
 import { detectLocale, locale, setLocale, t } from "./i18n.js";
 import { whyLines } from "./why.js";
 import { doctor, MARK } from "./doctor.js";
+import { gatherFacts, serviceRunning } from "./doctor-facts.js";
 import { statusLines, type AgentFacts } from "./status.js";
 import { backupName, peekBackup, planBackup, restoreBackup, writeBackup } from "./backup.js";
 import { Cron } from "croner";
@@ -392,18 +393,6 @@ service
     }
     stdout.write(`✔ ${t("removed. Garu no longer starts at login for {root}.", { root })}\n`);
   });
-
-/** Whether this folder's login service is loaded and running (launchd or systemd). */
-async function serviceRunning(root: string): Promise<boolean> {
-  if (process.platform === "darwin") {
-    const uid = String(process.getuid?.() ?? 501);
-    // `launchctl print` succeeds for any loaded service, running or not: read its state line.
-    const out = await run("launchctl", ["print", `gui/${uid}/${launchdLabel(root)}`]).then((r) => r.stdout, () => "");
-    return /^\s*state = running\b/m.test(out);
-  }
-  if (process.platform === "linux") return quiet("systemctl", ["--user", "is-active", "--quiet", `${serviceName(root)}.service`]);
-  return false;
-}
 
 service
   .command("status")
@@ -779,39 +768,7 @@ program
   .action(async (opts: { port: string }) => {
     loadDotEnv();
     const root = process.cwd();
-    const { agents, problems } = discoverGarufiles(root);
-    const authRoot = resolve(root, ".garu", "auth");
-    const referenced = new Set<string>();
-    for (const a of agents) for (const tl of a.garufile.tools) {
-      const scan = (v: string) => { for (const m of v.matchAll(/\$\{([A-Z_][A-Z0-9_]*)\}/g)) referenced.add(m[1]!); };
-      if (isRemoteServer(tl)) { scan(tl.url); Object.values(tl.headers).forEach(scan); } else { tl.args.forEach(scan); Object.values(tl.env).forEach(scan); }
-    }
-    // The model's key is read by the provider, not written in a Garufile: a Gemini agent needs GEMINI_API_KEY, an Anthropic one ANTHROPIC_API_KEY.
-    for (const a of agents) {
-      if (a.garufile.model.startsWith("gemini/")) referenced.add("GEMINI_API_KEY");
-      if (a.garufile.model.startsWith("anthropic/")) referenced.add("ANTHROPIC_API_KEY");
-      if (a.garufile.model.startsWith("openai/") && !/^https?:\/\/(127\.0\.0\.1|localhost)/.test(process.env["OPENAI_BASE_URL"] ?? "")) referenced.add("OPENAI_API_KEY");
-    }
-    const installed = process.platform === "darwin" ? existsSync(launchdPlistPath(root)) : process.platform === "linux" ? existsSync(systemdUnitPath(root)) : null;
-    const reach = new Reach(join(root, ".garu", "reach.json")).lost();
-    const checks = doctor({
-      node: process.versions.node,
-      dotEnv: existsSync(join(root, ".env")),
-      keys: [...referenced].sort().map((name) => ({ name, set: Boolean(process.env[name]) })),
-      optional: [
-        { name: "GARU_USER", set: Boolean(process.env["GARU_USER"]), does: t("names you in the greeting and the decisions") },
-        { name: "GARU_NOTIFY_URL", set: Boolean(process.env["GARU_NOTIFY_URL"]), does: t("pushes asks to the phone through ntfy") },
-        { name: "GARU_WEEKLY_WEBHOOK_URL", set: Boolean(process.env["GARU_WEEKLY_WEBHOOK_URL"]), does: t("posts the week in numbers on Sunday evening") },
-      ],
-      agents: agents.map((a) => a.garufile.name),
-      problems,
-      signIns: agents.flatMap((a) => a.garufile.tools.filter((tl) => tl.auth === "oauth").map((tl) => ({ agent: a.garufile.name, source: a.source, server: tl.name, at: signInFor(tl, authRoot).signedInAt() ?? null, google: /^https:\/\/accounts\.google\.com/.test(tl.oauth?.issuer ?? "") }))),
-      service: installed === null ? null : { installed, running: installed && (await serviceRunning(root)) },
-      tailscale: await tailscaleAddresses(Number(opts.port)),
-      reachLost: reach ? { since: localTime(reach.since, { seconds: false }) } : null,
-      pending: new Inbox({ root: DEFAULT_INBOX_ROOT }).all().filter((r) => !r.decision).map((r) => ({ agent: r.agent, tool: r.tool, expiresAt: r.expiresAt })),
-      parked: listParked(DEFAULT_LOG_ROOT).length,
-    });
+    const checks = doctor(await gatherFacts(root, Number(opts.port)));
     for (const c of checks) stdout.write(`${MARK[c.verdict]} ${c.text}\n`);
     if (checks.some((c) => c.verdict === "bad")) process.exitCode = 1;
   });
