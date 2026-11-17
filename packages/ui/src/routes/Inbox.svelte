@@ -37,12 +37,36 @@
     catch (e) { notice = errorText(e); }
     finally { revoking = null; }
   }
+  // The keyboard, on a desktop: j and k move between the waiting cards, a approves the selected one, d declines it.
+  // Nothing happens while typing in a field, and the hint only shows where a keyboard is likely.
+  let selected = $state(-1);
+  let cards = $state<ReviewCard[]>([]);
+  const hasKeyboard = typeof window !== "undefined" && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  function onKey(e: KeyboardEvent) {
+    const tag = (e.target as HTMLElement | null)?.tagName;
+    if (e.metaKey || e.ctrlKey || e.altKey || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target as HTMLElement | null)?.isContentEditable) return;
+    const n = live.pending.length;
+    if (!n) return;
+    if (e.key === "j" || e.key === "k") {
+      e.preventDefault();
+      selected = selected < 0 ? 0 : Math.min(n - 1, Math.max(0, selected + (e.key === "j" ? 1 : -1)));
+      document.querySelectorAll<HTMLElement>("[data-review-card]")[selected]?.scrollIntoView({ block: "nearest" });
+    } else if ((e.key === "a" || e.key === "d") && selected >= 0 && selected < n) {
+      e.preventDefault();
+      const card = cards[selected];
+      if (!card) return;
+      void (e.key === "a" ? card.approve() : card.decline());
+      selected = Math.min(selected, n - 2);
+    }
+  }
   // The empty state is what you see most of the time, so it says what happens next.
   const nextUp = $derived.by(() => {
     const soon = live.agents.filter((a) => a.nextRun && a.status === "scheduled").sort((a, b) => a.nextRun!.localeCompare(b.nextRun!))[0];
     return soon ? t("Next up: {agent}, {when}.", { agent: soon.name, when: until(soon.nextRun) }) : live.up ? t("No schedules are set.") : t("Schedules aren't running right now.");
   });
 </script>
+
+<svelte:window onkeydown={onKey} />
 
 <section class="space-y-6">
   <div class="rise">
@@ -62,7 +86,8 @@
         <span class="text-[12px] text-mute">{t("Read them first; \"all\" means all.")}</span>
       </div>
     {/if}
-    <div class="space-y-3">{#each live.pending as r (r.id)}<ReviewCard req={r} />{/each}</div>
+    <div class="space-y-3">{#each live.pending as r, i (r.id)}<div data-review-card><ReviewCard req={r} selected={i === selected} bind:this={cards[i]} /></div>{/each}</div>
+    {#if hasKeyboard}<p class="text-[11.5px] text-mute"><span class="mono">j</span> / <span class="mono">k</span> {t("to move")} · <span class="mono">a</span> {t("to approve")} · <span class="mono">d</span> {t("to decline")}</p>{/if}
   {/if}
 
   {#if notice}

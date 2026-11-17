@@ -15,7 +15,10 @@
   /** This card's element: where focus goes next is decided from its neighbours. */
   let cardEl = $state<HTMLElement | null>(null);
 
-  let { req, compact = false }: { req: ApprovalRequest; compact?: boolean } = $props();
+  let { req, compact = false, selected = false }: { req: ApprovalRequest; compact?: boolean; selected?: boolean } = $props();
+  /** For the inbox's keyboard: a and d decide the selected card. */
+  export function approve(): Promise<void> { return decide(true); }
+  export function decline(): Promise<void> { return decide(false); }
   let busy = $state(false);
   let error = $state<string | null>(null);
   let showRaw = $state(false);
@@ -116,7 +119,7 @@
   });
 </script>
 
-<div bind:this={cardEl} class="panel-raised rise overflow-hidden" style="border-color: color-mix(in oklab, var(--color-ask) 35%, var(--color-line-2))">
+<div bind:this={cardEl} class="panel-raised rise overflow-hidden" style="border-color: color-mix(in oklab, var(--color-ask) {selected ? 80 : 35}%, var(--color-line-2)); {selected ? 'outline: 2px solid var(--color-ask); outline-offset: 2px;' : ''}">
   <div class="flex flex-wrap items-start gap-3 px-4 pt-4">
     <Mark name={req.agent} size={34} status="waiting" />
     <div class="min-w-0 flex-1">
