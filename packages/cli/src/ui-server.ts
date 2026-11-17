@@ -1046,7 +1046,8 @@ export function weeklyText(w: WeeklyStats): string {
   const notes = w.notes ? ` ${w.notes === 1 ? t("1 note remembered.") : t("{n} notes remembered.", { n: w.notes })}` : "";
   const lines = w.agents.map((a) => {
     const parts = [a.ok ? t("{n} ok", { n: a.ok }) : "", a.failed ? t("{n} failed", { n: a.failed }) : "", a.offline ? t("{n} cut off", { n: a.offline }) : "", a.waiting ? t("{n} waiting on you", { n: a.waiting }) : "", a.expired ? t("{n} expired unanswered", { n: a.expired }) : ""].filter(Boolean).join(", ");
-    return `• ${a.agent}: ${a.runs === 1 ? t("1 run") : t("{n} runs", { n: a.runs })}${parts ? ` (${parts})` : ""}${a.asked ? `, ${a.asked === 1 ? t("asked you once") : t("asked you {n} times", { n: a.asked })}` : ""}, ${formatUsd(a.costUsd)}`;
+    const blocked = a.blocked.length ? `, ${t("blocked {list}", { list: a.blocked.map((b) => `${b.tool}${b.runs > 1 ? ` ×${b.runs}` : ""}`).join(", ") })}` : "";
+    return `• ${a.agent}: ${a.runs === 1 ? t("1 run") : t("{n} runs", { n: a.runs })}${parts ? ` (${parts})` : ""}${a.asked ? `, ${a.asked === 1 ? t("asked you once") : t("asked you {n} times", { n: a.asked })}` : ""}${blocked}, ${formatUsd(a.costUsd)}`;
   });
   return [head + expired + notes, ...lines].join("\n");
 }

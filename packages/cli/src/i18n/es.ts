@@ -497,4 +497,5 @@ export const es: Record<string, string> = {
   "{field} must be a number, or empty for no cap": "{field} debe ser un número, o vacío para no poner tope",
   "nothing to change": "nada que cambiar",
   "Open the inbox to decide.": "Abre la bandeja para decidir.",
+  "blocked {list}": "bloqueó {list}",
 };
