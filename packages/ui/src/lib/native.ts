@@ -15,6 +15,19 @@ type Hap = typeof import("@capacitor/haptics");
 let haptics: Promise<Hap> | null = null;
 const loadHaptics = () => (haptics ??= import("@capacitor/haptics"));
 
+type BadgeMod = typeof import("@capawesome/capacitor-badge");
+let badge: Promise<BadgeMod> | null = null;
+let shownBadge = -1;
+/** The number on the app's icon: the asks waiting for you, cleared when none are. Launchers that show only a dot show a dot. */
+export async function setBadge(n: number): Promise<void> {
+  if (!isApp || n === shownBadge) return;
+  shownBadge = n;
+  try {
+    const { Badge } = await (badge ??= import("@capawesome/capacitor-badge"));
+    if (n > 0) await Badge.set({ count: n }); else await Badge.clear();
+  } catch { /* no badge on this device */ }
+}
+
 /** A small physical confirmation. success = approve, warning = decline, light = a tap that did something. */
 export async function haptic(kind: "success" | "warning" | "light" = "light"): Promise<void> {
   if (!isApp || !prefs.haptics) return;

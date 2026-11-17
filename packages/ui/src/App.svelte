@@ -16,7 +16,7 @@
   import { isApp, paired, introSeen, markIntroSeen, server, forget } from "./lib/server.svelte";
   import { route, startRouter, href } from "./lib/router.svelte";
   import { connectLive, live, refreshNow, unreachable as unreachableText, unreachableHint } from "./lib/api.svelte";
-  import { setupNative } from "./lib/native";
+  import { setupNative, setBadge } from "./lib/native";
   import { openedLink } from "./lib/pairing.svelte";
   import { pullToRefresh } from "./lib/pull";
   import { prefs } from "./lib/prefs.svelte";
@@ -55,6 +55,8 @@
     startRouter();
     if (paired()) void connectLive().catch(() => {});
     void setupNative(resume, (url) => void openedLink(url));
+    // The icon's badge follows the inbox.
+    $effect(() => { void setBadge(live.pending.length); });
     // The app ships its own copy of the page; only the browser version wants the service worker.
     if (import.meta.env.PROD && !isApp && "serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js").catch(() => {});
   });
