@@ -650,6 +650,8 @@ export const es: Record<string, string> = {
   "the run picks up here once you decide; nothing stays open meanwhile": "la ejecución retoma aquí en cuanto decidas; mientras tanto no queda nada abierto",
   "Resumed": "Retomada",
   "Why it did that": "Por qué hizo eso",
+  "Backups": "Respaldos",
+  "one a day, kept {d} days": "uno al día, guardados {d} días",
   "The faces move: Bea hovers, tick plods, Tomay breathes, nudge hops; an agent at work breathes and one waiting on you knocks.": "Las caras se mueven: Bea flota, tick camina, Tomay respira, nudge salta; un agente trabajando respira y uno que te espera toca a la puerta.",
   "Swipe a card right to approve, left to decline. Or tap Edit, fix the draft, and approve your version.": "Desliza una tarjeta a la derecha para aprobar, a la izquierda para rechazar. O toca Editar, arregla el borrador y aprueba tu versión.",
   "The app's icon shows how many asks wait for you.": "El ícono de la app muestra cuántas preguntas te esperan.",

@@ -270,6 +270,7 @@
             <dt class="text-mute">{t("While it waits")}</dt><dd>{t("the run parks after {min} min and picks up when you answer", { min: s.askHoldMin })}</dd>
             <dt class="text-mute">{t("Push")}</dt><dd>{s.notify ? t("on (ntfy)") : t("off")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">GARU_NOTIFY_URL</span></span>{/if}</dd>
             <dt class="text-mute">{t("Weekly note")}</dt><dd>{s.weekly ? t("Sundays at 6 PM, to your channel") : t("off")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">GARU_WEEKLY_WEBHOOK_URL</span></span>{/if} · <button class="tap underline decoration-mute underline-offset-2 hover:text-fg" onclick={previewWeekly}>{weekly === null ? t("preview this week's") : t("hide")}</button></dd>
+            <dt class="text-mute">{t("Backups")}</dt><dd>{s.backup ? t("one a day, kept {d} days", { d: s.backup.days }) : t("none")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--backup</span></span>{/if}</dd>
             <dt class="text-mute">{t("Old runs")}</dt><dd>{s.pruneDays ? t("deleted after {d} days", { d: s.pruneDays }) : t("kept forever")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--prune</span></span>{/if}</dd>
             <dt class="text-mute">{t("Folder")}</dt><dd class="mono break-all">{shortRoot(s.root)}</dd>
           </dl>
