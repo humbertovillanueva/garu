@@ -120,6 +120,9 @@ temp path hidden); `scripts/play-shots.mjs` makes the Play and App Store cards f
 ## Conventions
 
 - The two things that must not break: the Garufile schema and the flight-recorder format.
+- Providers (`kernel/src/providers/`): gemini, anthropic, ollama, and openai (`OPENAI_API_KEY`, `OPENAI_BASE_URL`: Chat Completions, so Groq,
+  OpenRouter, LM Studio and Ollama's own `/v1` work too; no price table, so `garu new` sets no cap for them). A busy or rate-limited
+  server ends as `ModelBusyError` on every provider that retries.
 - Everything must run on Node 22 (`engines`, and CI tests on 22) although this Mac has Node 25: no
   regex inline modifiers like `(?i:…)`; a rule's `matches` takes `ignoreCase: true` instead.
 - Policy semantics: first matching rule wins; nothing matching = ask; an unanswered ask expires as a
