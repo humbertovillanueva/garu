@@ -15,6 +15,7 @@ function log(root: string, agent: string, runId: string, daysAgo: number, end: R
   const events: Record<string, unknown>[] = [{ type: "run.start", agent, model: "m", trigger: "cron:0 7 * * *" }];
   for (let i = 0; i < asks; i++) events.push({ type: "policy.decision", callId: `a${i}`, decision: { action: "ask", ruleIndex: 0, matched: "*", reason: "r" } });
   events.push({ type: "policy.decision", callId: "ok", decision: { action: "allow", ruleIndex: 0, matched: "*", reason: "r" } });
+  if (asks) { events.push({ type: "tool.request", callId: "b", request: { server: "fs", tool: "write_file", args: {} } }); events.push({ type: "policy.decision", callId: "b", decision: { action: "block", ruleIndex: 0, matched: "*", reason: "r" } }); }
   if (end) events.push({ type: "run.end", ...end });
   writeFileSync(join(root, agent, `${runId}.jsonl`), events.map((event, i) => JSON.stringify({ seq: i + 1, ts: at(daysAgo, i * 1000), runId, agent, event })).join("\n") + "\n");
 }
@@ -43,9 +44,9 @@ describe("weekly", () => {
     expect(w).toMatchObject({ from: "2026-11-09", to: "2026-11-15", runs: 4, actions: 4, asked: 2, expired: 2, notes: 2, priced: true });
     expect(w.costUsd).toBeCloseTo(0.013, 6);
     expect(w.agents).toEqual([
-      { agent: "bea", runs: 3, ok: 1, failed: 1, offline: 1, waiting: 0, asked: 2, expired: 1, costUsd: expect.closeTo(0.012, 6) },
-      { agent: "rook", runs: 0, ok: 0, failed: 0, offline: 0, waiting: 0, asked: 0, expired: 1, costUsd: 0 },
-      { agent: "tick", runs: 1, ok: 1, failed: 0, offline: 0, waiting: 0, asked: 0, expired: 0, costUsd: 0.001 },
+      { agent: "bea", runs: 3, ok: 1, failed: 1, offline: 1, waiting: 0, asked: 2, expired: 1, blocked: [{ tool: "fs.write_file", runs: 1 }], costUsd: expect.closeTo(0.012, 6) },
+      { agent: "rook", runs: 0, ok: 0, failed: 0, offline: 0, waiting: 0, asked: 0, expired: 1, blocked: [], costUsd: 0 },
+      { agent: "tick", runs: 1, ok: 1, failed: 0, offline: 0, waiting: 0, asked: 0, expired: 0, blocked: [], costUsd: 0.001 },
     ]);
   });
 

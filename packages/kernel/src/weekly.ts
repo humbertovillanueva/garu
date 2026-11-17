@@ -19,6 +19,8 @@ export interface WeeklyAgent {
   asked: number;
   /** Asks nobody answered in time, so they became a no. */
   expired: number;
+  /** The tools the policy blocked this week, with how many runs hit each. */
+  blocked: { tool: string; runs: number }[];
   costUsd: number;
 }
 
@@ -50,7 +52,8 @@ export function weeklyStats(store: RunStore, opts: { memory?: Memory; inbox?: We
   const out: WeeklyStats = { from: day(new Date(weekAgo + 86_400_000)), to: day(now), runs: 0, actions: 0, asked: 0, expired: 0, costUsd: 0, priced: true, notes: 0, agents: [] };
   const names = new Set([...store.agents(), ...(opts.agents ?? []), ...expired.keys()]);
   for (const agent of [...names].sort()) {
-    const a: WeeklyAgent = { agent, runs: 0, ok: 0, failed: 0, offline: 0, waiting: 0, asked: 0, expired: expired.get(agent) ?? 0, costUsd: 0 };
+    const a: WeeklyAgent = { agent, runs: 0, ok: 0, failed: 0, offline: 0, waiting: 0, asked: 0, expired: expired.get(agent) ?? 0, blocked: [], costUsd: 0 };
+    const blockedBy = new Map<string, number>();
     for (const r of store.runs(agent)) {
       if (Date.parse(r.startedAt) < weekAgo) continue;
       a.runs++;
@@ -59,11 +62,13 @@ export function weeklyStats(store: RunStore, opts: { memory?: Memory; inbox?: We
       else if (r.status === "running" || r.status === "parked") a.waiting++;
       else a.failed++;
       a.asked += r.toolCalls.ask;
+      for (const tool of r.blocked ?? []) blockedBy.set(tool, (blockedBy.get(tool) ?? 0) + 1);
       a.costUsd += r.costUsd;
       out.actions += r.toolCalls.allow;
       if (!r.priced) out.priced = false;
     }
     if (opts.memory) for (const n of opts.memory.read(agent)) if (n.at && Date.parse(`${n.at}T12:00:00`) >= weekAgo) out.notes++;
+    a.blocked = [...blockedBy.entries()].map(([tool, runs]) => ({ tool, runs })).sort((x, y) => y.runs - x.runs || x.tool.localeCompare(y.tool));
     if (a.runs === 0 && a.expired === 0) continue;
     out.runs += a.runs;
     out.asked += a.asked;
