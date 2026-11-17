@@ -26,7 +26,7 @@
   });
   function decisionOf(row: Row) {
     const d = row.children.find((c) => c.event.type === "policy.decision")?.event["decision"] as { action: "allow" | "ask" | "block"; reason: string } | undefined;
-    const approval = row.children.find((c) => c.event.type === "approval.resolved")?.event as { approved: boolean; by: string; note?: string } | undefined;
+    const approval = row.children.find((c) => c.event.type === "approval.resolved")?.event as { approved: boolean; by: string; note?: string; edited?: Record<string, unknown> } | undefined;
     const waiting = !approval && row.children.some((c) => c.event.type === "approval.requested");
     const result = row.children.find((c) => c.event.type === "tool.result")?.event as { ok: boolean; durationMs: number; error?: string; result?: unknown } | undefined;
     return { d, approval, waiting, result };
@@ -79,7 +79,7 @@
               <span class="mono font-medium">{req.server}.{req.tool}</span>
             {/if}
             {#if d}<Decision action={d.action} />{/if}
-            {#if approval}<Decision action={approval.approved ? "allow" : "block"} label={approval.approved ? (/^grant\b/.test(approval.by) ? t("allowed by your 24h approval") : t("approved by {who}", { who: decidedBy(approval.by) })) : expired(approval.by) ? t("expired, no answer") : t("declined by {who}", { who: decidedBy(approval.by) })} />{/if}
+            {#if approval}<Decision action={approval.approved ? "allow" : "block"} label={approval.approved ? (/^grant\b/.test(approval.by) ? t("allowed by your 24h approval") : approval.edited ? t("approved by {who}, with your edits", { who: decidedBy(approval.by) }) : t("approved by {who}", { who: decidedBy(approval.by) })) : expired(approval.by) ? t("expired, no answer") : t("declined by {who}", { who: decidedBy(approval.by) })} />{/if}
             {#if approval?.note}<span class="text-[12.5px] italic text-fg-2">“{approval.note}”</span>{/if}
             {#if waiting}<span class="pulse text-[12px]" style="color: var(--color-ask)">{t("waiting for you")}</span>{/if}
             {#if result}

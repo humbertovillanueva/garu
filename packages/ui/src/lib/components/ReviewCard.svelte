@@ -22,11 +22,16 @@
 
   let declining = $state(false);
   let note = $state("");
+  // Fix and go: the text of a draft, a message or a note can be edited in place and approved as edited.
+  // The agent's tool gets your version, the log says so, and a rule that would block it still does.
+  let editing = $state(false);
+  let draft = $state<Record<string, string>>({});
+  function startEdit() { draft = Object.fromEntries(editable.map((k) => [k, a[k] as string])); editing = true; declining = false; }
   async function decide(approve: boolean, forDuration?: string) {
     if (busy) return; // a second tap, or Enter pressed twice in the note, decides nothing
     busy = true; error = null;
     try {
-      await api.decide(req.id, approve, forDuration, approve ? undefined : note.trim() || undefined);
+      await api.decide(req.id, approve, forDuration, approve ? undefined : note.trim() || undefined, approve && edited ? { ...a, ...draft } : undefined);
       void haptic(approve ? "success" : "warning");
       // The card leaves now instead of when the live stream catches up, so it can't be tapped again.
       // It stays busy until then: there is nothing left to decide on it. Say what happened, and move
@@ -67,6 +72,9 @@
     if (/exec|shell|command|run|bash|terminal/i.test(tool) && (str("command") || str("cmd"))) return "command";
     return "generic";
   });
+  const EDITABLE: Record<string, string[]> = { email: ["subject", "body", "text", "message"], post: ["text", "message", "content"], note: ["note"], ask: ["message"] };
+  const editable = $derived((EDITABLE[shape] ?? []).filter((k) => typeof a[k] === "string"));
+  const edited = $derived(editing && editable.some((k) => draft[k] !== a[k]));
   const filePath = $derived(str("path") ?? str("file") ?? str("filename") ?? "");
   const fileName = $derived(filePath.split("/").pop() ?? filePath);
   const content = $derived(str("content") ?? str("text") ?? "");
@@ -140,7 +148,11 @@
           {#if list("cc")?.length}<span class="text-mute">{t("Cc")}</span>{@render people(list("cc")!)}{/if}
           {#if str("subject")}<span class="text-mute">{t("Subject")}</span><span class="min-w-0 font-medium [overflow-wrap:anywhere]">{str("subject")}</span>{/if}
         </div>
-        <pre class="max-h-56 overflow-auto whitespace-pre-wrap px-3 py-3 text-[13px] leading-relaxed text-fg-2 [overflow-wrap:anywhere]" style="font-family: inherit">{str("body") ?? str("text") ?? str("message") ?? ""}</pre>
+        {#if editing}
+          {#each editable as k (k)}<textarea class="field w-full resize-y rounded-none border-0 px-3 py-3 text-[13px] leading-relaxed" rows={k === "subject" ? 1 : 8} aria-label={k} bind:value={draft[k]}></textarea>{/each}
+        {:else}
+          <pre class="max-h-56 overflow-auto whitespace-pre-wrap px-3 py-3 text-[13px] leading-relaxed text-fg-2 [overflow-wrap:anywhere]" style="font-family: inherit">{str("body") ?? str("text") ?? str("message") ?? ""}</pre>
+        {/if}
       </div>
     {:else if shape === "file"}
       <div class="overflow-hidden rounded-lg border hairline bg-bg/60">
@@ -163,7 +175,11 @@
           <span>{postTo ? t("to {to}", { to: postTo }) : t("message")}</span>
           <span class="ml-auto flex-none">{t("{lines} lines · {chars} chars", { lines: postText.split("\n").length, chars: postText.length })}</span>
         </div>
-        <pre class="max-h-64 overflow-auto whitespace-pre-wrap px-3 py-3 text-[13px] leading-relaxed text-fg-2" style="font-family: inherit">{postText}</pre>
+        {#if editing}
+          {#each editable as k (k)}<textarea class="field w-full resize-y rounded-none border-0 px-3 py-3 text-[13px] leading-relaxed" rows={8} aria-label={k} bind:value={draft[k]}></textarea>{/each}
+        {:else}
+          <pre class="max-h-64 overflow-auto whitespace-pre-wrap px-3 py-3 text-[13px] leading-relaxed text-fg-2" style="font-family: inherit">{postText}</pre>
+        {/if}
       </div>
     {:else if shape === "ask"}
       <div class="overflow-hidden rounded-lg border hairline bg-bg/60">
@@ -177,7 +193,11 @@
         <div class="flex flex-wrap items-center gap-x-3 border-b hairline px-3 py-1.5 text-[11.5px] text-mute">
           <span>{req.tool === "garu.forget" ? t("a line it would drop from its notebook") : t("a line in its notebook, shown to it at the start of every run")}</span>
         </div>
-        <pre class="max-h-64 overflow-auto whitespace-pre-wrap px-3 py-3 text-[13px] leading-relaxed text-fg-2" style="font-family: inherit">{str("note")}</pre>
+        {#if editing}
+          <textarea class="field w-full resize-y rounded-none border-0 px-3 py-3 text-[13px] leading-relaxed" rows={3} aria-label="note" bind:value={draft["note"]}></textarea>
+        {:else}
+          <pre class="max-h-64 overflow-auto whitespace-pre-wrap px-3 py-3 text-[13px] leading-relaxed text-fg-2" style="font-family: inherit">{str("note")}</pre>
+        {/if}
       </div>
     {:else if shape === "command"}
       <pre class="mono overflow-auto rounded-lg border hairline bg-bg/60 px-3 py-3 text-[12.5px] text-fg-2"><span class="text-mute">$ </span>{str("command") ?? str("cmd")}</pre>
@@ -202,8 +222,13 @@
   </div>
 
   <div class="mt-3 flex flex-wrap items-center gap-2 border-t hairline bg-bg/30 px-4 py-3">
-    <button class="btn btn-ok" disabled={busy} onclick={() => decide(true)}>{t("Approve")}</button>
-    <button class="btn" disabled={busy} title={grantHint} onclick={() => decide(true, "24h")}>{t("Approve for 24h")}</button>
+    <button class="btn btn-ok" disabled={busy} onclick={() => decide(true)}>{edited ? t("Approve as edited") : t("Approve")}</button>
+    {#if editing}
+      <button class="btn" disabled={busy} onclick={() => (editing = false)}>{t("Keep the original")}</button>
+    {:else}
+      {#if editable.length}<button class="btn" disabled={busy} onclick={startEdit}>{t("Edit")}</button>{/if}
+      <button class="btn" disabled={busy} title={grantHint} onclick={() => decide(true, "24h")}>{t("Approve for 24h")}</button>
+    {/if}
     {#if !declining}
       <button class="btn btn-bad" disabled={busy} onclick={() => (declining = true)}>{t("Decline")}</button>
     {/if}
