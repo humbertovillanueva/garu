@@ -66,11 +66,12 @@ export function loader() {
 export const api = {
   agents: () => get<AgentsResponse>("/api/agents"),
   /** Newest first. `limit` caps the page (the server's own cap is 200 across agents); `offset` skips the newest, for older pages. */
-  runs: (agent?: string, page: { limit?: number; offset?: number } = {}) => {
+  runs: (agent?: string, page: { limit?: number; offset?: number; q?: string } = {}) => {
     const q = new URLSearchParams();
     if (agent) q.set("agent", agent);
     if (page.limit) q.set("limit", String(page.limit));
     if (page.offset) q.set("offset", String(page.offset));
+    if (page.q) q.set("q", page.q);
     const s = q.toString();
     return get<RunSummary[]>(s ? `/api/runs?${s}` : "/api/runs");
   },

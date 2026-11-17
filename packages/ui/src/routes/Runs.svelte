@@ -23,14 +23,19 @@
   let shown = $state(PAGE);
   let older = $state(false);
   const load = loader();
-  $effect(() => { live.tick; const n = untrack(() => shown); load(api.runs(undefined, { limit: n }), (r) => { runs = r; error = null; }, (m) => (error = m)); });
+  // A word from a summary or from an ask's text (a draft's subject, a recipient) narrows the list; the server does the looking.
+  let q = $state("");
+  let typed = $state("");
+  let debounce: ReturnType<typeof setTimeout> | undefined;
+  function onSearch(v: string) { typed = v; clearTimeout(debounce); debounce = setTimeout(() => { q = v.trim(); shown = PAGE; }, 250); }
+  $effect(() => { live.tick; q; const n = untrack(() => shown); load(api.runs(undefined, { limit: n, ...(q ? { q } : {}) }), (r) => { runs = r; error = null; }, (m) => (error = m)); });
   // Fewer than asked for means the list ends here; a full page may have more behind it.
   const maybeMore = $derived(runs !== null && runs.length >= shown);
   async function showOlder() {
     if (older || !runs) return;
     older = true;
     try {
-      const more = await api.runs(undefined, { offset: runs.length, limit: PAGE });
+      const more = await api.runs(undefined, { offset: runs.length, limit: PAGE, ...(q ? { q } : {}) });
       const seen = new Set(runs.map((r) => r.runId));
       runs = [...runs, ...more.filter((r) => !seen.has(r.runId))];
       // A short page means the list ends here, so the button goes away until new runs land.
@@ -60,12 +65,17 @@
 </script>
 
 <section class="space-y-5">
-  <div class="rise flex items-baseline justify-between">
+  <div class="rise flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
     <h1 class="title">{t("Runs")}</h1>
-    {#if runs?.length}<a href={href("cost")} class="tap text-[13px] text-mute hover:text-fg">{t("{total} total · Cost", { total: usd(total) })}</a>{/if}
+    <div class="flex items-baseline gap-4">
+      <input class="field w-44 py-1 text-[13px] sm:w-64" type="search" placeholder={t("Search runs")} aria-label={t("Search runs")} value={typed} oninput={(e) => onSearch(e.currentTarget.value)} />
+      {#if runs?.length}<a href={href("cost")} class="tap text-[13px] text-mute hover:text-fg">{t("{total} total · Cost", { total: usd(total) })}</a>{/if}
+    </div>
   </div>
   {#if runs === null}
     {#if error}<LoadError message={error} />{:else}<Skeleton rows={6} h={44} />{/if}
+  {:else if runs.length === 0 && q}
+    <Empty title={t("No run matches “{q}”", { q })} hint={t("It looks in summaries and in what the asks said: a recipient, a subject, a file name.")} />
   {:else if runs.length === 0}
     <Empty title={t("No runs yet")} hint={t("Open an agent and press Run now.")} />
   {:else}
