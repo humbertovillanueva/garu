@@ -278,6 +278,7 @@ The run's header keeps an honest clock: "took 1 h 10 min, 59 min of it with the 
 | `garu weekly [--post]` | The week in numbers, per agent: runs, how they ended, what asked you, what it cost, notes remembered. With `GARU_WEEKLY_WEBHOOK_URL` in `.env`, the control room posts it to that channel every Sunday at six; `--post` sends it now. |
 | `garu prune [--keep 90d] [--yes]` | Say which run logs, settled inbox requests and chat messages are older than the window, and delete them with `--yes`. `--prune 90d` on `garu ui` or `service install` does it once a day; a parked run is never touched. Without it, every run is kept forever. |
 | `garu status` | Home for the terminal: every agent with what it's doing, when it runs next, how its last run went, and what's waiting on you. |
+| `garu backup [file]` · `garu restore <file> [--yes]` | Everything under `.garu` in one file (runs, inbox, grants, notebooks, sign-ins, the token), and the way back for the day the laptop is replaced. A restore moves the old `.garu` aside, never deletes it. |
 | `garu doctor` | Check the computer in one go: Node, the keys in `.env`, every Garufile, each sign-in and its age, the login service, Tailscale, what's waiting on you. A cross means something to fix, and the command says what. |
 | `garu validate <Garufile>` | Lint policy, cron, budget, sandbox. |
 | `garu auth <Garufile> <server>` | Sign in to a remote tool server once, in your browser. `--forget` removes it. |
