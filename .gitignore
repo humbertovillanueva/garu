@@ -50,3 +50,4 @@ docs/video/remotion/public/audio/voice-raw.*
 # garu backup writes here by default
 garu-backup-*.tgz
 .garu.before-restore-*
+.garu-backups/

@@ -506,4 +506,6 @@ export const es: Record<string, string> = {
   "garu demo needs the repo (its agents/ and scripts/demo-data.mjs); run it from a checkout": "garu demo necesita el repo (sus agents/ y scripts/demo-data.mjs); ejecútalo desde una copia",
   "seeding a demo in {folder}…": "sembrando una demo en {folder}…",
   "the demo control room: {url}": "la sala de control de la demo: {url}",
+  "write a backup of .garu once a day and keep them this long (7d); unset means none": "escribe un respaldo de .garu una vez al día y guárdalos este tiempo (7d); sin esto, ninguno",
+  "where the backups go (a synced folder is the point)": "dónde van los respaldos (una carpeta sincronizada es la idea)",
 };

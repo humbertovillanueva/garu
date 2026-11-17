@@ -71,6 +71,7 @@ import { VERSION } from "./version.js";
 import { authenticate, clearSessionCookie, corsHeaders, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, rotateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
 import { SeenHosts, tailscaleAddresses, type Address } from "./ui-addresses.js";
 import { Reach } from "./ui-reach.js";
+import { backupName, listBackups, planBackup, pruneBackups, writeBackup } from "./backup.js";
 import { doctor } from "./doctor.js";
 import { gatherFacts } from "./doctor-facts.js";
 import { desktopNotify, desktopNotifyEnabled } from "./desktop.js";
@@ -98,6 +99,9 @@ export interface UiServerOptions {
   notify?: string;
   /** Delete run logs (and settled inbox requests) older than this, at start and once a day. Unset: keep everything. */
   pruneMs?: number;
+  /** A backup of .garu once a day into backupDir, kept this long; unset means none. */
+  backupMs?: number;
+  backupDir?: string;
   /** A Slack or Discord incoming webhook: the week in numbers is posted there on Sunday at six in the evening. */
   weeklyUrl?: string;
   /** Where the sign-in token lives (created on first start). */
@@ -411,6 +415,25 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
   prune();
   const pruneTicker = opts.pruneMs && !opts.demo ? setInterval(prune, 24 * 3600_000) : undefined;
   pruneTicker?.unref();
+
+  // A backup a day, into a folder beside .garu (or wherever --backup-dir points: a synced folder is the point), older ones pruned; never in the demo.
+  const backup = async () => {
+    if (!opts.backupMs || !opts.backupDir || opts.demo) return;
+    try {
+      const newest = listBackups(opts.backupDir)[0];
+      if (newest && Date.now() - newest.at.getTime() < 20 * 3600_000) return; // today's is there
+      const plan = planBackup(opts.root);
+      const file = join(opts.backupDir, backupName());
+      await writeBackup(plan, file);
+      const gone = pruneBackups(opts.backupDir, opts.backupMs);
+      opts.log(`💾 backup written: ${file} (${plan.runs} run(s), ${(plan.bytes / 1_048_576).toFixed(1)} MB before packing)${gone ? `; ${gone} older one(s) removed` : ""}`);
+    } catch (e) {
+      opts.log(`✖ backup: ${(e as Error).message}`);
+    }
+  };
+  void backup();
+  const backupTicker = opts.backupMs && !opts.demo ? setInterval(() => void backup(), 6 * 3600_000) : undefined;
+  backupTicker?.unref();
 
   // The week in numbers, posted on Sunday evening to the channel named in the env. The Sundays already
   // posted are kept in a file, so a restart that evening doesn't post twice.
@@ -920,6 +943,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           askTimeoutMin: Math.round((opts.askTimeoutMs ?? 24 * 60 * 60_000) / 60_000),
           askHoldMin: Math.round(ASK_HOLD_MS / 60_000),
           pruneDays: opts.pruneMs ? Math.round(opts.pruneMs / 86_400_000) : null,
+          backup: opts.backupMs && opts.backupDir ? { days: Math.round(opts.backupMs / 86_400_000), dir: opts.backupDir } : null,
           weekly: Boolean(opts.weeklyUrl),
           login: { required: requireLogin, direct: isDirectLoopback(req), tokenPath: opts.tokenPath },
         });

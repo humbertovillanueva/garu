@@ -76,6 +76,7 @@ const DEFAULT_MEMORY_ROOT = resolve(process.cwd(), ".garu", "memory");
 const DEFAULT_TOKEN_PATH = resolve(process.cwd(), ".garu", "ui-token");
 const DEFAULT_GRANTS_PATH = resolve(process.cwd(), ".garu", "grants.jsonl");
 const DEFAULT_DISMISSED_PATH = resolve(process.cwd(), ".garu", "suggestions-dismissed.json");
+const DEFAULT_BACKUP_DIR = resolve(process.cwd(), ".garu-backups");
 /** Where `garu ui` listens unless told otherwise; `garu up` looks for a control room there when it has a push to send. */
 const DEFAULT_UI_PORT = 4000;
 
@@ -336,16 +337,19 @@ service
   .option("--host <host>", t("bind address"), "127.0.0.1")
   .option("--as <name>", t("your name"), process.env["GARU_USER"] ?? process.env["USER"] ?? "you")
   .option("--notify <url>", t("POST approval requests to this URL"))
+  .option("--backup <time>", t("write a backup of .garu once a day and keep them this long (7d); unset means none"))
+  .option("--backup-dir <dir>", t("where the backups go (a synced folder is the point)"))
   .option("--prune <time>", t("delete run logs older than this once a day (90d); unset keeps everything"))
   .option("--ask-timeout <time>", t("deny approvals nobody answers after this long (30m, 24h, 7d; a bare number is minutes)"), "24h")
   .option("--demo", t("install the public demo instead: no schedules, nothing runs, nothing is edited"))
   .description(t("Start `garu ui --up` for this folder at every login, and now."))
-  .action(async (opts: { port: string; host: string; as: string; notify?: string; prune?: string; askTimeout: string; demo?: boolean }) => {
+  .action(async (opts: { port: string; host: string; as: string; notify?: string; prune?: string; backup?: string; backupDir?: string; askTimeout: string; demo?: boolean }) => {
     loadDotEnv();
     const root = process.cwd();
     const as = process.env["GARU_USER"] && opts.as === (process.env["USER"] ?? "you") ? process.env["GARU_USER"] : opts.as;
     if (opts.prune) keepMs(opts.prune); // refused here, not at the service's first start
-    const args = [opts.demo ? "--demo" : "--up", "--as", as, "--port", opts.port, "--host", opts.host, "--ask-timeout", opts.askTimeout, ...(opts.notify ? ["--notify", opts.notify] : []), ...(opts.prune ? ["--prune", opts.prune] : [])];
+    if (opts.backup) keepMs(opts.backup);
+    const args = [opts.demo ? "--demo" : "--up", "--as", as, "--port", opts.port, "--host", opts.host, "--ask-timeout", opts.askTimeout, ...(opts.notify ? ["--notify", opts.notify] : []), ...(opts.prune ? ["--prune", opts.prune] : []), ...(opts.backup ? ["--backup", opts.backup, ...(opts.backupDir ? ["--backup-dir", resolve(opts.backupDir)] : [])] : [])];
     const spec = { root, node: stableNodePath(), entry: fileURLToPath(import.meta.url), args, path: servicePath(process.env["PATH"]), env: serviceEnv(process.env) };
     mkdirSync(join(root, ".garu"), { recursive: true });
     if (process.platform === "darwin") {
@@ -448,15 +452,18 @@ program
   .option("--ask-timeout <time>", t("deny approvals nobody answers after this long (30m, 24h, 7d; a bare number is minutes)"), "24h")
   .option("--notify <url>", t("POST approval requests to this URL (ntfy.sh topic URLs work; GARU_NOTIFY_URL in .env is the default)"))
   .option("--prune <time>", t("delete run logs older than this once a day (90d); unset keeps everything"))
+  .option("--backup <time>", t("write a backup of .garu once a day and keep them this long (7d); unset means none"))
+  .option("--backup-dir <dir>", t("where the backups go (a synced folder is the point)"), DEFAULT_BACKUP_DIR)
   .option("--log-root <dir>", t("where run logs live"), DEFAULT_LOG_ROOT)
   .option("--inbox-root <dir>", t("where approval requests live"), DEFAULT_INBOX_ROOT)
   .option("--as <name>", t("your name — how approvals are recorded and how agents address you"), process.env["GARU_USER"] ?? process.env["USER"] ?? "you")
   .option("--require-login", t("ask for the token even in the browser on this computer"))
   .option("--demo", t("a public demo: visitors can look around and answer the sample asks; nothing runs and nothing is edited"))
   .description(t("Open the control room: your agents, live, in the browser. Add --up to run their schedules too."))
-  .action(async (opts: { port: string; host: string; up?: boolean; askTimeout: string; notify?: string; prune?: string; logRoot: string; inboxRoot: string; as: string; requireLogin?: boolean; demo?: boolean }) => {
+  .action(async (opts: { port: string; host: string; up?: boolean; askTimeout: string; notify?: string; prune?: string; backup?: string; backupDir: string; logRoot: string; inboxRoot: string; as: string; requireLogin?: boolean; demo?: boolean }) => {
     loadDotEnv();
     const pruneMs = opts.prune ? keepMs(opts.prune) : undefined;
+    const backupMs = opts.backup ? keepMs(opts.backup) : undefined;
     const staticDir = uiStaticDir();
     const log = (msg: string) => stderr.write(`${localTime()} ${msg}\n`);
     const srv = startUiServer({
@@ -477,6 +484,7 @@ program
       askTimeoutMs: askTimeoutMs(opts.askTimeout),
       ...((opts.notify ?? process.env["GARU_NOTIFY_URL"]) ? { notify: opts.notify ?? process.env["GARU_NOTIFY_URL"]! } : {}),
       ...(pruneMs ? { pruneMs } : {}),
+      ...(backupMs ? { backupMs, backupDir: resolve(opts.backupDir) } : {}),
       ...(process.env["GARU_WEEKLY_WEBHOOK_URL"] ? { weeklyUrl: process.env["GARU_WEEKLY_WEBHOOK_URL"] } : {}),
       tokenPath: DEFAULT_TOKEN_PATH,
       requireLogin: Boolean(opts.requireLogin),
