@@ -268,6 +268,7 @@ The agents are there, too: each face moves its own way (the bee hovers, the turt
 
 | Command | What it does |
 |---|---|
+| `garu demo` | A control room full of made-up runs and a waiting ask, in a temporary folder, no key needed: look around before you make an agent. `--lang es` for the Spanish one. |
 | `garu new [name]` | Make your own agent: a few questions, then a Garufile with a closed policy. Flags for scripting (`--task`, `--when`, `--web`, `--fs`, `--memory`, `--runs-per-day`, `-y`). |
 | `garu ui [--up] [--as Name] [--notify URL]` | Control room at localhost:4000. `--up` also runs every cron schedule found under the current folder. |
 | `garu service install` · `status` · `logs` · `restart` · `uninstall` | Run `garu ui --up` for this folder as a login service (launchd on macOS, systemd on Linux), so a reboot doesn't take your agents down. A schedule missed while the machine was asleep or off is run once when it comes back. `restart` after a build or a schedule change. |
