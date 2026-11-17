@@ -58,6 +58,7 @@ npm run garu -- why <agent> [run]                                # the run page'
 npm run garu -- doctor                                           # Node, .env keys, Garufiles, sign-ins, service, Tailscale, what's waiting
 npm run garu -- status                                           # Home for the terminal: each agent, next run, last run, what's waiting
 npm run garu -- backup [file] | restore <file> [--yes]           # .garu in one tgz, and back (the old .garu is moved aside)
+npm run garu -- demo [-p 4199] [--lang es] [--no-open]            # a seeded copy in $TMPDIR/garu-demo-<lang>, served --demo (the recipe below, in one command)
 npm run deploy                        # build, then restart the service here and every ~/garu-demo* (scripts/deploy.mjs)
 npm run sync -w @garu/app             # the phone UI, built and copied into android/ and ios/
 ```
