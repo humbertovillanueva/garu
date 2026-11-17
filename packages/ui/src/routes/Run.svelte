@@ -64,6 +64,32 @@
     if (s === "blocked") return t("It stopped: the policy blocked what it needed.");
     return t("It stopped with an error: {message}", { message: s.replace(/^error: /, "") });
   });
+  // A catch-up, or a fire the computer slept through: the schedule meant it for earlier.
+  const due = $derived(start?.event["dueAt"] as string | undefined);
+  const lateMs = $derived(due && start ? new Date(start.ts).getTime() - new Date(due).getTime() : 0);
+  /** Time the computer spent asleep mid-run: part of "took 1 h", none of it the agent's. */
+  const asleep = $derived((events ?? []).filter((e) => e.event.type === "host.slept").reduce((n, e) => n + (e.event["ms"] as number), 0));
+  // Time the run sat parked for your answer: on the clock, but none of it the agent's work.
+  const parkedMs = $derived.by(() => {
+    let total = 0;
+    let since: number | null = null;
+    for (const e of events ?? []) {
+      if (e.event.type === "run.parked") since = new Date(e.ts).getTime();
+      else if (e.event.type === "run.resumed" && since !== null) { total += new Date(e.ts).getTime() - since; since = null; }
+    }
+    return total;
+  });
+  const tookMs = $derived(end && start ? Math.max(0, new Date(end.ts).getTime() - new Date(start.ts).getTime() - parkedMs) : 0);
+  /** How the run started, in words: "Scheduled, Weekdays 7:00 AM", "Catch-up for Daily 9:00 AM", "From a message". */
+  const how = $derived.by(() => {
+    const trigger = String(start?.event["trigger"] ?? "");
+    if (trigger.startsWith("cron:")) return t("Scheduled, {schedule}", { schedule: cronLabel(trigger.slice(5)) });
+    if (trigger.startsWith("catch-up:")) return t("Catch-up for {schedule}", { schedule: cronLabel(trigger.slice(9)) });
+    if (trigger === "chat") return t("From a message");
+    if (trigger === "manual" || trigger === "ui") return t("Started with Run now");
+    const w = triggerLabel(trigger);
+    return w ? w[0]!.toUpperCase() + w.slice(1) : "";
+  });
   /** The header's one line: how it started, when, how long it took, and what the clock did meanwhile. */
   const headerLine = $derived(start ? [how, humanTime(start.ts), lateMs >= 60_000 && due ? t("started {span} late, due {time}", { span: span(lateMs), time: clock(due) }) : "", end ? (asleep ? t("took {duration}, {asleep} of it with the computer asleep", { duration: span(tookMs), asleep: span(asleep) }) : t("took {duration}", { duration: span(tookMs) })) : "", parkedMs >= 60_000 ? t("parked {span} for your answer", { span: span(parkedMs) }) : "", turns === 1 ? t("1 turn") : t("{n} turns", { n: turns })].filter(Boolean).join(" · ") : "");
   // The run as plain text, for a Slack thread or a tester's reply: the header, what it said, why it did that.
@@ -81,34 +107,8 @@
       if (why.hidden.length) lines.push(`- ${why.hidden.length === 1 ? t("1 tool was never offered, since no rule could allow it: {list}", { list: why.hidden.join(", ") }) : t("{n} tools were never offered, since no rule could allow them: {list}", { n: why.hidden.length, list: why.hidden.join(", ") })}`);
       if (stoppedText) lines.push(`- ${stoppedText}`);
     }
-  // A catch-up, or a fire the computer slept through: the schedule meant it for earlier.
-  const due = $derived(start?.event["dueAt"] as string | undefined);
-  const lateMs = $derived(due && start ? new Date(start.ts).getTime() - new Date(due).getTime() : 0);
-  /** Time the computer spent asleep mid-run: part of "took 1 h", none of it the agent's. */
-  const asleep = $derived((events ?? []).filter((e) => e.event.type === "host.slept").reduce((n, e) => n + (e.event["ms"] as number), 0));
-  // Time the run sat parked for your answer: on the clock, but none of it the agent's work.
-  const parkedMs = $derived.by(() => {
-    let total = 0;
-    let since: number | null = null;
-    for (const e of events ?? []) {
-      if (e.event.type === "run.parked") since = new Date(e.ts).getTime();
-      else if (e.event.type === "run.resumed" && since !== null) { total += new Date(e.ts).getTime() - since; since = null; }
-    }
-    return total;
-  });
-  const tookMs = $derived(end && start ? Math.max(0, new Date(end.ts).getTime() - new Date(start.ts).getTime() - parkedMs) : 0);
     try { await navigator.clipboard.writeText(lines.join("\n")); copied = true; setTimeout(() => (copied = false), 2000); } catch { /* no clipboard here */ }
   }
-  /** How the run started, in words: "Scheduled, Weekdays 7:00 AM", "Catch-up for Daily 9:00 AM", "From a message". */
-  const how = $derived.by(() => {
-    const trigger = String(start?.event["trigger"] ?? "");
-    if (trigger.startsWith("cron:")) return t("Scheduled, {schedule}", { schedule: cronLabel(trigger.slice(5)) });
-    if (trigger.startsWith("catch-up:")) return t("Catch-up for {schedule}", { schedule: cronLabel(trigger.slice(9)) });
-    if (trigger === "chat") return t("From a message");
-    if (trigger === "manual" || trigger === "ui") return t("Started with Run now");
-    const w = triggerLabel(trigger);
-    return w ? w[0]!.toUpperCase() + w.slice(1) : "";
-  });
   const sandbox = $derived(start?.event["sandbox"] as { network: string } | undefined);
   // What the run produced comes first: the document it wrote (a brief), then what it said. The
   // step-by-step is for when you want to know how, so it folds away unless the run is still going.

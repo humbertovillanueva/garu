@@ -651,7 +651,6 @@ export const es: Record<string, string> = {
   "Resumed": "Retomada",
   "Why it did that": "Por qué hizo eso",
   "Copy as text": "Copiar como texto",
-  "Copied": "Copiado",
   "you changed the {fields} of {tool} before approving": "cambiaste {fields} de {tool} antes de aprobar",
   "Change the rules": "Cambiar las reglas",
   "{name}'s rules": "Las reglas de {name}",
