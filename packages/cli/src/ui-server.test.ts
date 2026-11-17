@@ -147,8 +147,15 @@ describe("who gets in", () => {
   });
 
   it("a body over a megabyte is refused, and a path-shaped agent name too", async () => {
-    const big = await fetch(`${base}/api/login`, { method: "POST", headers: { "content-type": "application/json" }, body: `{"token":"${"a".repeat(1_100_000)}"}` });
-    expect(big.status).toBe(413);
+    // The server answers 413 and stops reading; a client still sending may see the connection closed instead of the answer. Both are the refusal.
+    let refused = false;
+    try {
+      const big = await fetch(`${base}/api/login`, { method: "POST", headers: { "content-type": "application/json" }, body: `{"token":"${"a".repeat(1_100_000)}"}` });
+      refused = big.status === 413;
+    } catch (e) {
+      refused = /reset|hang up|closed|aborted|fetch failed|EPIPE/i.test(`${(e as Error).message} ${String((e as Error & { cause?: unknown }).cause ?? "")}`);
+    }
+    expect(refused).toBe(true);
     expect((await get("/api/runs?agent=../../x")).status).toBe(400);
     expect(Array.isArray(await (await get("/api/runs")).json())).toBe(true);
   }, 15_000);
