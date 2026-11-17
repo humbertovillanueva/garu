@@ -1,4 +1,8 @@
 <script lang="ts">
+  // The live dot beats once when something new arrives, so "live" is seen to mean it.
+  let beat = $state(false);
+  let beatTimer: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => { if (!live.tick) return; beat = true; clearTimeout(beatTimer); beatTimer = setTimeout(() => (beat = false), 600); });
   import Logo from "./Logo.svelte";
   import { route, href } from "../router.svelte";
   import { live } from "../api.svelte";
@@ -28,7 +32,7 @@
     <span class="text-[16px] font-semibold tracking-tight">Garu</span>
     <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute" role="status">
       <!-- "connecting" until the first connection or a drop, like the phone bar: a fresh page isn't reconnecting -->
-      <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : live.disconnectedAt ? 'var(--color-ask)' : 'var(--color-mute)'}"></span>{live.connected ? t("live") : live.disconnectedAt ? t("offline") : t("connecting")}
+      <span class="dot" class:beat style="background: {live.connected ? 'var(--color-ok)' : live.disconnectedAt ? 'var(--color-ask)' : 'var(--color-mute)'}"></span>{live.connected ? t("live") : live.disconnectedAt ? t("offline") : t("connecting")}
     </span>
   </a>
 
@@ -86,7 +90,7 @@
   </a>
   <span class="ml-auto flex items-center gap-1.5 text-[11px] text-mute" role="status">
     <!-- "connecting" until the first connection or a drop: a fresh launch isn't offline -->
-    <span class="dot" style="background: {live.connected ? 'var(--color-ok)' : live.disconnectedAt ? 'var(--color-ask)' : 'var(--color-mute)'}"></span>{live.connected ? t("live") : live.disconnectedAt ? t("offline") : t("connecting")}
+    <span class="dot" class:beat style="background: {live.connected ? 'var(--color-ok)' : live.disconnectedAt ? 'var(--color-ask)' : 'var(--color-mute)'}"></span>{live.connected ? t("live") : live.disconnectedAt ? t("offline") : t("connecting")}
   </span>
   <a href={href("settings")} class="-my-2 -mr-3 grid h-11 w-11 place-items-center text-mute hover:text-fg" aria-label={t("Settings")}><Icon name="settings" size={18} /></a>
 </header>
@@ -104,3 +108,9 @@
     </a>
   {/each}
 </nav>
+
+<style>
+  .beat { animation: beat .6s ease-out; }
+  @keyframes beat { 0% { transform: scale(1) } 35% { transform: scale(1.9); opacity: .6 } 100% { transform: scale(1) } }
+  @media (prefers-reduced-motion: reduce) { .beat { animation: none !important } }
+</style>

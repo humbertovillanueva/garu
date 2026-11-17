@@ -195,7 +195,7 @@
     {/if}
     <details class="panel" bind:open={steps}>
       <summary class="cursor-pointer px-4 py-3 text-[13.5px] text-fg-2">{t("How it was made")} <span class="text-mute">· {t("{n} steps", { n: events.length })}</span></summary>
-      <div class="border-t hairline p-4"><Timeline {events} /></div>
+      <div class="border-t hairline p-4"><Timeline {events} running={status === "running"} /></div>
     </details>
   {/if}
 </section>

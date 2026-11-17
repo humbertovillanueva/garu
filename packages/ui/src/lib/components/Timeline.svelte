@@ -7,7 +7,7 @@
   const reasonLabel = (r: string) => (r === "rate limited" ? t("rate limited") : r === "high demand" ? t("high demand") : r);
   import type { Envelope } from "../types";
 
-  let { events, compact = false }: { events: Envelope[]; compact?: boolean } = $props();
+  let { events, compact = false, running = false }: { events: Envelope[]; compact?: boolean; running?: boolean } = $props();
   let open = $state<Record<number, boolean>>({});
 
   type Row = { kind: "turn" | "call" | "other"; env: Envelope; children: Envelope[] };
@@ -49,7 +49,7 @@
 <ol class="relative ml-2 border-l hairline">
   {#each rows as row (row.env.seq)}
     {@const e = row.env.event}
-    <li class="rise relative pl-6" class:pb-3={compact} class:pb-4={!compact}>
+    <li class="rise relative pl-6" class:pb-3={compact} class:pb-4={!compact} class:fresh={running && row === rows[rows.length - 1]}>
       {#if row.kind === "other" && glyph(e)}
         <span class="absolute -left-[7px] top-[3px] w-[13px] bg-bg text-center text-[11px] leading-none text-mute" aria-hidden="true">{glyph(e)}</span>
       {:else}
@@ -118,3 +118,10 @@
     </li>
   {/each}
 </ol>
+
+<style>
+  /* While the run goes on, its newest row shimmers: the one still being written. */
+  .fresh::after { content: ""; position: absolute; inset: 0 0 0 1.5rem; pointer-events: none; border-radius: .5rem; background: linear-gradient(90deg, transparent, var(--shimmer), transparent); transform: translateX(-100%); animation: fresh 1.6s infinite; }
+  @keyframes fresh { to { transform: translateX(100%) } }
+  @media (prefers-reduced-motion: reduce) { .fresh::after { animation: none !important; display: none } }
+</style>
