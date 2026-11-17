@@ -71,6 +71,8 @@ import { VERSION } from "./version.js";
 import { authenticate, clearSessionCookie, corsHeaders, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, rotateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
 import { SeenHosts, tailscaleAddresses, type Address } from "./ui-addresses.js";
 import { Reach } from "./ui-reach.js";
+import { doctor } from "./doctor.js";
+import { gatherFacts } from "./doctor-facts.js";
 import { desktopNotify, desktopNotifyEnabled } from "./desktop.js";
 
 export interface UiServerOptions {
@@ -882,6 +884,11 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         if (!existsSync(p)) return json(res, { lines: [], path: p });
         const lines = readFileSync(p, "utf8").split("\n").filter((l) => l.trim()).slice(-n).map(redactLogLine);
         return json(res, { lines, path: p });
+      }
+      if (path === "/api/doctor") {
+        // The doctor's checks, for Settings on the desktop: the phone would only be told to open a terminal it doesn't have.
+        if (opts.demo) return json(res, { checks: [] });
+        return json(res, { checks: doctor(await gatherFacts(opts.root, opts.port)) });
       }
       if (path === "/api/weekly") {
         // The Sunday note as it would post this minute: the owner sees it before the channel does.

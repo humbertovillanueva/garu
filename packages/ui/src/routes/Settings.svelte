@@ -32,6 +32,14 @@
   let pairError = $state<string | null>(null);
   let pairLink = $state<string | null>(null);
   let showToken = $state(false);
+  /** The doctor's checks, on request; null while hidden. */
+  let checks = $state<{ verdict: "ok" | "warn" | "bad"; text: string }[] | null>(null);
+  let checking = $state(false);
+  async function checkComputer() {
+    if (checks !== null) { checks = null; return; }
+    checking = true;
+    try { checks = (await api.doctor()).checks; } catch (e) { checks = [{ verdict: "bad", text: errorText(e) }]; } finally { checking = false; }
+  }
   /** The Sunday note as it stands now; null while hidden. */
   let weekly = $state<string | null>(null);
   async function previewWeekly() {
@@ -265,6 +273,15 @@
             <dt class="text-mute">{t("Old runs")}</dt><dd>{s.pruneDays ? t("deleted after {d} days", { d: s.pruneDays }) : t("kept forever")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--prune</span></span>{/if}</dd>
             <dt class="text-mute">{t("Folder")}</dt><dd class="mono break-all">{shortRoot(s.root)}</dd>
           </dl>
+          {#if !isApp && !live.demo}
+            <!-- garu doctor, here: Node, the keys, every Garufile, each sign-in's age, the service, Tailscale, what's waiting. -->
+            <button class="btn mt-3 py-1 text-[12.5px]" disabled={checking} onclick={checkComputer}>{checks === null ? (checking ? t("Checking…") : t("Check this computer")) : t("Hide the checks")}</button>
+            {#if checks}
+              <ul class="mt-2 space-y-1 text-[13px]">
+                {#each checks as c, i (i)}<li class="flex gap-2"><span class="w-4 flex-none text-center" style="color: {c.verdict === 'ok' ? 'var(--color-ok)' : c.verdict === 'warn' ? 'var(--color-ask)' : 'var(--color-bad)'}">{c.verdict === "ok" ? "✔" : c.verdict === "warn" ? "○" : "✖"}</span><span class="min-w-0 [overflow-wrap:anywhere]">{c.text}</span></li>{/each}
+              </ul>
+            {/if}
+          {/if}
           {#if weekly !== null}
             <!-- The week in numbers, the way the channel will get it on Sunday at six. -->
             <pre class="mt-3 whitespace-pre-wrap rounded-lg border hairline bg-bg/60 px-3 py-2 font-sans text-[13px] text-fg-2">{weekly}</pre>

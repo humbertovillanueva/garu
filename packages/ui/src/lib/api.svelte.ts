@@ -96,6 +96,7 @@ export const api = {
   editPolicy: (agent: string, edits: import("./types").PolicyEdit[]) => post<import("./types").Agent>(`/api/agents/${encodeURIComponent(agent)}/policy`, { edits }),
   editAgent: (agent: string, edits: { cron?: string | null; maxRunsPerDay?: number | null; maxCostUsd?: number | null; memory?: boolean }) => post<import("./types").Agent>(`/api/agents/${encodeURIComponent(agent)}/settings`, edits),
   weekly: () => get<{ text: string; posts: boolean }>("/api/weekly"),
+  doctor: () => get<{ checks: { verdict: "ok" | "warn" | "bad"; text: string }[] }>("/api/doctor"),
   logs: (n = 200) => get<{ lines: string[]; path: string }>(`/api/logs?n=${n}`),
   pair: () => get<import("./types").Pair>("/api/pair"),
   rotateToken: () => post<import("./types").Pair>("/api/pair"),
