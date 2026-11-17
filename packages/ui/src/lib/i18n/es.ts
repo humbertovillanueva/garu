@@ -650,6 +650,7 @@ export const es: Record<string, string> = {
   "the run picks up here once you decide; nothing stays open meanwhile": "la ejecución retoma aquí en cuanto decidas; mientras tanto no queda nada abierto",
   "Resumed": "Retomada",
   "Why it did that": "Por qué hizo eso",
+  "Asked by {agent}": "Preguntado por {agent}",
   "Copy as text": "Copiar como texto",
   "you changed the {fields} of {tool} before approving": "cambiaste {fields} de {tool} antes de aprobar",
   "Change the rules": "Cambiar las reglas",

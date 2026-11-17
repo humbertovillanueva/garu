@@ -85,6 +85,7 @@
     const trigger = String(start?.event["trigger"] ?? "");
     if (trigger.startsWith("cron:")) return t("Scheduled, {schedule}", { schedule: cronLabel(trigger.slice(5)) });
     if (trigger.startsWith("catch-up:")) return t("Catch-up for {schedule}", { schedule: cronLabel(trigger.slice(9)) });
+    if (trigger.startsWith("ask:")) return t("Asked by {agent}", { agent: trigger.slice(4) });
     if (trigger === "chat") return t("From a message");
     if (trigger === "manual" || trigger === "ui") return t("Started with Run now");
     const w = triggerLabel(trigger);
