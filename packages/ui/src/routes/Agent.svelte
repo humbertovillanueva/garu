@@ -123,6 +123,14 @@
       void refreshCore().catch(() => {});
     } catch (e) { rulesError = errorText(e); } finally { savingRules = false; }
   }
+  // Paused: kept on the schedule, skipped until resumed; written into the Garufile like the rest.
+  let pausing = $state(false);
+  async function togglePause() {
+    if (pausing || !a) return;
+    pausing = true;
+    try { await api.editAgent(a.name, { paused: !a.paused }); live.tick++; void refreshCore().catch(() => {}); }
+    catch (e) { saveError = errorText(e); } finally { pausing = false; }
+  }
   async function save() {
     if (saving || !a) return;
     saving = true; saveError = null;
@@ -262,6 +270,7 @@
         {:else}
           <div class="flex flex-wrap gap-x-4 gap-y-1">
             <button class="tap text-[12px] text-mute hover:text-fg" onclick={startEdit}>{t("Change schedule, caps or notebook")}</button>
+            {#if a.cron}<button class="tap text-[12px] text-mute hover:text-fg" disabled={pausing} onclick={togglePause}>{a.paused ? t("Resume the schedule") : t("Pause the schedule")}</button>{/if}
             {#if !editingRules}<button class="tap text-[12px] text-mute hover:text-fg" onclick={startRules}>{t("Change the rules")}</button>{/if}
           </div>
         {/if}

@@ -38,7 +38,7 @@ export interface RunSummary {
   summary: string | null;
 }
 
-export type AgentStatus = "idle" | "scheduled" | "working" | "waiting" | "needs-setup";
+export type AgentStatus = "idle" | "scheduled" | "working" | "waiting" | "needs-setup" | "paused";
 
 export interface Agent {
   name: string;
@@ -68,6 +68,8 @@ export interface Agent {
   maxTurns: number | null;
   /** The Garufile gave it a notebook (memory: true). */
   memory: boolean;
+  /** Kept on the schedule but skipped until resumed. */
+  paused: boolean;
   runs: number;
   runsToday: number;
   costTodayUsd: number;

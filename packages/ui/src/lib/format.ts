@@ -109,7 +109,7 @@ export function runStatus(r: { status: string; offline?: boolean; busy?: unknown
   return r.busy ? "busy" : r.offline ? "offline" : r.status;
 }
 export function statusLabel(s: string): string {
-  return ({ ok: t("done"), error: t("error"), offline: t("no network"), busy: t("model busy"), running: t("running"), parked: t("waiting for you"), interrupted: t("interrupted"), blocked: t("blocked"), max_turns: t("hit turn limit"), budget_exceeded: t("over budget"), "run.ok": t("done"), "needs-setup": t("needs setup"), waiting: t("waiting for you"), working: t("working"), scheduled: t("scheduled"), sleeping: t("sleeping"), idle: t("idle") } as Record<string, string>)[s] ?? s;
+  return ({ ok: t("done"), error: t("error"), offline: t("no network"), busy: t("model busy"), running: t("running"), parked: t("waiting for you"), paused: t("paused"), interrupted: t("interrupted"), blocked: t("blocked"), max_turns: t("hit turn limit"), budget_exceeded: t("over budget"), "run.ok": t("done"), "needs-setup": t("needs setup"), waiting: t("waiting for you"), working: t("working"), scheduled: t("scheduled"), sleeping: t("sleeping"), idle: t("idle") } as Record<string, string>)[s] ?? s;
 }
 
 /** First-person status line, the way a colleague would say it. */
@@ -117,6 +117,7 @@ export function statusLine(a: { status: string; inFlight: { turn: number } | nul
   if (a.status === "waiting") return a.pending === 1 ? t("Waiting for you to approve one action") : t("Waiting for you on {n} actions", { n: a.pending });
   if (a.status === "working") return a.inFlight ? t("Working — turn {turn}", { turn: a.inFlight.turn }) : t("Working");
   if (a.capped && a.budget?.maxRunsPerDay) return t("Done for today — at its cap of {n} runs a day; it runs again tomorrow", { n: a.budget.maxRunsPerDay });
+  if (a.status === "paused") return t("Paused — its schedule is skipped until you resume it");
   if (a.status === "scheduled") return t("Sleeping — next run {until}", { until: until(a.nextRun) });
   if (a.status === "needs-setup") {
     // The fix happens on the computer; the phone says so instead of showing commands it can't run.
