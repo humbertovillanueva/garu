@@ -20,12 +20,13 @@ export const RELEASES: Release[] = [
     version: "0.1.0 (5)",
     lines: () => [
       t("Each agent keeps a notebook you can read, add to and edit on its page."),
-      t("A run's timeline says when your computer was asleep, when a run started late, and what an agent remembered or asked."),
-      t("An ask waits a day for you instead of half an hour; the run parks meanwhile and picks up when you answer."),
-      t("An agent can have a cap on runs a day, and says \"Done for today\" when it reaches it."),
-      t("Home greets you by name, with a card per agent and the week in small bars."),
+      t("The faces move: Bea hovers, tick plods, Tomay breathes, nudge hops; an agent at work breathes and one waiting on you knocks."),
+      t("Swipe a card right to approve, left to decline. Or tap Edit, fix the draft, and approve your version."),
+      t("The app's icon shows how many asks wait for you."),
       t("A run's page says why it did that: what went through on its own, what asked you, what was blocked, what stopped it."),
-      t("A run that waited for your answer says how long it waited, apart from its own work."),
+      t("An ask waits a day for you instead of half an hour; the run parks meanwhile and picks up when you answer."),
+      t("A run's timeline says when your computer was asleep, when a run started late, how long it waited for you, and what an agent remembered or asked."),
+      t("Two openers above an agent's message box, from its own job; Home greets you by name."),
     ],
   },
 ];
