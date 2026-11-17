@@ -448,6 +448,14 @@ describe("the rest", () => {
     } finally { rmSync(file); }
   });
 
+  it("searches runs by their summary and by the asks' text", async () => {
+    const all = (await (await get("/api/runs")).json()) as { runId: string; agent: string }[];
+    expect((await (await get("/api/runs?q=zzz-nothing-says-this")).json()) as unknown[]).toEqual([]);
+    const byAgent = (await (await get(`/api/runs?q=${all[0]!.agent.toUpperCase()}`)).json()) as { agent: string }[];
+    expect(byAgent.length).toBeGreaterThan(0);
+    expect(byAgent.every((r) => r.agent === all[0]!.agent)).toBe(true);
+  });
+
   it("shows the week's note before Sunday posts it", async () => {
     const w = (await (await get("/api/weekly")).json()) as { text: string; posts: boolean };
     expect(w.text).toMatch(/^Garu, /);

@@ -676,7 +676,13 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         const offset = Math.max(0, Math.floor(Number(url.searchParams.get("offset")) || 0));
         const limitParam = url.searchParams.get("limit");
         const limit = limitParam !== null && Number(limitParam) > 0 ? Math.floor(Number(limitParam)) : agent ? Infinity : 200;
-        const all = agent ? store.runs(agent) : store.allRuns();
+        let all = agent ? store.runs(agent) : store.allRuns();
+        // A search: the summaries, and the asks' text (a draft's subject or body lives in the inbox, not the summary), so "the run where Bea drafted for Sara" is one word away.
+        const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
+        if (q) {
+          const askedIn = new Set(inbox.all().filter((r) => `${r.tool} ${JSON.stringify(r.args)}`.toLowerCase().includes(q)).map((r) => r.runId));
+          all = all.filter((r) => askedIn.has(r.runId) || `${r.agent} ${r.runId} ${r.trigger} ${r.model} ${r.summary ?? ""} ${(r.blocked ?? []).join(" ")}`.toLowerCase().includes(q));
+        }
         return json(res, all.slice(offset, offset + limit));
       }
       const m = /^\/api\/runs\/([^/]+)\/([^/]+)$/.exec(path);
