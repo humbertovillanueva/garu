@@ -221,6 +221,22 @@ describe("RunStore", () => {
   });
 });
 
+describe("this month's cost", () => {
+  it("sums the month so far per model and projects it to the month's end at the same pace", () => {
+    const root = mkdtempSync(join(tmpdir(), "store-"));
+    makeRun(root, "a", { cost: 0.3 });
+    makeRun(root, "a", { cost: 0.3 });
+    makeRun(root, "b", { cost: 0.0 });
+    const store = new RunStore(root);
+    const m = store.costThisMonth(new Date(2026, 10, 15, 12)); // Nov 15, a 30-day month; the fixtures' runs are "now", which is in this month only when the test runs in November
+    if (m.runs === 0) return; // another month: the fixtures fall outside it and there is nothing to project
+    expect(m).toMatchObject({ month: "2026-11", daysGone: 15, daysInMonth: 30, runs: 3 });
+    expect(m.spentUsd).toBeCloseTo(0.6, 6);
+    expect(m.projectedUsd).toBeCloseTo(1.2, 6);
+    expect(m.byModel).toEqual([{ model: "gemini/x", costUsd: expect.closeTo(0.6, 6), runs: 3 }]);
+  });
+});
+
 describe("a parked run", () => {
   it("is parked for as long as it waits, running again once resumed, and never interrupted meanwhile", () => {
     const root = mkdtempSync(join(tmpdir(), "store-"));

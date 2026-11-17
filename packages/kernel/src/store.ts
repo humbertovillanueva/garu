@@ -302,6 +302,29 @@ export class RunStore {
   }
 
   /** Cost and run counts per local day per agent, for the last `days` days. */
+  /**
+   * This month so far, and where it is heading at this pace: the spend, per model, with the days gone
+   * and the days in the month, so "is Gemini still free for me" has a number before the bill does.
+   */
+  costThisMonth(now = new Date()): { month: string; spentUsd: number; projectedUsd: number; daysGone: number; daysInMonth: number; runs: number; priced: boolean; byModel: { model: string; costUsd: number; runs: number }[] } {
+    const first = localDay(new Date(now.getFullYear(), now.getMonth(), 1));
+    const byModel = new Map<string, { model: string; costUsd: number; runs: number }>();
+    let spentUsd = 0, runs = 0, priced = true;
+    for (const r of this.allRuns()) {
+      if (localDay(r.startedAt) < first) continue;
+      const m = byModel.get(r.model) ?? { model: r.model, costUsd: 0, runs: 0 };
+      m.costUsd += r.costUsd; m.runs++; byModel.set(r.model, m);
+      spentUsd += r.costUsd; runs++;
+      if (!r.priced) priced = false;
+    }
+    const daysGone = now.getDate();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return {
+      month: first.slice(0, 7), spentUsd, projectedUsd: daysGone ? (spentUsd / daysGone) * daysInMonth : 0, daysGone, daysInMonth, runs, priced,
+      byModel: [...byModel.values()].sort((a, b) => b.costUsd - a.costUsd || b.runs - a.runs),
+    };
+  }
+
   costByDay(days = 14, now = new Date()): { day: string; agent: string; costUsd: number; runs: number }[] {
     const since = localDay(new Date(now.getTime() - days * 86_400_000));
     const buckets = new Map<string, { day: string; agent: string; costUsd: number; runs: number }>();
