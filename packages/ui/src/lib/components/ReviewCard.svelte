@@ -28,6 +28,31 @@
   // Fix and go: the text of a draft, a message or a note can be edited in place and approved as edited.
   // The agent's tool gets your version, the log says so, and a rule that would block it still does.
   let editing = $state(false);
+  // On a phone, a swipe decides: right approves, left declines, past a third of the card's width. The
+  // card follows the finger and tints toward the answer; let go early and it settles back. Mouse and
+  // trackpad never swipe (they'd fight with text selection), and nothing swipes while you edit.
+  const coarse = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+  let dx = $state(0);
+  let swiping = $state(false);
+  let startX = 0, startY = 0, pointerId = -1;
+  const SWIPE = 96;
+  function onPointerDown(e: PointerEvent) {
+    if (!coarse || busy || editing || e.pointerType === "mouse" || (e.target as HTMLElement).closest("button, a, input, textarea, select")) return;
+    startX = e.clientX; startY = e.clientY; pointerId = e.pointerId; swiping = true;
+  }
+  function onPointerMove(e: PointerEvent) {
+    if (!swiping || e.pointerId !== pointerId) return;
+    const mx = e.clientX - startX, my = e.clientY - startY;
+    if (Math.abs(my) > 24 && Math.abs(my) > Math.abs(mx)) { swiping = false; dx = 0; return; } // a scroll, not a swipe
+    dx = Math.max(-160, Math.min(160, mx));
+  }
+  function onPointerUp(e: PointerEvent) {
+    if (!swiping || e.pointerId !== pointerId) return;
+    swiping = false;
+    const d = dx; dx = 0;
+    if (d > SWIPE) void decide(true);
+    else if (d < -SWIPE) void decide(false);
+  }
   let draft = $state<Record<string, string>>({});
   function startEdit() { draft = Object.fromEntries(editable.map((k) => [k, a[k] as string])); editing = true; declining = false; }
   async function decide(approve: boolean, forDuration?: string) {
@@ -119,7 +144,8 @@
   });
 </script>
 
-<div bind:this={cardEl} class="panel-raised rise overflow-hidden" style="border-color: color-mix(in oklab, var(--color-ask) {selected ? 80 : 35}%, var(--color-line-2)); {selected ? 'outline: 2px solid var(--color-ask); outline-offset: 2px;' : ''}">
+<div bind:this={cardEl} class="panel-raised rise overflow-hidden" role="group" aria-label="{req.agent}: {object}" onpointerdown={onPointerDown} onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerUp}
+     style="border-color: color-mix(in oklab, var(--color-ask) {selected ? 80 : 35}%, var(--color-line-2)); {selected ? 'outline: 2px solid var(--color-ask); outline-offset: 2px;' : ''} transform: translateX({dx}px); transition: {swiping ? 'none' : 'transform .22s ease, box-shadow .22s ease'}; {dx ? `box-shadow: inset ${dx > 0 ? 4 : -4}px 0 0 color-mix(in oklab, ${dx > 0 ? 'var(--color-ok)' : 'var(--color-bad)'} ${Math.min(100, Math.round(Math.abs(dx) / SWIPE * 100))}%, transparent)` : ''}; touch-action: pan-y">
   <div class="flex flex-wrap items-start gap-3 px-4 pt-4">
     <Mark name={req.agent} size={34} status="waiting" />
     <div class="min-w-0 flex-1">
