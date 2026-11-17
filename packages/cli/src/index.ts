@@ -799,6 +799,7 @@ program
         parked: parked.filter((p) => p.agent === name).length,
         runsToday: s?.runsToday ?? 0,
         cap: g?.budget.maxRunsPerDay ?? null,
+        paused: g?.paused ?? false,
         costTodayUsd: s?.costTodayUsd ?? 0,
         needs: g ? [...missingEnv(g.tools, process.env), ...g.tools.filter((tl) => tl.auth === "oauth" && !signInFor(tl, authRoot).signedIn()).map((tl) => t("sign in to {server}", { server: tl.name }))] : [],
       };

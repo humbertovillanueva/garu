@@ -21,6 +21,7 @@ export interface AgentFacts {
   costTodayUsd: number;
   /** Keys or sign-ins it still needs. */
   needs: string[];
+  paused?: boolean;
 }
 
 export interface StatusFacts {
@@ -60,6 +61,7 @@ export function statusLines(f: StatusFacts): string[] {
     const state = a.pending ? (a.pending === 1 ? t("waiting for you") : t("waiting for you on {n}", { n: a.pending }))
       : a.parked ? t("parked for your answer")
       : a.last && !a.last.endedAt && a.last.status === "running" ? t("working")
+      : a.paused ? t("paused: its schedule is skipped until it is resumed")
       : a.needs.length ? t("needs setup: {list}", { list: a.needs.join(", ") })
       : a.cap && a.runsToday >= a.cap ? t("done for today")
       : a.cron && f.up && a.nextRun ? t("next {when}", { when: inWords(a.nextRun, now) })

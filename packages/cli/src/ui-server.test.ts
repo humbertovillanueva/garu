@@ -461,6 +461,10 @@ describe("the rest", () => {
     expect((await post("/api/agents/pip/settings", { cron: "every monday" })).status).toBe(400);
     expect((await post("/api/agents/pip/settings", { maxRunsPerDay: "x" })).status).toBe(400);
     expect((await post("/api/agents/nope/settings", { maxRunsPerDay: 2 })).status).toBe(404);
+    const paused = (await (await post("/api/agents/pip/settings", { paused: true })).json()) as { status: string; paused: boolean; nextRun: string | null };
+    expect(paused).toMatchObject({ status: "paused", paused: true, nextRun: null });
+    expect(readFileSync(file, "utf8")).toContain("paused: true");
+    expect(((await (await post("/api/agents/pip/settings", { paused: false })).json()) as { paused: boolean }).paused).toBe(false);
     const res = await post("/api/agents/pip/settings", { maxRunsPerDay: 2, memory: true });
     const r = (await res.json()) as { budget: { maxRunsPerDay: number | null }; memory: boolean; error?: string };
     expect(r.error, JSON.stringify(r)).toBeUndefined();

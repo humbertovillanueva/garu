@@ -510,4 +510,5 @@ export const es: Record<string, string> = {
   "where the backups go (a synced folder is the point)": "dónde van los respaldos (una carpeta sincronizada es la idea)",
   "redraw every few seconds (10 by default), for a terminal left open on the side": "redibuja cada pocos segundos (10 por defecto), para una terminal abierta a un lado",
   "{time} · every {n} s · Ctrl-C to stop": "{time} · cada {n} s · Ctrl-C para parar",
+  "paused: its schedule is skipped until it is resumed": "en pausa: su horario se salta hasta que se reanude",
 };

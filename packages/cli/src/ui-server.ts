@@ -469,7 +469,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     const inFlight = live.get(name);
     const cron = g?.triggers.find((t) => t.cron)?.cron ?? null;
     let nextRun: string | null = null;
-    if (cron && (opts.up || opts.demo)) {
+    if (cron && (opts.up || opts.demo) && !g?.paused) {
       try {
         nextRun = new Cron(cron, { paused: true }).nextRun()?.toISOString() ?? null;
       } catch {
@@ -482,7 +482,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     // Google ends a sign-in after seven days while the OAuth app is in Testing (docs/google.md). From the
     // sixth day the home screen says so, so the owner signs in again before a morning run fails.
     const signInExpiring = g && !opts.demo ? googleSignIns(g).filter((s) => s.days >= 6).map(({ server, days }) => ({ server, days })) : [];
-    const status = pending.length ? "waiting" : inFlight ? "working" : needs.length || signIn.length ? "needs-setup" : cron && (opts.up || opts.demo) ? "scheduled" : "idle";
+    const status = pending.length ? "waiting" : inFlight ? "working" : g?.paused ? "paused" : needs.length || signIn.length ? "needs-setup" : cron && (opts.up || opts.demo) ? "scheduled" : "idle";
     const price = g ? (g.budget.pricing ?? priceFor(g.model)) : null;
     return {
       name,
@@ -506,6 +506,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       capped: Boolean(g?.budget.maxRunsPerDay && todays.filter((r) => !r.offline).length >= g.budget.maxRunsPerDay),
       maxTurns: g?.maxTurns ?? null,
       memory: g?.memory ?? false,
+      paused: g?.paused ?? false,
       runs: runs.length,
       runsToday: todays.length,
       costTodayUsd: todays.reduce((s, r) => s + r.costUsd, 0),
@@ -670,15 +671,16 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           if ("cron" in body) edits.cron = body["cron"] === null || body["cron"] === "" ? null : String(body["cron"]).trim();
           num("maxRunsPerDay"); num("maxCostUsd");
           if ("memory" in body) edits.memory = Boolean(body["memory"]);
+          if ("paused" in body) edits.paused = Boolean(body["paused"]);
           editGarufile(a.path, edits);
         } catch (e) {
           return json(res, { error: (e as Error).message }, 400);
         }
         const fresh = discover().agents.find((x) => x.garufile.name === name);
-        if (fresh && edits.cron !== undefined && scheduler) {
+        if (fresh && (edits.cron !== undefined || edits.paused !== undefined) && scheduler) {
           const needs = missingEnv(fresh.garufile.tools, process.env).length || fresh.garufile.tools.some((tl) => tl.auth === "oauth" && !signInFor(tl, authRoot).signedIn());
           scheduled += scheduler.reschedule(fresh) - (needs ? 0 : 0);
-          opts.log(`✎ ${name}: schedule is now ${fresh.garufile.triggers.find((tr) => tr.cron)?.cron ?? "when asked"}`);
+          opts.log(fresh.garufile.paused ? `⏸ ${name}: paused; its schedule is skipped until it is resumed` : `✎ ${name}: schedule is now ${fresh.garufile.triggers.find((tr) => tr.cron)?.cron ?? "when asked"}`);
         }
         ping();
         return json(res, agentView(fresh, name));
