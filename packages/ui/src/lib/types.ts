@@ -80,6 +80,8 @@ export interface ToldNote {
   tool: string;
   approved: boolean;
   at: string;
+  /** The arguments you changed before approving, by name. */
+  edited?: string[];
 }
 
 /** One line of an agent's notebook. */

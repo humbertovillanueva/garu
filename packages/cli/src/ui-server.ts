@@ -686,8 +686,13 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         if (req.method === "GET" && !memM[2]) {
           const a = discover().agents.find((x) => x.garufile.name === name);
           // The last notes the owner wrote on this agent's asks (a decline with a note, mostly), newest first.
-          const told = inbox.all().filter((r) => r.agent === name && r.decision?.note).slice(-3).reverse()
-            .map((r) => ({ note: r.decision!.note!, tool: r.tool, approved: r.decision!.approved, at: r.decision!.at }));
+          // ...and the asks you approved with edits: what you changed is feedback too.
+          const told = inbox.all().filter((r) => r.agent === name && (r.decision?.note || r.decision?.args)).slice(-4).reverse()
+            .map((r) => {
+              const d = r.decision!;
+              const edited = d.args ? Object.keys(d.args).filter((k) => JSON.stringify(d.args![k]) !== JSON.stringify(r.args[k])) : [];
+              return { note: d.note ?? "", tool: r.tool, approved: d.approved, at: d.at, ...(edited.length ? { edited } : {}) };
+            });
           return json(res, { enabled: a?.garufile.memory ?? false, notes: memory.read(name), told, path: memory.path(name) });
         }
         if (req.method === "POST") {

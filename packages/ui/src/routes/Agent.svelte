@@ -319,7 +319,7 @@
             <ul class="space-y-1.5">
               {#each told as n (n.at + n.note)}
                 <li class="flex items-start gap-3 text-[13px]">
-                  <span class="min-w-0 flex-1 italic text-fg-2 [overflow-wrap:anywhere]">“{n.note}”</span>
+                  <span class="min-w-0 flex-1 text-fg-2 [overflow-wrap:anywhere]">{#if n.edited?.length}{t("you changed the {fields} of {tool} before approving", { fields: n.edited.join(", "), tool: n.tool })}{#if n.note} <span class="italic">“{n.note}”</span>{/if}{:else}<span class="italic">“{n.note}”</span>{/if}</span>
                   <span class="flex-none text-[12px] text-mute">{n.approved ? t("approved") : t("declined")} · {humanTime(n.at)}</span>
                 </li>
               {/each}
