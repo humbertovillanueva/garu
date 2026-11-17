@@ -77,6 +77,18 @@ export interface MemoryNote {
   at?: string;
 }
 
+/** This month so far and where it's heading at this pace, per model. */
+export interface CostMonth {
+  month: string;
+  spentUsd: number;
+  projectedUsd: number;
+  daysGone: number;
+  daysInMonth: number;
+  runs: number;
+  priced: boolean;
+  byModel: { model: string; costUsd: number; runs: number }[];
+}
+
 export interface AgentsResponse {
   agents: Agent[];
   problems: { source: string; error: string }[];

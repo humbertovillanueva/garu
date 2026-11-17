@@ -79,6 +79,7 @@ export const api = {
   inbox: () => get<InboxResponse>("/api/inbox"),
   feed: (limit = 80) => get<FeedItem[]>(`/api/feed?limit=${limit}`),
   cost: (days = 14) => get<CostRow[]>(`/api/cost?days=${days}`),
+  costMonth: () => get<import("./types").CostMonth>("/api/cost/month"),
   today: () => get<TodayResponse>("/api/today"),
   decide: (id: string, approve: boolean, forDuration?: string, note?: string, args?: Record<string, unknown>) => post<ApprovalRequest>(`/api/inbox/${id}/${approve ? "approve" : "deny"}`, { ...(forDuration ? { for: forDuration } : {}), ...(note ? { note } : {}), ...(args ? { args } : {}) }),
   diff: (id: string) => get<import("./types").WriteDiff>(`/api/inbox/${id}/diff`),

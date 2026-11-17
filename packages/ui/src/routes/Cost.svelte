@@ -10,6 +10,9 @@
   import { t, dateLocale } from "../lib/i18n.svelte";
 
   let rows = $state<CostRow[] | null>(null);
+  // This month so far, and where it's heading: the number that says whether the free tier is still free for you.
+  let month = $state<import("../lib/types").CostMonth | null>(null);
+  $effect(() => { live.tick; void api.costMonth().then((m) => (month = m)).catch(() => (month = null)); });
   let days = $state(14);
   let hover = $state<{ day: string; agent: string; cost: number; runs: number } | null>(null);
   let error = $state<string | null>(null);
@@ -79,6 +82,15 @@
       <div class="px-4 py-3"><div class="text-[11px] uppercase tracking-wider text-mute">{t("Runs")}</div><div class="mt-0.5 text-[20px] font-semibold tabular-nums">{totalRuns}</div></div>
       <div class="px-4 py-3"><div class="text-[11px] uppercase tracking-wider text-mute">{t("Per run")}</div><div class="mt-0.5 text-[20px] font-semibold tabular-nums">{usd(totalRuns ? total / totalRuns : 0)}</div></div>
     </div>
+    {#if month && month.runs}
+      <div class="panel rise p-4">
+        <h2 class="label mb-2">{t("This month")}</h2>
+        <p class="text-[14px]">{t("{spent} so far in {days} days; at this pace, {projected} by the end of the month.", { spent: usd(month.spentUsd), days: month.daysGone, projected: usd(month.projectedUsd) })}{#if !month.priced} <span class="text-mute">{t("Some runs were on an unpriced model and don't count.")}</span>{/if}</p>
+        <ul class="mt-2 space-y-1 text-[13px] text-fg-2">
+          {#each month.byModel as m (m.model)}<li class="flex items-baseline gap-3"><span class="mono min-w-0 flex-1 truncate">{m.model}</span><span class="tabular-nums">{usd(m.costUsd)}</span><span class="text-mute tabular-nums">{m.runs === 1 ? t("1 run") : t("{n} runs", { n: m.runs })}</span></li>{/each}
+        </ul>
+      </div>
+    {/if}
     <p class="text-[12.5px] text-mute">{t("Estimated from real token counts at list price. Free tiers and local models bill $0; the estimate still shows what it would cost.")}</p>
 
     <div class="panel p-4">
