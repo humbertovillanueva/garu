@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { backupName, peekBackup, planBackup, restoreBackup, writeBackup } from "./backup.js";
+import { backupName, listBackups, peekBackup, planBackup, pruneBackups, restoreBackup, writeBackup } from "./backup.js";
 
 function seed(root: string): void {
   for (const d of ["runs/bea", "inbox", "memory", "auth"]) mkdirSync(join(root, ".garu", d), { recursive: true });
@@ -49,5 +49,18 @@ describe("garu backup and restore", () => {
     const { execFileSync } = await import("node:child_process");
     execFileSync("tar", ["-czf", join(root, "not-garu.tgz"), "-C", root, "other"]);
     await expect(peekBackup(join(root, "not-garu.tgz"))).rejects.toThrow(/not a Garu backup/);
+  });
+
+  it("keeps a week of scheduled backups and never the last one alone", () => {
+    const dir = mkdtempSync(join(tmpdir(), "garu-bk-"));
+    for (const d of [1, 3, 9, 20]) writeFileSync(join(dir, backupName(new Date(2026, 10, 17 - d, 3, 0))), "x");
+    writeFileSync(join(dir, "not-a-backup.tgz"), "x");
+    expect(listBackups(dir).map((b) => b.at.getDate())).toEqual([16, 14, 8, 28]);
+    expect(pruneBackups(dir, 7 * 86_400_000, new Date(2026, 10, 17, 12))).toBe(2);
+    expect(listBackups(dir).map((b) => b.at.getDate())).toEqual([16, 14]);
+    // only an old one left: it stays
+    const lone = mkdtempSync(join(tmpdir(), "garu-bk-"));
+    writeFileSync(join(lone, backupName(new Date(2026, 9, 1, 3, 0))), "x");
+    expect(pruneBackups(lone, 7 * 86_400_000, new Date(2026, 10, 17, 12))).toBe(0);
   });
 });

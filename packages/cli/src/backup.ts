@@ -5,7 +5,7 @@
  * even then the old one is moved aside, not deleted.
  */
 import { execFile } from "node:child_process";
-import { existsSync, readdirSync, renameSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 
@@ -59,8 +59,9 @@ export function backupName(now = new Date()): string {
   return `garu-backup-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}.tgz`;
 }
 
-/** Write the tarball; the paths inside start with `.garu/`. */
+/** Write the tarball; the paths inside start with `.garu/`. The folder is made if it isn't there. */
 export async function writeBackup(plan: BackupPlan, file: string): Promise<void> {
+  mkdirSync(dirname(resolve(file)), { recursive: true });
   await run("tar", ["-czf", resolve(file), "-C", plan.root, ...plan.entries.map((e) => join(".garu", e))]);
 }
 
@@ -89,4 +90,21 @@ export async function restoreBackup(file: string, root: string, now = new Date()
   }
   await run("tar", ["-xzf", resolve(file), "-C", root]);
   return { movedAside };
+}
+
+/** The backups in a folder, newest first, by the date in their name. */
+export function listBackups(dir: string): { file: string; at: Date }[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .map((f) => { const m = /^garu-backup-(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})\.tgz$/.exec(f); return m ? { file: join(dir, f), at: new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5])) } : null; })
+    .filter((x): x is { file: string; at: Date } => x !== null)
+    .sort((a, b) => b.at.getTime() - a.at.getTime());
+}
+
+/** Backups older than the keep window go; the newest always stays, whatever its age. Returns how many went. */
+export function pruneBackups(dir: string, keepMs: number, now = new Date()): number {
+  const all = listBackups(dir);
+  let gone = 0;
+  for (const b of all.slice(1)) if (now.getTime() - b.at.getTime() > keepMs) { try { rmSync(b.file); gone++; } catch { /* already gone */ } }
+  return gone;
 }
