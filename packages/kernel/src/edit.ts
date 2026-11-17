@@ -6,7 +6,8 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { parseDocument } from "yaml";
-import { parseGarufile, type Garufile } from "./garufile.js";
+import { isMap, isSeq, YAMLSeq } from "yaml";
+import { parseGarufile, type Garufile, type PolicyRule } from "./garufile.js";
 import { assertValidCron } from "./scheduler.js";
 
 export interface GarufileEdits {
@@ -62,6 +63,46 @@ export function editGarufileText(text: string, edits: GarufileEdits, source = "G
 /** Edit the file in place; nothing is written unless the result parses. */
 export function editGarufile(path: string, edits: GarufileEdits): Garufile {
   const { text, garufile } = editGarufileText(readFileSync(path, "utf8"), edits, path);
+  writeFileSync(path, text);
+  return garufile;
+}
+
+/**
+ * One change to the policy list, by position: a rule's tool, action or reason changed (its `when`
+ * and its comments stay), a rule added at a position, or a rule removed. Positions are the list's
+ * before any change, and the changes apply in order.
+ */
+export type PolicyEdit =
+  | { op: "set"; index: number; tool?: string; action?: PolicyRule["action"]; reason?: string | null }
+  | { op: "add"; index: number; rule: PolicyRule }
+  | { op: "remove"; index: number };
+
+/** The edited text, parsed and valid, without touching the file. */
+export function editPolicyText(text: string, edits: readonly PolicyEdit[], source = "Garufile.yaml"): { text: string; garufile: Garufile } {
+  const doc = parseDocument(text);
+  let policy = doc.get("policy");
+  if (!isSeq(policy)) { policy = new YAMLSeq(); doc.set("policy", policy); }
+  const seq = policy as YAMLSeq;
+  for (const e of edits) {
+    if (e.op === "add") {
+      if (e.index < 0 || e.index > seq.items.length) throw new Error(`no rule position ${e.index}`);
+      seq.items.splice(e.index, 0, doc.createNode(e.rule));
+      continue;
+    }
+    const item = seq.items[e.index];
+    if (!isMap(item)) throw new Error(`no rule at position ${e.index}`);
+    if (e.op === "remove") { seq.items.splice(e.index, 1); continue; }
+    if (e.tool !== undefined) item.set("tool", e.tool);
+    if (e.action !== undefined) item.set("action", e.action);
+    if (e.reason !== undefined) { if (e.reason === null || e.reason === "") item.delete("reason"); else item.set("reason", e.reason); }
+  }
+  const out = doc.toString();
+  return { text: out, garufile: parseGarufile(out, source) };
+}
+
+/** Edit the file's policy in place; nothing is written unless the result parses. */
+export function editPolicy(path: string, edits: readonly PolicyEdit[]): Garufile {
+  const { text, garufile } = editPolicyText(readFileSync(path, "utf8"), edits, path);
   writeFileSync(path, text);
   return garufile;
 }

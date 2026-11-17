@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { editGarufileText } from "./edit.js";
+import { editGarufileText, editPolicyText } from "./edit.js";
 
 const FILE = `# Bea sorts the inbox.
 name: bea
@@ -53,5 +53,42 @@ describe("editing a Garufile from the control room", () => {
   it("refuses a bad cron and a cap below zero, and writes nothing", () => {
     expect(() => editGarufileText(FILE, { cron: "every monday" })).toThrow();
     expect(() => editGarufileText(FILE, { maxCostUsd: -1 })).toThrow();
+  });
+});
+
+describe("editing the policy from the control room", () => {
+  const WITH_RULES = FILE.replace(`policy:
+  - tool: "*"
+    action: block
+`, `policy:
+  # drafts ask, always
+  - tool: "gmail.create_draft"
+    when: { to: { matches: "no-reply" } }
+    action: block
+  - tool: "gmail.create_draft"
+    action: ask
+    reason: a draft in your name
+  - tool: "*"
+    action: block
+`);
+
+  it("changes a rule's action and reason, adds one, removes one, and keeps the comment and the when", () => {
+    const { text, garufile } = editPolicyText(WITH_RULES, [
+      { op: "set", index: 1, action: "allow", reason: null },
+      { op: "add", index: 2, rule: { tool: "gmail.label_thread", action: "allow" } },
+      { op: "remove", index: 3 },
+    ]);
+    expect(garufile.policy).toEqual([
+      { tool: "gmail.create_draft", when: { to: { matches: "no-reply" } }, action: "block" },
+      { tool: "gmail.create_draft", action: "allow" },
+      { tool: "gmail.label_thread", action: "allow" },
+    ]);
+    expect(text).toContain("# drafts ask, always");
+    expect(text).not.toContain("reason: a draft in your name");
+  });
+
+  it("refuses a bad action or a position that isn't there, and writes nothing", () => {
+    expect(() => editPolicyText(WITH_RULES, [{ op: "set", index: 0, action: "maybe" as "allow" }])).toThrow();
+    expect(() => editPolicyText(WITH_RULES, [{ op: "remove", index: 9 }])).toThrow(/no rule at position 9/);
   });
 });
