@@ -50,6 +50,8 @@ import {
   weeklyDue,
   formatUsd,
   type WeeklyStats,
+  editGarufile,
+  type GarufileEdits,
 } from "@garu/kernel";
 
 /**
@@ -615,6 +617,43 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
 
       // The agent's notebook: read it, add a note, or drop one. The run's own writes go through the
       // bus; these are the owner's, from the agent's page.
+      // The schedule, the runs a day, the cap per run and the notebook, edited from the agent's page: written into the
+      // Garufile with its comments kept, the schedule picked up by the running scheduler, nothing else touched.
+      const setM = /^\/api\/agents\/([^/]+)\/settings$/.exec(path);
+      if (setM && req.method === "POST") {
+        if (opts.demo) return json(res, { error: t("This is the demo: it can't do that. Garu on your own computer can.") }, 403);
+        const name = decodeURIComponent(setM[1]!);
+        if (!/^[a-z][a-z0-9-]*$/.test(name)) return json(res, { error: t("bad agent name") }, 400);
+        const a = discover().agents.find((x) => x.garufile.name === name);
+        if (!a) return json(res, { error: t("no such agent") }, 404);
+        const body = (await readBody(req)) as Record<string, unknown>;
+        const edits: GarufileEdits = {};
+        const num = (k: "maxRunsPerDay" | "maxCostUsd") => {
+          if (!(k in body)) return;
+          const v = body[k];
+          if (v === null || v === "") { edits[k] = null; return; }
+          const n = Number(v);
+          if (!Number.isFinite(n) || n < 0 || (k === "maxRunsPerDay" && !Number.isInteger(n))) throw new Error(t("{field} must be a number, or empty for no cap", { field: k }));
+          edits[k] = n;
+        };
+        try {
+          if ("cron" in body) edits.cron = body["cron"] === null || body["cron"] === "" ? null : String(body["cron"]).trim();
+          num("maxRunsPerDay"); num("maxCostUsd");
+          if ("memory" in body) edits.memory = Boolean(body["memory"]);
+          editGarufile(a.path, edits);
+        } catch (e) {
+          return json(res, { error: (e as Error).message }, 400);
+        }
+        const fresh = discover().agents.find((x) => x.garufile.name === name);
+        if (fresh && edits.cron !== undefined && scheduler) {
+          const needs = missingEnv(fresh.garufile.tools, process.env).length || fresh.garufile.tools.some((tl) => tl.auth === "oauth" && !signInFor(tl, authRoot).signedIn());
+          scheduled += scheduler.reschedule(fresh) - (needs ? 0 : 0);
+          opts.log(`✎ ${name}: schedule is now ${fresh.garufile.triggers.find((tr) => tr.cron)?.cron ?? "when asked"}`);
+        }
+        ping();
+        return json(res, agentView(fresh, name));
+      }
+
       const memM = /^\/api\/agents\/([^/]+)\/memory(\/forget)?$/.exec(path);
       if (memM) {
         const name = decodeURIComponent(memM[1]!);

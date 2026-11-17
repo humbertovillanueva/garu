@@ -448,6 +448,24 @@ describe("the rest", () => {
     } finally { rmSync(file); }
   });
 
+  it("changes an agent's caps and schedule from its page, keeping the Garufile's comments", async () => {
+    const file = join(root, "agents", "pip", "Garufile.yaml");
+    const before = readFileSync(file, "utf8");
+    expect((await post("/api/agents/pip/settings", { cron: "every monday" })).status).toBe(400);
+    expect((await post("/api/agents/pip/settings", { maxRunsPerDay: "x" })).status).toBe(400);
+    expect((await post("/api/agents/nope/settings", { maxRunsPerDay: 2 })).status).toBe(404);
+    const res = await post("/api/agents/pip/settings", { maxRunsPerDay: 2, memory: true });
+    const r = (await res.json()) as { budget: { maxRunsPerDay: number | null }; memory: boolean; error?: string };
+    expect(r.error, JSON.stringify(r)).toBeUndefined();
+    expect(r.budget.maxRunsPerDay).toBe(2);
+    expect(r.memory).toBe(true);
+    const after = readFileSync(file, "utf8");
+    expect(after).toContain("maxRunsPerDay: 2");
+    expect(after).toContain("memory: true");
+    // put it back for the tests that follow
+    writeFileSync(file, before);
+  });
+
   it("searches runs by their summary and by the asks' text", async () => {
     const all = (await (await get("/api/runs")).json()) as { runId: string; agent: string }[];
     expect((await (await get("/api/runs?q=zzz-nothing-says-this")).json()) as unknown[]).toEqual([]);

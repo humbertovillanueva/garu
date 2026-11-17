@@ -493,4 +493,6 @@ export const es: Record<string, string> = {
   "the old .garu is at {path}": "el .garu anterior está en {path}",
   "restored .garu from {file}: {list}": "restaurado .garu desde {file}: {list}",
   "If the login service runs here, restart it: garu service restart": "Si el servicio de inicio corre aquí, reinícialo: garu service restart",
+  "no such agent": "no existe ese agente",
+  "{field} must be a number, or empty for no cap": "{field} debe ser un número, o vacío para no poner tope",
 };
