@@ -76,6 +76,43 @@
     form = { cron: a?.cron ?? "", runs: a?.budget?.maxRunsPerDay ? String(a.budget.maxRunsPerDay) : "", cap: a?.budget?.maxCostUsd ? String(a.budget.maxCostUsd) : "", memory: Boolean(a?.memory) };
     saveError = null; editing = true;
   }
+  // The rules, edited in place: action and reason on each, a rule added or dropped; the Garufile keeps its comments.
+  let editingRules = $state(false);
+  let rules = $state<{ tool: string; action: "allow" | "ask" | "block"; reason: string; when?: Record<string, Record<string, unknown>>; index: number | null }[]>([]);
+  let removed = $state<number[]>([]);
+  let rulesError = $state<string | null>(null);
+  let savingRules = $state(false);
+  function startRules() {
+    rules = (a?.policy?.list ?? []).map((r, index) => ({ tool: r.tool, action: r.action, reason: r.reason ?? "", ...(r.when ? { when: r.when } : {}), index }));
+    removed = []; rulesError = null; editingRules = true;
+  }
+  const whenText = (w: Record<string, Record<string, unknown>>) => Object.entries(w).map(([k, p]) => `${k} ${Object.entries(p).map(([op, v]) => `${op} ${typeof v === "string" ? v : JSON.stringify(v)}`).join(", ")}`).join("; ");
+  async function saveRules() {
+    if (savingRules || !a) return;
+    savingRules = true; rulesError = null;
+    try {
+      const before = a.policy?.list ?? [];
+      const edits: import("../lib/types").PolicyEdit[] = [];
+      // Changes to rules that were there, by their old position; then removals from the bottom up; then additions by their new position.
+      for (const r of rules) {
+        if (r.index === null) continue;
+        const old = before[r.index]!;
+        const e: import("../lib/types").PolicyEdit = { op: "set", index: r.index };
+        if (r.tool.trim() !== old.tool) e.tool = r.tool.trim();
+        if (r.action !== old.action) e.action = r.action;
+        if ((r.reason.trim() || null) !== (old.reason ?? null)) e.reason = r.reason.trim() || null;
+        if (e.tool !== undefined || e.action !== undefined || e.reason !== undefined) edits.push(e);
+      }
+      for (const i of [...removed].sort((x, y) => y - x)) edits.push({ op: "remove", index: i });
+      // After removals the survivors shift up; a new rule's position is where it sits in the edited list.
+      rules.forEach((r, at) => { if (r.index === null) edits.push({ op: "add", index: at, rule: { tool: r.tool.trim(), action: r.action, ...(r.reason.trim() ? { reason: r.reason.trim() } : {}) } }); });
+      if (!edits.length) { editingRules = false; return; }
+      await api.editPolicy(a.name, edits);
+      editingRules = false;
+      live.tick++;
+      void refreshCore().catch(() => {});
+    } catch (e) { rulesError = errorText(e); } finally { savingRules = false; }
+  }
   async function save() {
     if (saving || !a) return;
     saving = true; saveError = null;
@@ -213,7 +250,37 @@
             <p class="mt-2 text-[12px] text-mute">{t("The file keeps your comments. A new schedule starts right away; a notebook needs its garu.remember and garu.forget rules in the policy to be used.")}</p>
           </div>
         {:else}
-          <button class="tap text-[12px] text-mute hover:text-fg" onclick={startEdit}>{t("Change schedule, caps or notebook")}</button>
+          <div class="flex flex-wrap gap-x-4 gap-y-1">
+            <button class="tap text-[12px] text-mute hover:text-fg" onclick={startEdit}>{t("Change schedule, caps or notebook")}</button>
+            {#if !editingRules}<button class="tap text-[12px] text-mute hover:text-fg" onclick={startRules}>{t("Change the rules")}</button>{/if}
+          </div>
+        {/if}
+        {#if editingRules}
+          <div class="panel rise p-4">
+            <h3 class="label mb-1">{t("{name}'s rules", { name: a.name })}</h3>
+            <p class="mb-3 text-[12.5px] text-mute">{t("The first rule that matches a call wins. A call no rule matches asks you.")}</p>
+            <div class="space-y-2">
+              {#each rules as r, i (r.index ?? `new-${i}`)}
+                <div class="flex flex-wrap items-center gap-2 rounded-lg border hairline px-3 py-2 text-[13px]">
+                  <span class="w-5 text-right text-mute tabular-nums">{i + 1}</span>
+                  <input class="field mono min-w-0 flex-1 !min-h-[34px] !py-1 !text-[12.5px]" bind:value={r.tool} aria-label={t("tool")} />
+                  <select class="field !min-h-[34px] !w-auto !py-1 !text-[13px]" bind:value={r.action} aria-label={t("action")}>
+                    <option value="allow">{t("allow")}</option><option value="ask">{t("ask")}</option><option value="block">{t("block")}</option>
+                  </select>
+                  <button class="tap text-mute hover:text-fg" aria-label={t("Drop this rule")} title={t("Drop this rule")} onclick={() => { if (r.index !== null) removed = [...removed, r.index]; rules = rules.filter((_, k) => k !== i); }}>×</button>
+                  {#if r.when}<span class="basis-full text-[12px] text-mute">{t("only when {condition}", { condition: whenText(r.when) })}</span>{/if}
+                  <input class="field basis-full !min-h-[34px] !py-1 !text-[12.5px]" bind:value={r.reason} placeholder={t("reason, shown on the ask (optional)")} aria-label={t("reason")} />
+                </div>
+              {/each}
+            </div>
+            <button class="btn mt-2 py-1 text-[12.5px]" onclick={() => (rules = [...rules, { tool: "", action: "ask", reason: "", index: null }])}>{t("Add a rule at the end")}</button>
+            {#if rulesError}<p class="mt-2 text-[12.5px]" style="color: var(--color-bad)">{rulesError}</p>{/if}
+            <div class="mt-3 flex gap-2">
+              <button class="btn btn-primary" disabled={savingRules || rules.some((r) => !r.tool.trim())} onclick={saveRules}>{t("Save to the Garufile")}</button>
+              <button class="btn" disabled={savingRules} onclick={() => (editingRules = false)}>{t("Cancel")}</button>
+            </div>
+            <p class="mt-2 text-[12px] text-mute">{t("A rule's conditions stay as written; edit the file for those. The next run uses the new rules.")}</p>
+          </div>
         {/if}
       {/if}
     {/if}

@@ -1,3 +1,15 @@
+/** One rule of an agent's policy, as the Garufile has it. */
+export interface PolicyRule {
+  tool: string;
+  action: "allow" | "ask" | "block";
+  when?: Record<string, Record<string, unknown>>;
+  reason?: string;
+}
+export type PolicyEdit =
+  | { op: "set"; index: number; tool?: string; action?: PolicyRule["action"]; reason?: string | null }
+  | { op: "add"; index: number; rule: PolicyRule }
+  | { op: "remove"; index: number };
+
 export type RunStatus = "running" | "parked" | "interrupted" | "ok" | "error" | "blocked" | "max_turns" | "budget_exceeded";
 
 export interface RunSummary {
@@ -48,7 +60,7 @@ export interface Agent {
   cron: string | null;
   nextRun: string | null;
   tools: string[];
-  policy: { rules: number; allow: number; ask: number; block: number } | null;
+  policy: { rules: number; allow: number; ask: number; block: number; list: PolicyRule[] } | null;
   sandbox: { image: string; network: string } | null;
   budget: { maxCostUsd: number | null; free: boolean; maxRunsPerDay: number | null } | null;
   /** Today's runs have reached budget.maxRunsPerDay: nothing more starts until tomorrow. */
