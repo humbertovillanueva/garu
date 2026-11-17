@@ -659,7 +659,7 @@ export const es: Record<string, string> = {
   "Drop this rule": "Quitar esta regla",
   "only when {condition}": "solo cuando {condition}",
   "reason, shown on the ask (optional)": "motivo, se muestra en la pregunta (opcional)",
-  "Add a rule at the end": "Agregar una regla al final",
+  "Add a rule": "Agregar una regla",
   "A rule's conditions stay as written; edit the file for those. The next run uses the new rules.": "Las condiciones de una regla quedan como están escritas; para esas, edita el archivo. La próxima ejecución usa las reglas nuevas.",
   "Change {name}": "Cambiar a {name}",
   "Schedule (cron; empty = only when asked)": "Horario (cron; vacío = solo cuando se le pida)",

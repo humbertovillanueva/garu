@@ -273,7 +273,8 @@
                 </div>
               {/each}
             </div>
-            <button class="btn mt-2 py-1 text-[12.5px]" onclick={() => (rules = [...rules, { tool: "", action: "ask", reason: "", index: null }])}>{t("Add a rule at the end")}</button>
+            <!-- A new rule goes above a closing catch-all ("*"), where it can still win; otherwise at the end. -->
+            <button class="btn mt-2 py-1 text-[13px]" onclick={() => { const at = rules.length && rules[rules.length - 1]!.tool.trim() === "*" ? rules.length - 1 : rules.length; rules = [...rules.slice(0, at), { tool: "", action: "ask", reason: "", index: null }, ...rules.slice(at)]; }}>{t("Add a rule")}</button>
             {#if rulesError}<p class="mt-2 text-[12.5px]" style="color: var(--color-bad)">{rulesError}</p>{/if}
             <div class="mt-3 flex gap-2">
               <button class="btn btn-primary" disabled={savingRules || rules.some((r) => !r.tool.trim())} onclick={saveRules}>{t("Save to the Garufile")}</button>
