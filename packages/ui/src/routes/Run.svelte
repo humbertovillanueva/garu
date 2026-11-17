@@ -2,7 +2,7 @@
   import { api, live, agentByName, loader, HttpError } from "../lib/api.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
-  import { usd, span, humanTime, clock, cronLabel, triggerLabel, plainTimes, until } from "../lib/format";
+  import { usd, span, humanTime, clock, cronLabel, triggerLabel, plainTimes, until, statusLabel } from "../lib/format";
   import { renderMarkdown } from "../lib/md";
   import Mark from "../lib/components/Mark.svelte";
   import Status from "../lib/components/Status.svelte";
@@ -64,6 +64,23 @@
     if (s === "blocked") return t("It stopped: the policy blocked what it needed.");
     return t("It stopped with an error: {message}", { message: s.replace(/^error: /, "") });
   });
+  /** The header's one line: how it started, when, how long it took, and what the clock did meanwhile. */
+  const headerLine = $derived(start ? [how, humanTime(start.ts), lateMs >= 60_000 && due ? t("started {span} late, due {time}", { span: span(lateMs), time: clock(due) }) : "", end ? (asleep ? t("took {duration}, {asleep} of it with the computer asleep", { duration: span(tookMs), asleep: span(asleep) }) : t("took {duration}", { duration: span(tookMs) })) : "", parkedMs >= 60_000 ? t("parked {span} for your answer", { span: span(parkedMs) }) : "", turns === 1 ? t("1 turn") : t("{n} turns", { n: turns })].filter(Boolean).join(" · ") : "");
+  // The run as plain text, for a Slack thread or a tester's reply: the header, what it said, why it did that.
+  let copied = $state(false);
+  async function copyAsText() {
+    const lines: string[] = [`${agent} · ${statusLabel(status)}`, headerLine, ""];
+    if (reply) lines.push(t("What it said"), plainTimes(reply), "");
+    if (why && (why.calls || why.hidden.length || why.stopped)) {
+      lines.push(t("Why it did that"));
+      const nA = why.allowed.reduce((n, x) => n + x.n, 0);
+      const nB = why.blocked.reduce((n, x) => n + x.n, 0);
+      if (nA) lines.push(`- ${nA === 1 ? t("1 call went through on its own: {list}", { list: allowedList }) : t("{n} calls went through on their own: {list}", { n: nA, list: allowedList })}`);
+      for (const x of why.asked) lines.push(`- ${x.n === 1 ? t("{tool} asked you once: {outcome}", { tool: x.tool, outcome: askedOutcome(x) }) : t("{tool} asked you {n} times: {outcome}", { tool: x.tool, n: x.n, outcome: askedOutcome(x) })}`);
+      if (nB) lines.push(`- ${nB === 1 ? t("1 call was blocked by the policy: {list}", { list: blockedList }) : t("{n} calls were blocked by the policy: {list}", { n: nB, list: blockedList })}`);
+      if (why.hidden.length) lines.push(`- ${why.hidden.length === 1 ? t("1 tool was never offered, since no rule could allow it: {list}", { list: why.hidden.join(", ") }) : t("{n} tools were never offered, since no rule could allow them: {list}", { n: why.hidden.length, list: why.hidden.join(", ") })}`);
+      if (stoppedText) lines.push(`- ${stoppedText}`);
+    }
   // A catch-up, or a fire the computer slept through: the schedule meant it for earlier.
   const due = $derived(start?.event["dueAt"] as string | undefined);
   const lateMs = $derived(due && start ? new Date(start.ts).getTime() - new Date(due).getTime() : 0);
@@ -80,6 +97,8 @@
     return total;
   });
   const tookMs = $derived(end && start ? Math.max(0, new Date(end.ts).getTime() - new Date(start.ts).getTime() - parkedMs) : 0);
+    try { await navigator.clipboard.writeText(lines.join("\n")); copied = true; setTimeout(() => (copied = false), 2000); } catch { /* no clipboard here */ }
+  }
   /** How the run started, in words: "Scheduled, Weekdays 7:00 AM", "Catch-up for Daily 9:00 AM", "From a message". */
   const how = $derived.by(() => {
     const trigger = String(start?.event["trigger"] ?? "");
@@ -123,7 +142,7 @@
         {#if events}<Status {status} />{/if}
       </div>
       {#if start}
-        <div class="mt-0.5 text-[13px] text-fg-2">{[how, humanTime(start.ts), lateMs >= 60_000 && due ? t("started {span} late, due {time}", { span: span(lateMs), time: clock(due) }) : "", end ? (asleep ? t("took {duration}, {asleep} of it with the computer asleep", { duration: span(tookMs), asleep: span(asleep) }) : t("took {duration}", { duration: span(tookMs) })) : "", parkedMs >= 60_000 ? t("parked {span} for your answer", { span: span(parkedMs) }) : "", turns === 1 ? t("1 turn") : t("{n} turns", { n: turns })].filter(Boolean).join(" · ")}</div>
+        <div class="mt-0.5 text-[13px] text-fg-2">{headerLine}</div>
         <div class="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-mute" title={t("run {id}", { id: runId })}>
           <span class="mono">{start.event["model"]}</span>
           {#if sandbox}<span>· {t("sandboxed, network {network}", { network: sandbox.network })}</span>{/if}
@@ -156,7 +175,7 @@
     {/if}
     {#if reply && status !== "error" && status !== "offline" && status !== "busy"}
       <div class="panel rise p-4">
-        <div class="mb-2 text-[11px] uppercase tracking-wider text-mute">{t("What it said")}</div>
+        <div class="mb-2 flex items-baseline justify-between gap-3"><span class="text-[11px] uppercase tracking-wider text-mute">{t("What it said")}</span><button class="tap text-[11.5px] text-mute hover:text-fg" onclick={copyAsText}>{copied ? t("Copied") : t("Copy as text")}</button></div>
         <div class="md space-y-2 text-[14px] text-fg-2">{@html renderMarkdown(plainTimes(reply))}</div>
       </div>
     {/if}
