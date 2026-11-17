@@ -50,8 +50,8 @@ export class ModelQuotaError extends Error {
  * was done" and let the schedule come back, the way a run cut off by the network does.
  */
 export class ModelBusyError extends Error {
-  constructor(readonly model: string, apiMessage: string, readonly reason: "high demand" | "rate limited") {
-    super(`gemini ${model}: ${apiMessage}`);
+  constructor(readonly model: string, apiMessage: string, readonly reason: "high demand" | "rate limited", provider = "gemini") {
+    super(`${provider} ${model}: ${apiMessage}`);
     this.name = "ModelBusyError";
   }
 }
