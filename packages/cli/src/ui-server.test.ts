@@ -466,6 +466,20 @@ describe("the rest", () => {
     writeFileSync(file, before);
   });
 
+  it("edits an agent's policy from its page, by position, and refuses a bad change whole", async () => {
+    const file = join(root, "agents", "pip", "Garufile.yaml");
+    const before = readFileSync(file, "utf8");
+    const view = (await (await get("/api/agents")).json()) as { agents: { name: string; policy: { list: { tool: string; action: string }[] } }[] };
+    const n = view.agents.find((x) => x.name === "pip")!.policy.list.length;
+    expect(n).toBeGreaterThan(0);
+    expect((await post("/api/agents/pip/policy", { edits: [] })).status).toBe(400);
+    expect((await post("/api/agents/pip/policy", { edits: [{ op: "remove", index: 99 }] })).status).toBe(400);
+    const r = (await (await post("/api/agents/pip/policy", { edits: [{ op: "add", index: 0, rule: { tool: "fs.read_text_file", action: "allow" } }, { op: "set", index: 0, reason: "reading is fine" }] })).json()) as { policy: { list: { tool: string; action: string; reason?: string }[] } };
+    expect(r.policy.list.length).toBe(n + 1);
+    expect(r.policy.list[0]).toEqual({ tool: "fs.read_text_file", action: "allow", reason: "reading is fine" });
+    writeFileSync(file, before);
+  });
+
   it("searches runs by their summary and by the asks' text", async () => {
     const all = (await (await get("/api/runs")).json()) as { runId: string; agent: string }[];
     expect((await (await get("/api/runs?q=zzz-nothing-says-this")).json()) as unknown[]).toEqual([]);

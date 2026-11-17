@@ -51,7 +51,9 @@ import {
   formatUsd,
   type WeeklyStats,
   editGarufile,
+  editPolicy,
   type GarufileEdits,
+  type PolicyEdit,
 } from "@garu/kernel";
 
 /**
@@ -470,7 +472,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       cron,
       nextRun,
       tools: g?.tools.map((t) => t.name) ?? [],
-      policy: g ? { rules: g.policy.length, allow: g.policy.filter((r) => r.action === "allow").length, ask: g.policy.filter((r) => r.action === "ask").length, block: g.policy.filter((r) => r.action === "block").length } : null,
+      policy: g ? { rules: g.policy.length, allow: g.policy.filter((r) => r.action === "allow").length, ask: g.policy.filter((r) => r.action === "ask").length, block: g.policy.filter((r) => r.action === "block").length, list: g.policy } : null,
       sandbox: g?.sandbox ? { image: g.sandbox.image, network: g.sandbox.network } : null,
       budget: g ? { maxCostUsd: g.budget.maxCostUsd ?? null, free: price ? price.inputPerMTok === 0 && price.outputPerMTok === 0 : false, maxRunsPerDay: g.budget.maxRunsPerDay ?? null } : null,
       capped: Boolean(g?.budget.maxRunsPerDay && todays.filter((r) => !r.offline).length >= g.budget.maxRunsPerDay),
@@ -652,6 +654,26 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         }
         ping();
         return json(res, agentView(fresh, name));
+      }
+
+      // The policy, edited from the agent's page: each change by position, written with the file's comments kept.
+      const polM = /^\/api\/agents\/([^/]+)\/policy$/.exec(path);
+      if (polM && req.method === "POST") {
+        if (opts.demo) return json(res, { error: t("This is the demo: it can't do that. Garu on your own computer can.") }, 403);
+        const name = decodeURIComponent(polM[1]!);
+        if (!/^[a-z][a-z0-9-]*$/.test(name)) return json(res, { error: t("bad agent name") }, 400);
+        const a = discover().agents.find((x) => x.garufile.name === name);
+        if (!a) return json(res, { error: t("no such agent") }, 404);
+        const body = (await readBody(req)) as { edits?: unknown };
+        if (!Array.isArray(body.edits) || !body.edits.length) return json(res, { error: t("nothing to change") }, 400);
+        try {
+          editPolicy(a.path, body.edits as PolicyEdit[]);
+        } catch (e) {
+          return json(res, { error: (e as Error).message }, 400);
+        }
+        opts.log(`✎ ${name}: policy edited from its page (${body.edits.length} change(s))`);
+        ping();
+        return json(res, agentView(discover().agents.find((x) => x.garufile.name === name), name));
       }
 
       const memM = /^\/api\/agents\/([^/]+)\/memory(\/forget)?$/.exec(path);

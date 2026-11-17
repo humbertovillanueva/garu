@@ -495,4 +495,5 @@ export const es: Record<string, string> = {
   "If the login service runs here, restart it: garu service restart": "Si el servicio de inicio corre aquí, reinícialo: garu service restart",
   "no such agent": "no existe ese agente",
   "{field} must be a number, or empty for no cap": "{field} debe ser un número, o vacío para no poner tope",
+  "nothing to change": "nada que cambiar",
 };
