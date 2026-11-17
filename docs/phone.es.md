@@ -38,6 +38,10 @@ HTTPS es lo que hace posible la instalación, una razón más para pasar por `ta
 
 **¿Aún no tienes Garu en una computadora?** La pantalla de emparejar de la app tiene un botón *Probar la demo*: una sala de control con agentes y correos inventados, para mirar y responder una pregunta de muestra. Nada en ella es real, y no puede ejecutar nada.
 
+## Decidir
+
+Desliza una tarjeta a la derecha para aprobar y a la izquierda para rechazar, más allá de un tercio de su ancho; si la sueltas antes, vuelve a su sitio. Toca **Editar** en un borrador, un mensaje o una nota para arreglarlo y aprobar tu versión. El ícono de la app muestra cuántas preguntas te esperan, en los lanzadores que muestran números (Samsung sí; el de Pixel muestra un punto).
+
 ## Notificaciones
 
 La app del teléfono muestra lo que está esperando cuando la abres. Para recibir un aviso push cuando un agente se pausa, ejecuta la sala de control con `GARU_NOTIFY_URL=https://ntfy.sh/<your-topic>` en `.env` (o `--notify`) y suscríbete a ese tema en la app de [ntfy](https://ntfy.sh). Cada notificación enlaza de vuelta a la sala de control, así que de la pantalla de bloqueo a la tarjeta de revisión hay un solo toque.
