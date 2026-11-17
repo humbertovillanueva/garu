@@ -48,6 +48,18 @@ triggers:
     expect(s.reschedule(edited)).toBe(1);
     expect(cron.stopped).toEqual(["0 7 * * *"]);
     expect(s.scheduledCrons()).toEqual([{ agent: "a", cron: "*/5 * * * *" }, { agent: "a", cron: "0 9 * * 1-5" }, { agent: "b", cron: "30 7 * * 1-5" }]);
+    const paused = { source: "b.yaml", garufile: parseGarufile(`
+name: b
+model: fake/x
+prompt: p
+paused: true
+triggers:
+  - cron: "30 7 * * 1-5"
+`) };
+    expect(s.reschedule(paused)).toBe(0);
+    expect(s.scheduledCrons().filter((j) => j.agent === "b")).toEqual([]);
+    expect(s.reschedule(edited)).toBe(1);
+    expect(s.scheduledCrons().filter((j) => j.agent === "b")).toEqual([{ agent: "b", cron: "30 7 * * 1-5" }]);
   });
 });
 

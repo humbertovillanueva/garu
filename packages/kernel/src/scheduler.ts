@@ -171,6 +171,7 @@ export class Scheduler {
   /** One agent's cron triggers, as jobs. */
   private schedule(a: ScheduledAgent): number {
     let count = 0;
+    if (a.garufile.paused) return 0;
     for (const t of a.garufile.triggers) {
       if (!t.cron) continue;
       assertValidCron(t.cron);

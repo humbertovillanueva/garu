@@ -34,6 +34,15 @@ describe("editing a Garufile from the control room", () => {
     expect(text).toContain("memory: true");
   });
 
+  it("pauses and resumes", () => {
+    const { text, garufile } = editGarufileText(FILE, { paused: true });
+    expect(garufile.paused).toBe(true);
+    expect(text).toContain("paused: true");
+    const back = editGarufileText(text, { paused: false });
+    expect(back.garufile.paused).toBe(false);
+    expect(back.text).not.toContain("paused");
+  });
+
   it("removes a cap or the schedule cleanly", () => {
     const { text, garufile } = editGarufileText(FILE, { cron: null, maxRunsPerDay: null, memory: false });
     expect(garufile.triggers).toEqual([{ manual: true }]);

@@ -199,6 +199,8 @@ export const Garufile = z
     language: z.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/, "language must be a code like es or pt-BR").optional(),
     /** A small notebook the agent keeps between runs (garu.remember / garu.forget, policed like any tool; the owner edits it on the agent's page). Off unless asked for. */
     memory: z.boolean().default(false),
+    /** Kept on the schedule but skipped: a vacation, a week you don't want it touching anything. */
+    paused: z.boolean().default(false),
     persona: Persona.optional(),
     /** "<provider>/<model>" e.g. "anthropic/claude-sonnet-4-5". */
     model: z.string().regex(/^[a-z0-9-]+\/.+$/, "model must look like provider/model-id"),

@@ -18,6 +18,8 @@ export interface GarufileEdits {
   /** null removes the cap. */
   maxCostUsd?: number | null;
   memory?: boolean;
+  /** Kept on the schedule but skipped. */
+  paused?: boolean;
 }
 
 /** The edited text, parsed and valid, without touching the file. */
@@ -55,6 +57,10 @@ export function editGarufileText(text: string, edits: GarufileEdits, source = "G
   if (edits.memory !== undefined) {
     if (edits.memory) doc.set("memory", true);
     else doc.delete("memory");
+  }
+  if (edits.paused !== undefined) {
+    if (edits.paused) doc.set("paused", true);
+    else doc.delete("paused");
   }
   const out = doc.toString();
   return { text: out, garufile: parseGarufile(out, source) };
