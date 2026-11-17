@@ -37,8 +37,11 @@
   let startX = 0, startY = 0, pointerId = -1;
   const SWIPE = 96;
   function onPointerDown(e: PointerEvent) {
-    if (!coarse || busy || editing || e.pointerType === "mouse" || (e.target as HTMLElement).closest("button, a, input, textarea, select")) return;
+    // Not from a control, and not from a block that scrolls on its own (a diff, a long body): those keep their gesture.
+    const from = e.target as HTMLElement;
+    if (!coarse || busy || editing || e.pointerType === "mouse" || from.closest("button, a, input, textarea, select") || [...(function* () { for (let el: HTMLElement | null = from; el && el !== cardEl; el = el.parentElement) yield el; })()].some((el) => el.scrollWidth > el.clientWidth + 2 && /auto|scroll/.test(getComputedStyle(el).overflowX))) return;
     startX = e.clientX; startY = e.clientY; pointerId = e.pointerId; swiping = true;
+    try { cardEl?.setPointerCapture(e.pointerId); } catch { /* not every target can capture */ }
   }
   function onPointerMove(e: PointerEvent) {
     if (!swiping || e.pointerId !== pointerId) return;
