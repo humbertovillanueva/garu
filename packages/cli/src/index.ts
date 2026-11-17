@@ -930,7 +930,8 @@ program
       }
 
       // Budget
-      let maxCostUsd: number | null = isFreeModel(model) ? null : 0.05;
+      // A model Garu can't price (an openai/ one, say) gets no cap: the cap needs a price, and the run would refuse to start without one.
+      let maxCostUsd: number | null = isFreeModel(model) || !priceFor(model) ? null : 0.05;
       if (opts.budget !== undefined) {
         maxCostUsd = Number(opts.budget);
         if (!Number.isFinite(maxCostUsd) || maxCostUsd < 0) fail(t("--budget must be a non-negative number"));
