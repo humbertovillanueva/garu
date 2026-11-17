@@ -190,6 +190,13 @@ describe("approvals", () => {
     expect((await post(`/api/inbox/${a}/approve`, {})).status).toBe(409); // already decided
   });
 
+  it("approves with the owner's edits, but never as a grant", async () => {
+    const id = pending("fs.write_file", { path: "docs/edit.md", content: "the model's version" });
+    expect((await post(`/api/inbox/${id}/approve`, { args: { path: "docs/edit.md", content: "my version" }, for: "24h" })).status).toBe(400);
+    const r = (await (await post(`/api/inbox/${id}/approve`, { args: { path: "docs/edit.md", content: "my version" } })).json()) as { decision: { approved: boolean; args?: Record<string, unknown> } };
+    expect(r.decision).toMatchObject({ approved: true, args: { path: "docs/edit.md", content: "my version" } });
+  });
+
   it("the diff preview shows a change, but never a secret file or one outside the project", async () => {
     const notes = pending("fs.write_file", { path: "notes.md", content: "new\n" });
     const d = (await (await get(`/api/inbox/${notes}/diff`)).json()) as { isNew: boolean; lines: { t: string; s: string }[] };

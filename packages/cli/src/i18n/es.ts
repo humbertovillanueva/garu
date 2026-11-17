@@ -479,4 +479,5 @@ export const es: Record<string, string> = {
   "after that many runs in a day it says \"Done for today\"": "tras tantas ejecuciones en un día dice \"Lista por hoy\"",
   "a notebook it keeps between runs; read and edit it on its page": "una libreta que guarda entre ejecuciones; léela y edítala en su página",
   "Its notebook: a note shapes every later run, so writing one asks; dropping one is fine.": "Su libreta: una nota moldea cada ejecución posterior, así que escribir una pregunta; borrar una está bien.",
+  "An edited approval can't also be a 24h approval: the edit is yours, the grant would cover the model's version.": "Una aprobación con cambios no puede ser también de 24 h: el cambio es tuyo, el permiso cubriría la versión del modelo.",
 };

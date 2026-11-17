@@ -221,12 +221,12 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     };
     let result: RunResult | undefined;
     try {
-      const answers: Record<string, { approved: boolean; by: string; note?: string }> = {};
+      const answers: Record<string, { approved: boolean; by: string; note?: string; args?: Record<string, unknown> }> = {};
       if (resume) {
         for (const s of resume.step) {
           if (s.kind !== "waiting") continue;
           const d = inbox.get(s.call.requestId)?.decision;
-          if (d) answers[s.call.requestId] = { approved: d.approved, by: d.by, ...(d.note ? { note: d.note } : {}) };
+          if (d) answers[s.call.requestId] = { approved: d.approved, by: d.by, ...(d.note ? { note: d.note } : {}), ...(d.args ? { args: d.args } : {}) };
         }
       }
       result = await runAgent({
@@ -727,13 +727,16 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
 
       const d = /^\/api\/inbox\/([a-z0-9]+)\/(approve|deny)$/.exec(path);
       if (d && req.method === "POST") {
-        const body = (await readBody(req)) as { for?: string; note?: string };
+        const body = (await readBody(req)) as { for?: string; note?: string; args?: unknown };
         // An approve with a duration makes a grant, which is a write any visitor could leave behind.
         if (opts.demo && body.for) return json(res, { error: t("This is the demo: it can't do that. Garu on your own computer can.") }, 403);
+        // The owner's edited arguments: an object, on an approve, never with a grant (the grant would cover the model's version, not theirs).
+        const edited = d[2] === "approve" && body.args && typeof body.args === "object" && !Array.isArray(body.args) ? (body.args as Record<string, unknown>) : undefined;
+        if (edited && body.for) return json(res, { error: t("An edited approval can't also be a 24h approval: the edit is yours, the grant would cover the model's version.") }, 400);
         try {
           // The duration is checked before anything is decided: a bad one changes nothing.
           const durationMs = d[2] === "approve" && body.for ? parseDuration(body.for) : null;
-          const r = inbox.decide(d[1]!, d[2] === "approve", opts.decider, typeof body.note === "string" ? body.note : undefined);
+          const r = inbox.decide(d[1]!, d[2] === "approve", opts.decider, typeof body.note === "string" ? body.note : undefined, edited);
           let grant;
           if (durationMs !== null) {
             const scope = scopeFor(r.args);
