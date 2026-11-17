@@ -38,6 +38,10 @@ HTTPS is what makes the install possible, which is one more reason to go through
 
 **No Garu on a computer yet?** The app's pairing screen has a *Try the demo* button: a control room with made-up agents and mail, to look around and answer a sample ask. Nothing in it is real, and it can't run anything.
 
+## Deciding
+
+Swipe a review card right to approve and left to decline, past a third of its width; let go early and it settles back. Tap **Edit** on a draft, a message or a note to fix it and approve your version. The app's icon shows how many asks wait for you, on launchers that show counts (Samsung does; the Pixel launcher shows a dot).
+
 ## Notifications
 
 The phone app shows what is waiting when you open it. For a push when an agent pauses, run the control room with `GARU_NOTIFY_URL=https://ntfy.sh/<your-topic>` in `.env` (or `--notify`) and subscribe to the topic in the [ntfy](https://ntfy.sh) app. Each notification links back to the control room, so it's one tap from the lock screen to the review card. The push says which agent wants which tool and why; the arguments (an email's body, a file's content) never leave your computer.
