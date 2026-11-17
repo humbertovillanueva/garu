@@ -277,6 +277,7 @@
           <ul class="space-y-2 text-[13.5px]">
             <li class="flex items-center gap-2"><span class="dot" style="background: {s.providers.gemini ? 'var(--color-ok)' : 'var(--color-line-2)'}"></span><span class="mono">GEMINI_API_KEY</span><span class="text-mute">{s.providers.gemini ? t("set") : t("not set · free at aistudio.google.com")}</span></li>
             <li class="flex items-center gap-2"><span class="dot" style="background: {s.providers.anthropic ? 'var(--color-ok)' : 'var(--color-line-2)'}"></span><span class="mono">ANTHROPIC_API_KEY</span><span class="text-mute">{s.providers.anthropic ? t("set") : t("not set")}</span></li>
+            <li class="flex items-center gap-2"><span class="dot" style="background: {s.providers.openai ? 'var(--color-ok)' : 'var(--color-line-2)'}"></span><span class="mono">OPENAI_API_KEY</span><span class="text-mute">{s.providers.openai ? (s.providers.openaiBase ? t("set · OPENAI_BASE_URL points at {host}", { host: s.providers.openaiBase }) : t("set")) : t("not set · OpenAI, or Groq, OpenRouter, LM Studio with OPENAI_BASE_URL")}</span></li>
             <li class="flex items-center gap-2"><span class="dot" style="background: var(--color-ok)"></span><span class="mono">ollama/*</span><span class="text-mute">{s.providers.ollamaHost ? t("custom OLLAMA_HOST") : t("localhost:11434 · $0, needs Ollama running")}</span></li>
           </ul>
         </div>

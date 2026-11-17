@@ -650,6 +650,8 @@ export const es: Record<string, string> = {
   "the run picks up here once you decide; nothing stays open meanwhile": "la ejecución retoma aquí en cuanto decidas; mientras tanto no queda nada abierto",
   "Resumed": "Retomada",
   "Why it did that": "Por qué hizo eso",
+  "set · OPENAI_BASE_URL points at {host}": "puesta · OPENAI_BASE_URL apunta a {host}",
+  "not set · OpenAI, or Groq, OpenRouter, LM Studio with OPENAI_BASE_URL": "sin poner · OpenAI, o Groq, OpenRouter, LM Studio con OPENAI_BASE_URL",
   "Your phone can't reach this computer": "Tu teléfono no puede llegar a esta computadora",
   "Tailscale hasn't served Garu since {since}. Open Tailscale on this computer and it comes back on its own.": "Tailscale no sirve a Garu desde {since}. Abre Tailscale en esta computadora y vuelve solo.",
   "preview this week's": "ver la de esta semana",

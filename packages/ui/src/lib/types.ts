@@ -197,7 +197,7 @@ export interface Settings {
   user: string;
   host: string;
   port: number;
-  providers: { gemini: boolean; anthropic: boolean; ollamaHost: boolean };
+  providers: { gemini: boolean; anthropic: boolean; openai: boolean; openaiBase: string | null; ollamaHost: boolean };
   env: { name: string; set: boolean }[];
   remotes: { agent: string; source: string; server: string; url: string; local?: boolean; auth: "none" | "oauth"; signedIn: boolean | null }[];
   notify: boolean;

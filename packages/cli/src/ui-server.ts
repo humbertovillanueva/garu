@@ -827,7 +827,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           user: opts.userName,
           host: opts.host,
           port: opts.port,
-          providers: { gemini: isSet("GEMINI_API_KEY"), anthropic: isSet("ANTHROPIC_API_KEY"), ollamaHost: isSet("OLLAMA_HOST") },
+          providers: { gemini: isSet("GEMINI_API_KEY"), anthropic: isSet("ANTHROPIC_API_KEY"), openai: isSet("OPENAI_API_KEY"), openaiBase: process.env["OPENAI_BASE_URL"] ? new URL(process.env["OPENAI_BASE_URL"]).host : null, ollamaHost: isSet("OLLAMA_HOST") },
           env: [...referenced].sort().map((k) => ({ name: k, set: isSet(k) })),
           remotes,
           notify: Boolean(opts.notify),
