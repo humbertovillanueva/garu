@@ -130,7 +130,8 @@
         </div>
       {/if}
     </div>
-    {#if events}<Budget spent={cost} cap={a?.budget?.maxCostUsd ?? null} free={a?.budget?.free ?? (end?.event["priced"] === false)} />{/if}
+    <!-- On a phone the cost bar takes its own row under the header, instead of squeezing the text beside it. -->
+    {#if events}<div class="basis-full sm:basis-auto"><Budget spent={cost} cap={a?.budget?.maxCostUsd ?? null} free={a?.budget?.free ?? (end?.event["priced"] === false)} /></div>{/if}
   </div>
 
   {#if missing}

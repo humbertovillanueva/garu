@@ -67,9 +67,9 @@
 <section class="space-y-5">
   <div class="rise flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
     <h1 class="title">{t("Runs")}</h1>
-    <div class="flex items-baseline gap-4">
-      <input class="field w-44 py-1 text-[13px] sm:w-64" type="search" placeholder={t("Search runs")} aria-label={t("Search runs")} value={typed} oninput={(e) => onSearch(e.currentTarget.value)} />
-      {#if runs?.length}<a href={href("cost")} class="tap text-[13px] text-mute hover:text-fg">{t("{total} total · Cost", { total: usd(total) })}</a>{/if}
+    <div class="flex w-full flex-wrap items-baseline gap-x-4 gap-y-2 sm:w-auto">
+      <input class="field w-full py-1 text-[13px] sm:w-64" type="search" placeholder={t("Search runs")} aria-label={t("Search runs")} value={typed} oninput={(e) => onSearch(e.currentTarget.value)} />
+      {#if runs?.length}<a href={href("cost")} class="tap whitespace-nowrap text-[13px] text-mute hover:text-fg">{t("{total} total · Cost", { total: usd(total) })}</a>{/if}
     </div>
   </div>
   {#if runs === null}
