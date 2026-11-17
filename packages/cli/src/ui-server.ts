@@ -71,6 +71,7 @@ import { VERSION } from "./version.js";
 import { authenticate, clearSessionCookie, corsHeaders, isCrossSiteWrite, isDirectLoopback, isHttps, loadOrCreateToken, rotateToken, sessionCookie, tokensMatch } from "./ui-auth.js";
 import { SeenHosts, tailscaleAddresses, type Address } from "./ui-addresses.js";
 import { Reach } from "./ui-reach.js";
+import { desktopNotify, desktopNotifyEnabled } from "./desktop.js";
 
 export interface UiServerOptions {
   port: number;
@@ -153,6 +154,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     onRequest: async (r) => {
       opts.log(`approval needed: ${formatRequest(r)}`);
       ping();
+      // The computer's own screen too, for the owner who is at it: the phone push needs ntfy, this needs nothing.
+      if (!opts.demo && desktopNotifyEnabled()) desktopNotify(`Garu: ${t("{agent} wants {tool}", { agent: r.agent, tool: r.tool })}`, `${t("reason: {reason}", { reason: r.reason })}. ${t("Open the inbox to decide.")}`);
       if (opts.notify) await notify(opts.notify, r, (await addresses())[0]?.url);
     },
   });

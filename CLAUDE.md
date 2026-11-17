@@ -173,6 +173,8 @@ temp path hidden); `scripts/play-shots.mjs` makes the Play and App Store cards f
   so the browser bundle takes just that file), read by the run page's panel, by `garu why`, and in one line under each
   run on the agent page (`blocked` on `RunSummary`). The dev server's page has build stamp `dev`, so the stale-page
   reload never fires against a running service.
+- Desktop notifications (`cli/src/desktop.ts`): an ask shows a macOS notification (osascript; notify-send on Linux) beside the phone
+  push, never in the demo; `GARU_DESKTOP_NOTIFY=0` turns it off.
 - Reach (`cli/src/ui-reach.ts`): the control room keeps the Tailscale address it was last served on in `.garu/reach.json`;
   the sweeper asks Tailscale every half minute and the first time the address is gone it logs it, pushes once through ntfy,
   and `/api/agents` carries `reach: {since, url}` until it's back (Home shows the red notice; `garu doctor` says it too).
