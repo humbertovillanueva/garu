@@ -2,7 +2,7 @@ import React from "react";
 import { AbsoluteFill, Audio, interpolate, Sequence, staticFile, useCurrentFrame } from "remotion";
 import { BAR, S, SH, SHORT_TOTAL, TOTAL, XF } from "./theme";
 import { Backdrop, clamp, GaruMark, lerp, Scene, useLand } from "./ui";
-import { Ask, ASK_TAP, Brief, BRIEF_AT, BRIEF_N, Control, Hook, Learn, LEARN_AT, LEARN_TAP, Logo, Meet, Proof, PROOF_BEAT } from "./scenes";
+import { Ask, ASK_EDIT, ASK_TAP, Brief, BRIEF_AT, BRIEF_N, Control, Hook, Learn, LEARN_AT, LEARN_TAP, Logo, Meet, Proof, PROOF_BEAT } from "./scenes";
 
 type Span = { from: number; dur: number };
 type Shot = { key: string; s: Span; el: React.ReactNode; noIn?: boolean; noOut?: boolean };
@@ -88,6 +88,7 @@ const Sound: React.FC<{ voice?: boolean }> = ({ voice }) => (
     {[0, 1, 2, 3].map((i) => <Sfx key={`m${i}`} at={S.meet.from + 20 + i * 9} src="audio/tick.wav" vol={0.3} />)}
     {Array.from({ length: BRIEF_N }, (_, i) => <Sfx key={`b${i}`} at={S.brief.from + BRIEF_AT(i)} src="audio/tick.wav" vol={0.22} />)}
     {[34, 70, 106].map((t) => <Sfx key={`s${t}`} at={S.control.from + t + 10} src="audio/stamp.wav" vol={0.4} />)}
+    <Sfx at={S.ask.from + ASK_EDIT - 1} src="audio/tap.wav" vol={0.5} />
     <Sfx at={S.ask.from + ASK_TAP - 1} src="audio/tap.wav" vol={0.8} />
     {LEARN_AT.map((t) => <Sfx key={`h${t}`} at={S.learn.from + t} src="audio/tick.wav" vol={0.25} />)}
     <Sfx at={S.learn.from + LEARN_TAP - 1} src="audio/tap.wav" vol={0.7} />

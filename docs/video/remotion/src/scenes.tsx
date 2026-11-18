@@ -356,10 +356,24 @@ export const Control: React.FC = () => {
 
 // ================================================================= 5 · the ask
 /** The review card's content at CARD_H. */
-const ReviewBody: React.FC<{ u: number; done?: number; tapAt?: number }> = ({ u, done = 0, tapAt }) => {
+/** The draft's second sentence, as the model wrote it and as you retype it. */
+const DRAFT_HEAD = "Hi Lena, thanks for sending the homepage draft, it reads well. ";
+const DRAFT_MODEL = "I'll get back to you on the pricing copy before our review.";
+const DRAFT_YOURS = "I'll send the pricing copy by Thursday.";
+const TYPE_FRAMES = 26;
+
+const ReviewBody: React.FC<{ u: number; done?: number; tapAt?: number; editAt?: number }> = ({ u, done = 0, tapAt, editAt }) => {
   const f = useCurrentFrame();
   const ok = done > 0.01;
   const press = tapAt !== undefined ? interpolate(f, [tapAt - 2, tapAt, tapAt + 5], [1, 0.9, 1], clamp) : 1;
+  const pressEdit = editAt !== undefined ? interpolate(f, [editAt - 2, editAt, editAt + 5], [1, 0.9, 1], clamp) : 1;
+  // Editing: the model's sentence goes at the tap, yours types in over it, the caret blinks until Approve.
+  const editing = editAt !== undefined && f >= editAt;
+  const typeStart = editAt !== undefined ? editAt + 10 : 0;
+  const typed = editing ? DRAFT_YOURS.slice(0, Math.floor(lerp(f, typeStart, typeStart + TYPE_FRAMES, 0, DRAFT_YOURS.length, Easing.linear))) : "";
+  const edited = editing && typed.length === DRAFT_YOURS.length;
+  const modelGone = editAt !== undefined ? lerp(f, editAt + 2, editAt + 10, 1, 0) : 1;
+  const caret = editing && !ok && Math.floor(f / 8) % 2 === 0;
   return (
     <div style={{ fontFamily: inter, color: C.fg, height: "100%", display: "flex", flexDirection: "column" }}>
       <div style={{ padding: `${18 * u}px ${18 * u}px 0` }}>
@@ -387,7 +401,18 @@ const ReviewBody: React.FC<{ u: number; done?: number; tapAt?: number }> = ({ u,
             <span style={{ marginLeft: "auto" }}>Re: Homepage draft</span>
           </div>
           <div style={{ height: 104 * u, overflow: "hidden", padding: `${10 * u}px ${14 * u}px`, position: "relative" }}>
-            <div style={{ fontSize: 14.5 * u, color: C.fg, lineHeight: 1.45 }}>Hi Lena, thanks for sending the homepage draft, it reads well. I'll get back to you on the pricing copy before our review.</div>
+            <div style={{ fontSize: 14.5 * u, color: C.fg, lineHeight: 1.45, outline: editing && !ok ? `${u * 0.7}px solid ${rgba(C.paper, 0.35)}` : undefined, outlineOffset: 4 * u, borderRadius: 4 * u }}>
+              {DRAFT_HEAD}
+              {editing ? (
+                <>
+                  <span style={{ opacity: modelGone, textDecoration: modelGone < 1 ? "line-through" : undefined, color: C.mute }}>{modelGone > 0.02 ? DRAFT_MODEL : ""}</span>
+                  <span style={{ color: C.paper }}>{typed}</span>
+                  {caret ? <span style={{ display: "inline-block", width: 2 * u, height: 15 * u, verticalAlign: "-2px", background: C.paper, marginLeft: 1 }} /> : null}
+                </>
+              ) : (
+                DRAFT_MODEL
+              )}
+            </div>
             <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 24 * u, background: "linear-gradient(180deg, rgba(14,16,20,0), rgba(14,16,20,1))" }} />
           </div>
         </div>
@@ -395,7 +420,7 @@ const ReviewBody: React.FC<{ u: number; done?: number; tapAt?: number }> = ({ u,
       <div style={{ marginTop: "auto", display: "flex", gap: 8 * u, padding: `${12 * u}px ${18 * u}px`, borderTop: `${u * 0.6}px solid ${C.line}`, background: rgba(C.bg, 0.3) }}>
         <div style={{ position: "relative" }}>
           <Btn u={u} tone="ok" fill={Math.min(1, done)} scale={press}>
-            {ok ? "✓ Approved" : "Approve"}
+            {ok ? "✓ Approved" : edited ? "Approve as edited" : "Approve"}
           </Btn>
           {tapAt !== undefined ? (
             <div style={{ position: "absolute", left: "50%", top: "50%", width: 0, height: 0 }}>
@@ -403,14 +428,23 @@ const ReviewBody: React.FC<{ u: number; done?: number; tapAt?: number }> = ({ u,
             </div>
           ) : null}
         </div>
-        <Btn u={u} dim={done}>Approve for 24h</Btn>
+        {editAt !== undefined ? (
+          <div style={{ position: "relative", opacity: editing ? 0.55 : 1 }}>
+            <Btn u={u} scale={pressEdit}>Edit</Btn>
+            <div style={{ position: "absolute", left: "50%", top: "50%", width: 0, height: 0 }}>
+              <Finger at={editAt} u={u} ripple={C.paper} />
+            </div>
+          </div>
+        ) : null}
+        {editAt === undefined ? <Btn u={u} dim={done}>Approve for 24h</Btn> : null}
         <Btn u={u} tone="bad" dim={done}>Decline</Btn>
       </div>
     </div>
   );
 };
 
-export const ASK_TAP = 74;
+export const ASK_EDIT = 30;
+export const ASK_TAP = 98;
 
 /** `short`: the 15-second cut has no room for two headlines, so the second one is there from the start. */
 export const Ask: React.FC<{ tap?: number; short?: boolean }> = ({ tap = ASK_TAP, short }) => {
@@ -424,7 +458,9 @@ export const Ask: React.FC<{ tap?: number; short?: boolean }> = ({ tap = ASK_TAP
   const done = spring({ frame: f - (tap + 2), fps, config: { damping: 16, mass: 0.5, stiffness: 220 } });
   const flash = f >= tap ? Math.max(0, 1 - (f - tap) / 16) : 0;
   const logIn = useSnap(tap + 22);
-  const after = <Headline text="One tap on|your phone.|Saved, not sent." at={short ? 4 : swap + 10} size={hs} accent={{ Saved: C.fg2, not: C.fg2, sent: C.fg2 }} />;
+  const after = short
+    ? <Headline text="One tap on|your phone.|Saved, not sent." at={4} size={hs} accent={{ Saved: C.fg2, not: C.fg2, sent: C.fg2 }} />
+    : <Headline text="Your words,|not the model's.|Saved, not sent." at={swap + 10} size={hs} accent={{ Saved: C.fg2, not: C.fg2, sent: C.fg2 }} />;
   return (
     <Layout
       head={short ? after : <Swap a={<Headline text="Nothing goes out|without your OK." at={4} outAt={swap} size={hs} accent={{ OK: C.allow }} />} b={after} />}
@@ -438,7 +474,7 @@ export const Ask: React.FC<{ tap?: number; short?: boolean }> = ({ tap = ASK_TAP
     >
       <div style={{ width: w, position: "relative" }}>
         <div style={{ position: "relative", height: CARD_H * u, borderRadius: 14 * u, overflow: "hidden", background: C.panel2, boxShadow: `inset 0 0 0 ${u * 0.7}px ${done > 0.01 ? `color-mix(in oklab, ${C.allow} ${35 + 30 * done}%, ${C.line2})` : `color-mix(in oklab, ${C.ask} 35%, ${C.line2})`}, ${raise(u)}, 0 0 ${120 * flash}px ${rgba(C.allow, 0.45 * flash)}` }}>
-          <ReviewBody u={u} done={done} tapAt={tap} />
+          <ReviewBody u={u} done={done} tapAt={tap} editAt={short ? undefined : ASK_EDIT} />
         </div>
         <Panel u={u} style={{ position: "absolute", left: 0, right: 0, top: "100%", marginTop: 14 * u, opacity: logIn, transform: `translateY(${(1 - logIn) * 30 * u}px)`, display: "flex", alignItems: "center", gap: 11 * u, padding: `${12 * u}px ${14 * u}px` }}>
           <Avatar kind="bee" size={26 * u} />
