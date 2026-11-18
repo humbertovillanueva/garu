@@ -45,6 +45,13 @@
   let told = $state<ToldNote[]>([]);
   let newNote = $state("");
   let memoryBusy = $state(false);
+  /** Your words on an ask, kept: a decline note becomes a standing instruction in the notebook. */
+  async function keep(text: string) {
+    if (memoryBusy || !a) return;
+    memoryBusy = true; memoryError = null;
+    try { memory = (await api.remember(a.name, text)).notes; }
+    catch (e) { memoryError = errorText(e); } finally { memoryBusy = false; }
+  }
   let memoryError = $state<string | null>(null);
   $effect(() => { live.tick; if (a?.memory) void api.memory(name).then((m) => { memory = m.notes; told = m.told ?? []; }, () => {}); });
   async function remember() {
@@ -340,6 +347,7 @@
                 <li class="flex items-start gap-3 text-[13px]">
                   <span class="min-w-0 flex-1 text-fg-2 [overflow-wrap:anywhere]">{#if n.edited?.length}{t("you changed the {fields} of {tool} before approving", { fields: n.edited.join(", "), tool: n.tool })}{#if n.note} <span class="italic">“{n.note}”</span>{/if}{:else}<span class="italic">“{n.note}”</span>{/if}</span>
                   <span class="flex-none text-[12px] text-mute">{n.approved ? t("approved") : t("declined")} · {humanTime(n.at)}</span>
+                  {#if n.note && memory && !live.demo && !memory.some((m) => m.text === n.note)}<button class="tap flex-none text-[12px] text-mute hover:text-fg" disabled={memoryBusy} onclick={() => keep(n.note)}>{t("Keep as a note")}</button>{/if}
                 </li>
               {/each}
             </ul>

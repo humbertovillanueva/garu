@@ -650,6 +650,7 @@ export const es: Record<string, string> = {
   "the run picks up here once you decide; nothing stays open meanwhile": "la ejecución retoma aquí en cuanto decidas; mientras tanto no queda nada abierto",
   "Resumed": "Retomada",
   "Why it did that": "Por qué hizo eso",
+  "Keep as a note": "Guardar como nota",
   "paused": "en pausa",
   "Paused — its schedule is skipped until you resume it": "En pausa: su horario se salta hasta que la reanudes",
   "Resume the schedule": "Reanudar el horario",
