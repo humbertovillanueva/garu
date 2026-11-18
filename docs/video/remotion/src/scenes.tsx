@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { BAR, C, inter, mono, rgba, S, XF } from "./theme";
-import { Avatar, Cam, Chip, clamp, Decision, GaruMark, Headline, Kind, lerp, Mono, Panel, raise, useLand, useSnap, useU } from "./ui";
+import { Avatar, Cam, Chip, clamp, Decision, GaruMark, Headline, Kind, KIND_COLOR, lerp, Mono, Panel, raise, useLand, useSnap, useU } from "./ui";
 
 /**
  * 9:16 safe zones: Shorts, Reels and TikTok lay their controls over the bottom 300 px and the
@@ -187,11 +187,16 @@ export const Meet: React.FC = () => {
       <div style={{ width: w, display: "flex", flexDirection: "column", gap: 12 * u }}>
         {AGENTS.map((a, i) => {
           const s = spring({ frame: f - (20 + i * 9), fps, config: { damping: 20, mass: 0.7, stiffness: 160 } });
+          const face = spring({ frame: f - (23 + i * 9), fps, config: { damping: 9, mass: 0.5, stiffness: 200 } });
+          const ring = lerp(f, 26 + i * 9, 48 + i * 9, 0, 1);
           const lead = i === 0 ? lerp(f, 108, 128, 0, 1) : 0;
           const dim = i ? lerp(f, 108, 128, 0, 0.45) : 0;
           return (
             <Panel key={a.name} u={u} raised style={{ display: "flex", alignItems: "center", gap: 14 * u, padding: `${16 * u}px ${18 * u}px`, opacity: s * (1 - dim), transform: `translateY(${(1 - s) * 50 * u}px)`, borderColor: lead ? `color-mix(in oklab, ${C.paper} ${30 * lead}%, ${C.line2})` : undefined }}>
-              <Avatar kind={a.kind} size={44 * u} />
+              <div style={{ position: "relative", transform: `scale(${face}) rotate(${(1 - face) * -40}deg)` }}>
+                <Avatar kind={a.kind} size={44 * u} seed={i * 5} />
+                <div style={{ position: "absolute", inset: 0, borderRadius: 99, border: `${2 * u}px solid ${KIND_COLOR[a.kind]}`, opacity: 1 - ring, transform: `scale(${1 + ring * 1.3})` }} />
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 * u }}>
                   <span style={{ fontSize: 17 * u, fontWeight: 600, letterSpacing: "-0.01em" }}>{a.name}</span>
@@ -222,8 +227,8 @@ const Section: React.FC<{ at: number; u: number; k: string; v: string }> = ({ at
   const s = useSnap(at);
   const line = lerp(f, at, at + 14, 0, 1);
   return (
-    <div style={{ marginTop: 12 * u, opacity: s, transform: `translateY(${(1 - s) * 14 * u}px)` }}>
-      <div style={{ height: u * 0.6, background: C.line2, width: `${line * 100}%`, marginBottom: 10 * u }} />
+    <div style={{ marginTop: 12 * u, opacity: s, transform: `translate(${(1 - s) * -24 * u}px, ${(1 - s) * 10 * u}px)` }}>
+      <div style={{ height: u * 0.6, background: `linear-gradient(90deg, ${C.fg2}, ${C.line2})`, width: `${line * 100}%`, marginBottom: 10 * u }} />
       <div style={{ fontSize: 10.5 * u, letterSpacing: "0.08em", textTransform: "uppercase", color: C.mute, fontWeight: 500 }}>{k}</div>
       {v.split("|").map((l, i) => {
         const [time, title] = l.includes("\u2003") ? l.split("\u2003") : [null, l];
@@ -339,8 +344,11 @@ export const Control: React.FC = () => {
                       <Mono style={{ display: "block", fontSize: 11 * u, color: C.mute, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.tool}</Mono>
                     )}
                   </div>
-                  <span style={{ opacity: lt >= 10 ? 1 : 0 }}>
+                  <span style={{ position: "relative", opacity: lt >= 10 ? 1 : 0 }}>
                     <Chip d={d} u={u} solid label={t.label ?? (d === "allow" ? "ALLOWED" : d === "ask" ? "ASKS YOU" : "BLOCKED")} scale={stamp} />
+                    <div style={{ position: "absolute", left: "50%", top: "50%", width: 0, height: 0 }}>
+                      <Burst at={t.at + 10} u={u} color={C[d]} n={8} reach={50} />
+                    </div>
                   </span>
                 </Panel>
               );
@@ -462,6 +470,7 @@ const ReviewBody: React.FC<{ u: number; done?: number; tapAt?: number; editAt?: 
           {tapAt !== undefined ? (
             <div style={{ position: "absolute", left: "50%", top: "50%", width: 0, height: 0 }}>
               <Finger at={tapAt} u={u} />
+              <Burst at={tapAt + 2} u={u} />
             </div>
           ) : null}
         </div>
@@ -493,8 +502,8 @@ export const Ask: React.FC<{ tap?: number; short?: boolean }> = ({ tap = ASK_TAP
   const hs = useHeadSize();
   const swap = tap + 18;
   const done = spring({ frame: f - (tap + 2), fps, config: { damping: 16, mass: 0.5, stiffness: 220 } });
-  const flash = f >= tap ? Math.max(0, 1 - (f - tap) / 16) : 0;
   const logIn = useSnap(tap + 22);
+  const fly = spring({ frame: f - (tap + 24), fps, config: { damping: 11, mass: 0.5, stiffness: 150 } });
   const after = short
     ? <Headline text="One tap on|your phone.|Saved, not sent." at={4} size={hs} accent={{ Saved: C.fg2, not: C.fg2, sent: C.fg2 }} />
     : <Headline text="Your words,|not the model's.|Saved, not sent." at={swap + 10} size={hs} accent={{ Saved: C.fg2, not: C.fg2, sent: C.fg2 }} />;
@@ -510,11 +519,13 @@ export const Ask: React.FC<{ tap?: number; short?: boolean }> = ({ tap = ASK_TAP
       ]}
     >
       <div style={{ width: w, position: "relative" }}>
-        <div style={{ position: "relative", height: CARD_H * u, borderRadius: 14 * u, overflow: "hidden", background: C.panel2, boxShadow: `inset 0 0 0 ${u * 0.7}px ${done > 0.01 ? `color-mix(in oklab, ${C.allow} ${35 + 30 * done}%, ${C.line2})` : `color-mix(in oklab, ${C.ask} 35%, ${C.line2})`}, ${raise(u)}, 0 0 ${120 * flash}px ${rgba(C.allow, 0.45 * flash)}` }}>
+        <div style={{ position: "relative", height: CARD_H * u, borderRadius: 14 * u, overflow: "hidden", background: C.panel2, boxShadow: `inset 0 0 0 ${u * 0.7}px ${done > 0.01 ? `color-mix(in oklab, ${C.allow} ${35 + 30 * done}%, ${C.line2})` : `color-mix(in oklab, ${C.ask} 35%, ${C.line2})`}, ${raise(u)}` }}>
           <ReviewBody u={u} done={done} tapAt={tap} editAt={short ? undefined : ASK_EDIT} />
         </div>
         <Panel u={u} style={{ position: "absolute", left: 0, right: 0, top: "100%", marginTop: 14 * u, opacity: logIn, transform: `translateY(${(1 - logIn) * 30 * u}px)`, display: "flex", alignItems: "center", gap: 11 * u, padding: `${12 * u}px ${14 * u}px` }}>
-          <Avatar kind="bee" size={26 * u} />
+          <div style={{ transform: `translateX(${(1 - fly) * -90 * u}px) rotate(${(1 - fly) * -30}deg)` }}>
+            <Avatar kind="bee" size={26 * u} seed={2} />
+          </div>
           <span style={{ fontSize: 14.5 * u }}>
             <b style={{ fontWeight: 600 }}>Bea</b> <span style={{ color: C.fg2 }}>saved it in Drafts</span>
           </span>
@@ -581,7 +592,7 @@ export const Learn: React.FC = () => {
           <div style={{ height: (3 - count) * 44 * u }} />
         </Panel>
         <div style={{ height: 16 * u }} />
-        <Panel u={u} raised style={{ overflow: "hidden", borderColor: `color-mix(in oklab, ${C.allow} ${30 + 30 * added}%, ${C.line2})`, opacity: card, transform: `translateY(${(1 - card) * 70}px) scale(${0.97 + 0.03 * card})`, boxShadow: `${raise(u)}, 0 0 ${100 * Math.max(0, 1 - (f - LEARN.tap) / 18) * (f >= LEARN.tap ? 1 : 0)}px ${rgba(C.allow, 0.4)}` }}>
+        <Panel u={u} raised style={{ overflow: "hidden", borderColor: `color-mix(in oklab, ${C.allow} ${30 + 30 * added}%, ${C.line2})`, opacity: card, transform: `translateY(${(1 - card) * 70}px) scale(${0.97 + 0.03 * card})`, boxShadow: raise(u) }}>
           <div style={{ display: "flex", gap: 11 * u, padding: `${16 * u}px ${16 * u}px 0` }}>
             <Avatar kind="bee" size={30 * u} />
             <div style={{ flex: 1, fontSize: 14 * u, lineHeight: 1.45 }}>
@@ -616,6 +627,7 @@ export const Learn: React.FC = () => {
                   </Btn>
                   <div style={{ position: "absolute", left: "50%", top: "50%", width: 0, height: 0 }}>
                     <Finger at={LEARN.tap} u={u} />
+                    <Burst at={LEARN.tap + 2} u={u} />
                   </div>
                 </div>
                 <Btn u={u}>Not now</Btn>
@@ -650,9 +662,9 @@ const ProofBeat: React.FC<{ i: number; head: string; accent?: Record<string, str
 };
 
 const Pill: React.FC<{ u: number; at: number; dot?: string; children: React.ReactNode; big?: boolean }> = ({ u, at, dot, children, big }) => {
-  const s = useSnap(at, { damping: 14 });
+  const s = useSnap(at, { damping: 9, stiffness: 190 });
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 12 * u, padding: big ? `${14 * u}px ${24 * u}px` : `${11 * u}px ${18 * u}px`, borderRadius: 999, background: C.panel2, boxShadow: `inset 0 0 0 ${u * 0.7}px ${C.line2}`, fontFamily: inter, fontWeight: 600, fontSize: (big ? 22 : 17) * u, color: C.paper, opacity: s, transform: `scale(${0.85 + 0.15 * s})`, whiteSpace: "nowrap" }}>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 12 * u, padding: big ? `${14 * u}px ${24 * u}px` : `${11 * u}px ${18 * u}px`, borderRadius: 999, background: C.panel2, boxShadow: `inset 0 0 0 ${u * 0.7}px ${C.line2}`, fontFamily: inter, fontWeight: 600, fontSize: (big ? 22 : 17) * u, color: C.paper, opacity: Math.min(1, s * 1.3), transform: `translateY(${(1 - s) * 30 * u}px) scale(${0.7 + 0.3 * s})`, whiteSpace: "nowrap" }}>
       {dot ? <span style={{ width: 10 * u, height: 10 * u, borderRadius: 9, background: dot }} /> : null}
       {children}
     </div>
@@ -721,6 +733,7 @@ export const Proof: React.FC = () => {
 
 // ================================================================= 8 · logo + call to action
 /** `fast`: the 15-second cut's card has two seconds, so everything lands sooner. */
+const CAST: Kind[] = ["fox", "bee", "owl", "octopus"];
 export const Logo: React.FC<{ dur?: number; fast?: boolean }> = ({ dur = S.logo.dur, fast }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -738,12 +751,27 @@ export const Logo: React.FC<{ dur?: number; fast?: boolean }> = ({ dur = S.logo.
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", flexDirection: "column", opacity: end }}>
       <AbsoluteFill style={{ background: `radial-gradient(circle at 50% ${land ? 38 : 40}%, ${rgba(C.paper, 0.16 * flash)}, ${rgba(C.paper, 0)} 45%)` }} />
-      <GaruMark size={size} ring={ring} cat={cat} style={{ transform: `scale(${1.15 - 0.15 * ring})` }} />
+      <div style={{ position: "relative" }}>
+        <GaruMark size={size} ring={ring} cat={cat} style={{ transform: `scale(${1.15 - 0.15 * ring})` }} />
+        <div style={{ position: "absolute", left: "50%", top: "50%", width: 0, height: 0 }}>
+          <Burst at={2} u={land ? 2.4 : 3} color={C.fg2} n={16} reach={150} />
+        </div>
+      </div>
       <div style={{ marginTop: 32, fontFamily: inter, fontWeight: 700, fontSize: land ? 88 : 112, letterSpacing: "-0.045em", color: C.paper, opacity: word, transform: `translateY(${(1 - word) * 30}px)` }}>Garu</div>
       <div style={{ marginTop: 6, fontFamily: inter, fontWeight: 500, fontSize: land ? 38 : 46, letterSpacing: "-0.02em", color: C.fg2, opacity: tag, transform: `translateY(${(1 - tag) * 24}px)`, textAlign: "center", padding: "0 60px" }}>Always-on agents you can actually trust.</div>
       <div style={{ marginTop: land ? 40 : 60, fontFamily: inter, fontWeight: 600, fontSize: land ? 30 : 36, color: C.fg2, opacity: sub, transform: `translateY(${(1 - sub) * 20}px)` }}>Free · Runs on your computer</div>
       {/* the address is the one thing to take away: second only to the wordmark */}
       <div style={{ marginTop: land ? 22 : 28, fontFamily: inter, fontWeight: 600, fontSize: land ? 48 : 56, letterSpacing: "-0.03em", color: C.paper, opacity: cta, transform: `translateY(${(1 - cta) * 24}px)` }}>garuagents.com</div>
+      <div style={{ marginTop: land ? 36 : 52, display: "flex", gap: land ? 20 : 26 }}>
+        {CAST.map((kind, i) => {
+          const s = spring({ frame: f - (58 * k + i * 5), fps, config: { damping: 10, mass: 0.5, stiffness: 170 } });
+          return (
+            <div key={kind} style={{ opacity: Math.min(1, s * 1.5), transform: `translateY(${(1 - s) * 160}px) rotate(${(1 - s) * (i % 2 ? 35 : -35)}deg) scale(${s})` }}>
+              <Avatar kind={kind} size={land ? 60 : 72} seed={i * 4 + 1} />
+            </div>
+          );
+        })}
+      </div>
     </AbsoluteFill>
   );
 };

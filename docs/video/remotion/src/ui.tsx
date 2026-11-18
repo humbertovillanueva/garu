@@ -23,7 +23,7 @@ export const useSnap = (at: number, cfg: { damping?: number; mass?: number; stif
 
 // ---------------------------------------------------------------- agent faces (ported from Creature.svelte / Mark.svelte)
 // The six kinds the video uses, copied by hand from KIND_COLOR in packages/ui/src/lib/colors.ts; keep the values identical.
-const KIND_COLOR = { fox: "#d0663a", turtle: "#2a9d78", owl: "#4f8fd9", bee: "#c9a227", cat: "#9a6fd0", octopus: "#d05a8a" } as const;
+export const KIND_COLOR = { fox: "#d0663a", turtle: "#2a9d78", owl: "#4f8fd9", bee: "#c9a227", cat: "#9a6fd0", octopus: "#d05a8a" } as const;
 export type Kind = keyof typeof KIND_COLOR;
 
 /**
@@ -200,13 +200,14 @@ export const Headline: React.FC<{ text: string; at: number; outAt?: number; size
   );
 };
 
-/** Scene wrapper: in over 0.4 s (settle from a slight zoom), out over 0.4 s (push through with a little blur). */
+/** Scene wrapper: in over 0.4 s (rise and settle from a slight zoom), out over 0.4 s (push up and through with a little blur). */
 export const Scene: React.FC<{ dur: number; xf: number; children: React.ReactNode; noIn?: boolean; noOut?: boolean }> = ({ dur, xf, children, noIn, noOut }) => {
   const f = useCurrentFrame();
   const a = noIn ? 1 : lerp(f, 0, xf, 0, 1);
   const b = noOut ? 1 : lerp(f, dur - xf, dur, 1, 0, Easing.in(Easing.cubic));
   const blur = (1 - a) * 10 + (1 - b) * 10;
-  return <AbsoluteFill style={{ opacity: Math.min(a, b), transform: `scale(${0.96 + 0.04 * a + (1 - b) * 0.08})`, filter: blur > 0.05 ? `blur(${blur}px)` : undefined }}>{children}</AbsoluteFill>;
+  // every cut pushes up a little: the leaving scene drifts up, the next one rises to meet it
+  return <AbsoluteFill style={{ opacity: Math.min(a, b), transform: `translateY(${(1 - a) * 40 - (1 - b) * 40}px) scale(${0.96 + 0.04 * a + (1 - b) * 0.08})`, filter: blur > 0.05 ? `blur(${blur}px)` : undefined }}>{children}</AbsoluteFill>;
 };
 
 /** Camera: eased moves between keyframes [frame, scale, x, y]; origin at the content centre. */
