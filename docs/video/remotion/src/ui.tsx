@@ -26,13 +26,23 @@ export const useSnap = (at: number, cfg: { damping?: number; mass?: number; stif
 const KIND_COLOR = { fox: "#d0663a", turtle: "#2a9d78", owl: "#4f8fd9", bee: "#c9a227", cat: "#9a6fd0", octopus: "#d05a8a" } as const;
 export type Kind = keyof typeof KIND_COLOR;
 
-const Face: React.FC<{ kind: Kind }> = ({ kind }) => {
+/**
+ * Each creature's own idle motion, as the control room's Creature.svelte does it in CSS: the bee hovers
+ * and its wings flutter, the fox breathes and twitches an ear, the owl tilts its head, the octopus waves
+ * its tentacles out of step, the turtle plods. `f` is the frame (30 fps); `seed` keeps two of a kind apart.
+ */
+const sin = (f: number, periodFrames: number, phase = 0) => Math.sin(((f + phase) / periodFrames) * Math.PI * 2);
+const Face: React.FC<{ kind: Kind; f?: number; seed?: number }> = ({ kind, f = 0, seed = 0 }) => {
   const g = { fill: "none", stroke: "#0a0c0f", strokeWidth: 2.2, strokeLinejoin: "round" as const, strokeLinecap: "round" as const };
-  if (kind === "fox")
+  const t = f + seed * 7;
+  if (kind === "fox") {
+    const breath = 1 + 0.03 * (0.5 + 0.5 * sin(t, 102)); // 3.4 s
+    const cycle = ((t % 210) + 210) % 210; // an ear twitch every 7 s
+    const twitch = cycle > 185 && cycle < 204 ? -14 * Math.sin(((cycle - 185) / 19) * Math.PI) : 0;
     return (
-      <g {...g}>
+      <g {...g} transform={`translate(32 45) scale(${breath}) translate(-32 -45)`}>
         <path d="M13 16 L21 30 L9 36 Z" fill="#0a0c0f" opacity=".85" />
-        <path d="M51 16 L43 30 L55 36 Z" fill="#0a0c0f" opacity=".85" />
+        <path d="M51 16 L43 30 L55 36 Z" fill="#0a0c0f" opacity=".85" transform={`rotate(${twitch} 49 36)`} />
         <path d="M10 34 Q14 50 32 54 Q50 50 54 34 Q44 26 32 27 Q20 26 10 34 Z" fill="#0a0c0f" opacity=".12" />
         <path d="M19 40 Q24 36 32 38 Q40 36 45 40 Q42 52 32 54 Q22 52 19 40 Z" fill="#f4f1ea" />
         <path d="M29 45.5 h6 l-3 3 Z" fill="#0a0c0f" />
@@ -40,11 +50,13 @@ const Face: React.FC<{ kind: Kind }> = ({ kind }) => {
         <circle cx="40.5" cy="34" r="2" fill="#0a0c0f" stroke="none" />
       </g>
     );
-  if (kind === "turtle")
+  }
+  if (kind === "turtle") {
+    const step = (ph: number) => 6 + 6 * sin(t, 48, ph); // 1.6 s, the legs out of step
     return (
-      <g {...g}>
-        <path d="M19 44 q0 7 4 7 h3 q3 0 3 -7 Z" fill="#f4f1ea" />
-        <path d="M35 44 q0 7 4 7 h3 q3 0 3 -7 Z" fill="#f4f1ea" />
+      <g {...g} transform={`translate(${0.6 * sin(t, 48)} 0) rotate(${1 * sin(t, 48)} 32 40)`}>
+        <path d="M19 44 q0 7 4 7 h3 q3 0 3 -7 Z" fill="#f4f1ea" transform={`rotate(${step(0)} 24 44)`} />
+        <path d="M35 44 q0 7 4 7 h3 q3 0 3 -7 Z" fill="#f4f1ea" transform={`rotate(${step(24)} 40 44)`} />
         <path d="M8 42 Q10 18 32 17 Q54 18 56 42 Z" fill="#0a0c0f" opacity=".3" />
         <path d="M8 42 Q10 18 32 17 Q54 18 56 42 Z" />
         <path d="M24 42 L22 30 L32 24 L42 30 L40 42 M22 30 L13 36 M42 30 L51 36" fill="#f4f1ea" fillOpacity=".18" />
@@ -53,9 +65,10 @@ const Face: React.FC<{ kind: Kind }> = ({ kind }) => {
         <circle cx="59" cy="35" r="1.7" fill="#0a0c0f" stroke="none" />
       </g>
     );
+  }
   if (kind === "owl")
     return (
-      <g {...g}>
+      <g {...g} transform={`rotate(${5 * sin(t, 150)} 32 51)`}>
         <path d="M18 22 L14 12 L24 18" fill="#0a0c0f" opacity=".85" />
         <path d="M46 22 L50 12 L40 18" fill="#0a0c0f" opacity=".85" />
         <circle cx="24" cy="30" r="8.5" fill="#f4f1ea" />
@@ -65,11 +78,12 @@ const Face: React.FC<{ kind: Kind }> = ({ kind }) => {
         <path d="M32 36.5 L29.5 41 L34.5 41 Z" fill="#f4f1ea" stroke="none" />
       </g>
     );
-  if (kind === "bee")
+  if (kind === "bee") {
+    const flap = 9 * sin(t, 9.6); // a flutter every 0.32 s
     return (
-      <g {...g}>
-        <ellipse cx="26" cy="21" rx="10" ry="6" fill="#f4f1ea" opacity=".92" transform="rotate(-25 26 21)" />
-        <ellipse cx="40" cy="21" rx="10" ry="6" fill="#f4f1ea" opacity=".92" transform="rotate(25 40 21)" />
+      <g {...g} transform={`translate(0 ${-1.6 * (0.5 + 0.5 * sin(t, 66))})`}>
+        <g transform={`rotate(${-flap} 26 27)`}><ellipse cx="26" cy="21" rx="10" ry="6" fill="#f4f1ea" opacity=".92" transform="rotate(-25 26 21)" /></g>
+        <g transform={`rotate(${flap} 40 27)`}><ellipse cx="40" cy="21" rx="10" ry="6" fill="#f4f1ea" opacity=".92" transform="rotate(25 40 21)" /></g>
         <ellipse cx="34" cy="38" rx="17" ry="12" fill="#f4f1ea" opacity=".35" />
         <ellipse cx="34" cy="38" rx="17" ry="12" />
         <path d="M27 27.5 v21 M35 26 v24 M43 29 v18" />
@@ -79,7 +93,9 @@ const Face: React.FC<{ kind: Kind }> = ({ kind }) => {
         <path d="M51 40 l6 3" />
       </g>
     );
-  if (kind === "octopus")
+  }
+  if (kind === "octopus") {
+    const wave = (i: number) => 7 * sin(t, 78, i * 12); // 2.6 s, each tentacle 0.4 s behind the last
     return (
       <g {...g} strokeWidth={2.4}>
         <path d="M12 38 Q12 12 32 12 Q52 12 52 38 Z" fill="#0a0c0f" opacity=".14" />
@@ -89,9 +105,14 @@ const Face: React.FC<{ kind: Kind }> = ({ kind }) => {
         <circle cx="26" cy="29.5" r="1.8" fill="#0a0c0f" stroke="none" />
         <circle cx="40" cy="29.5" r="1.8" fill="#0a0c0f" stroke="none" />
         <path d="M28 36 q4 3 8 0" />
-        <path d="M14 38 q-6 10 2 15 M22 39 q-3 10 3 14 M32 40 q0 9 0 14 M42 39 q3 10 -3 14 M50 38 q6 10 -2 15" />
+        <path d="M14 38 q-6 10 2 15" transform={`rotate(${wave(0)} 14 38)`} />
+        <path d="M22 39 q-3 10 3 14" transform={`rotate(${wave(1)} 22 39)`} />
+        <path d="M32 40 q0 9 0 14" transform={`rotate(${wave(2)} 32 40)`} />
+        <path d="M42 39 q3 10 -3 14" transform={`rotate(${wave(3)} 42 39)`} />
+        <path d="M50 38 q6 10 -2 15" transform={`rotate(${wave(4)} 50 38)`} />
       </g>
     );
+  }
   return (
     <g {...g}>
       <path d="M16 26 L15 10 L27 20" fill="#0a0c0f" opacity=".85" />
@@ -103,12 +124,13 @@ const Face: React.FC<{ kind: Kind }> = ({ kind }) => {
   );
 };
 
-export const Avatar: React.FC<{ kind: Kind; size: number; ring?: string }> = ({ kind, size, ring }) => {
+export const Avatar: React.FC<{ kind: Kind; size: number; ring?: string; still?: boolean; seed?: number }> = ({ kind, size, ring, still, seed = 0 }) => {
   const c = KIND_COLOR[kind];
+  const frame = useCurrentFrame();
   return (
     <div style={{ width: size, height: size, flex: "none", borderRadius: size, display: "grid", placeItems: "center", background: `radial-gradient(circle at 35% 30%, color-mix(in oklab, ${c} 85%, white 20%), ${c} 55%, color-mix(in oklab, ${c} 70%, black) 100%)`, boxShadow: `inset 0 0 0 1px color-mix(in oklab, ${c} 40%, transparent)${ring ? `, 0 0 0 ${size * 0.09}px ${ring}` : ""}` }}>
       <svg viewBox="0 0 64 64" width={size * 0.78} height={size * 0.78}>
-        <Face kind={kind} />
+        <Face kind={kind} f={still ? 0 : frame} seed={seed} />
       </svg>
     </div>
   );
