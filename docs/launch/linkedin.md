@@ -8,8 +8,8 @@ Before posting: check that garuagents.com and the demo answer, and that Tailscal
 **What to attach.** One of these, not both (LinkedIn takes a video or images per post):
 
 - The launch video, `docs/video/garu-v10-16x9.mp4` (45 s, on this Mac). The feed autoplays it muted,
-  which that cut was made for. Its music is the synthesized score from `tools/score.py`, and that is
-  what sounds like every other generated video; see "Audio" below before using it.
+  which that cut was made for. Its score (piano and strings, `tools/score.py`) was picked by Humberto
+  from five candidates on 2026-11-17; the captions for the other channels are in `video.md`.
 - Four images, in this order: `docs/launch/play/home.png`, `inbox.png`, `agent.png`, `cost.png`
   (the Play cards, 1080×1920, each with its caption).
 - Or the three desktop shots of the demo control room in `docs/launch/linkedin/`, same width, in
@@ -113,9 +113,9 @@ haría: ¿dónde está tu límite? ¿Qué nunca le dejarías hacer?
 
 ## Audio
 
-The v8 score is synthesized by `docs/video/remotion/tools/score.py` (150 bpm, pad, kick, arp,
-riser, impact) and it sounds like the music under every generated launch video. Three ways out, in
-order of how human they sound:
+Settled on 2026-11-17: v10 plays a cinematic score (piano, strings, a heartbeat kick) that Humberto
+picked from five synthesized candidates, replacing the v8 pad-and-arp one that sounded like every
+generated video. The three ways considered, kept for the record:
 
 1. Humberto's own voice over a much quieter bed. He reads the scene lines (they're in the video
    already) into the phone's recorder in a quiet room; the bed is the current pad with the drums and
