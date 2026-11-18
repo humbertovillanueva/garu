@@ -26,9 +26,9 @@ natural if a line runs long. The words on screen are in brackets where the line 
 | Meet | 0:05 | 4.8 s | Garu runs agents on your own computer. On your schedule, by your rules. |
 | Brief | 0:10 | 3.2 s | Tomay reads my calendar, and my day is ready when I wake up. |
 | Control | 0:13 | 6.4 s | Bea reads my email and files it. A draft reply asks me first. And she can't send anything: I never gave her a send tool. |
-| Ask | 0:19 | 6.4 s | Nothing goes out without my OK. One tap on my phone. Saved, not sent. |
+| Ask | 0:19 | 6.4 s | Nothing goes out without my OK. I can change her words to mine first. One tap on my phone. Saved, not sent. |
 | Learn | 0:26 | 4.8 s | Say yes to the same thing three times, and Garu suggests the rule. |
-| Proof | 0:30 | 8.0 s | Free and open source. Runs on your own computer. Gemini, Claude, or a model that never leaves your machine. |
+| Proof | 0:30 | 8.0 s | Free and open source. Runs on your own computer. Gemini, Claude, OpenAI, or a model that never leaves your machine. |
 | Logo | 0:38 | 6.4 s | Garu. Always-on agents you can actually trust. |
 
 The Spanish video, if there is one later, takes the same lines in Spanish, read by him too.
@@ -39,6 +39,6 @@ The Spanish video, if there is one later, takes the same lines in Spanish, read 
    fine), trimmed to the first clean take, peaks at about −3 dBFS.
 2. `python tools/score.py public/audio` already writes `bed.wav` beside `score.wav`.
 3. Render with the voice: `npm run render:16x9 -- --props='{"voice":true}'` (and the same for 9x16).
-   Without the prop the video renders exactly as v8.
+   Without the prop the video renders exactly as v9.
 4. Check the mix (`ffmpeg -i x.mp4 -af loudnorm=print_format=json -f null -`): the voice should sit
    around −16 LUFS, the bed well under it.
