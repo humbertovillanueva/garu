@@ -9,7 +9,7 @@
 // The server is a seeded copy (scripts/demo-data.mjs) served by `garu ui --demo --as Humberto`, reached
 // over loopback so no token is needed; run both it and this script under the same TZ (a morning one reads best). Nothing on the server is changed: the screens are only read.
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { readFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -21,6 +21,8 @@ const SERVER = arg("server", "http://127.0.0.1:4199");
 const RUN = arg("run", "");
 const OUT = arg("out", "docs/screenshots");
 const TZ = arg("tz", "");
+// The "What's new" card would cover Home: mark the current release as seen, the way play-shots.mjs does.
+const RELEASE = /id: "([^"]+)"/.exec(readFileSync(new URL("../packages/ui/src/lib/whatsnew.ts", import.meta.url), "utf8"))?.[1] ?? "";
 const CHROME = arg("chrome", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome");
 const PORT = 9335;
 if (!RUN) {
@@ -109,7 +111,7 @@ async function main() {
     await sleep(2000);
     // Dark, intro seen, English: the README's language.
     await page.eval(`(() => {
-      localStorage.setItem("garu.prefs", JSON.stringify({ haptics: true, landOnInbox: false, theme: "dark", language: "en" }));
+      localStorage.setItem("garu.prefs", JSON.stringify({ haptics: true, landOnInbox: false, theme: "dark", language: "en", seenRelease: ${JSON.stringify(RELEASE)} }));
       localStorage.setItem("garu.intro", "1");
       location.reload();
     })()`);
