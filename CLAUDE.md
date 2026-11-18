@@ -276,11 +276,13 @@ since 2026-10-10. What they do, the rules learned on real mail, and the setup: `
 
 ## Launch video
 
-v9 (`docs/video/garu-v9-9x16.mp4`, `garu-v9-16x9.mp4`, 2026-11-17) tells it with Tomay and Bea, with
-room to read and nothing under the Shorts and Reels buttons: the faces move, the owner edits Bea's draft
-before approving it, the proof names OpenAI. Beside it a 15-second cut (`garu-v9-15s-9x16.mp4`), two
-posters and a web encode (`garu-v9-16x9-web.mp4`) that the site plays. Only the web encode and the two
-posters are tracked; the full v9 renders, the 15-second cut, v8, v7, v6 and `score.wav` stay on this
-Mac, gitignored, and the README links the site's copy. Source, commands,
+v10 (`docs/video/garu-v10-9x16.mp4`, `garu-v10-16x9.mp4`, 2026-11-17) opens on a night of notifications
+that turn into "?" under the question, moves throughout (faces fly in, sparks, a push on every cut), the
+owner edits Bea's draft before approving it, the proof names OpenAI, and the score is piano and strings
+(`tools/score.py`; Humberto picked it from five candidates). Beside it a 15-second cut (`garu-v10-15s-9x16.mp4`),
+two posters and a web encode (`garu-v10-16x9-web.mp4`) that the site plays. Only the web encode and the two
+posters are tracked; the full renders, the 15-second cut, v9 and earlier and `score.wav` stay on this
+Mac, gitignored, and the README links the site's copy. Remotion's own ffmpeg (`node_modules/@remotion/compositor-darwin-arm64`)
+only runs from its folder; there is no other ffmpeg on this Mac. Source, commands,
 scenes and rules: `docs/video/remotion/README.md`.
 Garu's own facts on screen are real; sample meetings and emails are made up (example.com).

@@ -1,13 +1,13 @@
 # Garu launch video
 
-Remotion project for `docs/video/garu-v9-9x16.mp4` (1080×1920) and `garu-v9-16x9.mp4` (1920×1080). v9 (2026-11-17) is v8 with what landed since: the faces move in the meet scene, the owner edits Bea's draft before approving it ("Approve as edited"), and the proof scene names OpenAI. v8 was the pacing and safe-zone pass of 2026-10-27; v7 the same story before it; v6 told it with the old weather-brief Tomay.
+Remotion project for `docs/video/garu-v10-9x16.mp4` (1080×1920) and `garu-v10-16x9.mp4` (1920×1080). v10 (2026-11-17) opens on a night of notifications (three agents report what they did while you slept, and every "done" turns into a "?" under the question), moves more (faces fly in, sparks on every stamp and approval, a push on every cut, the four agents on the end card) and has a new score: piano and strings, a heartbeat kick, a snare roll into the hit. v9, the same day, was v8 plus the moving faces, the edited draft ("Approve as edited") and OpenAI in the proof; v8 was the pacing and safe-zone pass of 2026-10-27; v7 the same story before it; v6 told it with the old weather-brief Tomay.
 
 ```
 npm install
 npm run dev                                   # Remotion Studio: scrub frame by frame
-npm run render:9x16                           # → ../garu-v9-9x16.mp4 (crf 16)
-npm run render:16x9                           # → ../garu-v9-16x9.mp4
-npm run render:15s                            # → ../garu-v9-15s-9x16.mp4
+npm run render:9x16                           # → ../garu-v10-9x16.mp4 (crf 16)
+npm run render:16x9                           # → ../garu-v10-16x9.mp4
+npm run render:15s                            # → ../garu-v10-15s-9x16.mp4
 npm run render:16x9 -- --props='{"voice":true}'   # the spoken version: bed.wav + voice-<scene>.wav, see voice-over.md
 ```
 
@@ -15,11 +15,11 @@ npm run render:16x9 -- --props='{"voice":true}'   # the spoken version: bed.wav 
 
 | File | Size | For |
 |---|---|---|
-| `garu-v9-9x16.mp4` | 11.3 MB, 44.8 s, 1080×1920 | YouTube Shorts, Instagram Reels, TikTok |
-| `garu-v9-16x9.mp4` | 8.9 MB, 44.8 s, 1920×1080 | the site, the README, YouTube, X |
-| `garu-v9-15s-9x16.mp4` | 4.4 MB, 15.0 s, 1080×1920 | Reels and X: hook, control, ask, end card, with the score spliced on bar lines (the `Garu-15s-9x16` composition, not a trim) |
-| `garu-v9-16x9-web.mp4` | 1.7 MB, 720p | the site's hero: `ffmpeg -i garu-v9-16x9.mp4 -vf scale=1280:720 -c:v libx264 -preset slow -crf 28 -pix_fmt yuv420p -c:a aac -b:a 96k -movflags +faststart garu-v9-16x9-web.mp4` |
-| `garu-v9-9x16-poster.jpg`, `garu-v9-16x9-poster.jpg` | 59 KB, 55 KB | the poster frame (`<video poster>`, thumbnails): the first held frame, `ffmpeg -ss 0.5 -i … -frames:v 1 -q:v 4` |
+| `garu-v10-9x16.mp4` | 12.2 MB, 44.8 s, 1080×1920 | YouTube Shorts, Instagram Reels, TikTok |
+| `garu-v10-16x9.mp4` | 9.4 MB, 44.8 s, 1920×1080 | the site, the README, YouTube, X |
+| `garu-v10-15s-9x16.mp4` | 4.8 MB, 15.0 s, 1080×1920 | Reels and X: hook, control, ask, end card, with the score spliced on bar lines (the `Garu-15s-9x16` composition, not a trim) |
+| `garu-v10-16x9-web.mp4` | 1.8 MB, 720p | the site's hero: `ffmpeg -i garu-v10-16x9.mp4 -vf scale=1280:720 -c:v libx264 -preset slow -crf 28 -pix_fmt yuv420p -c:a aac -b:a 96k -movflags +faststart garu-v10-16x9-web.mp4` |
+| `garu-v10-9x16-poster.jpg`, `garu-v10-16x9-poster.jpg` | 53 KB, 46 KB | the poster frame (`<video poster>`, thumbnails): the first held frame, `ffmpeg -ss 0.5 -i … -frames:v 1 -q:v 4` |
 
 ## Design
 
@@ -42,7 +42,7 @@ Written for people who aren't developers first, with the real UI and a little re
 
 Garu's own facts are real: agent names, descriptions, schedules and rules from the Garufiles, tool names from `packages/mcp-google`, the suggestion card as `SuggestionCard.svelte` draws it and the rule `suggest.ts` proposes for three approved drafts to the same address (`narrowestRule` scopes it to that address; three different people would give the whole tool and the card's amber warning), the startup lines `garu ui` prints, the models from the README. The meetings, people and emails are made up, the same ones `scripts/demo-data.mjs` seeds (example.com addresses). Bea's real Garufile keeps drafts on `ask`; the Learn scene shows what Garu offers after three approvals.
 
-`tools/score.py` synthesizes the score (150 bpm, 28 bars) and the one-shots into `public/audio/`; no samples. Run it with a Python that has `numpy`: `python tools/score.py public/audio`. The score was arranged to v7's bars (groove from bar 10, build from bar 21, impact on 24); v8 moved control two bars earlier and gave proof five bars inside the same music, so `score.wav` did not change. The mix in `src/Garu.tsx` peaks at about −1.4 dBTP and sits near −14 LUFS; check a render with `ffmpeg -i x.mp4 -af loudnorm=print_format=json -f null -`.
+`tools/score.py` synthesizes the score (150 bpm felt in half time, 28 bars) and the one-shots into `public/audio/`; no samples. Run it with a Python that has `numpy`: `python tools/score.py public/audio` (this Mac has none on its path: `python3 -m venv /tmp/garu-venv && /tmp/garu-venv/bin/pip install numpy`, then that venv's python). v10's score is the cinematic one picked from five candidates: piano broken chords from the first frame, strings from bar 3, a heartbeat kick, the build on 21 and the impact on 24, the same bar plan as v7 to v9. The mix in `src/Garu.tsx` peaks at about −1.4 dBTP and sits near −14 LUFS; check a render with `ffmpeg -i x.mp4 -af loudnorm=print_format=json -f null -`.
 
 ## Rules for the next cut
 

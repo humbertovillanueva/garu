@@ -39,6 +39,6 @@ The Spanish video, if there is one later, takes the same lines in Spanish, read 
    fine), trimmed to the first clean take, peaks at about −3 dBFS.
 2. `python tools/score.py public/audio` already writes `bed.wav` beside `score.wav`.
 3. Render with the voice: `npm run render:16x9 -- --props='{"voice":true}'` (and the same for 9x16).
-   Without the prop the video renders exactly as v9.
+   Without the prop the video renders exactly as v10.
 4. Check the mix (`ffmpeg -i x.mp4 -af loudnorm=print_format=json -f null -`): the voice should sit
    around −16 LUFS, the bed well under it.
