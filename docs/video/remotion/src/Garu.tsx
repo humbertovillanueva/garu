@@ -2,7 +2,7 @@ import React from "react";
 import { AbsoluteFill, Audio, interpolate, Sequence, staticFile, useCurrentFrame } from "remotion";
 import { BAR, S, SH, SHORT_TOTAL, TOTAL, XF } from "./theme";
 import { Backdrop, clamp, GaruMark, lerp, Scene, useLand } from "./ui";
-import { Ask, ASK_EDIT, ASK_TAP, Brief, BRIEF_AT, BRIEF_N, Control, Hook, Learn, LEARN_AT, LEARN_TAP, Logo, Meet, Proof, PROOF_BEAT } from "./scenes";
+import { Ask, ASK_EDIT, ASK_TAP, Brief, BRIEF_AT, BRIEF_N, Control, Hook, HOOK_AT, HOOK_N, Learn, LEARN_AT, LEARN_TAP, Logo, Meet, Proof, PROOF_BEAT } from "./scenes";
 
 type Span = { from: number; dur: number };
 type Shot = { key: string; s: Span; el: React.ReactNode; noIn?: boolean; noOut?: boolean };
@@ -85,7 +85,10 @@ const Sound: React.FC<{ voice?: boolean }> = ({ voice }) => (
     {/* a whoosh on every cut: the question, then each scene's bar line */}
     {[2, 3, 6, 8, 12, 16, 19].map((b) => <Sfx key={`w${b}`} at={b * BAR - 9} src="audio/whoosh.wav" vol={b === 2 ? 0.2 : 0.32} len={20} />)}
     {[1, 2].map((k) => <Sfx key={`wp${k}`} at={S.proof.from + XF / 2 + k * PROOF_BEAT - 6} src="audio/whoosh.wav" vol={0.22} len={20} />)}
-    {[0, 1, 2, 3].map((i) => <Sfx key={`m${i}`} at={S.meet.from + 20 + i * 9} src="audio/tick.wav" vol={0.3} />)}
+    {/* the night's notifications, then their chips flipping to "?" under the question */}
+    {Array.from({ length: HOOK_N }, (_, i) => <Sfx key={`n${i}`} at={HOOK_AT(i)} src="audio/pop.wav" vol={0.5} />)}
+    {Array.from({ length: HOOK_N }, (_, i) => <Sfx key={`q${i}`} at={2 * BAR + 8 + i * 4} src="audio/tick.wav" vol={0.28} />)}
+    {[0, 1, 2, 3].map((i) => <Sfx key={`m${i}`} at={S.meet.from + 23 + i * 9} src="audio/pop.wav" vol={0.35} />)}
     {Array.from({ length: BRIEF_N }, (_, i) => <Sfx key={`b${i}`} at={S.brief.from + BRIEF_AT(i)} src="audio/tick.wav" vol={0.22} />)}
     {[34, 70, 106].map((t) => <Sfx key={`s${t}`} at={S.control.from + t + 10} src="audio/stamp.wav" vol={0.4} />)}
     <Sfx at={S.ask.from + ASK_EDIT - 1} src="audio/tap.wav" vol={0.5} />
@@ -127,6 +130,7 @@ const ShortSound: React.FC = () => (
     <Part from={2 * BAR} dur={6 * BAR} bar={11} />
     <Part from={8 * BAR} dur={SHORT_TOTAL - 8 * BAR} bar={24} fadeOut={24} />
     {[1, 2, 6].map((b) => <Sfx key={`w${b}`} at={b * BAR - 9} src="audio/whoosh.wav" vol={b === 1 ? 0.2 : 0.32} len={20} />)}
+    {Array.from({ length: HOOK_N }, (_, i) => <Sfx key={`n${i}`} at={HOOK_AT(i, BAR)} src="audio/pop.wav" vol={0.5} />)}
     {[34, 70, 106].map((t) => <Sfx key={`s${t}`} at={SH.control.from + t + 10} src="audio/stamp.wav" vol={0.4} />)}
     <Sfx at={SH.ask.from + SHORT_ASK_TAP - 1} src="audio/tap.wav" vol={0.8} />
   </>

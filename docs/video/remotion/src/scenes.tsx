@@ -65,19 +65,68 @@ const Btn: React.FC<{ u: number; tone?: "ok" | "bad"; fill?: number; dim?: numbe
 };
 
 // ================================================================= 1 · hook
-const DOTS = (() => {
-  const out: { min: number; x: number; y: number }[] = [];
-  let seed = 7;
-  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  for (let h = 0; h < 7; h++) for (let k = 0; k < 4; k++) out.push({ min: h * 60 + 5 + k * 9, x: rnd(), y: rnd() });
-  return out;
-})();
+/** The night's notifications: what three agents did while you slept, in order. */
+const NIGHT: { time: string; kind: Kind; name: string; say: string; seed: number }[] = [
+  { time: "12:20 AM", kind: "bee", name: "Bea", say: "Sorted 14 emails. 2 need you.", seed: 3 },
+  { time: "2:55 AM", kind: "owl", name: "Rook", say: "3 new stars, 1 issue on GitHub.", seed: 7 },
+  { time: "6:40 AM", kind: "fox", name: "Tomay", say: "Your day is ready.", seed: 11 },
+];
 const QUESTION = BAR * 2; // "But would you trust one?" lands on bar 2
+/** When the i-th notification arrives, as a share of the way to the question (the 15-second cut asks sooner). */
+export const HOOK_AT = (i: number, question = QUESTION) => Math.round(question * [0.3, 0.54, 0.76][i]);
+export const HOOK_N = NIGHT.length;
 
-/** The clock and the first line are there from frame 0, so the first frame (the thumbnail) is never an empty backdrop. */
+/** A burst of sparks from a point: `n` dots fly out and fade over 22 frames. Place inside a 0×0 anchor. */
+const Burst: React.FC<{ at: number; u: number; color?: string; n?: number; reach?: number }> = ({ at, u, color = C.allow, n = 10, reach = 80 }) => {
+  const f = useCurrentFrame();
+  if (f < at || f > at + 22) return null;
+  const p = (f - at) / 22;
+  const d = Easing.out(Easing.cubic)(p);
+  return (
+    <>
+      {Array.from({ length: n }, (_, i) => {
+        const a = (i / n) * Math.PI * 2 + (i % 2) * 0.35;
+        const r = reach * u * d * (0.7 + 0.3 * (((i * 7) % 5) / 4));
+        const sz = (5 - 3 * p) * u;
+        return <div key={i} style={{ position: "absolute", left: Math.cos(a) * r - sz / 2, top: Math.sin(a) * r - sz / 2, width: sz, height: sz, borderRadius: 99, background: i % 3 ? color : C.paper, opacity: 1 - p }} />;
+      })}
+    </>
+  );
+};
+
+/** One notification: springs in with a bounce, its face arrives spinning, its chip flips to "?" under the question. */
+const Night: React.FC<{ i: number; at: number; question: number; u: number }> = ({ i, at, question, u }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const n = NIGHT[i];
+  if (f < at) return null;
+  const s = spring({ frame: f - at, fps, config: { damping: 13, mass: 0.6, stiffness: 170 } });
+  const face = spring({ frame: f - at - 3, fps, config: { damping: 9, mass: 0.5, stiffness: 200 } });
+  const q = lerp(f, question + 6 + i * 4, question + 14 + i * 4, 0, 1);
+  const pop = 1 + 0.45 * Math.sin(Math.PI * q);
+  return (
+    <Panel u={u} raised style={{ display: "flex", alignItems: "center", gap: 14 * u, padding: `${14 * u}px ${18 * u}px`, opacity: Math.min(1, s * 1.4), transform: `translateY(${(1 - s) * 70 * u}px) scale(${0.92 + 0.08 * s})` }}>
+      <div style={{ transform: `scale(${face}) rotate(${(1 - face) * -40}deg)` }}>
+        <Avatar kind={n.kind} size={40 * u} seed={n.seed} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10 * u }}>
+          <span style={{ fontSize: 16 * u, fontWeight: 600, letterSpacing: "-0.01em" }}>{n.name}</span>
+          <span style={{ marginLeft: "auto", fontSize: 12 * u, color: C.mute, whiteSpace: "nowrap" }}>{n.time}</span>
+        </div>
+        <div style={{ marginTop: 3 * u, fontSize: 14 * u, color: C.fg2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{n.say}</div>
+      </div>
+      <span style={{ display: "inline-block", transform: `scale(${pop})` }}>{q < 0.5 ? <Chip d="allow" u={u} label="done" /> : <Chip d="ask" u={u} solid label="?" />}</span>
+    </Panel>
+  );
+};
+
+/** The headline and the clock are there from frame 0, so the first frame (the thumbnail) is never an empty backdrop. */
 export const Hook: React.FC<{ question?: number }> = ({ question = QUESTION }) => {
   const f = useCurrentFrame();
   const land = useLand();
+  const u = useU() * (land ? 0.82 : 0.96);
+  const w = usePanelW();
   const mins = interpolate(f, [4, question - 16], [-2, 420], { ...clamp, easing: Easing.bezier(0.7, 0, 0.25, 1) });
   const m = Math.round(mins);
   const hh = ((Math.floor((m + 24 * 60) / 60) % 24) + 24) % 24;
@@ -85,38 +134,26 @@ export const Hook: React.FC<{ question?: number }> = ({ question = QUESTION }) =
   const mm = String(((m % 60) + 60) % 60).padStart(2, "0");
   const ampm = hh < 12 ? "AM" : "PM";
   const doubt = lerp(f, question - 6, question + 10, 0, 1);
-  const W = land ? 1920 : 1080;
-  const H = land ? 1080 : 1920;
-  const size = land ? 230 : 240;
+  const size = land ? 150 : 170;
   return (
-    <AbsoluteFill>
-      {DOTS.map((d, i) => {
-        if (mins < d.min) return null;
-        const born = interpolate(mins, [d.min, d.min + 25], [0, 1], clamp);
-        const ang = d.y * Math.PI * 2;
-        const ring = (d.x * 0.5 + 0.5) * 0.42;
-        const x = W / 2 + Math.cos(ang) * W * ring * (land ? 1 : 1.05);
-        const y = H * (land ? 0.56 : 0.58) + Math.sin(ang) * H * ring * (land ? 0.8 : 0.42);
-        const r = 9 * (1 + (1 - born) * 0.8);
-        // under the question, what the agents did becomes unknown
-        const col = `color-mix(in oklab, ${C.allow} ${100 - doubt * 100}%, ${C.mute})`;
-        return <div key={i} style={{ position: "absolute", left: x - r, top: y - r, width: r * 2, height: r * 2, borderRadius: 99, background: col, opacity: (0.25 + 0.75 * (1 - born)) * (1 - doubt * 0.5), boxShadow: doubt < 0.5 ? `0 0 20px ${C.allow}` : undefined }} />;
-      })}
-      <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", paddingTop: land ? 220 : 300, opacity: 1 - doubt * 0.82, filter: doubt > 0.01 ? `blur(${doubt * 6}px)` : undefined }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 22, fontFamily: inter, fontWeight: 700, fontSize: size, letterSpacing: "-0.05em", color: C.paper, fontVariantNumeric: "tabular-nums" }}>
-          <span>
-            {h12}:{mm}
-          </span>
-          <span style={{ fontSize: size * 0.32, fontWeight: 600, color: C.fg2, letterSpacing: "-0.02em" }}>{ampm}</span>
+    <>
+      <Layout head={<Headline text="AI agents can work|while you sleep." at={-40} outAt={question - 10} size={land ? 78 : 94} />} cam={[[0, 1, 0, 0], [question, 1.05, 0, 0], [question + 40, 1.08, 0, 0]]}>
+        <div style={{ width: w, height: land ? 620 : 800, display: "flex", flexDirection: "column", justifyContent: "flex-start", gap: 12 * u, opacity: 1 - doubt * 0.7, filter: doubt > 0.01 ? `blur(${doubt * 4}px)` : undefined, transform: `scale(${1 - doubt * 0.04})` }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 18, marginBottom: 18 * u, fontFamily: inter, fontWeight: 700, fontSize: size, letterSpacing: "-0.05em", color: C.paper, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+            <span>
+              {h12}:{mm}
+            </span>
+            <span style={{ fontSize: size * 0.32, fontWeight: 600, color: C.fg2, letterSpacing: "-0.02em" }}>{ampm}</span>
+          </div>
+          {NIGHT.map((_, i) => (
+            <Night key={i} i={i} at={HOOK_AT(i, question)} question={question} u={u} />
+          ))}
         </div>
-      </AbsoluteFill>
-      <AbsoluteFill style={{ alignItems: "center", padding: land ? "130px 120px 0" : "260px 70px 0" }}>
-        <Headline text="AI agents can work|while you sleep." at={-40} outAt={question - 10} size={land ? 92 : 104} align="center" />
-      </AbsoluteFill>
+      </Layout>
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", padding: 70 }}>
-        <Headline text="But would you|trust one?" at={question + 2} size={132} align="center" accent={{ trust: C.ask, one: C.ask }} />
+        <Headline text="But would you|trust one?" at={question + 2} size={land ? 110 : 132} align="center" accent={{ trust: C.ask, one: C.ask }} />
       </AbsoluteFill>
-    </AbsoluteFill>
+    </>
   );
 };
 
