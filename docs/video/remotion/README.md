@@ -1,13 +1,13 @@
 # Garu launch video
 
-Remotion project for `docs/video/garu-v8-9x16.mp4` (1080×1920) and `garu-v8-16x9.mp4` (1920×1080). v7 (same story, kept beside it) was re-rendered in place on 2026-10-14 (end card says garuagents.com) and on 2026-10-27 (Bea's time, the startup line, the suggestion card's confirmation and the brief's date made true); v8 is the pacing and safe-zone pass of 2026-10-27. v6 told the same story with the old weather-brief Tomay.
+Remotion project for `docs/video/garu-v9-9x16.mp4` (1080×1920) and `garu-v9-16x9.mp4` (1920×1080). v9 (2026-11-17) is v8 with what landed since: the faces move in the meet scene, the owner edits Bea's draft before approving it ("Approve as edited"), and the proof scene names OpenAI. v8 was the pacing and safe-zone pass of 2026-10-27; v7 the same story before it; v6 told it with the old weather-brief Tomay.
 
 ```
 npm install
 npm run dev                                   # Remotion Studio: scrub frame by frame
-npm run render:9x16                           # → ../garu-v8-9x16.mp4 (crf 16)
-npm run render:16x9                           # → ../garu-v8-16x9.mp4
-npm run render:15s                            # → ../garu-v8-15s-9x16.mp4
+npm run render:9x16                           # → ../garu-v9-9x16.mp4 (crf 16)
+npm run render:16x9                           # → ../garu-v9-16x9.mp4
+npm run render:15s                            # → ../garu-v9-15s-9x16.mp4
 npm run render:16x9 -- --props='{"voice":true}'   # the spoken version: bed.wav + voice-<scene>.wav, see voice-over.md
 ```
 
@@ -15,11 +15,11 @@ npm run render:16x9 -- --props='{"voice":true}'   # the spoken version: bed.wav 
 
 | File | Size | For |
 |---|---|---|
-| `garu-v8-9x16.mp4` | 11.3 MB, 44.8 s, 1080×1920 | YouTube Shorts, Instagram Reels, TikTok |
-| `garu-v8-16x9.mp4` | 8.9 MB, 44.8 s, 1920×1080 | the site, the README, YouTube, X |
-| `garu-v8-15s-9x16.mp4` | 4.4 MB, 15.0 s, 1080×1920 | Reels and X: hook, control, ask, end card, with the score spliced on bar lines (the `Garu-15s-9x16` composition, not a trim) |
-| `garu-v8-16x9-web.mp4` | 1.7 MB, 720p | the site's hero: `ffmpeg -i garu-v8-16x9.mp4 -vf scale=1280:720 -c:v libx264 -preset slow -crf 28 -pix_fmt yuv420p -c:a aac -b:a 96k -movflags +faststart garu-v8-16x9-web.mp4` |
-| `garu-v8-9x16-poster.jpg`, `garu-v8-16x9-poster.jpg` | 59 KB, 55 KB | the poster frame (`<video poster>`, thumbnails): the first held frame, `ffmpeg -ss 0.5 -i … -frames:v 1 -q:v 4` |
+| `garu-v9-9x16.mp4` | 11.3 MB, 44.8 s, 1080×1920 | YouTube Shorts, Instagram Reels, TikTok |
+| `garu-v9-16x9.mp4` | 8.9 MB, 44.8 s, 1920×1080 | the site, the README, YouTube, X |
+| `garu-v9-15s-9x16.mp4` | 4.4 MB, 15.0 s, 1080×1920 | Reels and X: hook, control, ask, end card, with the score spliced on bar lines (the `Garu-15s-9x16` composition, not a trim) |
+| `garu-v9-16x9-web.mp4` | 1.7 MB, 720p | the site's hero: `ffmpeg -i garu-v9-16x9.mp4 -vf scale=1280:720 -c:v libx264 -preset slow -crf 28 -pix_fmt yuv420p -c:a aac -b:a 96k -movflags +faststart garu-v9-16x9-web.mp4` |
+| `garu-v9-9x16-poster.jpg`, `garu-v9-16x9-poster.jpg` | 59 KB, 55 KB | the poster frame (`<video poster>`, thumbnails): the first held frame, `ffmpeg -ss 0.5 -i … -frames:v 1 -q:v 4` |
 
 ## Design
 
