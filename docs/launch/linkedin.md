@@ -7,7 +7,7 @@ Before posting: check that garuagents.com and the demo answer, and that Tailscal
 
 **What to attach.** One of these, not both (LinkedIn takes a video or images per post):
 
-- The launch video, `docs/video/garu-v8-16x9.mp4` (45 s, on this Mac). The feed autoplays it muted,
+- The launch video, `docs/video/garu-v9-16x9.mp4` (45 s, on this Mac). The feed autoplays it muted,
   which that cut was made for. Its music is the synthesized score from `tools/score.py`, and that is
   what sounds like every other generated video; see "Audio" below before using it.
 - Four images, in this order: `docs/launch/play/home.png`, `inbox.png`, `agent.png`, `cost.png`
