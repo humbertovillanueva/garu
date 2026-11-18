@@ -651,6 +651,8 @@ export const es: Record<string, string> = {
   "Resumed": "Retomada",
   "Why it did that": "Por qué hizo eso",
   "Keep as a note": "Guardar como nota",
+  "Run again": "Ejecutar de nuevo",
+  "Starting…": "Empezando…",
   "paused": "en pausa",
   "Paused — its schedule is skipped until you resume it": "En pausa: su horario se salta hasta que la reanudes",
   "Resume the schedule": "Reanudar el horario",

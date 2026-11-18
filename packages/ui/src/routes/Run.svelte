@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { api, live, agentByName, loader, HttpError } from "../lib/api.svelte";
+  import { api, live, agentByName, loader, HttpError, errorText } from "../lib/api.svelte";
+  import { announce } from "../lib/a11y.svelte";
   import LoadError from "../lib/components/LoadError.svelte";
   import { href } from "../lib/router.svelte";
   import { usd, span, humanTime, clock, cronLabel, triggerLabel, plainTimes, until, statusLabel } from "../lib/format";
@@ -93,6 +94,15 @@
   });
   /** The header's one line: how it started, when, how long it took, and what the clock did meanwhile. */
   const headerLine = $derived(start ? [how, humanTime(start.ts), lateMs >= 60_000 && due ? t("started {span} late, due {time}", { span: span(lateMs), time: clock(due) }) : "", end ? (asleep ? t("took {duration}, {asleep} of it with the computer asleep", { duration: span(tookMs), asleep: span(asleep) }) : t("took {duration}", { duration: span(tookMs) })) : "", parkedMs >= 60_000 ? t("parked {span} for your answer", { span: span(parkedMs) }) : "", turns === 1 ? t("1 turn") : t("{n} turns", { n: turns })].filter(Boolean).join(" · ") : "");
+  // The same agent once more, from here: strongest on a run that ended offline, busy or in error.
+  let again = $state(false);
+  async function runAgain() {
+    if (again || !a) return;
+    again = true;
+    try { await api.startRun(agent); location.hash = href("agent", agent); }
+    catch (e) { announce(errorText(e)); }
+    finally { again = false; }
+  }
   // The run as plain text, for a Slack thread or a tester's reply: the header, what it said, why it did that.
   let copied = $state(false);
   async function copyAsText() {
@@ -141,6 +151,7 @@
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
         <a href={href("agent", agent)} class="text-[20px] font-semibold tracking-tight hover:underline">{agent}</a>
         {#if events}<Status {status} />{/if}
+        {#if end && !live.demo && a?.configured}<button class="btn py-0.5 text-[12px]" disabled={again} onclick={runAgain}>{again ? t("Starting…") : t("Run again")}</button>{/if}
       </div>
       {#if start}
         <div class="mt-0.5 text-[13px] text-fg-2">{headerLine}</div>
