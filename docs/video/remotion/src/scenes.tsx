@@ -626,13 +626,16 @@ export const Proof: React.FC = () => {
           </div>
         </Panel>
       </ProofBeat>
-      <ProofBeat i={2} head="Gemini, Claude,|or fully local." accent={{ or: C.fg2, fully: C.fg2, local: C.fg2 }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 * u }}>
-          <Pill u={u} at={2 * PROOF + o + 4}>
+      <ProofBeat i={2} head="Gemini, Claude,|OpenAI, or local." accent={{ or: C.fg2, "local.": C.fg2 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 * u }}>
+          <Pill u={u} at={2 * PROOF + o + 3}>
             Gemini <span style={{ color: C.mute, fontWeight: 500 }}>· free tier</span>
           </Pill>
-          <Pill u={u} at={2 * PROOF + o + 8}>
+          <Pill u={u} at={2 * PROOF + o + 6}>
             Claude <span style={{ color: C.mute, fontWeight: 500 }}>· your key</span>
+          </Pill>
+          <Pill u={u} at={2 * PROOF + o + 9}>
+            OpenAI <span style={{ color: C.mute, fontWeight: 500 }}>· or any compatible API</span>
           </Pill>
           <Pill u={u} at={2 * PROOF + o + 12}>
             Ollama <span style={{ color: C.mute, fontWeight: 500 }}>· $0, offline</span>
