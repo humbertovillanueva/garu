@@ -76,6 +76,7 @@
   .shot { margin: 44px auto 0; max-width: 1000px; border: 1px solid var(--line-2); border-radius: 14px; overflow: hidden; background: var(--panel); box-shadow: 0 30px 80px -30px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.02) inset; }
   .shot img, .shot video { display: block; width: 100%; height: auto; }
   .shot { position: relative; }
+  .shot.tall { max-width: 440px; }
   .play { position: absolute; inset: 0; margin: auto; width: 72px; height: 72px; border-radius: 50%; border: 0; background: var(--accent); color: #141008; display: grid; place-items: center; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
   .play[hidden] { display: none; }
   .caption { margin-top: 14px; text-align: center; color: var(--mute); font-size: 13.5px; }
@@ -164,10 +165,14 @@
   </div>
   <div class="install"><span>$</span> git clone https://github.com/humbertovillanueva/garu &amp;&amp; cd garu &amp;&amp; npm install &amp;&amp; npm run build</div>
 
-  <div class="shot"><video id="hero" src="video/garu-v10-16x9-web.mp4" poster="video/garu-v10-16x9-poster.jpg" width="1000" height="563" muted loop playsinline controls preload="none" aria-label="Garu's launch video: Tomay prepares your day from your calendar, Bea sorts your inbox and drafts replies that wait for your approval, and Garu learns which approvals you'd rather skip."></video><button id="hero-play" class="play" type="button" aria-label="Play the video" hidden><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button></div>
+  <div class="shot"><video id="hero" poster="video/garu-v10-16x9-poster.jpg" width="1000" height="563" muted loop playsinline controls preload="none" aria-label="Garu's launch video: Tomay prepares your day from your calendar, Bea sorts your inbox and drafts replies that wait for your approval, and Garu learns which approvals you'd rather skip."><source src="video/garu-v10-9x16-web.mp4" media="(max-aspect-ratio: 3/4)" type="video/mp4"><source src="video/garu-v10-16x9-web.mp4" type="video/mp4"></video><button id="hero-play" class="play" type="button" aria-label="Play the video" hidden><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button></div>
 <script>
 (function () {
   var v = document.getElementById("hero"), b = document.getElementById("hero-play");
+  // A phone held upright gets the vertical cut (the first <source>, by its media query) and its poster.
+  if (matchMedia("(max-aspect-ratio: 3/4)").matches) {
+    v.poster = "video/garu-v10-9x16-poster.jpg"; v.width = 450; v.height = 800; v.parentNode.classList.add("tall");
+  }
   if (matchMedia("(max-width: 800px)").matches) {
     b.hidden = false;
     b.addEventListener("click", function () { v.preload = "auto"; v.play(); });

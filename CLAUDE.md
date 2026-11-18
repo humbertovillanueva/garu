@@ -280,8 +280,8 @@ v10 (`docs/video/garu-v10-9x16.mp4`, `garu-v10-16x9.mp4`, 2026-11-17) opens on a
 that turn into "?" under the question, moves throughout (faces fly in, sparks, a push on every cut), the
 owner edits Bea's draft before approving it, the proof names OpenAI, and the score is piano and strings
 (`tools/score.py`; Humberto picked it from five candidates). Beside it a 15-second cut (`garu-v10-15s-9x16.mp4`),
-two posters and a web encode (`garu-v10-16x9-web.mp4`) that the site plays. Only the web encode and the two
-posters are tracked; the full renders, the 15-second cut, v9 and earlier and `score.wav` stay on this
+two posters and two web encodes (`garu-v10-16x9-web.mp4`, and `garu-v10-9x16-web.mp4` for a phone held
+upright) that the site plays. Only the web encodes and the two posters are tracked; the full renders, the 15-second cut, v9 and earlier and `score.wav` stay on this
 Mac, gitignored, and the README links the site's copy. Remotion's own ffmpeg (`node_modules/@remotion/compositor-darwin-arm64`)
 only runs from its folder; there is no other ffmpeg on this Mac. Source, commands,
 scenes and rules: `docs/video/remotion/README.md`.

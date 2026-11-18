@@ -18,6 +18,7 @@ npm run render:16x9 -- --props='{"voice":true}'   # the spoken version: bed.wav 
 | `garu-v10-9x16.mp4` | 12.2 MB, 44.8 s, 1080×1920 | YouTube Shorts, Instagram Reels, TikTok |
 | `garu-v10-16x9.mp4` | 9.4 MB, 44.8 s, 1920×1080 | the site, the README, YouTube, X |
 | `garu-v10-15s-9x16.mp4` | 4.8 MB, 15.0 s, 1080×1920 | Reels and X: hook, control, ask, end card, with the score spliced on bar lines (the `Garu-15s-9x16` composition, not a trim) |
+| `garu-v10-9x16-web.mp4` | 2.2 MB, 720×1280 | the site's hero on a phone held upright (`<source media="(max-aspect-ratio: 3/4)">`): the same encode with `-vf scale=720:1280` |
 | `garu-v10-16x9-web.mp4` | 1.8 MB, 720p | the site's hero: `ffmpeg -i garu-v10-16x9.mp4 -vf scale=1280:720 -c:v libx264 -preset slow -crf 28 -pix_fmt yuv420p -c:a aac -b:a 96k -movflags +faststart garu-v10-16x9-web.mp4` |
 | `garu-v10-9x16-poster.jpg`, `garu-v10-16x9-poster.jpg` | 53 KB, 46 KB | the poster frame (`<video poster>`, thumbnails): the first held frame, `ffmpeg -ss 0.5 -i … -frames:v 1 -q:v 4` |
 

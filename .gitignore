@@ -37,6 +37,7 @@ keystore.properties
 # renders, the old cuts, the 15-second cut, the source clips and the score stay on this Mac
 docs/video/*.mp4
 !docs/video/garu-v10-16x9-web.mp4
+!docs/video/garu-v10-9x16-web.mp4
 docs/video/remotion/public/audio/score.wav
 docs/video/remotion/public/audio/bed.wav
 docs/video/remotion/public/audio/voice-*.wav
