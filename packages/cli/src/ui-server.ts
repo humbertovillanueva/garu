@@ -33,7 +33,11 @@ import {
   type RunResult,
   missingEnv,
   isRemoteServer,
+  expandSpec,
   signInFor,
+  startSignIn,
+  SignInBusyError,
+  type SignInFlow,
   WORKSPACE_MOUNT,
   lineDiff,
   diffStats,
@@ -731,6 +735,34 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           if (!r.ok) return json(res, { error: r.reason }, 400);
           return json(res, { notes: memory.read(name) });
         }
+      }
+
+      // "Sign in again" on the agent's page: the control room runs the browser sign-in itself and hands the page
+      // the address to open. The browser comes back to this computer's loopback, so the phone (and the demo)
+      // only say to do it here.
+      const signM = /^\/api\/agents\/([^/]+)\/signin$/.exec(path);
+      if (signM && req.method === "POST") {
+        if (opts.demo) return json(res, { error: t("This is the demo: it can't do that. Garu on your own computer can.") }, 403);
+        const name = decodeURIComponent(signM[1]!);
+        const a = discover().agents.find((x) => x.garufile.name === name);
+        if (!a) return json(res, { error: t("no such agent") }, 404);
+        const body = (await readBody(req)) as { server?: string };
+        const raw = a.garufile.tools.find((tl) => tl.name === body.server);
+        if (!raw) return json(res, { error: t("no such tool server") }, 404);
+        if (raw.auth !== "oauth") return json(res, { error: t("{server} doesn't sign in", { server: raw.name }) }, 400);
+        let flow: SignInFlow;
+        try {
+          flow = await startSignIn(expandSpec(raw, process.env), authRoot, { page: { signedIn: t("Signed in"), failed: t("Sign-in failed"), close: t("{server} can now be used by your agents. You can close this tab.", { server: raw.name }) } });
+        } catch (e) {
+          if (e instanceof SignInBusyError) return json(res, { error: t("A sign-in is already waiting for a browser (port {port}). Finish or close that tab first.", { port: e.port }) }, 409);
+          return json(res, { error: (e as Error).message }, 502);
+        }
+        opts.log(`🔑 ${t("{agent}: signing in to {server} in the browser", { agent: name, server: raw.name })}`);
+        flow.done.then(
+          () => { opts.log(`✔ ${t("{agent}: signed in to {server} again", { agent: name, server: raw.name })}`); ping(); },
+          (e: Error) => { opts.log(`✖ ${t("{agent}: the {server} sign-in didn't finish: {reason}", { agent: name, server: raw.name, reason: e.message })}`); ping(); },
+        );
+        return json(res, { url: flow.url.href }, 202);
       }
 
       const chatM = /^\/api\/agents\/([^/]+)\/chat$/.exec(path);

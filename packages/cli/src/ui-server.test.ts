@@ -4,7 +4,7 @@ import { createServer as httpServer } from "node:http";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Inbox, Recorder, readRun, suggestRules, writeParked, readParked, parseGarufile, signInFor } from "@garu/kernel";
+import { AUTH_REDIRECT_URL, Inbox, Recorder, readRun, suggestRules, writeParked, readParked, parseGarufile, signInFor } from "@garu/kernel";
 import { startUiServer, askRefusal, MAX_ASK_HOPS, notify } from "./ui-server.js";
 
 /**
@@ -43,6 +43,23 @@ let srv: ReturnType<typeof startUiServer>;
 let pingServer: ReturnType<typeof httpServer>;
 let pingPort = 0;
 const pings: { title: string; click: string; body: string }[] = [];
+let issuer: { url: string; close: () => Promise<void> };
+/** An authorization server with discovery and a code exchange, for the control room's own sign-in. */
+function startIssuer(): Promise<{ url: string; close: () => Promise<void> }> {
+  const http = httpServer((req, res) => {
+    const base = `http://${req.headers.host}`;
+    const json = (code: number, body: unknown) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(body)); };
+    if (req.url?.startsWith("/.well-known/")) return json(200, { issuer: base, authorization_endpoint: `${base}/authorize`, token_endpoint: `${base}/token`, response_types_supported: ["code"], grant_types_supported: ["authorization_code", "refresh_token"], code_challenge_methods_supported: ["S256"], token_endpoint_auth_methods_supported: ["client_secret_post"] });
+    if (req.url === "/token" && req.method === "POST") {
+      let body = "";
+      req.on("data", (c) => (body += c));
+      req.on("end", () => json(200, new URLSearchParams(body).get("code") === "ok-code" ? { access_token: "fresh", refresh_token: "rt", expires_in: 3599, token_type: "Bearer" } : { error: "invalid_grant" }));
+      return;
+    }
+    res.writeHead(404); res.end();
+  });
+  return new Promise((resolve) => http.listen(0, "127.0.0.1", () => resolve({ url: `http://127.0.0.1:${(http.address() as { port: number }).port}`, close: () => new Promise((r) => http.close(() => r())) })));
+}
 const logLines: string[] = [];
 /** Looks like a proxy is in front: the server must then insist on the token. */
 const viaProxy = { "x-forwarded-for": "100.64.0.9" };
@@ -72,6 +89,10 @@ beforeAll(async () => {
   // half a second before exiting (the bus gives it one more try after three seconds, then the run fails).
   mkdirSync(join(root, "agents", "slow"), { recursive: true });
   writeFileSync(join(root, "agents", "slow", "Garufile.yaml"), GARUFILE.replace("name: pip", "name: slow").replace("model: fake/any", "model: ollama/test").replace('args: ["-e", "0"]', 'args: ["-e", "setTimeout(() => {}, 500)"]'));
+  // An agent whose sign-in the control room can run to the end: a remote server on loopback whose issuer is the tiny one below.
+  issuer = await startIssuer();
+  mkdirSync(join(root, "agents", "loc"), { recursive: true });
+  writeFileSync(join(root, "agents", "loc", "Garufile.yaml"), `name: loc\nmodel: fake/any\nprompt: p\ntools:\n  - name: cal\n    url: ${issuer.url}\n    auth: oauth\n    oauth:\n      clientId: id\n      clientSecret: secret\n      scopes: [https://www.googleapis.com/auth/calendar.readonly]\npolicy:\n  - tool: "*"\n    action: block\n`);
   // An agent with a Google sign-in six days old: Google ends it at seven, so the phone hears about it once.
   mkdirSync(join(root, "agents", "gog"), { recursive: true });
   const GOG = `name: gog\nmodel: fake/any\nprompt: p\ntools:\n  - name: calendar\n    command: node\n    args: ["-e", "0"]\n    auth: oauth\n    oauth:\n      issuer: https://accounts.google.com\n      clientId: id\n      clientSecret: secret\n      scopes: [https://www.googleapis.com/auth/calendar.readonly]\npolicy:\n  - tool: "*"\n    action: block\n`;
@@ -110,13 +131,13 @@ beforeAll(async () => {
     await new Promise((r) => setTimeout(r, 50));
   }
 });
-afterAll(async () => { await srv.close(); pingServer.close(); });
+afterAll(async () => { await srv.close(); pingServer.close(); await issuer.close(); });
 
 describe("who gets in", () => {
   it("a browser on this computer is let in; a page from another local origin, or anything behind a proxy, is not", async () => {
     const mine = await get("/api/agents");
     expect(mine.status).toBe(200);
-    expect(((await mine.json()) as { agents: { name: string }[] }).agents.map((a) => a.name)).toEqual(["gog", "once", "pip", "slow", "vault"]);
+    expect(((await mine.json()) as { agents: { name: string }[] }).agents.map((a) => a.name)).toEqual(["gog", "loc", "once", "pip", "slow", "vault"]);
     const other = await get("/api/pair", { headers: { origin: "http://localhost:5173" } });
     expect(other.status).toBe(401);
     expect(await other.json()).toMatchObject({ signIn: true });
@@ -337,6 +358,28 @@ describe("the sign-in ping", () => {
     await new Promise((r) => setTimeout(r, 900));
     expect(mine().length).toBe(1);
   }, 15_000);
+});
+
+describe("sign in again from the page", () => {
+  it("the control room starts the browser sign-in and the browser's return finishes it; the wrong door is refused", async () => {
+    expect((await post("/api/agents/nobody/signin", { server: "cal" })).status).toBe(404);
+    expect((await post("/api/agents/loc/signin", { server: "nope" })).status).toBe(404);
+    expect((await post("/api/agents/pip/signin", { server: "fs" })).status).toBe(400);
+    const loc = async () => ((await (await get("/api/agents")).json()) as { agents: { name: string; signIn: string[] }[] }).agents.find((x) => x.name === "loc")!;
+    expect((await loc()).signIn).toEqual(["cal"]);
+    const started = await post("/api/agents/loc/signin", { server: "cal" });
+    expect(started.status).toBe(202);
+    const { url } = (await started.json()) as { url: string };
+    const u = new URL(url);
+    expect(u.origin).toBe(issuer.url);
+    expect(u.searchParams.get("redirect_uri")).toBe(AUTH_REDIRECT_URL);
+    // One at a time: the loopback port is taken while it waits.
+    expect((await post("/api/agents/loc/signin", { server: "cal" })).status).toBe(409);
+    expect(await (await fetch(`${AUTH_REDIRECT_URL}?code=ok-code`)).text()).toContain("Signed in");
+    for (let i = 0; i < 100 && !logLines.some((l) => /loc: signed in to cal again/.test(l)); i++) await new Promise((r) => setTimeout(r, 50));
+    expect(logLines.some((l) => /loc: signed in to cal again/.test(l))).toBe(true);
+    expect((await loc()).signIn).toEqual([]);
+  });
 });
 
 describe("the notebook", () => {
