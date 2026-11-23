@@ -92,6 +92,8 @@ export const api = {
   memory: (agent: string) => get<{ enabled: boolean; notes: import("./types").MemoryNote[]; told: import("./types").ToldNote[]; path: string }>(`/api/agents/${encodeURIComponent(agent)}/memory`),
   remember: (agent: string, note: string) => post<{ notes: import("./types").MemoryNote[] }>(`/api/agents/${encodeURIComponent(agent)}/memory`, { note }),
   forget: (agent: string, note: string) => post<{ notes: import("./types").MemoryNote[] }>(`/api/agents/${encodeURIComponent(agent)}/memory/forget`, { note }),
+  /** Start the browser sign-in for one of the agent's tool servers; the page opens the address in a tab. */
+  signIn: (agent: string, server: string) => post<{ url: string }>(`/api/agents/${encodeURIComponent(agent)}/signin`, { server }),
   settings: () => get<import("./types").Settings>("/api/settings"),
   editPolicy: (agent: string, edits: import("./types").PolicyEdit[]) => post<import("./types").Agent>(`/api/agents/${encodeURIComponent(agent)}/policy`, { edits }),
   editAgent: (agent: string, edits: { cron?: string | null; maxRunsPerDay?: number | null; maxCostUsd?: number | null; memory?: boolean; paused?: boolean }) => post<import("./types").Agent>(`/api/agents/${encodeURIComponent(agent)}/settings`, edits),

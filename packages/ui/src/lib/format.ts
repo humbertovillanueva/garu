@@ -124,7 +124,7 @@ export function statusLine(a: { status: string; inFlight: { turn: number } | nul
     if (isApp) return t("Needs setup on your computer");
     const parts = [];
     if (a.needs?.length) parts.push(t("add {keys} to .env", { keys: a.needs.join(", ") }));
-    if (a.signIn?.length) parts.push(t("sign in to {services} with npm run garu -- auth", { services: a.signIn.join(", ") }));
+    if (a.signIn?.length) parts.push(t("sign in to {services}", { services: a.signIn.join(", ") }));
     return t("Needs setup — {parts}", { parts: parts.join("; ") });
   }
   if (!a.configured) return t("No Garufile found — history only");

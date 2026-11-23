@@ -166,7 +166,7 @@
           <a href={href("agent", a.name)} class="card-hover flex items-center gap-3 px-3 py-2.5 first:rounded-t-xl last:rounded-b-xl">
             <Mark name={a.name} size={26} status={a.status} />
             <span class="font-medium">{a.name}</span>
-            <span class="min-w-0 text-[12.5px] [overflow-wrap:anywhere]" style="color: var(--color-ask)">{#each a.signInExpiring ?? [] as s, i}{i ? " · " : ""}{isApp ? t("Its {server} sign-in is {days} days old; Google ends it at 7. Sign in again on your computer.", { server: s.server, days: s.days }) : t("Its {server} sign-in is {days} days old; Google ends it at 7. Sign in again:", { server: s.server, days: s.days })}{#if !isApp} <span class="mono">npm run garu -- auth {a.source} {s.server}</span>{/if}{/each}</span>
+            <span class="min-w-0 text-[12.5px] [overflow-wrap:anywhere]" style="color: var(--color-ask)">{#each a.signInExpiring ?? [] as s, i}{i ? " · " : ""}{isApp ? t("Its {server} sign-in is {days} days old; Google ends it at 7. Sign in again on your computer.", { server: s.server, days: s.days }) : t("Its {server} sign-in is {days} days old; Google ends it at 7. Sign in again from its page.", { server: s.server, days: s.days })}{/each}</span>
           </a>
         {/each}
       </div>

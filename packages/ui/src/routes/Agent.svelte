@@ -20,6 +20,27 @@
 
   let { name }: { name: string } = $props();
   const a = $derived(agentByName(name));
+  // "Sign in again": the tab is opened on the click (a browser only allows that), then pointed at the
+  // address the control room answers with; the waiting ends when the live data shows the sign-in fresh.
+  let signingIn = $state<string | null>(null);
+  let signInError = $state("");
+  async function signIn(server: string) {
+    const tab = window.open("", "_blank");
+    signInError = "";
+    signingIn = server;
+    try {
+      const { url } = await api.signIn(name, server);
+      if (tab) tab.location.href = url;
+      else window.location.assign(url);
+    } catch (e) {
+      tab?.close();
+      signInError = errorText(e);
+      signingIn = null;
+    }
+  }
+  $effect(() => {
+    if (signingIn && !(a?.signIn ?? []).includes(signingIn) && !(a?.signInExpiring ?? []).some((s) => s.server === signingIn)) signingIn = null;
+  });
   const pending = $derived(live.pending.filter((p) => p.agent === name));
 
   let runs = $state<RunSummary[] | null>(null);
@@ -229,8 +250,9 @@
         {#if a.description}<p class="mt-1 text-[14px] text-fg-2">{a.description}</p>{/if}
         <p class="mt-1 text-[13px] text-mute">{a.status === "needs-setup" ? (isApp ? t("Needs setup on your computer") : statusLine(a)) : statusLine(a)}</p>
         {#each a.signInExpiring ?? [] as s (s.server)}
-          <p class="mt-1 text-[13px] [overflow-wrap:anywhere]" style="color: var(--color-ask)">{isApp ? t("Its {server} sign-in is {days} days old; Google ends it at 7. Sign in again on your computer.", { server: s.server, days: s.days }) : t("Its {server} sign-in is {days} days old; Google ends it at 7. Sign in again:", { server: s.server, days: s.days })}{#if !isApp} <span class="mono text-fg">npm run garu -- auth {a.source} {s.server}</span>{/if}</p>
+          <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] [overflow-wrap:anywhere]" style="color: var(--color-ask)"><span>{isApp ? t("Its {server} sign-in is {days} days old; Google ends it at 7. Sign in again on your computer.", { server: s.server, days: s.days }) : t("Its {server} sign-in is {days} days old; Google ends it at 7.", { server: s.server, days: s.days })}</span>{#if !isApp}<button type="button" class="btn py-0.5 text-[12.5px]" disabled={signingIn === s.server} onclick={() => signIn(s.server)}>{signingIn === s.server ? t("Waiting for the other tab…") : t("Sign in again")}</button>{/if}</p>
         {/each}
+        {#if signInError}<p class="mt-1 text-[13px]" style="color: var(--color-bad)">{signInError}</p>{/if}
       </div>
     </div>
 
@@ -392,7 +414,8 @@
         {:else}
           <div class="font-medium text-fg">{t("{name} can't run yet", { name: a.name })}</div>
           {#if a.needs.length}<div>{#each parts("Add {keys} to {file}, then {command}.", { keys: a.needs.join(", "), file: ".env", command: "npm run garu -- service restart" }) as p}{#if p.name === "keys"}<span class="mono text-fg">{p.text}</span>{:else if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}</div>{/if}
-          {#each a.signIn as srv}<div>{#each parts("Sign in to {server} once: {command}", { server: srv, command: `npm run garu -- auth ${a.source} ${srv}` }) as p}{#if p.name === "command"}<span class="mono text-fg [overflow-wrap:anywhere]">{p.text}</span>{:else if p.name}<span class="mono text-fg">{p.text}</span>{:else}{p.text}{/if}{/each}</div>{/each}
+          {#each a.signIn as srv}<div class="flex flex-wrap items-center gap-2">{#each parts("Sign in to {server} once.", { server: srv }) as p}{#if p.name}<span class="mono text-fg">{p.text}</span>{:else}{p.text}{/if}{/each}<button type="button" class="btn py-0.5 text-[12.5px]" disabled={signingIn === srv} onclick={() => signIn(srv)}>{signingIn === srv ? t("Waiting for the other tab…") : t("Sign in")}</button></div>{/each}
+          {#if signInError}<div style="color: var(--color-bad)">{signInError}</div>{/if}
         {/if}
       </div>
     {:else if a.configured && pending.length === 0}
