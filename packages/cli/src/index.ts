@@ -16,6 +16,9 @@ import { join, relative, resolve } from "node:path";
 import {
   AUTH_CALLBACK_PORT,
   AUTH_REDIRECT_URL,
+  SignInBusyError,
+  startSignIn,
+  type SignInFlow,
   signInFor,
   expandSpec,
   missingEnv,
@@ -1051,6 +1054,38 @@ program
       return;
     }
 
+    const openBrowser = (url: URL) => {
+      stdout.write(`\n${t("Opening your browser to sign in to {server}. If it doesn't open, visit:", { server: spec.name })}\n  ${url.href}\n\n`);
+      const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
+      const args = process.platform === "win32" ? ["/c", "start", "", url.href] : [url.href];
+      try { spawn(cmd, args, { stdio: "ignore", detached: true }).on("error", () => {}).unref(); } catch { /* printed above */ }
+    };
+
+    if (!isRemoteServer(spec)) {
+      // A local server has nothing to connect to yet: sign in with the issuer directly. Garu keeps
+      // the tokens and hands the server a current access token at the start of each run.
+      // Already signed in: running this again signs in again, which is what the "sign in again soon"
+      // warning asks for (Google ends a Testing-mode sign-in after seven days). The control room's
+      // "Sign in again" button runs the same flow (startSignIn), with the tab opened by the page.
+      if (provider.signedIn()) {
+        const at = provider.signedInAt();
+        const days = at ? Math.floor((Date.now() - at.getTime()) / 86_400_000) : 0;
+        stdout.write(`${days === 0 ? t("signed in today; signing in again replaces it") : days === 1 ? t("signed in yesterday; signing in again replaces it") : t("signed in {days} days ago; signing in again replaces it", { days })}\n`);
+      }
+      let flow: SignInFlow;
+      try {
+        flow = await startSignIn(spec, opts.authRoot, { page: { signedIn: t("Signed in"), failed: t("Sign-in failed"), close: t("{server} can now be used by your agents. You can close this tab.", { server: spec.name }) } });
+      } catch (e) {
+        fail(e instanceof SignInBusyError ? t("port {port} is in use. Stop whatever holds it, or set GARU_AUTH_PORT to another port (the same one every time).", { port: e.port }) : (e as Error).message);
+      }
+      openBrowser(flow.url);
+      stdout.write(`${t("waiting for the sign-in to finish (5 minutes)…")}\n`);
+      try { await flow.done; } catch (e) { fail(t("the sign-in for {server} didn't finish: {reason}", { server: spec.name, reason: (e as Error).message })); }
+      stdout.write(`✔ ${t("signed in for {server} with {host} — {n} permission(s) asked for", { server: spec.name, host: new URL(where).host, n: spec.oauth?.scopes?.length ?? 0 })}\n`);
+      stdout.write(`  ${t("tokens: {dir}/ (shared by every agent asking {where} for the same permissions)", { dir: opts.authRoot, where })}\n`);
+      return;
+    }
+
     // Catch the browser's return on the fixed loopback port.
     let gotCode!: (code: string) => void;
     let gotError!: (e: Error) => void;
@@ -1071,37 +1106,12 @@ program
     });
 
     try {
-      const openBrowser = (url: URL) => {
-        stdout.write(`\n${t("Opening your browser to sign in to {server}. If it doesn't open, visit:", { server: spec.name })}\n  ${url.href}\n\n`);
-        const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
-        const args = process.platform === "win32" ? ["/c", "start", "", url.href] : [url.href];
-        try { spawn(cmd, args, { stdio: "ignore", detached: true }).on("error", () => {}).unref(); } catch { /* printed above */ }
-      };
       const interactive = signInFor(spec, opts.authRoot, { redirectUrl: AUTH_REDIRECT_URL, onAuthorize: openBrowser });
       const waitForCode = () => {
         stdout.write(`${t("waiting for the sign-in to finish (5 minutes)…")}\n`);
         // The timer must not keep the process alive once the code is in: unref'd, it dies with the command.
         return Promise.race([code, new Promise<string>((_, rej) => setTimeout(() => rej(new Error(t("timed out waiting for the browser"))), 5 * 60_000).unref())]);
       };
-
-      if (!isRemoteServer(spec)) {
-        // A local server has nothing to connect to yet: sign in with the issuer directly. Garu keeps
-        // the tokens and hands the server a current access token at the start of each run.
-        // Already signed in: running this again signs in again, which is what the "sign in again soon"
-        // warning asks for (Google ends a Testing-mode sign-in after seven days). The old tokens go
-        // first; with them in place the flow would only refresh them.
-        if (provider.signedIn()) {
-          const at = provider.signedInAt();
-          const days = at ? Math.floor((Date.now() - at.getTime()) / 86_400_000) : 0;
-          stdout.write(`${days === 0 ? t("signed in today; signing in again replaces it") : days === 1 ? t("signed in yesterday; signing in again replaces it") : t("signed in {days} days ago; signing in again replaces it", { days })}\n`);
-          provider.invalidateCredentials("tokens");
-        }
-        if ((await auth(interactive, { serverUrl: where })) === "REDIRECT") await auth(interactive, { serverUrl: where, authorizationCode: await waitForCode() });
-        if (!provider.signedIn()) fail(t("the sign-in for {server} didn't finish; run this again", { server: spec.name }));
-        stdout.write(`✔ ${t("signed in for {server} with {host} — {n} permission(s) asked for", { server: spec.name, host: new URL(where).host, n: spec.oauth?.scopes?.length ?? 0 })}\n`);
-        stdout.write(`  ${t("tokens: {dir}/ (shared by every agent asking {where} for the same permissions)", { dir: opts.authRoot, where })}\n`);
-        return;
-      }
 
       const transport = remoteTransport(spec, opts.authRoot, { redirectUrl: AUTH_REDIRECT_URL, onAuthorize: openBrowser });
       const client = new Client({ name: "garu", version: VERSION });
