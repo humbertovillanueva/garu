@@ -251,7 +251,10 @@ Weekly chore: the Google OAuth app stays in Testing (`docs/google.md` says why),
 sign-ins (Tomay's calendar and Gmail, Bea's Gmail) die every seven days; the home screen warns from
 day six, the phone gets one push per sign-in on day six (`checkSignIns` in the sweeper; the ones pinged are
 kept in `.garu/signin-pings.json`, keyed by agent/server@signedInAt, so a renewal starts a new cycle), and
-`garu auth <Garufile> <server>` renews one in place; `garu doctor` says each one's age. Last renewed Sunday 2026-11-15 (day six). Run the three one after another and let each exit before the next.
+"Sign in again" on the agent's page renews one from the control room (`POST /api/agents/<agent>/signin` runs
+`startSignIn` in `kernel/src/signin.ts`, the same loopback flow as `garu auth`, and hands the page the address to open
+in a tab; one at a time, since the callback port is fixed); `garu auth <Garufile> <server>` does the same from a terminal;
+`garu doctor` says each one's age. Last renewed Monday 2026-11-23 (they had died on the 22nd). One after another, never two at once.
 
 His Mac is a laptop that sleeps after a minute idle, on power too, and spends nights on battery
 napping every quarter hour; runs that fire in a nap are late or cut off, and catch-up, the awake hold
