@@ -526,6 +526,34 @@ describe("the job, the sheet and the retirement", () => {
   });
 });
 
+describe("the doors hold", () => {
+  it("a path-shaped name, a dotted file, a wrong month and a bad variable are refused at every new door", async () => {
+    // Names that try to leave the agents folder or the retired folder.
+    for (const name of ["..", "../x", "a/../b", ".hidden", "x%2F..%2Fy", "a b", "-x"]) {
+      expect((await post("/api/agents", { name, task: "x", model: "fake/any", schedule: "manual" })).status, name).toBe(400);
+      expect([400, 404]).toContain((await post(`/api/agents/${name}/retire`, {})).status);
+      expect([400, 404]).toContain((await post(`/api/agents/${name}/signin`, { server: "x" })).status);
+      expect([400, 404]).toContain((await post(`/api/agents/${name}/policy/try`, { tool: "a.b" })).status);
+    }
+    // The download hands out backups by their exact name only.
+    for (const file of ["../.garu/ui-token", "..%2F..%2Fnotes.md", "garu-backup-2026-11-25-1048.tgz/../x", "notes.md", "garu-backup-x.tgz"]) {
+      expect((await get(`/api/backups/${file}`)).status, file).toBe(404);
+    }
+    expect((await get("/api/runs.csv?month=2026-11%0aagent")).status).toBe(400);
+    expect((await get("/api/runs.csv?month=../x")).status).toBe(400);
+    // A webhook variable is a name, never a value; a folder path is text, never a command.
+    expect((await post("/api/agents", { name: "zz", task: "x", model: "fake/any", schedule: "manual", webhook: { envVar: "https://evil.example" } })).status).toBe(400);
+    expect((await post("/api/agents", { name: "zz", task: "x", model: "fake/any", schedule: "manual", webhook: { envVar: "x; rm -rf" } })).status).toBe(400);
+    expect(existsSync(join(root, "agents", "zz"))).toBe(false);
+    // A cell that starts with = or + is quoted in the sheet so a spreadsheet never runs it.
+    const rec = new Recorder({ root: join(root, ".garu", "runs"), agent: "vault" });
+    rec.record({ type: "run.start", agent: "vault", model: "=cmd|' /C calc'!A0", trigger: "ui" });
+    rec.record({ type: "run.end", status: "ok" });
+    const csv = await (await get(`/api/runs.csv?month=${new Date().toISOString().slice(0, 7)}`)).text();
+    expect(csv).toContain("\"'=cmd|' /C calc'!A0\"");
+  });
+});
+
 describe("the notebook", () => {
   it("the owner reads, adds and drops notes from the agent's page; a bad name or an empty note is refused", async () => {
     expect((await get("/api/agents/..%2Fx/memory")).status).toBe(400);

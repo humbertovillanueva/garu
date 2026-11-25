@@ -1091,7 +1091,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       if (path === "/api/runs.csv") {
         const month = url.searchParams.get("month") ?? localDay(new Date()).slice(0, 7);
         if (!/^\d{4}-\d{2}$/.test(month)) return json(res, { error: t("month must look like 2026-11") }, 400);
-        const cell = (v: unknown) => { const s = v === null || v === undefined ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+        // A cell that starts like a formula (=, +, -, @) is prefixed with a quote and quoted, so a spreadsheet shows it and never runs it.
+        const cell = (v: unknown) => { let s = v === null || v === undefined ? "" : String(v); const armed = /^[=+\-@]/.test(s); if (armed) s = `'${s}`; return armed || /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
         const rows = store.allRuns().filter((r) => localDay(r.startedAt).startsWith(month)).sort((x, y) => x.startedAt.localeCompare(y.startedAt))
           .map((r) => [r.agent, `${localDay(r.startedAt)} ${localTime(r.startedAt, { seconds: false })}`, r.trigger, r.offline ? "offline" : r.status, r.turns, r.costUsd.toFixed(4), r.model, r.runId].map(cell).join(","));
         res.writeHead(200, { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="garu-runs-${month}.csv"` });
