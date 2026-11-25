@@ -43,13 +43,14 @@ export interface WeeklyStats {
 /** The inbox, as far as the week needs it: every request, with how and when it was decided. */
 export interface WeeklyInbox { all(): { agent: string; decision?: { by: string; at: string } }[] }
 
-export function weeklyStats(store: RunStore, opts: { memory?: Memory; inbox?: WeeklyInbox; agents?: readonly string[]; now?: Date } = {}): WeeklyStats {
+/** `since` counts from that moment instead of the last seven days (Home's "while you were away"). */
+export function weeklyStats(store: RunStore, opts: { memory?: Memory; inbox?: WeeklyInbox; agents?: readonly string[]; now?: Date; since?: Date } = {}): WeeklyStats {
   const now = opts.now ?? new Date();
-  const weekAgo = now.getTime() - 7 * 86_400_000;
+  const weekAgo = opts.since ? opts.since.getTime() : now.getTime() - 7 * 86_400_000;
   const expired = new Map<string, number>();
   if (opts.inbox) for (const r of opts.inbox.all()) if (r.decision && /expired/.test(r.decision.by) && Date.parse(r.decision.at) >= weekAgo) expired.set(r.agent, (expired.get(r.agent) ?? 0) + 1);
   const day = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const out: WeeklyStats = { from: day(new Date(weekAgo + 86_400_000)), to: day(now), runs: 0, actions: 0, asked: 0, expired: 0, costUsd: 0, priced: true, notes: 0, agents: [] };
+  const out: WeeklyStats = { from: day(opts.since ?? new Date(weekAgo + 86_400_000)), to: day(now), runs: 0, actions: 0, asked: 0, expired: 0, costUsd: 0, priced: true, notes: 0, agents: [] };
   const names = new Set([...store.agents(), ...(opts.agents ?? []), ...expired.keys()]);
   for (const agent of [...names].sort()) {
     const a: WeeklyAgent = { agent, runs: 0, ok: 0, failed: 0, offline: 0, waiting: 0, asked: 0, expired: expired.get(agent) ?? 0, blocked: [], costUsd: 0 };

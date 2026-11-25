@@ -41,6 +41,10 @@ describe("weekly", () => {
     ask("d1", "bea", "Humberto (ui)", 1); // declined by a person: not expired
     ask("e3", "rook", "inbox: expired", 4); // an agent with no run this week still shows for its expired ask
     const w = weeklyStats(store, { memory, inbox, agents: ["tomay"], now });
+    // A narrower window counts from its own start: nothing before `since` is in.
+    const recent = weeklyStats(store, { memory, inbox, agents: ["tomay"], now, since: new Date(now.getTime() - 60_000) });
+    expect(recent.from).toBe(w.to);
+    expect(recent.runs).toBeLessThanOrEqual(w.runs);
     expect(w).toMatchObject({ from: "2026-11-09", to: "2026-11-15", runs: 4, actions: 4, asked: 2, expired: 2, notes: 2, priced: true });
     expect(w.costUsd).toBeCloseTo(0.013, 6);
     expect(w.agents).toEqual([
