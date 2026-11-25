@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
   import Sidebar from "./lib/components/Sidebar.svelte";
+  import Palette from "./lib/components/Palette.svelte";
   import Logo from "./lib/components/Logo.svelte";
   import Home from "./routes/Home.svelte";
   import Agents from "./routes/Agents.svelte";
@@ -117,6 +118,7 @@
 {:else}
 <div class="flex min-h-screen flex-col lg:flex-row">
   <Sidebar />
+  {#if !isApp}<Palette />{/if}
   <main class="pull min-w-0 flex-1 outline-none" tabindex="-1" bind:this={mainEl} use:pullToRefresh={refreshNow}>
     <div class="sr-only" role="status" aria-live="polite">{announcer.text}</div>
     <div class="pull-hint" aria-hidden="true"><span class="dot" class:pulse={live.refreshing}></span>{live.refreshing ? t("Refreshing…") : t("Pull to refresh")}</div>

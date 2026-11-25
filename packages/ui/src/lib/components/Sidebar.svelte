@@ -1,4 +1,6 @@
 <script lang="ts">
+  /** The palette's shortcut, as this keyboard names it. */
+  const jumpKey = /Mac|iPhone|iPad/.test(typeof navigator === "undefined" ? "" : navigator.platform) ? "⌘K" : "Ctrl K";
   // The live dot beats once when something new arrives, so "live" is seen to mean it.
   let beat = $state(false);
   let beatTimer: ReturnType<typeof setTimeout> | undefined;
@@ -75,6 +77,7 @@
       <span class="navicon"><Icon name="settings" size={17} /></span>
       <span>{t("Settings")}</span>
     </a>
+    {#if !isApp}<div class="px-2.5 pt-1 text-[11px] text-mute"><span class="mono">{jumpKey}</span> {t("jumps to an agent or a page")}</div>{/if}
     <div class="flex items-center gap-2 px-2.5 pb-1 pt-2 text-[11px] text-mute">
       <span class="dot" style="background: {live.up ? 'var(--color-ok)' : 'var(--color-mute)'}"></span>
       <span class="truncate">{live.up ? t("schedules running") : t("schedules off")}</span>
