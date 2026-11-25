@@ -133,7 +133,8 @@ export interface SchedulerOptions {
 
 export class Scheduler {
   private readonly handles: CronHandle[] = [];
-  private readonly jobs: { agent: ScheduledAgent; cron: string; handle: CronHandle }[] = [];
+  /** `since`: a job added after start (a new agent, a changed schedule) catches up only for fires after that moment. */
+  private readonly jobs: { agent: ScheduledAgent; cron: string; handle: CronHandle; since?: Date }[] = [];
   private readonly inFlight = new Map<string, Promise<void>>();
   /** Agents between "fire" and "running": the reachability check is async, and two fires in one tick must not both pass. */
   private readonly starting = new Set<string>();
@@ -199,7 +200,11 @@ export class Scheduler {
     const kept = this.jobs.filter((j) => j.agent.garufile.name !== name);
     this.jobs.length = 0;
     this.jobs.push(...kept);
-    return this.schedule(a);
+    const n = this.schedule(a);
+    // A schedule set at 11:08 for 7:00 has not missed today's 7:00: it did not exist then.
+    const since = (this.opts.catchUp?.now ?? (() => new Date()))();
+    for (const j of this.jobs) if (j.agent.garufile.name === name) j.since = since;
+    return n;
   }
 
   /** The crons scheduled right now, per agent, for a test or a status line. */
@@ -219,7 +224,7 @@ export class Scheduler {
       if (this.inFlight.has(name) || this.starting.has(name) || this.catchUpPending.has(name)) continue;
       if ((this.offlineUntil.get(name) ?? 0) > now.getTime()) continue;
       const due = j.handle.lastDue(now, since);
-      if (!due) continue;
+      if (!due || (j.since && due.getTime() <= j.since.getTime())) continue;
       const last = cu.lastRunAt(name);
       if (last && last.getTime() >= due.getTime()) continue;
       this.catchUpPending.add(name);

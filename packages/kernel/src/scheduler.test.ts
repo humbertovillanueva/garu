@@ -147,6 +147,15 @@ describe("Scheduler", () => {
     expect(events.filter((e) => e.type === "run.done")).toHaveLength(1);
   });
 
+  it("a schedule added after start does not catch up for a fire before it existed", async () => {
+    const m = manualCron();
+    const s = new Scheduler({ runner: async (a) => ok(a.garufile.name), onEvent: () => {}, cronFactory: m.factory, online: async () => true, catchUp: { lastRunAt: () => null, now: () => local(9, 9, 30), everyMs: 0 } });
+    s.start([]);
+    expect(s.reschedule(agentA)).toBeGreaterThan(0);
+    expect(s.checkMissed()).toBe(0); // a fire was due before 9:30, but the schedule was made at 9:30
+    await s.stop();
+  });
+
   it("a reachability check or a listener that throws on a tick is reported, and never a loose rejection", async () => {
     const m = manualCron();
     const events: SchedulerEvent[] = [];
