@@ -404,6 +404,17 @@ describe("the rest", () => {
     await new Promise((r) => setTimeout(r, 300));
     expect((await get("/api/agents")).status).toBe(200);
     expect(logLines.some((l) => /✖ pip: unknown model provider "fake"/.test(l))).toBe(true);
+    // The phone hears that pip stopped, with the reason and a link to the agent, once today however many times it fails.
+    const stopped = () => pings.filter((p) => p.title === "Garu: pip stopped");
+    for (let i = 0; i < 100 && stopped().length === 0; i++) await new Promise((r) => setTimeout(r, 50));
+    expect(stopped().length).toBe(1);
+    expect(stopped()[0]!.body).toMatch(/^pip's run failed: unknown model provider "fake"/);
+    // No Tailscale here, so no link; with one the push opens the run.
+    expect(stopped()[0]!.click).toBe("");
+    await post("/api/agents/pip/run", {});
+    await new Promise((r) => setTimeout(r, 400));
+    expect(stopped().length).toBe(1);
+    expect(JSON.parse(readFileSync(join(root, ".garu", "fail-pings.json"), "utf8"))).toHaveProperty("pip");
   });
 
   it("the webhook door starts a run with the message as its input, and only through a declared hook", async () => {

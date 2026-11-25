@@ -255,6 +255,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       return result;
     } catch (e) {
       chat.append(name, { role: "agent", kind: "error", text: (e as Error).message });
+      if (trigger !== "chat") void pushFailure(name, undefined, "error", (e as Error).message);
       throw e;
     } finally {
       // The thread is the agent's diary: a chat reply for chat runs, a short entry for everything else.
@@ -264,6 +265,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         const text = result.output?.trim() || `run ${result.status} with nothing to say`;
         // A run the network cut off before it changed anything is a diary entry, not a red one: the schedule runs it again.
         chat.append(name, { role: "agent", kind: trigger === "chat" ? (result.status === "ok" ? "chat" : "error") : result.status === "ok" || result.offline ? "run" : "error", text, runId: result.runId, ...(result.quota ? { quota: result.quota } : {}) });
+        if (trigger !== "chat" && result.status !== "ok" && !result.offline) void pushFailure(name, result.runId, result.status, text);
       }
       live.delete(name);
       ping();
@@ -287,6 +289,25 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     });
   // A push on day six, once per sign-in: the sign-ins pinged are kept in a file, so a restart doesn't ring twice.
   const signInPingsPath = join(opts.root, ".garu", "signin-pings.json");
+  // A run that stopped on its own (an error, the cost or turn cap, a block) is pushed to the phone once a day
+  // per agent, with the reason in a sentence and a link to the run; never one Garu retries itself (offline,
+  // model busy), never a chat reply the owner is reading anyway. The day each agent was pinged is kept in a file.
+  const failPingsPath = join(opts.root, ".garu", "fail-pings.json");
+  const pushFailure = async (name: string, runId: string | undefined, status: string, reason: string) => {
+    if (!opts.notify || opts.demo) return;
+    let sent: Record<string, string> = {};
+    try { sent = JSON.parse(readFileSync(failPingsPath, "utf8")) as Record<string, string>; } catch { /* none yet */ }
+    const today = localDay(new Date());
+    if (sent[name] === today) return;
+    sent[name] = today;
+    writeFileSync(failPingsPath, JSON.stringify(sent));
+    const short = reason.replace(/\s+/g, " ").trim().slice(0, 240);
+    const why = status === "budget_exceeded" ? t("{agent}'s run stopped at its cost cap.", { agent: name })
+      : status === "max_turns" ? t("{agent}'s run stopped at its turn cap.", { agent: name })
+      : status === "blocked" ? t("{agent}'s run was blocked: {reason}", { agent: name, reason: short })
+      : t("{agent}'s run failed: {reason}", { agent: name, reason: short });
+    await pushText(opts.notify, `Garu: ${name} stopped`, `${why}\n${t("Once a day per agent; the run's page has the whole story.")}`, (await addresses())[0]?.url, "warning", runId ? `/#/run/${encodeURIComponent(name)}/${encodeURIComponent(runId)}` : `/#/agent/${encodeURIComponent(name)}`);
+  };
   // The phone's way in: when Tailscale stops serving us, say so once, in the log, on Home, and on the phone (ntfy needs no Tailscale).
   const reach = new Reach(join(opts.root, ".garu", "reach.json"));
   const checkReach = async () => {
@@ -1130,7 +1151,7 @@ export async function postToChannel(url: string, text: string, fetchFn: typeof f
 }
 
 /** One push: plain text so ntfy shows it as-is, with a tap that opens the control room's inbox when its address is known. Best effort. */
-export async function pushText(url: string, title: string, body: string, link: string | undefined, tags: string): Promise<void> {
+export async function pushText(url: string, title: string, body: string, link: string | undefined, tags: string, path = "/#/inbox"): Promise<void> {
   try {
     await fetch(url, {
       method: "POST",
@@ -1139,7 +1160,7 @@ export async function pushText(url: string, title: string, body: string, link: s
         Title: title,
         Priority: "high",
         Tags: tags,
-        ...(link ? { Click: `${link.replace(/\/$/, "")}/#/inbox` } : {}),
+        ...(link ? { Click: `${link.replace(/\/$/, "")}${path}` } : {}),
       },
       body,
     });
