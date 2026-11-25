@@ -22,6 +22,8 @@ export interface WeeklyAgent {
   /** The tools the policy blocked this week, with how many runs hit each. */
   blocked: { tool: string; runs: number }[];
   costUsd: number;
+  /** The runs that ended badly, newest first, three at most: when, how, and what the run said. */
+  stopped: { at: string; status: string; summary: string | null }[];
 }
 
 export interface WeeklyStats {
@@ -53,7 +55,7 @@ export function weeklyStats(store: RunStore, opts: { memory?: Memory; inbox?: We
   const out: WeeklyStats = { from: day(opts.since ?? new Date(weekAgo + 86_400_000)), to: day(now), runs: 0, actions: 0, asked: 0, expired: 0, costUsd: 0, priced: true, notes: 0, agents: [] };
   const names = new Set([...store.agents(), ...(opts.agents ?? []), ...expired.keys()]);
   for (const agent of [...names].sort()) {
-    const a: WeeklyAgent = { agent, runs: 0, ok: 0, failed: 0, offline: 0, waiting: 0, asked: 0, expired: expired.get(agent) ?? 0, blocked: [], costUsd: 0 };
+    const a: WeeklyAgent = { agent, runs: 0, ok: 0, failed: 0, offline: 0, waiting: 0, asked: 0, expired: expired.get(agent) ?? 0, blocked: [], costUsd: 0, stopped: [] };
     const blockedBy = new Map<string, number>();
     for (const r of store.runs(agent)) {
       if (Date.parse(r.startedAt) < weekAgo) continue;
@@ -61,7 +63,7 @@ export function weeklyStats(store: RunStore, opts: { memory?: Memory; inbox?: We
       if (r.offline) a.offline++;
       else if (r.status === "ok") a.ok++;
       else if (r.status === "running" || r.status === "parked") a.waiting++;
-      else a.failed++;
+      else { a.failed++; a.stopped.push({ at: r.startedAt, status: r.status, summary: r.summary }); }
       a.asked += r.toolCalls.ask;
       for (const tool of r.blocked ?? []) blockedBy.set(tool, (blockedBy.get(tool) ?? 0) + 1);
       a.costUsd += r.costUsd;
@@ -69,6 +71,7 @@ export function weeklyStats(store: RunStore, opts: { memory?: Memory; inbox?: We
       if (!r.priced) out.priced = false;
     }
     if (opts.memory) for (const n of opts.memory.read(agent)) if (n.at && Date.parse(`${n.at}T12:00:00`) >= weekAgo) out.notes++;
+    a.stopped = a.stopped.sort((x, y) => y.at.localeCompare(x.at)).slice(0, 3);
     a.blocked = [...blockedBy.entries()].map(([tool, runs]) => ({ tool, runs })).sort((x, y) => y.runs - x.runs || x.tool.localeCompare(y.tool));
     if (a.runs === 0 && a.expired === 0) continue;
     out.runs += a.runs;

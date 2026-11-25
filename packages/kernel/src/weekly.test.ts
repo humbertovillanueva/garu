@@ -48,9 +48,9 @@ describe("weekly", () => {
     expect(w).toMatchObject({ from: "2026-11-09", to: "2026-11-15", runs: 4, actions: 4, asked: 2, expired: 2, notes: 2, priced: true });
     expect(w.costUsd).toBeCloseTo(0.013, 6);
     expect(w.agents).toEqual([
-      { agent: "bea", runs: 3, ok: 1, failed: 1, offline: 1, waiting: 0, asked: 2, expired: 1, blocked: [{ tool: "fs.write_file", runs: 1 }], costUsd: expect.closeTo(0.012, 6) },
-      { agent: "rook", runs: 0, ok: 0, failed: 0, offline: 0, waiting: 0, asked: 0, expired: 1, blocked: [], costUsd: 0 },
-      { agent: "tick", runs: 1, ok: 1, failed: 0, offline: 0, waiting: 0, asked: 0, expired: 0, blocked: [], costUsd: 0.001 },
+      { agent: "bea", runs: 3, ok: 1, failed: 1, offline: 1, waiting: 0, asked: 2, expired: 1, blocked: [{ tool: "fs.write_file", runs: 1 }], costUsd: expect.closeTo(0.012, 6), stopped: [{ at: at(3), status: "error", summary: null }] },
+      { agent: "rook", runs: 0, ok: 0, failed: 0, offline: 0, waiting: 0, asked: 0, expired: 1, blocked: [], costUsd: 0, stopped: [] },
+      { agent: "tick", runs: 1, ok: 1, failed: 0, offline: 0, waiting: 0, asked: 0, expired: 0, blocked: [], costUsd: 0.001, stopped: [] },
     ]);
   });
 
