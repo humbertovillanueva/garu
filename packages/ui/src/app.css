@@ -48,7 +48,7 @@
   --color-line-2: #cdc8bf;
   --color-fg: #15171b;
   --color-fg-2: #474e5b;
-  --color-mute: #666e7c;
+  --color-mute: #5e6674;          /* 4.9:1 on panel-2; #666e7c sat just under 4.5 */
   --color-accent: #15171b;
   --color-ok: #197a42;
   --color-ask: #8a6a10;
