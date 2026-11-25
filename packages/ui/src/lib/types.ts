@@ -240,6 +240,9 @@ export interface Settings {
   backups: { name: string; at: string; bytes: number }[];
   /** The week in numbers goes to a channel on Sunday evening. */
   weekly: boolean;
+  /** A budget for the month, pushed at 80% and 100%; null when none is set. */
+  monthlyBudgetUsd: number | null;
+  monthSpentUsd: number;
   /** required: even this computer signs in. direct: this request came from a browser on the same computer. */
   login: { required: boolean; direct: boolean; tokenPath: string };
 }

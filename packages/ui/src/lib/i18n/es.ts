@@ -197,6 +197,8 @@ export const es: Record<string, string> = {
   "Its {server} sign-in is {days} days old; Google ends it at 7.": "Su sesión de {server} tiene {days} días; Google la termina a los 7.",
   "Its {server} sign-in is {days} days old; Google ends it at 7. Sign in again from its page.": "Su sesión de {server} tiene {days} días; Google la termina a los 7. Vuelve a iniciar sesión desde su página.",
   "Sign in again": "Volver a iniciar sesión",
+  "Monthly budget": "Presupuesto mensual",
+  "{spent} of {budget} so far; the phone hears at 80% and at 100%": "{spent} de {budget} hasta ahora; el teléfono avisa al 80% y al 100%",
   "Never wins: rule {n} ({tool}) above it matches first.": "Nunca gana: la regla {n} ({tool}) de arriba coincide primero.",
   "No tool server called {server} in this Garufile, so it never matches.": "No hay un servidor de herramientas llamado {server} en este Garufile, así que nunca coincide.",
   "1 rule never wins": "1 regla nunca gana",

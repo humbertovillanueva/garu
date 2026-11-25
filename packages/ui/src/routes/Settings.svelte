@@ -8,7 +8,7 @@
   import QRCode from "qrcode";
   import { build, forget, isApp, markIntroSeen, server } from "../lib/server.svelte";
   import { prefs, setPref } from "../lib/prefs.svelte";
-  import { buildText, humanTime } from "../lib/format";
+  import { usd, buildText, humanTime } from "../lib/format";
   import { latest } from "../lib/whatsnew";
   import { haptic } from "../lib/native";
   import { appPairLink } from "../lib/pairlink";
@@ -279,6 +279,7 @@
             <dt class="text-mute">{t("While it waits")}</dt><dd>{t("the run parks after {min} min and picks up when you answer", { min: s.askHoldMin })}</dd>
             <dt class="text-mute">{t("Push")}</dt><dd>{s.notify ? t("on (ntfy)") : t("off")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">GARU_NOTIFY_URL</span></span>{/if}</dd>
             <dt class="text-mute">{t("Weekly note")}</dt><dd>{s.weekly ? t("Sundays at 6 PM, to your channel") : t("off")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">GARU_WEEKLY_WEBHOOK_URL</span></span>{/if} · <button class="tap underline decoration-mute underline-offset-2 hover:text-fg" onclick={previewWeekly}>{weekly === null ? t("preview this week's") : t("hide")}</button></dd>
+            <dt class="text-mute">{t("Monthly budget")}</dt><dd>{s.monthlyBudgetUsd !== null ? t("{spent} of {budget} so far; the phone hears at 80% and at 100%", { spent: usd(s.monthSpentUsd), budget: usd(s.monthlyBudgetUsd) }) : t("none")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">GARU_MONTHLY_BUDGET_USD</span></span>{/if}</dd>
             <dt class="text-mute">{t("Backups")}</dt><dd>{s.backup ? t("one a day, kept {d} days", { d: s.backup.days }) : t("none")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--backup</span></span>{/if}
               {#if !live.demo}
                 <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px]">
