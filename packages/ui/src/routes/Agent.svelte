@@ -6,6 +6,7 @@
   import { usd, humanTime, statusLine, runStatus, until, duration, cronLabel, triggerLabel, plainTimes, dayLabel } from "../lib/format";
   import Mark from "../lib/components/Mark.svelte";
   import Status from "../lib/components/Status.svelte";
+  import Decision from "../lib/components/Decision.svelte";
   import Budget from "../lib/components/Budget.svelte";
   import Timeline from "../lib/components/Timeline.svelte";
   import ReviewCard from "../lib/components/ReviewCard.svelte";
@@ -116,6 +117,25 @@
   }
   // The rules, edited in place: action and reason on each, a rule added or dropped; the Garufile keeps its comments.
   let editingRules = $state(false);
+  // "Try a call": the policy's answer for a tool and arguments, from the rules in the file now.
+  let tryOpen = $state(false);
+  let tryTool = $state("");
+  let tryArgs = $state("");
+  let trying = $state(false);
+  let tryError = $state("");
+  let tried = $state<{ action: "allow" | "ask" | "block"; ruleIndex: number; matched: string; reason: string } | null>(null);
+  async function tryCall() {
+    if (!tryTool.trim()) return;
+    let args: Record<string, unknown> = {};
+    if (tryArgs.trim()) {
+      try { const v: unknown = JSON.parse(tryArgs); if (!v || typeof v !== "object" || Array.isArray(v)) throw new Error("not an object"); args = v as Record<string, unknown>; }
+      catch { tryError = t("The arguments must be a JSON object, like the example in the box."); tried = null; return; }
+    }
+    trying = true; tryError = "";
+    try { tried = await api.tryPolicy(name, tryTool.trim(), args); }
+    catch (e) { tryError = errorText(e); tried = null; }
+    finally { trying = false; }
+  }
   let rules = $state<{ tool: string; action: "allow" | "ask" | "block"; reason: string; when?: Record<string, Record<string, unknown>>; index: number | null }[]>([]);
   let removed = $state<number[]>([]);
   let rulesError = $state<string | null>(null);
@@ -301,6 +321,7 @@
             <button class="tap text-[12px] text-mute hover:text-fg" onclick={startEdit}>{t("Change schedule, caps or notebook")}</button>
             {#if a.cron}<button class="tap text-[12px] text-mute hover:text-fg" disabled={pausing} onclick={togglePause}>{a.paused ? t("Resume the schedule") : t("Pause the schedule")}</button>{/if}
             {#if !editingRules}<button class="tap text-[12px] text-mute hover:text-fg" onclick={startRules}>{t("Change the rules")}</button>{/if}
+            <button class="tap text-[12px] text-mute hover:text-fg" onclick={() => (tryOpen = !tryOpen)}>{t("Try a call")}</button>
           </div>
         {/if}
         {#if editingRules}
@@ -329,6 +350,21 @@
               <button class="btn" disabled={savingRules} onclick={() => (editingRules = false)}>{t("Cancel")}</button>
             </div>
             <p class="mt-2 text-[12px] text-mute">{t("A rule's conditions stay as written; edit the file for those. The next run uses the new rules.")}</p>
+          </div>
+        {/if}
+        {#if tryOpen}
+          <div class="panel rise p-4">
+            <h3 class="label mb-1">{t("Try a call")}</h3>
+            <p class="mb-3 text-[12.5px] text-mute">{t("What {name}'s rules would do with a call, without running it. The rules in the file now; an edit above counts once it is saved.", { name: a.name })}</p>
+            <div class="flex flex-wrap gap-2">
+              <input class="field mono min-w-0 flex-1 !min-h-[34px] !py-1 !text-[12.5px]" bind:value={tryTool} placeholder="gmail.create_draft" aria-label={t("tool")} onkeydown={(e) => { if (e.key === "Enter") void tryCall(); }} />
+              <input class="field mono min-w-0 basis-full sm:basis-auto sm:flex-[2] !min-h-[34px] !py-1 !text-[12.5px]" bind:value={tryArgs} placeholder={'{"to": "lena@example.com"}'} aria-label={t("arguments, as JSON")} onkeydown={(e) => { if (e.key === "Enter") void tryCall(); }} />
+              <button class="btn py-1 text-[13px]" disabled={trying || !tryTool.trim()} onclick={tryCall}>{t("Try")}</button>
+            </div>
+            {#if tryError}<p class="mt-2 text-[12.5px]" style="color: var(--color-bad)">{tryError}</p>{/if}
+            {#if tried}
+              <p class="mt-3 flex flex-wrap items-center gap-2 text-[13px]"><Decision action={tried.action} /><span>{tried.ruleIndex < 0 ? t("No rule matches it, so it asks you.") : t("Rule {n} ({tool}) decides: {reason}", { n: tried.ruleIndex + 1, tool: tried.matched, reason: tried.reason })}</span></p>
+            {/if}
           </div>
         {/if}
       {/if}
