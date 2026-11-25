@@ -1255,7 +1255,10 @@ export function weeklyText(w: WeeklyStats): string {
     const blocked = a.blocked.length ? `, ${t("blocked {list}", { list: a.blocked.map((b) => `${b.tool}${b.runs > 1 ? ` ×${b.runs}` : ""}`).join(", ") })}` : "";
     return `• ${a.agent}: ${a.runs === 1 ? t("1 run") : t("{n} runs", { n: a.runs })}${parts ? ` (${parts})` : ""}${a.asked ? `, ${a.asked === 1 ? t("asked you once") : t("asked you {n} times", { n: a.asked })}` : ""}${blocked}, ${formatUsd(a.costUsd)}`;
   });
-  return [head + expired + notes, ...lines].join("\n");
+  // What stopped, so the note is also the week's to-do: the runs that ended badly, each with its reason.
+  const weekday = (iso: string) => new Date(iso).toLocaleDateString(locale() === "es" ? "es" : "en-US", { weekday: "short" });
+  const stopped = w.agents.flatMap((a) => a.stopped.map((s) => `  · ${a.agent}, ${weekday(s.at)}: ${s.status === "budget_exceeded" ? t("stopped at its cost cap") : s.status === "max_turns" ? t("stopped at its turn cap") : s.status === "blocked" ? t("blocked") : t("failed")}${s.summary ? ` — ${s.summary.replace(/\s+/g, " ").trim().slice(0, 160)}` : ""}`));
+  return [head + expired + notes, ...lines, ...(stopped.length ? [t("What stopped:"), ...stopped] : [])].join("\n");
 }
 
 /** Post a text to a Slack or Discord incoming webhook (or anything that takes JSON), the way Tomay's post_message does. */
