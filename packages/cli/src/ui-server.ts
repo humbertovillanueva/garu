@@ -8,7 +8,7 @@
  * see them".
  */
 import { createServer, type ServerResponse } from "node:http";
-import { createReadStream, existsSync, mkdirSync, readFileSync, realpathSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, readFileSync, realpathSync, renameSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
 import { basename, dirname, extname, join, normalize, relative, resolve } from "node:path";
 import { Cron } from "croner";
 import {
@@ -542,6 +542,7 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
     return {
       name,
       description: g?.description ?? "",
+      prompt: g?.prompt ?? "",
       persona: g?.persona ?? null,
       model: g?.model ?? runs[0]?.model ?? null,
       source: a?.source ?? null,
@@ -764,6 +765,32 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       // bus; these are the owner's, from the agent's page.
       // The schedule, the runs a day, the cap per run and the notebook, edited from the agent's page: written into the
       // Garufile with its comments kept, the schedule picked up by the running scheduler, nothing else touched.
+      // Retire: the agent's folder goes aside under .garu/retired with the date, off the schedule and the sidebar;
+      // its runs stay readable. Moving the folder back brings it back. A Garufile sharing a folder with others goes alone.
+      const retM = /^\/api\/agents\/([^/]+)\/retire$/.exec(path);
+      if (retM && req.method === "POST") {
+        if (opts.demo) return json(res, { error: t("This is the demo: it can't do that. Garu on your own computer can.") }, 403);
+        const name = decodeURIComponent(retM[1]!);
+        if (!/^[a-z][a-z0-9-]*$/.test(name)) return json(res, { error: t("bad agent name") }, 400);
+        const all = discover().agents;
+        const a = all.find((x) => x.garufile.name === name);
+        if (!a) return json(res, { error: t("no such agent") }, 404);
+        if (live.has(name)) return json(res, { error: t("{agent} is running right now; wait for the run to end", { agent: name }) }, 409);
+        const file = resolve(opts.root, a.source);
+        const folder = dirname(file);
+        const ownFolder = basename(folder) === name && !all.some((x) => x !== a && resolve(opts.root, x.source).startsWith(folder + "/"));
+        const now = new Date();
+        const stamp = `${localDay(now).replace(/-/g, "")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+        const dest = join(opts.root, ".garu", "retired", `${name}-${stamp}`);
+        mkdirSync(dirname(dest), { recursive: true });
+        if (ownFolder) renameSync(folder, dest);
+        else { mkdirSync(dest, { recursive: true }); renameSync(file, join(dest, basename(file))); }
+        if (scheduler) scheduler.reschedule({ ...a, garufile: { ...a.garufile, triggers: [] } });
+        const movedTo = relative(opts.root, dest);
+        opts.log(`🗂 ${t("{agent}: retired to {dir}; move it back under agents/ to bring it back", { agent: name, dir: movedTo })}`);
+        ping();
+        return json(res, { name, movedTo });
+      }
       const setM = /^\/api\/agents\/([^/]+)\/settings$/.exec(path);
       if (setM && req.method === "POST") {
         if (opts.demo) return json(res, { error: t("This is the demo: it can't do that. Garu on your own computer can.") }, 403);
@@ -784,12 +811,15 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         try {
           if ("cron" in body) edits.cron = body["cron"] === null || body["cron"] === "" ? null : String(body["cron"]).trim();
           num("maxRunsPerDay"); num("maxCostUsd");
+          if ("description" in body) { if (typeof body["description"] !== "string") throw new Error(t("the description must be text")); edits.description = body["description"].trim(); }
+          if ("prompt" in body) { if (typeof body["prompt"] !== "string" || !body["prompt"].trim()) throw new Error(t("the prompt can't be empty")); edits.prompt = body["prompt"]; }
           if ("memory" in body) edits.memory = Boolean(body["memory"]);
           if ("paused" in body) edits.paused = Boolean(body["paused"]);
           editGarufile(a.path, edits);
         } catch (e) {
           return json(res, { error: (e as Error).message }, 400);
         }
+        if (edits.prompt !== undefined || edits.description !== undefined) opts.log(`✎ ${t("{agent}: its job was changed from the page", { agent: name })}`);
         const fresh = discover().agents.find((x) => x.garufile.name === name);
         if (fresh && (edits.cron !== undefined || edits.paused !== undefined) && scheduler) {
           const needs = missingEnv(fresh.garufile.tools, process.env).length || fresh.garufile.tools.some((tl) => tl.auth === "oauth" && !signInFor(tl, authRoot).signedIn());
@@ -1053,7 +1083,18 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       }
       if (path === "/api/feed") return json(res, feed(store, inbox, Number(url.searchParams.get("limit") ?? 80)));
       if (path === "/api/cost") return json(res, store.costByDay(Number(url.searchParams.get("days") ?? 14)));
-      if (path === "/api/cost/month") return json(res, store.costThisMonth());
+      if (path === "/api/cost/month") return json(res, { ...store.costThisMonth(), budgetUsd: monthlyBudget() });
+      // A month's runs as a spreadsheet: agent, when, trigger, status, turns, cost, model, id.
+      if (path === "/api/runs.csv") {
+        const month = url.searchParams.get("month") ?? localDay(new Date()).slice(0, 7);
+        if (!/^\d{4}-\d{2}$/.test(month)) return json(res, { error: t("month must look like 2026-11") }, 400);
+        const cell = (v: unknown) => { const s = v === null || v === undefined ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+        const rows = store.allRuns().filter((r) => localDay(r.startedAt).startsWith(month)).sort((x, y) => x.startedAt.localeCompare(y.startedAt))
+          .map((r) => [r.agent, localTime(r.startedAt, { seconds: false }), r.trigger, r.offline ? "offline" : r.status, r.turns, r.costUsd.toFixed(4), r.model, r.runId].map(cell).join(","));
+        res.writeHead(200, { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="garu-runs-${month}.csv"` });
+        res.end(["agent,started,trigger,status,turns,cost_usd,model,run_id", ...rows].join("\n") + "\n");
+        return;
+      }
       // "While you were away" on Home: what happened since the page last looked, in numbers, with the runs that
       // stopped and the asks that expired meanwhile.
       if (path === "/api/since") {

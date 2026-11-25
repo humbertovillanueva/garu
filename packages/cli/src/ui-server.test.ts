@@ -488,6 +488,39 @@ describe("the month's budget", () => {
   }, 15_000);
 });
 
+describe("the job, the sheet and the retirement", () => {
+  it("changes an agent's description and prompt from the page, hands the month's runs out as CSV, and retires an agent", async () => {
+    const bad = await post("/api/agents/newt/settings", { prompt: "  " });
+    expect(bad.status).toBe(400);
+    const r = await post("/api/agents/newt/settings", { description: "Watches the pond.", prompt: "You are newt.\n\n1. Look at the pond.\n2. Say what changed." });
+    expect(r.status).toBe(200);
+    expect((await r.json()) as unknown).toMatchObject({ description: "Watches the pond.", prompt: "You are newt.\n\n1. Look at the pond.\n2. Say what changed.\n" });
+    const text = readFileSync(join(root, "agents", "newt", "Garufile.yaml"), "utf8");
+    expect(text).toMatch(/description: "?Watches the pond\."?\n/);
+    expect(text).toContain("prompt: |");
+    expect(text).toContain("  2. Say what changed.");
+
+    const csv = await get(`/api/runs.csv?month=${new Date().toISOString().slice(0, 7)}`);
+    expect(csv.status).toBe(200);
+    expect(csv.headers.get("content-type")).toContain("text/csv");
+    const lines = (await csv.text()).trim().split("\n");
+    expect(lines[0]).toBe("agent,started,trigger,status,turns,cost_usd,model,run_id");
+    expect(lines.some((l) => l.startsWith("vault,"))).toBe(true);
+    expect((await get("/api/runs.csv?month=nope")).status).toBe(400);
+
+    expect((await post("/api/agents/nobody/retire", {})).status).toBe(404);
+    const gone = await post("/api/agents/newt/retire", {});
+    expect(gone.status).toBe(200);
+    const { movedTo } = (await gone.json()) as { movedTo: string };
+    expect(movedTo).toMatch(/^\.garu\/retired\/newt-\d{8}-\d{4}$/);
+    expect(existsSync(join(root, movedTo, "Garufile.yaml"))).toBe(true);
+    expect(existsSync(join(root, "agents", "newt"))).toBe(false);
+    const names = ((await (await get("/api/agents")).json()) as { agents: { name: string }[] }).agents.map((a) => a.name);
+    expect(names).not.toContain("newt");
+    expect(logLines.some((l) => /newt: retired to \.garu\/retired\/newt-/.test(l))).toBe(true);
+  });
+});
+
 describe("the notebook", () => {
   it("the owner reads, adds and drops notes from the agent's page; a bad name or an empty note is refused", async () => {
     expect((await get("/api/agents/..%2Fx/memory")).status).toBe(400);
