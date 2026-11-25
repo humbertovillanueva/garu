@@ -181,6 +181,10 @@ temp path hidden); `scripts/play-shots.mjs` makes the Play and App Store cards f
   naming a server the Garufile lacks) rides on the agent view (`policy.lint`), the rules editor, `garu doctor` and `garu try`. The
   weekly note ends with "What stopped" (`WeeklyAgent.stopped`). `GARU_MONTHLY_BUDGET_USD`: the sweeper pushes at 80% and 100% of
   the month once each (`checkBudget`, `.garu/budget-pings.json`); Settings shows the budget and the spend.
+- From the agent page too: "Change what it does" (the settings route takes `description` and `prompt`; `editGarufile` writes the
+  prompt as a block, comments kept) and "Retire" (`POST /api/agents/<agent>/retire` moves `agents/<name>/` to `.garu/retired/<name>-<stamp>/`,
+  off the schedule; `mv` it back to bring it back; runs stay). The Cost page shows the month against `GARU_MONTHLY_BUDGET_USD` and
+  downloads a month's runs as CSV (`GET /api/runs.csv?month=`).
 - Pushes beyond asks (`cli/src/ui-server.ts`): a run that stops on its own (error, cost or turn cap, blocked) is pushed
   once a day per agent with the reason and a link to the run (`pushFailure`; days in `.garu/fail-pings.json`; never offline/busy
   runs, chat replies or the demo). `pushText` takes the path to open. "Try a call" on the agent page is
