@@ -23,7 +23,7 @@ npm run open:ios -w @garu/app    # opens the project in Xcode
 ```
 
 In Xcode, pick an iPhone simulator at the top of the window and press **Run** (▶).
-The first build fetches Capacitor's Swift packages and takes a few minutes.
+The first build fetches Capacitor's Swift packages and takes a few minutes. Last built and checked in the Simulator on 2026-11-25 with the web build of app build 6 (the What's new card, Home, the faces); the Android bundle of the same build carries versionCode 6, the iOS project stays at build 1 until there is an account to upload with.
 
 To pair a real iPhone: on your computer, Garu → **Settings → Your phone & other
 devices → Show pairing code**, switch *Code is for* to **the iPhone app**, and
