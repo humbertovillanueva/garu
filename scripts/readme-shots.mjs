@@ -83,6 +83,8 @@ const SCREENS = [
   ["why", `#/run/${RUN}`, { width: 1456, height: 520, deviceScaleFactor: 1, mobile: false }],
   ["run", `#/run/${RUN}`, { width: 1456, height: 829, deviceScaleFactor: 1, mobile: false }],
   ["cost", "#/cost", { width: 1456, height: 829, deviceScaleFactor: 1, mobile: false }],
+  // The New agent page, as far as the limits: the form from the top.
+  ["new-agent", "#/new", { width: 1456, height: 1040, deviceScaleFactor: 1, mobile: false }],
   ["phone-approve", "#/inbox", { width: 375, height: 812, deviceScaleFactor: 2, mobile: true }],
 ];
 
