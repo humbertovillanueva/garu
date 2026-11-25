@@ -281,6 +281,7 @@
       {@const total = (a.policy?.allow ?? 0) + (a.policy?.ask ?? 0) + (a.policy?.block ?? 0) || 1}
       {@const [provider, modelName] = (a.model ?? "").includes("/") ? (a.model as string).split("/", 2) as [string, string] : ["", a.model ?? ""]}
       {@const policyText = t("{allow} allow · {ask} ask · {block} block", { allow: a.policy?.allow ?? "", ask: a.policy?.ask ?? "", block: a.policy?.block ?? "" })}
+      {@const lintCount = a.policy?.lint.length ?? 0}
       <div class="rise facts">
         <div class="fact"><div class="k">{t("Runs")}</div><div class="v" title={a.cron ?? ""}>{a.cron ? cronLabel(a.cron) : t("when asked")}{#if a.nextRun && live.up}<span class="text-mute">&nbsp;· {t("next {until}", { until: until(a.nextRun) })}</span>{/if}</div></div>
         <div class="fact"><div class="k">{t("History")}</div><div class="v">{a.runs === 1 ? t("1 run") : t("{n} runs", { n: a.runs })}{#if a.runsToday}<span class="text-mute">&nbsp;· {t("{n} today", { n: a.runsToday })}</span>{/if}</div></div>
@@ -295,6 +296,7 @@
               <span style="width: {((a.policy?.block ?? 0) / total) * 100}%; background: var(--color-bad)"></span>
             </span>
             <span class="text-[11.5px] leading-tight text-mute">{policyText}</span>
+            {#if lintCount}<span class="block text-[11.5px]" style="color: var(--color-ask)">{lintCount === 1 ? t("1 rule never wins") : t("{n} rules never win", { n: lintCount })}</span>{/if}
           </div>
         </div>
         <div class="fact"><div class="k">{t("Limits")}</div><div class="v">{a.budget?.maxCostUsd ? t("{cost} per run", { cost: usd(a.budget.maxCostUsd) }) : a.budget?.free ? t("free model") : t("no cap")}{#if a.budget?.maxRunsPerDay}<span class="text-mute">&nbsp;· {a.budget.maxRunsPerDay === 1 ? t("1 run a day") : t("{n} runs a day", { n: a.budget.maxRunsPerDay })}</span>{/if}<span class="text-mute">&nbsp;· {a.sandbox ? t("sandboxed, net {network}", { network: a.sandbox.network }) : t("no sandbox")}</span></div></div>
@@ -338,6 +340,7 @@
                   </select>
                   <button class="tap text-mute hover:text-fg" aria-label={t("Drop this rule")} title={t("Drop this rule")} onclick={() => { if (r.index !== null) removed = [...removed, r.index]; rules = rules.filter((_, k) => k !== i); }}>×</button>
                   {#if r.when}<span class="basis-full text-[12px] text-mute">{t("only when {condition}", { condition: whenText(r.when) })}</span>{/if}
+                  {#if r.index !== null}{@const l = a.policy?.lint.find((x) => x.index === r.index)}{#if l?.by !== undefined}<span class="basis-full text-[12px]" style="color: var(--color-ask)">{t("Never wins: rule {n} ({tool}) above it matches first.", { n: l.by + 1, tool: a.policy?.list[l.by]?.tool ?? "" })}</span>{:else if l?.server}<span class="basis-full text-[12px]" style="color: var(--color-ask)">{t("No tool server called {server} in this Garufile, so it never matches.", { server: l.server })}</span>{/if}{/if}
                   <input class="field basis-full !min-h-[34px] !py-1 !text-[12.5px]" bind:value={r.reason} placeholder={t("reason, shown on the ask (optional)")} aria-label={t("reason")} />
                 </div>
               {/each}

@@ -60,7 +60,8 @@ export interface Agent {
   cron: string | null;
   nextRun: string | null;
   tools: string[];
-  policy: { rules: number; allow: number; ask: number; block: number; list: PolicyRule[] } | null;
+  /** lint: rules that never win (by: the earlier rule that matches first) or name a server the Garufile doesn't have. */
+  policy: { rules: number; allow: number; ask: number; block: number; list: PolicyRule[]; lint: { index: number; by?: number; server?: string }[] } | null;
   sandbox: { image: string; network: string } | null;
   budget: { maxCostUsd: number | null; free: boolean; maxRunsPerDay: number | null } | null;
   /** Today's runs have reached budget.maxRunsPerDay: nothing more starts until tomorrow. */
