@@ -20,6 +20,9 @@ export interface GarufileEdits {
   memory?: boolean;
   /** Kept on the schedule but skipped. */
   paused?: boolean;
+  /** The job, in the owner's words: the one-line description and the prompt (written as a block, as hands write it). */
+  description?: string;
+  prompt?: string;
 }
 
 /** The edited text, parsed and valid, without touching the file. */
@@ -61,6 +64,12 @@ export function editGarufileText(text: string, edits: GarufileEdits, source = "G
   if (edits.paused !== undefined) {
     if (edits.paused) doc.set("paused", true);
     else doc.delete("paused");
+  }
+  if (edits.description !== undefined) doc.set("description", edits.description);
+  if (edits.prompt !== undefined) {
+    const node = doc.createNode(edits.prompt.replace(/\s+$/, "") + "\n") as { type?: string };
+    if (edits.prompt.includes("\n")) node.type = "BLOCK_LITERAL";
+    doc.set("prompt", node);
   }
   const out = doc.toString();
   return { text: out, garufile: parseGarufile(out, source) };

@@ -39,6 +39,13 @@ describe("editing a Garufile from the control room", () => {
     expect(garufile.paused).toBe(true);
     expect(text).toContain("paused: true");
     const back = editGarufileText(text, { paused: false });
+    // The job itself: a one-line description and a prompt written as a block, comments kept.
+    const job = editGarufileText(FILE, { description: "Files the mail and drafts the replies.", prompt: "You are Bea.\n\n1. Read the inbox.\n2. File what you can." });
+    expect(job.garufile.description).toBe("Files the mail and drafts the replies.");
+    expect(job.garufile.prompt).toBe("You are Bea.\n\n1. Read the inbox.\n2. File what you can.\n");
+    expect(job.text).toContain("prompt: |");
+    expect(job.text).toContain("  2. File what you can.");
+    expect(job.text).toContain("# Bea sorts the inbox.");
     expect(back.garufile.paused).toBe(false);
     expect(back.text).not.toContain("paused");
   });
