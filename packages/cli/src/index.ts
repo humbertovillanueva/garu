@@ -16,6 +16,7 @@ import { join, relative, resolve } from "node:path";
 import {
   AUTH_CALLBACK_PORT,
   AUTH_REDIRECT_URL,
+  lintPolicy,
   SignInBusyError,
   startSignIn,
   type SignInFlow,
@@ -686,6 +687,33 @@ program
     if (!pick || !existsSync(join(dir, pick))) fail(t("no run {run} for agent \"{agent}\"", { run: run ?? "", agent }));
     stdout.write(`${agent} · ${pick.replace(/\.jsonl$/, "")}\n`);
     for (const line of whyLines(readRun(join(dir, pick)))) stdout.write(`  · ${line}\n`);
+  });
+
+program
+  .command("try")
+  .argument("<agent>", t("agent name"))
+  .argument("<tool>", t("the call, as server.tool (gmail.create_draft)"))
+  .argument("[args]", t("its arguments as JSON, like '{\"to\": \"lena@example.com\"}'"))
+  .description(t("What the agent's rules would do with a call, without running it: the decision and the rule that made it"))
+  .action((agent: string, tool: string, args: string | undefined) => {
+    const a = discoverGarufiles(process.cwd()).agents.find((x) => x.garufile.name === agent);
+    if (!a) fail(t("no agent called \"{agent}\" under this folder", { agent }));
+    const dot = tool.indexOf(".");
+    if (dot <= 0 || dot === tool.length - 1) fail(t("A tool is server.tool, like gmail.create_draft."));
+    let parsed: Record<string, unknown> = {};
+    if (args) {
+      try { const v: unknown = JSON.parse(args); if (!v || typeof v !== "object" || Array.isArray(v)) throw new Error("not an object"); parsed = v as Record<string, unknown>; }
+      catch { fail(t("the arguments must be a JSON object")); }
+    }
+    const d = new PolicyEngine(a.garufile.policy).decide({ server: tool.slice(0, dot), tool: tool.slice(dot + 1), args: parsed });
+    const mark = d.action === "allow" ? "✔" : d.action === "ask" ? "?" : "✖";
+    stdout.write(`${mark} ${d.action}  ${tool}\n`);
+    if (d.ruleIndex < 0) stdout.write(`  ${t("no rule matches it, so it asks you")}\n`);
+    else if (d.reason.startsWith("rule #")) stdout.write(`  ${t("rule {n} ({tool}) decides; it gives no reason", { n: d.ruleIndex + 1, tool: d.matched })}\n`);
+    else stdout.write(`  ${t("rule {n} ({tool}) decides: {reason}", { n: d.ruleIndex + 1, tool: d.matched, reason: d.reason })}\n`);
+    for (const l of lintPolicy(a.garufile.policy, a.garufile.tools.map((tl) => tl.name))) {
+      if (l.by !== undefined) stdout.write(`  ○ ${t("rule {n} ({tool}) never wins; rule {m} ({other}) above it matches first", { n: l.index + 1, tool: a.garufile.policy[l.index]!.tool, m: l.by + 1, other: a.garufile.policy[l.by]!.tool })}\n`);
+    }
   });
 
 // ---------------------------------------------------------------------------
