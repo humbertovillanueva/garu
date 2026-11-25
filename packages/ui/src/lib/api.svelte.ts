@@ -81,6 +81,7 @@ export const api = {
   cost: (days = 14) => get<CostRow[]>(`/api/cost?days=${days}`),
   costMonth: () => get<import("./types").CostMonth>("/api/cost/month"),
   today: () => get<TodayResponse>("/api/today"),
+  since: (at: string) => get<import("./types").SinceResponse>(`/api/since?at=${encodeURIComponent(at)}`),
   decide: (id: string, approve: boolean, forDuration?: string, note?: string, args?: Record<string, unknown>) => post<ApprovalRequest>(`/api/inbox/${id}/${approve ? "approve" : "deny"}`, { ...(forDuration ? { for: forDuration } : {}), ...(note ? { note } : {}), ...(args ? { args } : {}) }),
   diff: (id: string) => get<import("./types").WriteDiff>(`/api/inbox/${id}/diff`),
   batch: (ids: string[], approve: boolean) => post<{ results: { id: string; ok: boolean }[] }>(`/api/inbox/batch`, { ids, approve }),

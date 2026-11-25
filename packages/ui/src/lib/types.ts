@@ -244,6 +244,19 @@ export interface Settings {
 }
 
 /** /api/today: each agent's newest good result from the last seven days, and the week in numbers. */
+/** What happened since the page last looked (GET /api/since?at=…). */
+export interface SinceResponse {
+  since: string;
+  runs: number;
+  ok: number;
+  failed: number;
+  offline: number;
+  expired: number;
+  waiting: number;
+  failedRuns: { agent: string; runId: string; startedAt: string; status: string; summary: string | null }[];
+  expiredAsks: { agent: string; tool: string; at: string }[];
+}
+
 export interface TodayResponse {
   results: { agent: string; runId: string; endedAt: string; summary: string | null; costUsd: number; priced: boolean; asked: number; blocked: string[]; doc: { path: string; content: string } | null }[];
   week: { runs: number; actions: number; asked: number; costUsd: number; priced: boolean; days: { day: string; runs: number; actions: number; asked: number; costUsd: number }[] };

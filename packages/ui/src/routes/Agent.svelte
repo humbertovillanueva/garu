@@ -363,7 +363,7 @@
             </div>
             {#if tryError}<p class="mt-2 text-[12.5px]" style="color: var(--color-bad)">{tryError}</p>{/if}
             {#if tried}
-              <p class="mt-3 flex flex-wrap items-center gap-2 text-[13px]"><Decision action={tried.action} /><span>{tried.ruleIndex < 0 ? t("No rule matches it, so it asks you.") : t("Rule {n} ({tool}) decides: {reason}", { n: tried.ruleIndex + 1, tool: tried.matched, reason: tried.reason })}</span></p>
+              <p class="mt-3 flex flex-wrap items-center gap-2 text-[13px]"><Decision action={tried.action} /><span>{tried.ruleIndex < 0 ? t("No rule matches it, so it asks you.") : tried.reason.startsWith("rule #") ? t("Rule {n} ({tool}) decides; it gives no reason.", { n: tried.ruleIndex + 1, tool: tried.matched }) : t("Rule {n} ({tool}) decides: {reason}", { n: tried.ruleIndex + 1, tool: tried.matched, reason: tried.reason })}</span></p>
             {/if}
           </div>
         {/if}

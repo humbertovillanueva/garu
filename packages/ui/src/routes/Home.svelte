@@ -9,7 +9,7 @@
   import SuggestionCard from "../lib/components/SuggestionCard.svelte";
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
-  import type { FeedItem, ApprovalRequest, TodayResponse } from "../lib/types";
+  import type { FeedItem, ApprovalRequest, TodayResponse, SinceResponse } from "../lib/types";
   import { isApp } from "../lib/server.svelte";
   import { renderMarkdown } from "../lib/md";
   import { t, parts } from "../lib/i18n.svelte";
@@ -26,6 +26,23 @@
   const loadToday = loader();
   $effect(() => { live.tick; load(api.feed(60), (f) => { feed = f; feedError = null; }, (m) => (feedError = m)); });
   $effect(() => { live.tick; loadToday(api.today(), (r) => (today = r), () => {}); });
+
+  // "While you were away": six hours or more since this device last looked at Home, and Home opens with what
+  // happened meanwhile. The moment is kept on the device, so each phone and browser has its own.
+  const AWAY_MS = 6 * 3_600_000;
+  const lastLook = prefs.lastLook;
+  setPref("lastLook", new Date().toISOString());
+  let away = $state<SinceResponse | null>(null);
+  if (lastLook && Date.now() - Date.parse(lastLook) >= AWAY_MS) void api.since(lastLook).then((r) => { if (r.runs || r.expired || r.waiting) away = r; }).catch(() => {});
+  const awayLine = $derived.by(() => {
+    if (!away) return "";
+    const p = [away.runs === 1 ? t("1 run") : t("{n} runs", { n: away.runs })];
+    if (away.failed) p.push(away.failed === 1 ? t("1 failed") : t("{n} failed", { n: away.failed }));
+    if (away.offline) p.push(t("{n} cut off by the network", { n: away.offline }));
+    if (away.expired) p.push(away.expired === 1 ? t("1 ask expired unanswered") : t("{n} asks expired unanswered", { n: away.expired }));
+    if (away.waiting) p.push(away.waiting === 1 ? t("1 waiting on you") : t("{n} waiting on you", { n: away.waiting }));
+    return p.join(" · ");
+  });
 
   // Follows the shared clock: a page left open overnight says good morning in the morning.
   const greeting = $derived.by(() => { const hour = new Date(ticker.now).getHours(); return hour < 5 ? t("Still up") : hour < 12 ? t("Good morning") : hour < 18 ? t("Good afternoon") : t("Good evening"); });
@@ -185,6 +202,23 @@
           </a>
         {/each}
       </div>
+    </div>
+  {/if}
+
+  {#if away}
+    <div class="panel rise p-4">
+      <h2 class="label mb-1">{t("While you were away")}</h2>
+      <p class="text-[13.5px]">{t("Since {when}:", { when: humanTime(away.since) })} {awayLine}</p>
+      {#if away.failedRuns.length}
+        <ul class="mt-2 space-y-1 text-[13px]">
+          {#each away.failedRuns as r (r.runId)}<li class="[overflow-wrap:anywhere]"><a href={href("run", r.agent, r.runId)} class="underline decoration-mute underline-offset-2 hover:text-fg"><b class="font-semibold">{r.agent}</b> · {statusLabel(r.status)} · {humanTime(r.startedAt)}</a>{#if r.summary}<span class="text-fg-2">: {r.summary}</span>{/if}</li>{/each}
+        </ul>
+      {/if}
+      {#if away.expiredAsks.length}
+        <ul class="mt-2 space-y-1 text-[13px] text-fg-2">
+          {#each away.expiredAsks as x, i (i)}<li class="[overflow-wrap:anywhere]">{t("{agent} asked about {tool} and nobody answered in time, so it was a no.", { agent: x.agent, tool: x.tool })}</li>{/each}
+        </ul>
+      {/if}
     </div>
   {/if}
 
