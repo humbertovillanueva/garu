@@ -3,6 +3,8 @@
  * closed: only the tools you named, writes ask unless you said otherwise,
  * everything else blocked. Pure functions here; the questions live in the CLI.
  */
+import { dirname, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { t, locale } from "./i18n.js";
 
 export type Schedule = "manual" | "weekday-morning" | "hourly" | "daily" | { cron: string };
@@ -68,6 +70,14 @@ export function suggestModel(env: NodeJS.ProcessEnv): { model: string; why: stri
   out.push({ model: "ollama/qwen3:8b", why: env["OLLAMA_HOST"] ? t("OLLAMA_HOST is set · local, $0") : t("local via Ollama, $0 (needs `ollama pull qwen3:8b`)") });
   if (!env["GEMINI_API_KEY"]) out.push({ model: "gemini/gemini-3.5-flash-lite", why: t("free tier · add GEMINI_API_KEY to .env") });
   return out;
+}
+
+/** The fetch server's path as the Garufile should name it: relative to `from` when it sits inside, absolute otherwise. */
+export function fetchServerPath(from = process.cwd()): string {
+  const here = dirname(fileURLToPath(import.meta.url)); // packages/cli/dist
+  const abs = resolve(here, "..", "..", "mcp-fetch", "dist", "index.js");
+  const rel = relative(from, abs);
+  return rel.startsWith("..") ? abs : rel.split("\\").join("/");
 }
 
 export function isFreeModel(model: string): boolean {

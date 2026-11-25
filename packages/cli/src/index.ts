@@ -69,7 +69,7 @@ import { backupName, peekBackup, planBackup, restoreBackup, writeBackup } from "
 import { Cron } from "croner";
 import { Reach } from "./ui-reach.js";
 import { VERSION } from "./version.js";
-import { KINDS, SCHEDULES, cronFor, isFreeModel, renderGarufile, suggestModel, type Kind, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
+import { KINDS, SCHEDULES, cronFor, fetchServerPath, isFreeModel, renderGarufile, suggestModel, type Kind, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
 import { launchdLabel, launchdPlist, launchdPlistPath, logPath, serviceEnv, servicePath, serviceName, systemdUnit, systemdUnitPath } from "./service.js";
 
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
@@ -1318,13 +1318,6 @@ function summarize(events: Envelope[]): string {
 }
 
 /** Path to the bundled fetch server, relative to where the Garufile will be run from (the cwd). */
-function fetchServerPath(): string {
-  const here = dirname(fileURLToPath(import.meta.url)); // packages/cli/dist
-  const abs = resolve(here, "..", "..", "mcp-fetch", "dist", "index.js");
-  const rel = relative(process.cwd(), abs);
-  return rel.startsWith("..") ? abs : rel.split("\\").join("/");
-}
-
 function fail(msg: string): never {
   stderr.write(`garu: ${msg}\n`);
   process.exit(1);
