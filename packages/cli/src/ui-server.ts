@@ -8,7 +8,7 @@
  * see them".
  */
 import { createServer, type ServerResponse } from "node:http";
-import { createReadStream, existsSync, readFileSync, realpathSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, readFileSync, realpathSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
 import { basename, dirname, extname, join, normalize, relative, resolve } from "node:path";
 import { Cron } from "croner";
 import {
@@ -34,6 +34,8 @@ import {
   missingEnv,
   isRemoteServer,
   PolicyEngine,
+  assertValidCron,
+  parseGarufile,
   expandSpec,
   signInFor,
   startSignIn,
@@ -80,6 +82,7 @@ import { backupName, listBackups, planBackup, pruneBackups, writeBackup } from "
 import { doctor } from "./doctor.js";
 import { gatherFacts } from "./doctor-facts.js";
 import { desktopNotify, desktopNotifyEnabled } from "./desktop.js";
+import { KINDS, SCHEDULES, cronFor, fetchServerPath, isFreeModel, renderGarufile, suggestModel, type Kind, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
 
 export interface UiServerOptions {
   port: number;
@@ -609,6 +612,65 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
 
       if (path === "/api/events") return sse(res, clients, servedBuild(opts.staticDir));
 
+      // "New agent" on the desktop: the questions `garu new` asks, as a form. GET /api/new is what the form offers;
+      // POST /api/agents writes the Garufile (the same scaffold, the same closed policy) and schedules it.
+      if (path === "/api/new") {
+        const taken = new Set(discover().agents.map((a) => a.garufile.name));
+        return json(res, {
+          kinds: (Object.keys(KINDS) as Kind[]).map((kind) => ({ kind, label: KINDS[kind].label, suggested: KINDS[kind].names.find((n) => !taken.has(n)) ?? kind })),
+          schedules: (Object.keys(SCHEDULES) as Exclude<Schedule, { cron: string }>[]).map((key) => ({ key, cron: SCHEDULES[key].cron, label: SCHEDULES[key].label })),
+          models: suggestModel(process.env).map((m) => ({ ...m, cap: isFreeModel(m.model) || !priceFor(m.model) ? null : 0.05 })),
+          taken: [...taken].sort(),
+        });
+      }
+      if (path === "/api/agents" && req.method === "POST") {
+        if (opts.demo) return json(res, { error: t("This is the demo: it can't do that. Garu on your own computer can.") }, 403);
+        const b = (await readBody(req)) as { name?: unknown; kind?: unknown; tagline?: unknown; task?: unknown; model?: unknown; schedule?: unknown; web?: unknown; fs?: unknown; webhook?: unknown; maxCostUsd?: unknown; maxRunsPerDay?: unknown; memory?: unknown };
+        const name = typeof b.name === "string" ? b.name.trim().toLowerCase() : "";
+        if (!/^[a-z][a-z0-9-]*$/.test(name)) return json(res, { error: t("name must be lowercase letters, digits and hyphens, starting with a letter") }, 400);
+        const task = typeof b.task === "string" ? b.task.trim() : "";
+        if (!task) return json(res, { error: t("say what it should do") }, 400);
+        const model = typeof b.model === "string" ? b.model.trim() : "";
+        if (!/^[a-z0-9-]+\/.+$/.test(model)) return json(res, { error: t("model must look like provider/model-id (got \"{model}\")", { model }) }, 400);
+        const kind = typeof b.kind === "string" && b.kind in KINDS ? (b.kind as Kind) : undefined;
+        let schedule: Schedule;
+        if (typeof b.schedule === "string" && b.schedule in SCHEDULES) schedule = b.schedule as Schedule;
+        else if (b.schedule && typeof b.schedule === "object" && typeof (b.schedule as { cron?: unknown }).cron === "string") schedule = { cron: (b.schedule as { cron: string }).cron.trim() };
+        else return json(res, { error: t("schedule must be one of {keys}, or {cron}", { keys: Object.keys(SCHEDULES).join(", "), cron: '{"cron": "…"}' }) }, 400);
+        const cron = cronFor(schedule);
+        try { if (cron) assertValidCron(cron); } catch (e) { return json(res, { error: (e as Error).message }, 400); }
+        const dir = join(opts.root, "agents", name);
+        const file = join(dir, "Garufile.yaml");
+        if (existsSync(file) || discover().agents.some((a) => a.garufile.name === name)) return json(res, { error: t("There is already an agent called {name}.", { name }) }, 409);
+        const hosts = b.web && typeof b.web === "object" && Array.isArray((b.web as { hosts?: unknown }).hosts) ? ((b.web as { hosts: unknown[] }).hosts.filter((h): h is string => typeof h === "string").map((h) => h.trim()).filter(Boolean)) : null;
+        const fsIn = b.fs && typeof b.fs === "object" ? (b.fs as { path?: unknown; write?: unknown }) : null;
+        const fsPath = fsIn && typeof fsIn.path === "string" && fsIn.path.trim() ? fsIn.path.trim() : fsIn ? `./agents/${name}/workspace` : null;
+        const hook = b.webhook && typeof b.webhook === "object" && typeof (b.webhook as { envVar?: unknown }).envVar === "string" ? (b.webhook as { envVar: string }).envVar.trim() : null;
+        if (hook !== null && !/^[A-Z_][A-Z0-9_]*$/.test(hook)) return json(res, { error: t("the webhook's .env variable is UPPER_CASE letters, digits and underscores") }, 400);
+        const num = (v: unknown, whole: boolean): number | null | false => { if (v === null || v === undefined || v === "") return null; const n = Number(v); return Number.isFinite(n) && n >= (whole ? 1 : 0) && (!whole || Number.isInteger(n)) ? n : false; };
+        const maxCostUsd = isFreeModel(model) || !priceFor(model) ? null : num(b.maxCostUsd, false);
+        if (maxCostUsd === false) return json(res, { error: t("budget must be a non-negative number") }, 400);
+        const maxRunsPerDay = num(b.maxRunsPerDay, true);
+        if (maxRunsPerDay === false) return json(res, { error: t("runs a day must be a whole number") }, 400);
+        const answers: ScaffoldAnswers = {
+          name, task, model, schedule,
+          web: hosts ? { hosts } : null,
+          fs: fsPath ? { path: fsPath, write: fsIn?.write === "allow" ? "allow" : "ask" } : null,
+          webhook: hook ? { envVar: hook } : null,
+          maxCostUsd, maxRunsPerDay, memory: Boolean(b.memory), fetchServerPath: fetchServerPath(opts.root),
+          ...(kind ? { kind } : {}), ...(typeof b.tagline === "string" && b.tagline.trim() ? { tagline: b.tagline.trim() } : {}),
+        };
+        const text = renderGarufile(answers);
+        try { parseGarufile(text, file); } catch (e) { return json(res, { error: (e as Error).message }, 400); } // never write a file the kernel would reject
+        mkdirSync(dir, { recursive: true });
+        if (fsPath && fsPath.startsWith("./")) mkdirSync(resolve(opts.root, fsPath), { recursive: true });
+        writeFileSync(file, text);
+        const fresh = discover().agents.find((x) => x.garufile.name === name);
+        if (fresh && cron && scheduler) scheduler.reschedule(fresh);
+        opts.log(`✚ ${t("{agent}: made from the page ({file})", { agent: name, file: relative(opts.root, file) })}`);
+        ping();
+        return json(res, { name, file: relative(opts.root, file), cron }, 201);
+      }
       if (path === "/api/agents") {
         const { agents, problems } = discover();
         const names = new Set([...agents.map((a) => a.garufile.name), ...store.agents()]);

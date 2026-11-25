@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer } from "node:net";
 import { createServer as httpServer } from "node:http";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AUTH_REDIRECT_URL, Inbox, Recorder, readRun, suggestRules, writeParked, readParked, parseGarufile, signInFor } from "@garu/kernel";
@@ -431,6 +431,33 @@ describe("while you were away", () => {
     const none = (await (await get(`/api/since?at=${encodeURIComponent(new Date(Date.now() + 60_000).toISOString())}`)).json()) as { runs: number; failedRuns: unknown[] };
     expect(none.runs).toBe(0);
     expect(none.failedRuns).toEqual([]);
+  });
+});
+
+describe("a new agent from the page", () => {
+  it("offers the choices, writes the Garufile with a closed policy, and refuses a bad or taken name", async () => {
+    const o = (await (await get("/api/new")).json()) as { kinds: { kind: string; suggested: string }[]; schedules: { key: string }[]; models: { model: string; cap: number | null }[]; taken: string[] };
+    expect(o.kinds.find((k) => k.kind === "cat")!.suggested).toBe("mochi"); // pip is taken
+    expect(o.schedules.map((s) => s.key)).toContain("weekday-morning");
+    expect(o.models.length).toBeGreaterThan(0);
+    expect(o.taken).toContain("pip");
+    expect((await post("/api/agents", { name: "Bad Name", task: "x", model: "fake/any", schedule: "manual" })).status).toBe(400);
+    expect((await post("/api/agents", { name: "pip", task: "x", model: "fake/any", schedule: "manual" })).status).toBe(409);
+    expect((await post("/api/agents", { name: "newt", task: "x", model: "fake/any", schedule: { cron: "not a cron" } })).status).toBe(400);
+    expect((await post("/api/agents", { name: "newt", task: "x", model: "nope", schedule: "manual" })).status).toBe(400);
+    const r = await post("/api/agents", { name: "newt", kind: "frog", tagline: "hops", task: "Watches the pond. Says when it changes.", model: "ollama/qwen3:8b", schedule: "daily", web: { hosts: ["api.example.com"] }, fs: { path: "", write: "ask" }, webhook: null, maxCostUsd: null, maxRunsPerDay: 2, memory: true });
+    expect(r.status).toBe(201);
+    expect((await r.json()) as unknown).toMatchObject({ name: "newt", file: join("agents", "newt", "Garufile.yaml"), cron: "0 9 * * *" });
+    const text = readFileSync(join(root, "agents", "newt", "Garufile.yaml"), "utf8");
+    expect(text).toContain("name: newt");
+    expect(text).toContain("kind: frog");
+    expect(text).toContain("maxRunsPerDay: 2");
+    expect(text).toContain("memory: true");
+    expect(text).toMatch(/tool: "\*"\s+action: block/);
+    expect(existsSync(join(root, "agents", "newt", "workspace"))).toBe(true);
+    const agents = ((await (await get("/api/agents")).json()) as { agents: { name: string; cron: string | null; memory: boolean }[] }).agents;
+    expect(agents.find((a) => a.name === "newt")).toMatchObject({ cron: "0 9 * * *", memory: true });
+    expect(logLines.some((l) => /newt: made from the page/.test(l))).toBe(true);
   });
 });
 
