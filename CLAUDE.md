@@ -55,6 +55,7 @@ npm run garu -- <cmd>                 # the CLI from the repo (no global install
 npm run garu -- service install|status|logs|restart|uninstall   # Garu as a login service (launchd)
 npm run garu -- prune [--keep 90d] [--yes]                       # old run logs: dry run, then delete
 npm run garu -- why <agent> [run]                                # the run page's "Why it did that", in the terminal
+npm run garu -- try <agent> <server.tool> ['{"json": 1}']        # what the rules would do with a call, and which rule decides
 npm run garu -- doctor                                           # Node, .env keys, Garufiles, sign-ins, service, Tailscale, what's waiting
 npm run garu -- status                                           # Home for the terminal: each agent, next run, last run, what's waiting
 npm run garu -- backup [file] | restore <file> [--yes]           # .garu in one tgz, and back (the old .garu is moved aside)
@@ -174,6 +175,12 @@ temp path hidden); `scripts/play-shots.mjs` makes the Play and App Store cards f
   so the browser bundle takes just that file), read by the run page's panel, by `garu why`, and in one line under each
   run on the agent page (`blocked` on `RunSummary`). The dev server's page has build stamp `dev`, so the stale-page
   reload never fires against a running service.
+- New agent from the page (desktop): `GET /api/new` (faces with a free suggested name, schedules, models the keys allow, taken names),
+  `POST /api/agents` (the answers `garu new` asks for, the same `renderGarufile`, never in the demo), `ui/.../routes/NewAgent.svelte`.
+  Rules lint (`kernel/src/lint.ts`: `lintPolicy` flags a rule shadowed by an earlier one without `when` whose glob covers it, and one
+  naming a server the Garufile lacks) rides on the agent view (`policy.lint`), the rules editor, `garu doctor` and `garu try`. The
+  weekly note ends with "What stopped" (`WeeklyAgent.stopped`). `GARU_MONTHLY_BUDGET_USD`: the sweeper pushes at 80% and 100% of
+  the month once each (`checkBudget`, `.garu/budget-pings.json`); Settings shows the budget and the spend.
 - Pushes beyond asks (`cli/src/ui-server.ts`): a run that stops on its own (error, cost or turn cap, blocked) is pushed
   once a day per agent with the reason and a link to the run (`pushFailure`; days in `.garu/fail-pings.json`; never offline/busy
   runs, chat replies or the demo). `pushText` takes the path to open. "Try a call" on the agent page is
