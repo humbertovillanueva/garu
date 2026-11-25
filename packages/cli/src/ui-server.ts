@@ -8,7 +8,7 @@
  * see them".
  */
 import { createServer, type ServerResponse } from "node:http";
-import { createReadStream, existsSync, mkdirSync, readFileSync, realpathSync, renameSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
 import { basename, dirname, extname, join, normalize, relative, resolve } from "node:path";
 import { Cron } from "croner";
 import {
@@ -697,7 +697,10 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       }
       if (path === "/api/agents") {
         const { agents, problems } = discover();
-        const names = new Set([...agents.map((a) => a.garufile.name), ...store.agents()]);
+        // A retired agent keeps its runs but leaves the list; an agent whose Garufile merely broke stays, as "needs setup".
+        const retiredDir = join(opts.root, ".garu", "retired");
+        const retired = new Set(existsSync(retiredDir) ? readdirSync(retiredDir).map((d) => d.replace(/-\d{8}-\d{4}$/, "")) : []);
+        const names = new Set([...agents.map((a) => a.garufile.name), ...store.agents().filter((n) => !retired.has(n))]);
         const byName = new Map(agents.map((a) => [a.garufile.name, a]));
         return json(res, {
           agents: [...names].sort().map((n) => agentView(byName.get(n), n)),

@@ -509,6 +509,10 @@ describe("the job, the sheet and the retirement", () => {
     expect((await get("/api/runs.csv?month=nope")).status).toBe(400);
 
     expect((await post("/api/agents/nobody/retire", {})).status).toBe(404);
+    // A run of newt's, so the retirement has runs to keep: they stay on disk, and newt leaves the list all the same.
+    const rec = new Recorder({ root: join(root, ".garu", "runs"), agent: "newt" });
+    rec.record({ type: "run.start", agent: "newt", model: "fake/any", trigger: "ui" });
+    rec.record({ type: "run.end", status: "ok" });
     const gone = await post("/api/agents/newt/retire", {});
     expect(gone.status).toBe(200);
     const { movedTo } = (await gone.json()) as { movedTo: string };
@@ -517,6 +521,7 @@ describe("the job, the sheet and the retirement", () => {
     expect(existsSync(join(root, "agents", "newt"))).toBe(false);
     const names = ((await (await get("/api/agents")).json()) as { agents: { name: string }[] }).agents.map((a) => a.name);
     expect(names).not.toContain("newt");
+    expect(existsSync(join(root, ".garu", "runs", "newt"))).toBe(true);
     expect(logLines.some((l) => /newt: retired to \.garu\/retired\/newt-/.test(l))).toBe(true);
   });
 });
