@@ -969,6 +969,21 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       if (path === "/api/feed") return json(res, feed(store, inbox, Number(url.searchParams.get("limit") ?? 80)));
       if (path === "/api/cost") return json(res, store.costByDay(Number(url.searchParams.get("days") ?? 14)));
       if (path === "/api/cost/month") return json(res, store.costThisMonth());
+      // "While you were away" on Home: what happened since the page last looked, in numbers, with the runs that
+      // stopped and the asks that expired meanwhile.
+      if (path === "/api/since") {
+        const at = Date.parse(url.searchParams.get("at") ?? "");
+        if (!Number.isFinite(at)) return json(res, { error: t("at must be a time") }, 400);
+        const since = new Date(at);
+        const stats = weeklyStats(store, { inbox, agents: discover().agents.map((a) => a.garufile.name), since });
+        const sum = (k: "ok" | "failed" | "offline") => stats.agents.reduce((n, a) => n + a[k], 0);
+        const failedRuns = store.agents()
+          .flatMap((agent) => store.runs(agent).filter((r) => Date.parse(r.startedAt) >= at && !r.offline && r.status !== "ok" && r.status !== "running" && r.status !== "parked").map((r) => ({ agent, runId: r.runId, startedAt: r.startedAt, status: r.status, summary: r.summary })))
+          .sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 10);
+        const expiredAsks = inbox.all().filter((r) => r.decision && /expired/.test(r.decision.by) && Date.parse(r.decision.at) >= at).map((r) => ({ agent: r.agent, tool: r.tool, at: r.decision!.at }))
+          .sort((a, b) => b.at.localeCompare(a.at)).slice(0, 10);
+        return json(res, { since: since.toISOString(), runs: stats.runs, ok: sum("ok"), failed: sum("failed"), offline: sum("offline"), expired: stats.expired, waiting: inbox.pending().length, failedRuns, expiredAsks });
+      }
       if (path === "/api/today") {
         // An agent that fires more than four times a day is a heartbeat: its results stay in the activity list.
         const often = (cron: string) => { try { const next = new Cron(cron, { paused: true }).nextRuns(5); return next.length === 5 && next[4]!.getTime() - Date.now() < 86_400_000; } catch { return false; } };

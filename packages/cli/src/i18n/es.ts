@@ -241,6 +241,7 @@ export const es: Record<string, string> = {
   "Once a day per agent; the run's page has the whole story.": "Una vez al día por agente; la página de la ejecución tiene la historia completa.",
   "the sign-in for {server} didn't finish: {reason}": "el inicio de sesión de {server} no terminó: {reason}",
   "no such tool server": "no existe ese servidor de herramientas",
+  "at must be a time": "at debe ser una fecha y hora",
   "backup written from the page: {file} ({runs} run(s), {mb} MB before packing)": "copia escrita desde la página: {file} ({runs} ejecución(es), {mb} MB antes de empaquetar)",
   "A tool is server.tool, like gmail.create_draft.": "Una herramienta es servidor.herramienta, como gmail.create_draft.",
   "{server} doesn't sign in": "{server} no inicia sesión",

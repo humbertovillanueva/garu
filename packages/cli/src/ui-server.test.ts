@@ -414,6 +414,26 @@ describe("backups from the page", () => {
   });
 });
 
+describe("while you were away", () => {
+  it("counts what happened since a moment, with the runs that stopped and the asks that expired", async () => {
+    expect((await get("/api/since?at=nope")).status).toBe(400);
+    // A run of vault's that failed just now, written straight into the store.
+    const rec = new Recorder({ root: join(root, ".garu", "runs"), agent: "vault" });
+    rec.record({ type: "run.start", agent: "vault", model: "fake/any", trigger: "cron" });
+    rec.record({ type: "error", message: "the tool server went away" });
+    rec.record({ type: "run.end", status: "error", summary: "the tool server went away" });
+    const r = (await (await get(`/api/since?at=${encodeURIComponent(new Date(Date.now() - 86_400_000).toISOString())}`)).json()) as { runs: number; failed: number; failedRuns: { agent: string; runId: string; status: string; summary: string | null }[]; expiredAsks: unknown[]; waiting: number };
+    expect(r.runs).toBeGreaterThan(0);
+    expect(r.failed).toBeGreaterThan(0);
+    expect(r.failedRuns.some((x) => x.agent === "vault" && x.status === "error" && x.summary === "the tool server went away")).toBe(true);
+    expect(Array.isArray(r.expiredAsks)).toBe(true);
+    expect(typeof r.waiting).toBe("number");
+    const none = (await (await get(`/api/since?at=${encodeURIComponent(new Date(Date.now() + 60_000).toISOString())}`)).json()) as { runs: number; failedRuns: unknown[] };
+    expect(none.runs).toBe(0);
+    expect(none.failedRuns).toEqual([]);
+  });
+});
+
 describe("the notebook", () => {
   it("the owner reads, adds and drops notes from the agent's page; a bad name or an empty note is refused", async () => {
     expect((await get("/api/agents/..%2Fx/memory")).status).toBe(400);
