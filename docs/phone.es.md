@@ -44,7 +44,7 @@ Desliza una tarjeta a la derecha para aprobar y a la izquierda para rechazar, m�
 
 ## Notificaciones
 
-La app del teléfono muestra lo que está esperando cuando la abres. Para recibir un aviso push cuando un agente se pausa, ejecuta la sala de control con `GARU_NOTIFY_URL=https://ntfy.sh/<your-topic>` en `.env` (o `--notify`) y suscríbete a ese tema en la app de [ntfy](https://ntfy.sh). Cada notificación enlaza de vuelta a la sala de control, así que de la pantalla de bloqueo a la tarjeta de revisión hay un solo toque.
+La app del teléfono muestra lo que está esperando cuando la abres. Para recibir un aviso push cuando un agente se pausa, ejecuta la sala de control con `GARU_NOTIFY_URL=https://ntfy.sh/<your-topic>` en `.env` (o `--notify`) y suscríbete a ese tema en la app de [ntfy](https://ntfy.sh). Cada notificación enlaza de vuelta a la sala de control, así que de la pantalla de bloqueo a la tarjeta de revisión hay un solo toque. El mismo tema avisa cuando una ejecución se detiene sola (un error, un tope de costo o de turnos), una vez al día por agente con el motivo y un enlace a la ejecución; cuando un inicio de sesión de Google está por terminar; y cuando tu teléfono ya no alcanza a tu computadora.
 
 ## Sin Tailscale
 

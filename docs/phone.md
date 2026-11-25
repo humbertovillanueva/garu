@@ -44,7 +44,7 @@ Swipe a review card right to approve and left to decline, past a third of its wi
 
 ## Notifications
 
-The phone app shows what is waiting when you open it. For a push when an agent pauses, run the control room with `GARU_NOTIFY_URL=https://ntfy.sh/<your-topic>` in `.env` (or `--notify`) and subscribe to the topic in the [ntfy](https://ntfy.sh) app. Each notification links back to the control room, so it's one tap from the lock screen to the review card. The push says which agent wants which tool and why; the arguments (an email's body, a file's content) never leave your computer.
+The phone app shows what is waiting when you open it. For a push when an agent pauses, run the control room with `GARU_NOTIFY_URL=https://ntfy.sh/<your-topic>` in `.env` (or `--notify`) and subscribe to the topic in the [ntfy](https://ntfy.sh) app. Each notification links back to the control room, so it's one tap from the lock screen to the review card. The push says which agent wants which tool and why; the arguments (an email's body, a file's content) never leave your computer. The same topic hears when a run stops on its own (an error, a cost or turn cap), once a day per agent with the reason and a link to the run; when a Google sign-in is about to end; and when your phone can't reach your computer any more.
 
 ## Without Tailscale
 
