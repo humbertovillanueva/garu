@@ -382,6 +382,19 @@ describe("sign in again from the page", () => {
   });
 });
 
+describe("try a call", () => {
+  it("answers with the policy's decision and the rule that made it, without a run", async () => {
+    const tryIt = async (agent: string, tool: unknown, args?: unknown) => { const r = await post(`/api/agents/${agent}/policy/try`, { tool, args }); return { status: r.status, body: (await r.json()) as { action?: string; ruleIndex?: number; matched?: string; reason?: string; error?: string } }; };
+    // vault keeps pip's rules untouched (other tests edit pip's).
+    expect((await tryIt("vault", "fs.write_file", { path: "notes.md" })).body).toMatchObject({ action: "ask", ruleIndex: 0, matched: "fs.write_file", reason: "writing" });
+    expect((await tryIt("vault", "fs.read_file")).body).toMatchObject({ action: "block", ruleIndex: 1, matched: "*" });
+    expect((await tryIt("gog", "calendar.list_events")).body).toMatchObject({ action: "block", ruleIndex: 0, matched: "*" });
+    expect((await tryIt("pip", "fs")).status).toBe(400);
+    expect((await tryIt("pip", 7)).status).toBe(400);
+    expect((await tryIt("nobody", "fs.read_file")).status).toBe(404);
+  });
+});
+
 describe("the notebook", () => {
   it("the owner reads, adds and drops notes from the agent's page; a bad name or an empty note is refused", async () => {
     expect((await get("/api/agents/..%2Fx/memory")).status).toBe(400);

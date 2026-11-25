@@ -33,6 +33,7 @@ import {
   type RunResult,
   missingEnv,
   isRemoteServer,
+  PolicyEngine,
   expandSpec,
   signInFor,
   startSignIn,
@@ -712,6 +713,23 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       }
 
       // The policy, edited from the agent's page: each change by position, written with the file's comments kept.
+      // "Try a call" on the agent's page: the policy's own answer for a tool and arguments, without running
+      // the agent. Read-only, so the demo answers too.
+      const tryM = /^\/api\/agents\/([^/]+)\/policy\/try$/.exec(path);
+      if (tryM && req.method === "POST") {
+        const name = decodeURIComponent(tryM[1]!);
+        if (!/^[a-z][a-z0-9-]*$/.test(name)) return json(res, { error: t("bad agent name") }, 400);
+        const a = discover().agents.find((x) => x.garufile.name === name);
+        if (!a) return json(res, { error: t("no such agent") }, 404);
+        const body = (await readBody(req)) as { tool?: unknown; args?: unknown };
+        const qualified = typeof body.tool === "string" ? body.tool.trim() : "";
+        const dot = qualified.indexOf(".");
+        if (dot <= 0 || dot === qualified.length - 1) return json(res, { error: t("A tool is server.tool, like gmail.create_draft.") }, 400);
+        const args = body.args && typeof body.args === "object" && !Array.isArray(body.args) ? (body.args as Record<string, unknown>) : {};
+        const d = new PolicyEngine(a.garufile.policy).decide({ server: qualified.slice(0, dot), tool: qualified.slice(dot + 1), args });
+        return json(res, { tool: qualified, action: d.action, ruleIndex: d.ruleIndex, matched: d.matched, reason: d.reason });
+      }
+
       const polM = /^\/api\/agents\/([^/]+)\/policy$/.exec(path);
       if (polM && req.method === "POST") {
         if (opts.demo) return json(res, { error: t("This is the demo: it can't do that. Garu on your own computer can.") }, 403);

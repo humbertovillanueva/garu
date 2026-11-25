@@ -241,6 +241,7 @@ export const es: Record<string, string> = {
   "Once a day per agent; the run's page has the whole story.": "Una vez al día por agente; la página de la ejecución tiene la historia completa.",
   "the sign-in for {server} didn't finish: {reason}": "el inicio de sesión de {server} no terminó: {reason}",
   "no such tool server": "no existe ese servidor de herramientas",
+  "A tool is server.tool, like gmail.create_draft.": "Una herramienta es servidor.herramienta, como gmail.create_draft.",
   "{server} doesn't sign in": "{server} no inicia sesión",
   "A sign-in is already waiting for a browser (port {port}). Finish or close that tab first.": "Ya hay un inicio de sesión esperando a un navegador (puerto {port}). Termina o cierra esa pestaña primero.",
   "{agent}: signing in to {server} in the browser": "{agent}: iniciando sesión en {server} en el navegador",
