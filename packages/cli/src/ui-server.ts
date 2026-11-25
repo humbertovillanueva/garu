@@ -347,10 +347,32 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
       }
     }).catch(() => {});
   };
+  // A budget for the month (GARU_MONTHLY_BUDGET_USD): the phone hears at 80% and at 100%, once each per month.
+  // The month and the levels already pushed live in a file, so a restart doesn't ring twice.
+  const budgetPingsPath = join(opts.root, ".garu", "budget-pings.json");
+  const monthlyBudget = () => { const n = Number(process.env["GARU_MONTHLY_BUDGET_USD"] ?? ""); return Number.isFinite(n) && n > 0 ? n : null; };
+  const checkBudget = () => {
+    const budget = monthlyBudget();
+    if (!budget || !opts.notify || opts.demo) return;
+    const m = store.costThisMonth();
+    let sent: { month: string; levels: number[] } = { month: m.month, levels: [] };
+    try { const r = JSON.parse(readFileSync(budgetPingsPath, "utf8")) as { month: string; levels: number[] }; if (r.month === m.month) sent = r; } catch { /* none yet */ }
+    const due = [80, 100].filter((level) => m.spentUsd >= (budget * level) / 100 && !sent.levels.includes(level));
+    if (!due.length) return;
+    sent.levels.push(...due);
+    try { writeFileSync(budgetPingsPath, JSON.stringify(sent) + "\n"); } catch { /* best effort */ }
+    const level = Math.max(...due);
+    const body = level >= 100
+      ? t("{spent} spent this month, past the {budget} budget. The agents keep running; lower their caps or pause them from their pages.", { spent: formatUsd(m.spentUsd), budget: formatUsd(budget) })
+      : t("{spent} spent this month, 80% of the {budget} budget; {projected} by the end at this pace.", { spent: formatUsd(m.spentUsd), budget: formatUsd(budget), projected: formatUsd(m.projectedUsd) });
+    opts.log(`💸 ${body}`);
+    void addresses().then((addr) => pushText(opts.notify!, level >= 100 ? "Garu: over this month's budget" : "Garu: 80% of this month's budget", body, addr[0]?.url, "moneybag", "/#/cost")).catch(() => {});
+  };
   const checkParked = () => {
     if (opts.demo) return;
     for (const r of inbox.expireOverdue()) opts.log(`✖ ${r.agent}: nobody answered about ${r.tool} in time (${r.id}); declined`);
     checkSignIns();
+    checkBudget();
     void checkReach().catch(() => {});
     if (opts.notify) {
       const soon = Date.now() + LAST_CALL_MS;
@@ -1120,6 +1142,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           backupDir,
           backups: backupsList(),
           weekly: Boolean(opts.weeklyUrl),
+          monthlyBudgetUsd: monthlyBudget(),
+          monthSpentUsd: store.costThisMonth().spentUsd,
           login: { required: requireLogin, direct: isDirectLoopback(req), tokenPath: opts.tokenPath },
         });
       }

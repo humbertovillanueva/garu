@@ -73,6 +73,7 @@ export async function gatherFacts(root: string, port: number): Promise<DoctorFac
       { name: "GARU_USER", set: Boolean(process.env["GARU_USER"]), does: t("names you in the greeting and the decisions") },
       { name: "GARU_NOTIFY_URL", set: Boolean(process.env["GARU_NOTIFY_URL"]), does: t("pushes asks to the phone through ntfy") },
       { name: "GARU_WEEKLY_WEBHOOK_URL", set: Boolean(process.env["GARU_WEEKLY_WEBHOOK_URL"]), does: t("posts the week in numbers on Sunday evening") },
+      { name: "GARU_MONTHLY_BUDGET_USD", set: Boolean(process.env["GARU_MONTHLY_BUDGET_USD"]), does: t("pushes at 80% and 100% of the month's budget") },
     ],
     agents: agents.map((a) => a.garufile.name),
     problems,

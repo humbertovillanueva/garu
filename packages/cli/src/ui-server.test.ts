@@ -461,6 +461,33 @@ describe("a new agent from the page", () => {
   });
 });
 
+describe("the month's budget", () => {
+  it("pushes once at 80% and once past 100%, with the amounts", async () => {
+    process.env["GARU_MONTHLY_BUDGET_USD"] = "0.5";
+    const spend = (id: string, usd: number) => { const rec = new Recorder({ root: join(root, ".garu", "runs"), agent: "vault" }); rec.record({ type: "run.start", agent: "vault", model: "fake/any", trigger: "cron" }); rec.record({ type: "run.end", status: "ok", costUsd: usd, priced: true }); return id; };
+    const mine = () => pings.filter((p) => /this month's budget/.test(p.title));
+    try {
+      spend("b1", 0.42);
+      pending("fs.write_file", { path: "budget-1.md", content: "x" }, "pip"); // a decision sweeps
+      for (let i = 0; i < 100 && mine().length === 0; i++) await new Promise((r) => setTimeout(r, 50));
+      expect(mine().length).toBe(1);
+      expect(mine()[0]!.title).toBe("Garu: 80% of this month's budget");
+      expect(mine()[0]!.body).toMatch(/^\$0\.42\d? spent this month, 80% of the \$0\.50\d? budget/);
+      pending("fs.write_file", { path: "budget-2.md", content: "x" }, "pip");
+      await new Promise((r) => setTimeout(r, 400));
+      expect(mine().length).toBe(1);
+      spend("b2", 0.1);
+      pending("fs.write_file", { path: "budget-3.md", content: "x" }, "pip");
+      for (let i = 0; i < 100 && mine().length < 2; i++) await new Promise((r) => setTimeout(r, 50));
+      expect(mine().length).toBe(2);
+      expect(mine()[1]!.title).toBe("Garu: over this month's budget");
+      expect(JSON.parse(readFileSync(join(root, ".garu", "budget-pings.json"), "utf8"))).toMatchObject({ levels: [80, 100] });
+    } finally {
+      delete process.env["GARU_MONTHLY_BUDGET_USD"];
+    }
+  }, 15_000);
+});
+
 describe("the notebook", () => {
   it("the owner reads, adds and drops notes from the agent's page; a bad name or an empty note is refused", async () => {
     expect((await get("/api/agents/..%2Fx/memory")).status).toBe(400);
