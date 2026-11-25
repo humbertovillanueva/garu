@@ -174,6 +174,13 @@ temp path hidden); `scripts/play-shots.mjs` makes the Play and App Store cards f
   so the browser bundle takes just that file), read by the run page's panel, by `garu why`, and in one line under each
   run on the agent page (`blocked` on `RunSummary`). The dev server's page has build stamp `dev`, so the stale-page
   reload never fires against a running service.
+- Pushes beyond asks (`cli/src/ui-server.ts`): a run that stops on its own (error, cost or turn cap, blocked) is pushed
+  once a day per agent with the reason and a link to the run (`pushFailure`; days in `.garu/fail-pings.json`; never offline/busy
+  runs, chat replies or the demo). `pushText` takes the path to open. "Try a call" on the agent page is
+  `POST /api/agents/<agent>/policy/try {tool, args}` straight over `PolicyEngine.decide` (read-only, demo too). Backups from
+  Settings: `POST /api/backups` packs .garu into the --backup-dir or `.garu-backups/`, `GET /api/backups/<name>` downloads one;
+  restore stays in the terminal. Home's "While you were away": the device keeps `lastLook` in prefs and after six hours asks
+  `GET /api/since?at=` (`weeklyStats` with `since`) for the runs that stopped and the asks that expired.
 - Desktop notifications (`cli/src/desktop.ts`): an ask shows a macOS notification (osascript; notify-send on Linux) beside the phone
   push, never in the demo; `GARU_DESKTOP_NOTIFY=0` turns it off.
 - Reach (`cli/src/ui-reach.ts`): the control room keeps the Tailscale address it was last served on in `.garu/reach.json`;
