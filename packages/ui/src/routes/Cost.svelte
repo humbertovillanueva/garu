@@ -7,6 +7,7 @@
   import Skeleton from "../lib/components/Skeleton.svelte";
   import Empty from "../lib/components/Empty.svelte";
   import type { CostRow } from "../lib/types";
+  import { isApp } from "../lib/server.svelte";
   import { t, dateLocale } from "../lib/i18n.svelte";
 
   let rows = $state<CostRow[] | null>(null);
@@ -86,9 +87,20 @@
       <div class="panel rise p-4">
         <h2 class="label mb-2">{t("This month")}</h2>
         <p class="text-[14px]">{t("{spent} so far in {days} days; at this pace, {projected} by the end of the month.", { spent: usd(month.spentUsd), days: month.daysGone, projected: usd(month.projectedUsd) })}{#if !month.priced} <span class="text-mute">{t("Some runs were on an unpriced model and don't count.")}</span>{/if}</p>
+        {#if month.budgetUsd}
+          {@const pct = Math.min(100, (month.spentUsd / month.budgetUsd) * 100)}
+          <div class="mt-3" role="meter" aria-valuemin="0" aria-valuemax={month.budgetUsd} aria-valuenow={month.spentUsd} aria-label={t("Spend against the month's budget")}>
+            <div class="relative h-2 overflow-hidden rounded-full bg-panel-3">
+              <div class="h-full rounded-full" style="width: {pct}%; background: {pct >= 100 ? 'var(--color-bad)' : pct >= 80 ? 'var(--color-ask)' : 'var(--color-ok)'}"></div>
+              <div class="absolute inset-y-0 w-px bg-line-2" style="left: 80%"></div>
+            </div>
+            <p class="mt-1 text-[12.5px] text-fg-2">{t("{spent} of the {budget} budget ({pct}%); the phone hears at 80% and at 100%.", { spent: usd(month.spentUsd), budget: usd(month.budgetUsd), pct: Math.round((month.spentUsd / month.budgetUsd) * 100) })}</p>
+          </div>
+        {/if}
         <ul class="mt-2 space-y-1 text-[13px] text-fg-2">
           {#each month.byModel as m (m.model)}<li class="flex items-baseline gap-3"><span class="mono min-w-0 flex-1 truncate">{m.model}</span><span class="tabular-nums">{usd(m.costUsd)}</span><span class="text-mute tabular-nums">{m.runs === 1 ? t("1 run") : t("{n} runs", { n: m.runs })}</span></li>{/each}
         </ul>
+        {#if !isApp}<a class="mt-3 inline-block text-[12.5px] underline decoration-mute underline-offset-2 hover:text-fg" href={"/api/runs.csv?month=" + month.month} download>{t("Download this month's runs as a spreadsheet (CSV)")}</a>{/if}
       </div>
     {/if}
     <p class="text-[12.5px] text-mute">{t("Estimated from real token counts at list price. Free tiers and local models bill $0; the estimate still shows what it would cost.")}</p>
