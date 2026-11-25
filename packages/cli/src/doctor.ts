@@ -31,6 +31,8 @@ export interface DoctorFacts {
   pending: { agent: string; tool: string; expiresAt: string }[];
   /** Runs parked for an answer. */
   parked: number;
+  /** Policy rules that can't mean anything: shadowed by an earlier rule (`by`), or naming a server the Garufile doesn't have. */
+  rules?: { agent: string; source: string; index: number; tool: string; by?: { index: number; tool: string }; server?: string }[];
   /** The control room's build stamp on disk, and the one the running control room serves (null when it isn't answering). */
   build?: { onDisk: string | null; served: string | null };
   now?: Date;
@@ -58,6 +60,10 @@ export function doctor(f: DoctorFacts): Check[] {
   else if (f.keys.length) say("ok", t("every key the agents reference is set in .env ({list})", { list: f.keys.map((k) => k.name).join(", ") }));
   for (const o of f.optional) say(o.set ? "ok" : "warn", o.set ? t("{name} is set: {does}", { name: o.name, does: o.does }) : t("{name} is not set: {does}", { name: o.name, does: o.does }));
 
+  for (const r of f.rules ?? []) {
+    if (r.by) say("warn", t("{agent}: rule {n} ({tool}) never wins; rule {m} ({other}) above it matches first ({file})", { agent: r.agent, n: r.index + 1, tool: r.tool, m: r.by.index + 1, other: r.by.tool, file: r.source }));
+    else if (r.server) say("warn", t("{agent}: rule {n} ({tool}) names {server}, a tool server not in {file}, so it never matches", { agent: r.agent, n: r.index + 1, tool: r.tool, server: r.server, file: r.source }));
+  }
   for (const s of f.signIns) {
     if (!s.at) { say("bad", t("{agent}'s {server} is not signed in; run: {command}", { agent: s.agent, server: s.server, command: `garu auth ${s.source} ${s.server}` })); continue; }
     const days = Math.floor((now.getTime() - s.at.getTime()) / 86_400_000);

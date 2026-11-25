@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { join, resolve } from "node:path";
-import { Inbox, discoverGarufiles, isRemoteServer, listParked, localTime, missingEnv, signInFor } from "@garu/kernel";
+import { Inbox, discoverGarufiles, isRemoteServer, lintPolicy, listParked, localTime, missingEnv, signInFor } from "@garu/kernel";
 import type { DoctorFacts } from "./doctor.js";
 import { t } from "./i18n.js";
 import { launchdLabel, launchdPlistPath, serviceName, systemdUnitPath } from "./service.js";
@@ -76,6 +76,7 @@ export async function gatherFacts(root: string, port: number): Promise<DoctorFac
     ],
     agents: agents.map((a) => a.garufile.name),
     problems,
+    rules: agents.flatMap((a) => lintPolicy(a.garufile.policy, a.garufile.tools.map((tl) => tl.name)).map((l) => ({ agent: a.garufile.name, source: a.source, index: l.index, tool: a.garufile.policy[l.index]!.tool, ...(l.by !== undefined ? { by: { index: l.by, tool: a.garufile.policy[l.by]!.tool } } : {}), ...(l.server ? { server: l.server } : {}) }))),
     signIns: agents.flatMap((a) => a.garufile.tools.filter((tl) => tl.auth === "oauth").map((tl) => ({ agent: a.garufile.name, source: a.source, server: tl.name, at: signInFor(tl, authRoot).signedInAt() ?? null, google: /^https:\/\/accounts\.google\.com/.test(tl.oauth?.issuer ?? "") }))),
     service: installed === null ? null : { installed, running: installed && (await serviceRunning(root)) },
     tailscale: await tailscaleAddresses(port),

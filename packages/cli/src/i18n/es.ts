@@ -241,6 +241,8 @@ export const es: Record<string, string> = {
   "Once a day per agent; the run's page has the whole story.": "Una vez al día por agente; la página de la ejecución tiene la historia completa.",
   "the sign-in for {server} didn't finish: {reason}": "el inicio de sesión de {server} no terminó: {reason}",
   "no such tool server": "no existe ese servidor de herramientas",
+  "{agent}: rule {n} ({tool}) never wins; rule {m} ({other}) above it matches first ({file})": "{agent}: la regla {n} ({tool}) nunca gana; la regla {m} ({other}) de arriba coincide primero ({file})",
+  "{agent}: rule {n} ({tool}) names {server}, a tool server not in {file}, so it never matches": "{agent}: la regla {n} ({tool}) nombra {server}, un servidor de herramientas que no está en {file}, así que nunca coincide",
   "say what it should do": "di qué debe hacer",
   "schedule must be one of {keys}, or {cron}": "el horario debe ser uno de {keys}, o {cron}",
   "There is already an agent called {name}.": "Ya hay un agente llamado {name}.",

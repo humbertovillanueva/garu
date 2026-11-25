@@ -10,6 +10,17 @@ const fine: DoctorFacts = {
 };
 
 describe("garu doctor", () => {
+  it("says which rules can never mean anything", () => {
+    const checks = doctor({ ...fine, rules: [
+      { agent: "bea", source: "agents/bea/Garufile.yaml", index: 4, tool: "gmail.send", by: { index: 3, tool: "*" } },
+      { agent: "bea", source: "agents/bea/Garufile.yaml", index: 5, tool: "slack.post", server: "slack" },
+    ] });
+    expect(checks.filter((c) => c.verdict === "warn").map((c) => c.text)).toEqual([
+      "bea: rule 5 (gmail.send) never wins; rule 4 (*) above it matches first (agents/bea/Garufile.yaml)",
+      "bea: rule 6 (slack.post) names slack, a tool server not in agents/bea/Garufile.yaml, so it never matches",
+    ]);
+  });
+
   it("a healthy computer gets only ticks", () => {
     const checks = doctor(fine);
     expect(checks.every((c) => c.verdict === "ok")).toBe(true);
