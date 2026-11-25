@@ -95,6 +95,8 @@ export const api = {
   /** Start the browser sign-in for one of the agent's tool servers; the page opens the address in a tab. */
   signIn: (agent: string, server: string) => post<{ url: string }>(`/api/agents/${encodeURIComponent(agent)}/signin`, { server }),
   settings: () => get<import("./types").Settings>("/api/settings"),
+  /** A backup of .garu now, into the backups folder; answers with the newest list. */
+  makeBackup: () => post<{ name: string; at: string; bytes: number; backups: import("./types").Settings["backups"] }>("/api/backups"),
   /** What the policy would do with one call: the decision and the rule that made it. */
   tryPolicy: (agent: string, tool: string, args: Record<string, unknown>) => post<{ tool: string; action: "allow" | "ask" | "block"; ruleIndex: number; matched: string; reason: string }>(`/api/agents/${encodeURIComponent(agent)}/policy/try`, { tool, args }),
   editPolicy: (agent: string, edits: import("./types").PolicyEdit[]) => post<import("./types").Agent>(`/api/agents/${encodeURIComponent(agent)}/policy`, { edits }),

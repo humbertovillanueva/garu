@@ -8,7 +8,7 @@
   import QRCode from "qrcode";
   import { build, forget, isApp, markIntroSeen, server } from "../lib/server.svelte";
   import { prefs, setPref } from "../lib/prefs.svelte";
-  import { buildText } from "../lib/format";
+  import { buildText, humanTime } from "../lib/format";
   import { latest } from "../lib/whatsnew";
   import { haptic } from "../lib/native";
   import { appPairLink } from "../lib/pairlink";
@@ -21,6 +21,15 @@
   let confirmRotate = $state(false);
 
   let s = $state<Settings | null>(null);
+  // "Make a backup now": .garu in one file, into the backups folder; the list below refreshes with it.
+  let backingUp = $state(false);
+  let backupNote = $state("");
+  async function makeBackup() {
+    backingUp = true; backupNote = "";
+    try { const r = await api.makeBackup(); if (s) s = { ...s, backups: r.backups }; backupNote = t("Written: {name}", { name: r.name }); haptic("light"); }
+    catch (e) { backupNote = errorText(e); }
+    finally { backingUp = false; }
+  }
   let error = $state<string | null>(null);
   const load = loader();
   $effect(() => { live.tick; load(api.settings(), (v) => { s = v; error = null; }, (m) => (error = m)); });
@@ -270,7 +279,19 @@
             <dt class="text-mute">{t("While it waits")}</dt><dd>{t("the run parks after {min} min and picks up when you answer", { min: s.askHoldMin })}</dd>
             <dt class="text-mute">{t("Push")}</dt><dd>{s.notify ? t("on (ntfy)") : t("off")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">GARU_NOTIFY_URL</span></span>{/if}</dd>
             <dt class="text-mute">{t("Weekly note")}</dt><dd>{s.weekly ? t("Sundays at 6 PM, to your channel") : t("off")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">GARU_WEEKLY_WEBHOOK_URL</span></span>{/if} · <button class="tap underline decoration-mute underline-offset-2 hover:text-fg" onclick={previewWeekly}>{weekly === null ? t("preview this week's") : t("hide")}</button></dd>
-            <dt class="text-mute">{t("Backups")}</dt><dd>{s.backup ? t("one a day, kept {d} days", { d: s.backup.days }) : t("none")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--backup</span></span>{/if}</dd>
+            <dt class="text-mute">{t("Backups")}</dt><dd>{s.backup ? t("one a day, kept {d} days", { d: s.backup.days }) : t("none")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--backup</span></span>{/if}
+              {#if !live.demo}
+                <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px]">
+                  <button class="btn py-0.5 text-[12.5px]" disabled={backingUp} onclick={makeBackup}>{backingUp ? t("Packing…") : t("Make a backup now")}</button>
+                  {#if backupNote}<span class="text-mute">{backupNote}</span>{/if}
+                </div>
+                {#if s.backups.length}
+                  <ul class="mt-1 space-y-0.5 text-[12.5px] text-mute">
+                    {#each s.backups as b (b.name)}<li class="flex flex-wrap gap-x-2"><span>{humanTime(b.at)}</span><span>· {(b.bytes / 1_048_576).toFixed(1)} MB</span>{#if !isApp}<a class="underline decoration-mute underline-offset-2 hover:text-fg" href={"/api/backups/" + b.name} download>{t("Download")}</a>{/if}</li>{/each}
+                  </ul>
+                {/if}
+              {/if}
+            </dd>
             <dt class="text-mute">{t("Old runs")}</dt><dd>{s.pruneDays ? t("deleted after {d} days", { d: s.pruneDays }) : t("kept forever")}{#if !isApp}<span class="text-mute">&nbsp;· <span class="mono">--prune</span></span>{/if}</dd>
             <dt class="text-mute">{t("Folder")}</dt><dd class="mono break-all">{shortRoot(s.root)}</dd>
           </dl>

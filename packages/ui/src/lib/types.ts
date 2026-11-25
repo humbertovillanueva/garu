@@ -234,6 +234,9 @@ export interface Settings {
   /** Run logs older than this many days are deleted once a day; null keeps everything. */
   pruneDays: number | null;
   backup: { days: number; dir: string } | null;
+  /** Where backups go; the newest five, for the Settings page. */
+  backupDir: string;
+  backups: { name: string; at: string; bytes: number }[];
   /** The week in numbers goes to a channel on Sunday evening. */
   weekly: boolean;
   /** required: even this computer signs in. direct: this request came from a browser on the same computer. */
