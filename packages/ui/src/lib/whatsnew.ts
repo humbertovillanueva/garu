@@ -16,6 +16,18 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    id: "build-6",
+    version: "0.1.0 (6)",
+    lines: () => [
+      t("Open Garu after a few hours away and Home starts with what happened meanwhile: the runs that stopped and the asks that expired."),
+      t("The phone hears when a run stops on its own: once a day per agent, with the reason and a link to the run."),
+      t("A budget for the month on your computer, and the phone hears at 80% and at 100%."),
+      t("A Google sign-in about to end renews with one button on your computer; the phone says when."),
+      t("An agent's page says which of its rules can never win, and tries a call against the rules without running it."),
+      t("Settings makes a backup of everything on the spot."),
+    ],
+  },
+  {
     id: "build-5",
     version: "0.1.0 (5)",
     lines: () => [
