@@ -256,7 +256,7 @@ Spanish screenshots; the opt-in link is https://play.google.com/apps/testing/io.
 twelve family testers have been opted in since 2026-10-16. The first production application (2026-10-31)
 was answered on 2026-11-01: "more testing required", testers not engaged, no feedback-and-update cycle. The
 clock restarted that day: keep at least twelve testers opted in without a gap, and "Apply for production"
-opens again on **2026-11-15**. Until then: collect one piece of feedback per tester (WhatsApp), ship build 5
+opens again on **2026-11-15**. Until then: collect one piece of feedback per tester (WhatsApp), ship build 6 (versionCode 6, prepared 2026-11-25; build 5 never went up)
 to the closed track with a change that came from it, and rewrite the answers with what really happened.
 The verdict, the plan and the answers as sent are in `docs/launch/play-store.md` ("Applying for
 production"). Also due, by 2027-02-01: declare non-trader status in the Play Console (Manage account →

@@ -344,9 +344,9 @@ them is `testers.md`)
 A reply that led to no change still gets its row, with "no change: …" and why, so the count of replies
 is honest and the reasoning is on record.
 
-## Build 5 (prepared 2026-11-12, not uploaded)
+## Build 6 (prepared 2026-11-25, not uploaded; build 5 never was, so this one carries both)
 
-versionCode 5, versionName 0.1.0, signed bundle at
+versionCode 6, versionName 0.1.0, signed bundle at
 `packages/app/android/app/build/outputs/bundle/release/app-release.aab`. What testers get that build 4
 did not: each agent's notebook ("What it remembers", with notes you can add or drop); "Done for today"
 once an agent reaches its runs-a-day cap; a run's timeline shows when the computer was asleep, when a
@@ -358,6 +358,10 @@ an answer says how long it waited apart from its own work.
 Added 2026-11-17: swipe a card to decide, edit a draft before approving, the asks waiting on the app's icon,
 the faces move (and an agent at work breathes, one waiting on you knocks), two openers above the message
 box, the rules editable from the agent's page on the desktop, and `openai/` models.
+Added 2026-11-25 (build 6): Home opens with "while you were away" after six hours; the phone hears when a run
+stops on its own, at 80% and 100% of the month's budget, and when a Google sign-in is about to end (renewed with
+a button on the computer); an agent's page names the rules that can never win and tries a call against the
+rules; Settings makes a backup on the spot.
 
 The app also opens on a "What's new in this version" card the first time after the update (Home, until
 "Got it"; again from Settings), listing the same changes in the phone's language: the reviewer's
