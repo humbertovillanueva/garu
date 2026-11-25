@@ -395,6 +395,25 @@ describe("try a call", () => {
   });
 });
 
+describe("backups from the page", () => {
+  it("makes one now, lists it in the settings, and hands it back as a download", async () => {
+    const r = await post("/api/backups", {});
+    expect(r.status).toBe(201);
+    const made = (await r.json()) as { name: string; bytes: number; backups: { name: string }[] };
+    expect(made.name).toMatch(/^garu-backup-\d{4}-\d{2}-\d{2}-\d{4}\.tgz$/);
+    expect(made.backups[0]!.name).toBe(made.name);
+    const settings = (await (await get("/api/settings")).json()) as { backups: { name: string; bytes: number }[]; backupDir: string };
+    expect(settings.backups.some((b) => b.name === made.name)).toBe(true);
+    expect(settings.backupDir).toBe(join(root, ".garu-backups"));
+    const dl = await get(`/api/backups/${made.name}`);
+    expect(dl.status).toBe(200);
+    expect(dl.headers.get("content-type")).toBe("application/gzip");
+    expect((await dl.arrayBuffer()).byteLength).toBe(made.bytes);
+    expect((await get("/api/backups/garu-backup-2000-01-01-0000.tgz")).status).toBe(404);
+    expect((await get("/api/backups/notes.md")).status).toBe(404);
+  });
+});
+
 describe("the notebook", () => {
   it("the owner reads, adds and drops notes from the agent's page; a bad name or an empty note is refused", async () => {
     expect((await get("/api/agents/..%2Fx/memory")).status).toBe(400);

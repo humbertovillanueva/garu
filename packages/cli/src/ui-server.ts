@@ -8,7 +8,7 @@
  * see them".
  */
 import { createServer, type ServerResponse } from "node:http";
-import { existsSync, readFileSync, realpathSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
+import { createReadStream, existsSync, readFileSync, realpathSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
 import { basename, dirname, extname, join, normalize, relative, resolve } from "node:path";
 import { Cron } from "croner";
 import {
@@ -443,6 +443,9 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
   pruneTicker?.unref();
 
   // A backup a day, into a folder beside .garu (or wherever --backup-dir points: a synced folder is the point), older ones pruned; never in the demo.
+  // Where backups go: the --backup-dir, or .garu-backups beside .garu for the ones made from the page.
+  const backupDir = opts.backupDir ?? join(opts.root, ".garu-backups");
+  const backupsList = () => listBackups(backupDir).slice(0, 5).map((b) => ({ name: basename(b.file), at: b.at.toISOString(), bytes: statSync(b.file).size }));
   const backup = async () => {
     if (!opts.backupMs || !opts.backupDir || opts.demo) return;
     try {
@@ -990,6 +993,25 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
         // The Sunday note as it would post this minute: the owner sees it before the channel does.
         return json(res, { text: weeklyText(weeklyStats(store, { memory, inbox, agents: discover().agents.map((a) => a.garufile.name) })), posts: Boolean(opts.weeklyUrl) && !opts.demo });
       }
+      // Backups from the page: make one now (the list is in /api/settings) and download one. A browser on
+      // this computer, or a signed-in one, gets the file; the demo makes none.
+      if (path === "/api/backups" && req.method === "POST") {
+        if (opts.demo) return json(res, { error: t("This is the demo: it can't do that. Garu on your own computer can.") }, 403);
+        let plan;
+        try { plan = planBackup(opts.root); } catch (e) { return json(res, { error: (e as Error).message }, 400); }
+        const file = join(backupDir, backupName());
+        await writeBackup(plan, file);
+        opts.log(`💾 ${t("backup written from the page: {file} ({runs} run(s), {mb} MB before packing)", { file, runs: plan.runs, mb: (plan.bytes / 1_048_576).toFixed(1) })}`);
+        return json(res, { name: basename(file), at: new Date().toISOString(), bytes: statSync(file).size, backups: backupsList() }, 201);
+      }
+      const dlM = /^\/api\/backups\/(garu-backup-\d{4}-\d{2}-\d{2}-\d{4}\.tgz)$/.exec(path);
+      if (dlM && req.method === "GET") {
+        const file = join(backupDir, dlM[1]!);
+        if (!existsSync(file)) return json(res, { error: t("not found") }, 404);
+        res.writeHead(200, { "content-type": "application/gzip", "content-length": statSync(file).size, "content-disposition": `attachment; filename="${dlM[1]}"` });
+        createReadStream(file).pipe(res);
+        return;
+      }
       if (path === "/api/settings") {
         // Only whether a key is set — never its value.
         const isSet = (k: string) => Boolean(process.env[k]);
@@ -1017,6 +1039,8 @@ export function startUiServer(opts: UiServerOptions): { close: () => Promise<voi
           askHoldMin: Math.round(ASK_HOLD_MS / 60_000),
           pruneDays: opts.pruneMs ? Math.round(opts.pruneMs / 86_400_000) : null,
           backup: opts.backupMs && opts.backupDir ? { days: Math.round(opts.backupMs / 86_400_000), dir: opts.backupDir } : null,
+          backupDir,
+          backups: backupsList(),
           weekly: Boolean(opts.weeklyUrl),
           login: { required: requireLogin, direct: isDirectLoopback(req), tokenPath: opts.tokenPath },
         });
