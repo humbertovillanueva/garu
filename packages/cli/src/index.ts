@@ -833,9 +833,13 @@ program
         paused: g?.paused ?? false,
         costTodayUsd: s?.costTodayUsd ?? 0,
         needs: g ? [...missingEnv(g.tools, process.env), ...g.tools.filter((tl) => tl.auth === "oauth" && !signInFor(tl, authRoot).signedIn()).map((tl) => t("sign in to {server}", { server: tl.name }))] : [],
+        lint: g ? lintPolicy(g.policy, g.tools.map((tl) => tl.name)).length : 0,
       };
     });
-    const lines = statusLines({ agents: facts, up });
+    const budgetUsd = Number(process.env["GARU_MONTHLY_BUDGET_USD"] ?? "");
+    const retiredDir = join(root, ".garu", "retired");
+    const retired = existsSync(retiredDir) ? [...new Set(readdirSync(retiredDir).map((d) => d.replace(/-\d{8}-\d{4}$/, "")))].sort() : [];
+    const lines = statusLines({ agents: facts, up, budget: Number.isFinite(budgetUsd) && budgetUsd > 0 ? { usd: budgetUsd, spentUsd: store.costThisMonth().spentUsd } : null, retired });
     if (!every) { for (const line of lines) stdout.write(line + "\n"); return; }
     // The screen again, with the time, every few seconds; Ctrl-C ends it.
     stdout.write(`\x1b[2J\x1b[H${lines.join("\n")}\n\n${t("{time} · every {n} s · Ctrl-C to stop", { time: localTime(new Date(), { seconds: false }), n: every })}\n`);

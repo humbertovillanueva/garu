@@ -22,6 +22,8 @@ export interface AgentFacts {
   /** Keys or sign-ins it still needs. */
   needs: string[];
   paused?: boolean;
+  /** Rules in its policy that can never win. */
+  lint?: number;
 }
 
 export interface StatusFacts {
@@ -29,6 +31,10 @@ export interface StatusFacts {
   /** Whether the schedules are running (the login service, or garu ui --up). */
   up: boolean;
   now?: Date;
+  /** The month against GARU_MONTHLY_BUDGET_USD, when one is set. */
+  budget?: { usd: number; spentUsd: number } | null;
+  /** Agents retired from the page, by name. */
+  retired?: string[];
 }
 
 /** "in 25 min", "in 2 h 20 min", "tomorrow 7:00 AM", "Thu 8:00 AM". */
@@ -71,11 +77,14 @@ export function statusLines(f: StatusFacts): string[] {
       ? `${t("last {when}", { when: localTime(a.last.startedAt, { date: localDay(a.last.startedAt) !== localDay(now), seconds: false }) })}: ${ended(a.last)}${a.last.asked ? `, ${a.last.asked === 1 ? t("asked you once") : t("asked you {n} times", { n: a.last.asked })}` : ""}${a.last.blocked.length ? `, ${t("blocked: {list}", { list: a.last.blocked.join(", ") })}` : ""}`
       : t("no runs yet");
     const today = a.runsToday ? ` · ${a.cap ? t("{n} of {cap} runs today", { n: a.runsToday, cap: a.cap }) : a.runsToday === 1 ? t("1 run today") : t("{n} runs today", { n: a.runsToday })}, ${formatUsd(a.costTodayUsd)}` : "";
-    out.push(`${a.name.padEnd(width)}  ${state} · ${last}${today}`);
+    const lint = a.lint ? ` · ${a.lint === 1 ? t("1 rule never wins") : t("{n} rules never win", { n: a.lint })} (garu try ${a.name} …)` : "";
+    out.push(`${a.name.padEnd(width)}  ${state} · ${last}${today}${lint}`);
   }
   const waiting = f.agents.reduce((n, a) => n + a.pending, 0);
   out.push("");
   out.push(waiting ? (waiting === 1 ? t("1 ask is waiting for you: garu inbox") : t("{n} asks are waiting for you: garu inbox", { n: waiting })) : t("nothing is waiting on you"));
+  if (f.budget) out.push(t("{spent} of the {budget} budget this month ({pct}%)", { spent: formatUsd(f.budget.spentUsd), budget: formatUsd(f.budget.usd), pct: Math.round((f.budget.spentUsd / f.budget.usd) * 100) }));
+  if (f.retired?.length) out.push(t("retired: {list} (in .garu/retired; move one back under agents/ to bring it back)", { list: f.retired.join(", ") }));
   if (!f.up) out.push(t("schedules are off: `garu ui --up`, or `garu service install` to run them at login"));
   return out;
 }

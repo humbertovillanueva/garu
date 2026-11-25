@@ -16,6 +16,15 @@ describe("garu status", () => {
     expect(inWords(at(8, 0, 3), now)).toMatch(/^Thu 8:00/);
   });
 
+  it("names the rules that never win, the month against its budget, and the retired", () => {
+    const lines = statusLines({ up: true, now, budget: { usd: 5, spentUsd: 1.25 }, retired: ["scout"], agents: [
+      { name: "bea", cron: null, nextRun: null, last: null, pending: 0, parked: 0, runsToday: 0, cap: null, costTodayUsd: 0, needs: [], lint: 2 },
+    ] });
+    expect(lines[0]).toBe("bea   idle · no runs yet · 2 rules never win (garu try bea …)");
+    expect(lines).toContain("$1.25 of the $5.00 budget this month (25%)");
+    expect(lines).toContain("retired: scout (in .garu/retired; move one back under agents/ to bring it back)");
+  });
+
   it("one line per agent, then what's waiting", () => {
     const lines = statusLines({ up: true, now, agents: [
       { name: "bea", cron: "0 8 * * 1-5", nextRun: at(8, 0, 1), last: { startedAt: at(8, 14).toISOString(), endedAt: at(8, 15).toISOString(), status: "ok", asked: 0, blocked: [], summary: "20 new" }, pending: 1, parked: 1, runsToday: 1, cap: 8, costTodayUsd: 0.004, needs: [] },
