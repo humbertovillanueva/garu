@@ -257,6 +257,29 @@ export interface SinceResponse {
   expiredAsks: { agent: string; tool: string; at: string }[];
 }
 
+/** What the New agent page offers (GET /api/new). */
+export interface NewAgentOptions {
+  kinds: { kind: NonNullable<Agent["persona"]>["kind"]; label: string; suggested: string }[];
+  schedules: { key: string; cron: string | null; label: string }[];
+  models: { model: string; why: string; cap: number | null }[];
+  taken: string[];
+}
+/** The answers that make an agent (POST /api/agents). */
+export interface NewAgentBody {
+  name: string;
+  kind?: string;
+  tagline?: string;
+  task: string;
+  model: string;
+  schedule: string | { cron: string };
+  web: { hosts: string[] } | null;
+  fs: { path: string; write: "ask" | "allow" } | null;
+  webhook: { envVar: string } | null;
+  maxCostUsd: number | null;
+  maxRunsPerDay: number | null;
+  memory: boolean;
+}
+
 export interface TodayResponse {
   results: { agent: string; runId: string; endedAt: string; summary: string | null; costUsd: number; priced: boolean; asked: number; blocked: string[]; doc: { path: string; content: string } | null }[];
   week: { runs: number; actions: number; asked: number; costUsd: number; priced: boolean; days: { day: string; runs: number; actions: number; asked: number; costUsd: number }[] };

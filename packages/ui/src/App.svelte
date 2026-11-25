@@ -4,6 +4,7 @@
   import Logo from "./lib/components/Logo.svelte";
   import Home from "./routes/Home.svelte";
   import Agents from "./routes/Agents.svelte";
+  import NewAgent from "./routes/NewAgent.svelte";
   import Agent from "./routes/Agent.svelte";
   import Runs from "./routes/Runs.svelte";
   import Run from "./routes/Run.svelte";
@@ -62,7 +63,7 @@
   });
   $effect(() => { if (live.loaded && !landed) { landed = true; landOnPending(); } });
   // The title names the page and what needs you, like a mail client; a screen reader hears it on every navigation.
-  const PAGE: Record<string, string> = $derived({ home: "Garu", inbox: t("Inbox"), agents: t("Agents"), agent: t("Agent"), runs: t("Runs"), run: t("Run"), cost: t("Cost"), settings: t("Settings"), help: t("Help"), about: t("About"), report: t("Report a problem") });
+  const PAGE: Record<string, string> = $derived({ home: "Garu", inbox: t("Inbox"), agents: t("Agents"), agent: t("Agent"), new: t("New agent"), runs: t("Runs"), run: t("Run"), cost: t("Cost"), settings: t("Settings"), help: t("Help"), about: t("About"), report: t("Report a problem") });
   $effect(() => {
     const page = route.name === "agent" && route.parts[0] ? route.parts[0] : PAGE[route.name] ?? "Garu";
     document.title = `${live.pending.length ? `(${live.pending.length}) ` : ""}${page === "Garu" ? "Garu" : `${page} · Garu`}`;
@@ -153,6 +154,8 @@
           <Agent name={route.parts[0]} />
         {:else if route.name === "agents"}
           <Agents />
+        {:else if route.name === "new"}
+          <NewAgent />
         {:else if route.name === "runs"}
           <Runs />
         {:else if route.name === "run" && route.parts[0] && route.parts[1]}

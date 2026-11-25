@@ -64,6 +64,7 @@
         {:else if a.status === "scheduled"}<span class="text-mute"><Icon name="clock" size={13} /></span>{/if}
       </a>
     {/each}
+    {#if !isApp && !live.demo && live.loaded}<a href={href("new")} class="navitem" class:active={isActive("new")}><span class="w-[22px] text-center text-mute">+</span><span class="min-w-0 flex-1 truncate text-mute">{t("New agent")}</span></a>{/if}
     {#if live.loaded && live.agents.length === 0}
       <div class="px-2 py-3 text-[12.5px] text-mute">{t("No Garufiles found under this folder yet.")} {#if isApp}{t("Make one on your computer.")}{:else}{#each parts("{command} makes one.", { command: "npm run garu -- new" }) as p}{#if p.name}<span class="mono">{p.text}</span>{:else}{p.text}{/if}{/each}{/if}</div>
     {/if}
