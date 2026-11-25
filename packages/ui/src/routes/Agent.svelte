@@ -115,6 +115,27 @@
     form = { cron: a?.cron ?? "", runs: a?.budget?.maxRunsPerDay ? String(a.budget.maxRunsPerDay) : "", cap: a?.budget?.maxCostUsd ? String(a.budget.maxCostUsd) : "", memory: Boolean(a?.memory) };
     saveError = null; editing = true;
   }
+  // The job itself: the one-line description and the prompt, written into the Garufile with the comments kept.
+  let editingJob = $state(false);
+  let job = $state({ description: "", prompt: "" });
+  let jobError = $state<string | null>(null);
+  let savingJob = $state(false);
+  function startJob() { job = { description: a?.description ?? "", prompt: a?.prompt ?? "" }; jobError = null; editingJob = true; }
+  async function saveJob() {
+    if (savingJob || !a) return;
+    savingJob = true; jobError = null;
+    try { await api.editAgent(a.name, { description: job.description.trim(), prompt: job.prompt }); editingJob = false; live.tick++; void refreshCore().catch(() => {}); }
+    catch (e) { jobError = errorText(e); } finally { savingJob = false; }
+  }
+  // Retire: the folder goes aside under .garu/retired; the sidebar and the schedule forget it; the runs stay.
+  let retiring = $state(false);
+  async function retire() {
+    if (!a || retiring) return;
+    if (!confirm(t("Retire {name}? Its folder moves to .garu/retired with today's date, it leaves the schedule and the sidebar, and its runs stay readable. Move the folder back under agents/ to bring it back.", { name: a.name }))) return;
+    retiring = true;
+    try { await api.retire(a.name); await refreshCore(); location.hash = href("agents"); }
+    catch (e) { jobError = errorText(e); retiring = false; }
+  }
   // The rules, edited in place: action and reason on each, a rule added or dropped; the Garufile keeps its comments.
   let editingRules = $state(false);
   // "Try a call": the policy's answer for a tool and arguments, from the rules in the file now.
@@ -324,6 +345,22 @@
             {#if a.cron}<button class="tap text-[12px] text-mute hover:text-fg" disabled={pausing} onclick={togglePause}>{a.paused ? t("Resume the schedule") : t("Pause the schedule")}</button>{/if}
             {#if !editingRules}<button class="tap text-[12px] text-mute hover:text-fg" onclick={startRules}>{t("Change the rules")}</button>{/if}
             <button class="tap text-[12px] text-mute hover:text-fg" onclick={() => (tryOpen = !tryOpen)}>{t("Try a call")}</button>
+            {#if !editingJob}<button class="tap text-[12px] text-mute hover:text-fg" onclick={startJob}>{t("Change what it does")}</button>{/if}
+            {#if !isApp && !live.demo}<button class="tap text-[12px] text-mute hover:text-fg" disabled={retiring} onclick={retire}>{retiring ? t("Retiring…") : t("Retire")}</button>{/if}
+          </div>
+          {#if jobError && !editingJob}<p class="mt-1 text-[12.5px]" style="color: var(--color-bad)">{jobError}</p>{/if}
+        {/if}
+        {#if editingJob}
+          <div class="panel rise p-4">
+            <h3 class="label mb-3">{t("What {name} does", { name: a.name })}</h3>
+            <label class="block text-[13px]"><span class="text-mute">{t("In one line")}</span><input class="field mt-1 w-full" bind:value={job.description} /></label>
+            <label class="mt-3 block text-[13px]"><span class="text-mute">{t("The prompt, as the model reads it")}</span><textarea class="field mono mt-1 min-h-[260px] w-full !text-[12.5px] leading-relaxed" bind:value={job.prompt} spellcheck="false"></textarea></label>
+            {#if jobError}<p class="mt-2 text-[12.5px]" style="color: var(--color-bad)">{jobError}</p>{/if}
+            <div class="mt-3 flex gap-2">
+              <button class="btn btn-primary" disabled={savingJob || !job.prompt.trim()} onclick={saveJob}>{t("Save to the Garufile")}</button>
+              <button class="btn" disabled={savingJob} onclick={() => (editingJob = false)}>{t("Cancel")}</button>
+            </div>
+            <p class="mt-2 text-[12px] text-mute">{t("The file keeps your comments. The next run reads the new prompt.")}</p>
           </div>
         {/if}
         {#if editingRules}

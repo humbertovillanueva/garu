@@ -43,6 +43,8 @@ export type AgentStatus = "idle" | "scheduled" | "working" | "waiting" | "needs-
 export interface Agent {
   name: string;
   description: string;
+  /** The job as written in the Garufile; editable from the page. */
+  prompt: string;
   persona: { kind: "owl" | "fox" | "turtle" | "bee" | "cat" | "octopus" | "rabbit" | "bear" | "frog" | "penguin" | "raccoon" | "whale"; tagline?: string } | null;
   model: string | null;
   source: string | null;
@@ -104,6 +106,8 @@ export interface CostMonth {
   runs: number;
   priced: boolean;
   byModel: { model: string; costUsd: number; runs: number }[];
+  /** GARU_MONTHLY_BUDGET_USD, or null when none is set. */
+  budgetUsd: number | null;
 }
 
 export interface AgentsResponse {

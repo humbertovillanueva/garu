@@ -103,7 +103,9 @@ export const api = {
   /** What the policy would do with one call: the decision and the rule that made it. */
   tryPolicy: (agent: string, tool: string, args: Record<string, unknown>) => post<{ tool: string; action: "allow" | "ask" | "block"; ruleIndex: number; matched: string; reason: string }>(`/api/agents/${encodeURIComponent(agent)}/policy/try`, { tool, args }),
   editPolicy: (agent: string, edits: import("./types").PolicyEdit[]) => post<import("./types").Agent>(`/api/agents/${encodeURIComponent(agent)}/policy`, { edits }),
-  editAgent: (agent: string, edits: { cron?: string | null; maxRunsPerDay?: number | null; maxCostUsd?: number | null; memory?: boolean; paused?: boolean }) => post<import("./types").Agent>(`/api/agents/${encodeURIComponent(agent)}/settings`, edits),
+  /** Retire an agent: its folder goes aside under .garu/retired; the terminal brings it back. */
+  retire: (agent: string) => post<{ name: string; movedTo: string }>(`/api/agents/${encodeURIComponent(agent)}/retire`),
+  editAgent: (agent: string, edits: { cron?: string | null; maxRunsPerDay?: number | null; maxCostUsd?: number | null; memory?: boolean; paused?: boolean; description?: string; prompt?: string }) => post<import("./types").Agent>(`/api/agents/${encodeURIComponent(agent)}/settings`, edits),
   weekly: () => get<{ text: string; posts: boolean }>("/api/weekly"),
   doctor: () => get<{ checks: { verdict: "ok" | "warn" | "bad"; text: string }[] }>("/api/doctor"),
   logs: (n = 200) => get<{ lines: string[]; path: string }>(`/api/logs?n=${n}`),
