@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://garuagents.com/garufile.schema.json
 # The smallest useful Garu agent.
 #
 # It can read the files in ./workspace, and it may write a summary there —

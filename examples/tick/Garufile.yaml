@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://garuagents.com/garufile.schema.json
 # An always-on agent. Every six hours it checks the workspace and appends one
 # line to tick.log saying what's there. Tiny on purpose: it exists to show
 # `garu up` keeping an agent alive on a schedule, with every run in the log.

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://garuagents.com/garufile.schema.json
 # Tomay — your day, ready before you are.
 #
 # Every weekday at 7:00 Tomay reads today's calendar and, for each meeting with other

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://garuagents.com/garufile.schema.json
 # Un agente siempre activo. Cada seis horas revisa el espacio de trabajo y agrega una
 # línea a tick.log diciendo qué hay. Diminuto a propósito: existe para mostrar a
 # `garu up` manteniendo vivo un agente con horario, con cada ejecución en el registro.

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://garuagents.com/garufile.schema.json
 # The pip agent, with its tool server locked in a Docker container:
 # no network, only ./workspace mounted, 512 MB, 1 CPU, destroyed after the run.
 # The agent loop and the policy kernel stay on the host, in front of it.

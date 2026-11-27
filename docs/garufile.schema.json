@@ -1,0 +1,510 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://garuagents.com/garufile.schema.json",
+  "title": "Garufile",
+  "description": "One Garu agent: what it does, when it runs, which tools it gets and what it may do with them. https://garuagents.com",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "The agent's name: lowercase letters, digits and hyphens. It is what you call it, and its folder under agents/."
+    },
+    "description": {
+      "default": "",
+      "description": "What it does, in one line; shown under its name.",
+      "type": "string"
+    },
+    "language": {
+      "description": "What it writes to you in, as a code (es, pt-BR); it gets the date in that language too. Unset: English.",
+      "type": "string",
+      "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+    },
+    "memory": {
+      "default": false,
+      "description": "A small notebook it keeps between runs (garu.remember and garu.forget, policed like any tool; you read and edit it on its page).",
+      "type": "boolean"
+    },
+    "paused": {
+      "default": false,
+      "description": "Kept on the schedule but skipped, until you resume it.",
+      "type": "boolean"
+    },
+    "persona": {
+      "description": "Its face and one line of character; what it may do is the policy.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "owl",
+            "fox",
+            "turtle",
+            "bee",
+            "cat",
+            "octopus",
+            "rabbit",
+            "bear",
+            "frog",
+            "penguin",
+            "raccoon",
+            "whale"
+          ],
+          "description": "Its face in the control room: owl (watcher), fox (messenger), turtle (keeper), bee (worker), cat (reader), octopus (planner), rabbit (runner), bear (guardian), frog (connector), penguin (organizer), raccoon (tinkerer), whale (deep reader)."
+        },
+        "tagline": {
+          "description": "One line of character, shown under its name.",
+          "type": "string",
+          "maxLength": 80
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "model": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+\\/.+$",
+      "description": "provider/model, like gemini/gemini-2.5-flash-lite, anthropic/claude-haiku-4-5, openai/gpt-5-mini or ollama/qwen3:8b."
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The job, as the model reads it. Garu adds the date, your name and the tools on its own."
+    },
+    "tools": {
+      "default": [],
+      "description": "The MCP tool servers it may use: a command Garu runs, or a URL it connects to. Empty: it can only think and reply.",
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]*$",
+                "description": "The server's name in rules and in the log: lowercase, digits, - or _. Tools are \"<name>.<tool>\"."
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The program that runs the MCP server (node, npx, python…)."
+              },
+              "args": {
+                "default": [],
+                "description": "Its arguments; ${VAR} reads a value from .env.",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "env": {
+                "default": {},
+                "description": "Environment variables for the server; ${VAR} reads a value from .env, so secrets never sit here.",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "cwd": {
+                "description": "The folder it starts in.",
+                "type": "string"
+              },
+              "auth": {
+                "description": "oauth: Garu signs in for it once (garu auth, or the agent's page) and hands it a short-lived access token at the start of each run.",
+                "type": "string",
+                "enum": [
+                  "none",
+                  "oauth"
+                ]
+              },
+              "oauth": {
+                "description": "Your own OAuth client, for a server that does not hand one out.",
+                "type": "object",
+                "properties": {
+                  "clientId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Your OAuth client id; ${VAR} reads it from .env."
+                  },
+                  "clientSecret": {
+                    "description": "Your OAuth client secret, as ${VAR} from .env; never written here.",
+                    "type": "string"
+                  },
+                  "scopes": {
+                    "description": "The permissions the sign-in asks for (the scope).",
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "authorizationParams": {
+                    "default": {},
+                    "description": "Extra sign-in parameters, like Google's access_type: offline so runs can refresh the token without you.",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "issuer": {
+                    "description": "Who you sign in with, like https://accounts.google.com. A local server needs it; a remote one finds it on its own.",
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "clientId"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "name",
+              "command"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]*$"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "headers": {
+                "default": {},
+                "description": "Static headers, like an API key as ${VAR} from .env.",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "auth": {
+                "default": "none",
+                "description": "oauth: Garu signs in to it once (garu auth) and keeps the tokens.",
+                "type": "string",
+                "enum": [
+                  "none",
+                  "oauth"
+                ]
+              },
+              "oauth": {
+                "description": "Your own OAuth client, when the server needs one.",
+                "type": "object",
+                "properties": {
+                  "clientId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Your OAuth client id; ${VAR} reads it from .env."
+                  },
+                  "clientSecret": {
+                    "description": "Your OAuth client secret, as ${VAR} from .env; never written here.",
+                    "type": "string"
+                  },
+                  "scopes": {
+                    "description": "The permissions the sign-in asks for (the scope).",
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "authorizationParams": {
+                    "default": {},
+                    "description": "Extra sign-in parameters, like Google's access_type: offline so runs can refresh the token without you.",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "issuer": {
+                    "description": "Who you sign in with, like https://accounts.google.com. A local server needs it; a remote one finds it on its own.",
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "clientId"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "name",
+              "url"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "triggers": {
+      "default": [
+        {
+          "manual": true
+        }
+      ],
+      "description": "When it runs: a cron schedule, a webhook door, or only when told.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "cron": {
+            "description": "A schedule (minute hour day month weekday), in this computer's time zone; runs while the control room is up with --up or as the login service.",
+            "type": "string"
+          },
+          "webhook": {
+            "description": "A door: POST /api/agents/<agent>/hooks/<name> on the control room starts a run, with the body's message as its input.",
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,39}$"
+          },
+          "manual": {
+            "description": "Runs when told: Run now, a message, garu run.",
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "policy": {
+      "default": [
+        {
+          "tool": "*",
+          "action": "ask"
+        }
+      ],
+      "description": "The rules in front of every tool call, read top to bottom; the first match wins, and a call no rule matches asks you.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tool": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A glob over \"<server>.<tool>\": \"gmail.send\", \"fs.*\", \"*\". The first rule whose glob and conditions match a call decides it."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "ask",
+              "block"
+            ],
+            "description": "allow: the call goes through on its own. ask: it waits for your approval in the inbox. block: it is refused, and a tool no rule can ever allow is not shown to the model."
+          },
+          "when": {
+            "description": "Conditions on the call's arguments, by dotted path (\"to\", \"recipients.length\"); every one must hold for the rule to match.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "eq": {
+                  "description": "The argument equals this value (deep equality for lists and objects)."
+                },
+                "neq": {
+                  "description": "The argument differs from this value."
+                },
+                "gt": {
+                  "description": "The argument is a number greater than this.",
+                  "type": "number"
+                },
+                "gte": {
+                  "description": "The argument is a number greater than or equal to this.",
+                  "type": "number"
+                },
+                "lt": {
+                  "description": "The argument is a number less than this.",
+                  "type": "number"
+                },
+                "lte": {
+                  "description": "The argument is a number less than or equal to this.",
+                  "type": "number"
+                },
+                "matches": {
+                  "description": "The argument, as text, matches this regular expression (JavaScript syntax; no inline modifiers).",
+                  "type": "string"
+                },
+                "ignoreCase": {
+                  "description": "For matches: upper and lower case count the same.",
+                  "type": "boolean"
+                },
+                "in": {
+                  "description": "The argument is one of these values.",
+                  "type": "array",
+                  "items": {}
+                },
+                "exists": {
+                  "description": "true: the argument is present; false: it is absent.",
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "reason": {
+            "description": "Why, in your words: shown on the review card, in the log and in the push.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool",
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "maxTurns": {
+      "default": 25,
+      "description": "At most this many model turns in a run, so it can never loop forever.",
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "budget": {
+      "default": {},
+      "description": "The money guard: a cap per run, a cap on runs a day, your own prices.",
+      "type": "object",
+      "properties": {
+        "maxCostUsd": {
+          "description": "A run stops before its estimated cost crosses this many dollars.",
+          "type": "number",
+          "minimum": 0
+        },
+        "maxRunsPerDay": {
+          "description": "At most this many runs a day, whatever starts them; a run the network cut off does not count.",
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "pricing": {
+          "description": "Your own price for this model, in dollars per million tokens (both 0 on a free tier); otherwise Garu's table.",
+          "type": "object",
+          "properties": {
+            "inputPerMTok": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Dollars per million input tokens."
+            },
+            "outputPerMTok": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Dollars per million output tokens."
+            }
+          },
+          "required": [
+            "inputPerMTok",
+            "outputPerMTok"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "modelOptions": {
+      "default": {},
+      "description": "Knobs for the model: temperature, maxOutputTokens, thinkingBudget, and Ollama's own options as they are. A key a provider has no place for is left out.",
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "sandbox": {
+      "description": "Run every tool server inside its own Docker container. Omit to run them on this computer; set (even {}) to contain them.",
+      "type": "object",
+      "properties": {
+        "image": {
+          "default": "garu-sandbox",
+          "description": "The Docker image with the tool servers in it; garu sandbox build makes the default one.",
+          "type": "string",
+          "minLength": 1
+        },
+        "network": {
+          "default": "none",
+          "description": "none: no network at all. bridge: normal outbound internet.",
+          "type": "string",
+          "enum": [
+            "none",
+            "bridge"
+          ]
+        },
+        "workspace": {
+          "description": "A folder on this computer mounted read-write at /workspace inside the container.",
+          "type": "string",
+          "minLength": 1
+        },
+        "mounts": {
+          "default": [],
+          "description": "More folders to mount.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A folder on this computer."
+              },
+              "container": {
+                "type": "string",
+                "pattern": "^\\/",
+                "description": "Where it appears inside the container (an absolute path)."
+              },
+              "readonly": {
+                "default": false,
+                "description": "Mount it read-only.",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "host",
+              "container"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "memory": {
+          "default": "512m",
+          "description": "Memory for the container, like 512m or 2g.",
+          "type": "string",
+          "pattern": "^\\d+[kmg]$"
+        },
+        "cpus": {
+          "default": 1,
+          "description": "CPUs for the container.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "name",
+    "model",
+    "prompt"
+  ],
+  "additionalProperties": false
+}

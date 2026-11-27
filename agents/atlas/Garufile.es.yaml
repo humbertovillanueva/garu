@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://garuagents.com/garufile.schema.json
 # Planner — la lista de pendientes de Garu, desde Linear.
 #
 # Linear es un servidor MCP remoto con OAuth: inicia sesión una vez con

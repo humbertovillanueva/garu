@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://garuagents.com/garufile.schema.json
 # Bea — your inbox, sorted before you open it.
 #
 # Every weekday at 8:00 Bea goes through what arrived since yesterday and files each thread

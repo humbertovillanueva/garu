@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://garuagents.com/garufile.schema.json
 # Nudge — Cada noche a las nueve, y otra vez a las once, revisa en GitHub si hoy hubo un commit tuyo y avisa si no lo hay.
 #
 # Hecho con `garu new`. La política empieza cerrada: solo las herramientas nombradas abajo,

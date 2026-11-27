@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://garuagents.com/garufile.schema.json
 # Nudge — Every evening at nine, and again at eleven, check GitHub for a commit of yours today and speak up if there is none.
 #
 # Made with `garu new`. The policy starts closed: only the tools named below,

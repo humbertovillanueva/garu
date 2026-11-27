@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://garuagents.com/garufile.schema.json
 # Rook — Cada lunes por la mañana, revisa el repositorio de Garu en busca de estrellas e issues nuevos.
 #
 # Hecho con `garu new`. La política empieza cerrada: solo las herramientas nombradas abajo,

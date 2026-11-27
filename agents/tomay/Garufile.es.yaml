@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://garuagents.com/garufile.schema.json
 # Tomay — tu día, listo antes que tú.
 #
 # Cada día entre semana a las 7:00, Tomay lee la agenda de hoy y, para cada reunión con otras
