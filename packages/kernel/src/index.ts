@@ -25,4 +25,5 @@ export * from "./oauth.js";
 export * from "./signin.js";
 export * from "./lint.js";
 export * from "./schema.js";
+export * from "./words.js";
 export * from "./diff.js";

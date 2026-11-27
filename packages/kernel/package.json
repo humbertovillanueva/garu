@@ -18,6 +18,10 @@
     "./why": {
       "types": "./dist/why.d.ts",
       "import": "./dist/why.js"
+    },
+    "./words": {
+      "types": "./dist/words.d.ts",
+      "import": "./dist/words.js"
     }
   },
   "files": [
