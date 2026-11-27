@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
+import { garufileJsonSchema } from "@garu/kernel";
 import { join } from "node:path";
 import { es } from "./i18n/es.js";
 import { detectLocale, setLocale, t } from "./i18n.js";
@@ -28,7 +29,10 @@ describe("the terminal in Spanish", () => {
     expect(bad).toEqual([]);
   });
   it("has no stale entries", () => {
+    // The Garufile reference reads each key's line from the schema and hands it to t(), so those lines are keys too.
     const keys = keysIn(import.meta.dirname);
+    const walk = (n: Record<string, unknown>) => { if (typeof n["description"] === "string") keys.add(n["description"]); for (const v of Object.values(n)) if (v && typeof v === "object") walk(v as Record<string, unknown>); };
+    walk(garufileJsonSchema() as Record<string, unknown>);
     expect(Object.keys(es).filter((k) => !keys.has(k))).toEqual([]);
   });
   it("follows the computer's language, GARU_LANG first", () => {

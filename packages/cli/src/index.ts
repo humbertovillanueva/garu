@@ -75,6 +75,7 @@ import { VERSION } from "./version.js";
 import { KINDS, SCHEDULES, cronFor, fetchServerPath, isFreeModel, renderGarufile, suggestModel, type Kind, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
 import { policyLines } from "./words.js";
 import { describeForInstall, fetchSource, installGarufile, resolveSource } from "./install.js";
+import { garufileMarkdown } from "./garufile-doc.js";
 import { launchdLabel, launchdPlist, launchdPlistPath, logPath, serviceEnv, servicePath, serviceName, systemdUnit, systemdUnitPath } from "./service.js";
 
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
@@ -724,8 +725,15 @@ program
 program
   .command("schema")
   .argument("[file]", t("where to write it (prints it without one)"))
+  .option("--markdown <file>", t("the Garufile reference as Markdown instead, written to this file (GARU_LANG picks the language)"))
   .description(t("The Garufile as a JSON Schema, for editors that validate and complete YAML"))
-  .action((file: string | undefined) => {
+  .action((file: string | undefined, opts: { markdown?: string }) => {
+    if (opts.markdown) {
+      const es = locale() === "es";
+      writeFileSync(opts.markdown, garufileMarkdown(es ? { label: "In English", file: "garufile.md" } : { label: "En español", file: "garufile.es.md" }));
+      stdout.write(`✔ ${opts.markdown}\n`);
+      return;
+    }
     const text = JSON.stringify(garufileJsonSchema(), null, 2) + "\n";
     if (!file) { stdout.write(text); return; }
     writeFileSync(file, text);
