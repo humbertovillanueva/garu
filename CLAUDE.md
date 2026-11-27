@@ -49,7 +49,7 @@ docs/video/remotion the launch video's source (Remotion 4, React); see "Launch v
 
 ```
 npm install && npm run build          # all workspaces
-npm run typecheck && npm test         # tsc -b, vitest (293 tests); run before every commit
+npm run typecheck && npm test         # tsc -b, vitest (408 tests, one of them over the built CLI); run before every commit
 npx svelte-check --workspace packages/ui
 npm run garu -- <cmd>                 # the CLI from the repo (no global install yet)
 npm run garu -- service install|status|logs|restart|uninstall   # Garu as a login service (launchd)
@@ -240,11 +240,12 @@ temp path hidden); `scripts/play-shots.mjs` makes the Play and App Store cards f
 - Commit messages: a short title, then a plain paragraph on what changed and why. Written as
   Humberto would write them; match the style in `git log` (e.g. "review card: … ; …").
 
-## Status (2026-10-27)
+## Status (2026-11-26)
 
-Built and running: kernel, CLI, control room, Android app (debug and the signed Play build), iPhone app
-in the Simulator, login service with catch-up, the Google agents, Nudge, the public demos, brand, Owner's
-Guide, launch video v8, Spanish end to end. Both audits are done (`docs/audit-2026-10-12.md`,
+Built and running: kernel, CLI, control room (with everything an owner does from the page: a new agent, its job,
+its rules and a call to try, retire, backups, the month's budget, sign in again), Android app (debug and the
+signed Play build 6), iPhone app in the Simulator, login service with catch-up, the Google agents, Nudge, the
+public demos, brand, Owner's Guide, launch video v10, Spanish end to end. Both audits are done (`docs/audit-2026-10-12.md`,
 `docs/audit-2026-10-27.md`), including their last two decisions: the v6 videos and the WAV left the
 tree, and the iPhone pairs by scanning a `garu://pair` code with its own camera (the pairing panel's
 "Code is for" switch; `docs/ios.md`). No Apple developer account yet, so the iPhone app stays in the
