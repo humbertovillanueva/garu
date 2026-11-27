@@ -197,6 +197,7 @@ export const es: Record<string, string> = {
   "Its {server} sign-in is {days} days old; Google ends it at 7.": "Su sesión de {server} tiene {days} días; Google la termina a los 7.",
   "Its {server} sign-in is {days} days old; Google ends it at 7. Sign in again from its page.": "Su sesión de {server} tiene {days} días; Google la termina a los 7. Vuelve a iniciar sesión desde su página.",
   "Sign in again": "Volver a iniciar sesión",
+  "how Garu works, in plain words": "cómo funciona Garu, en palabras sencillas",
   "what needs you, what happened": "qué te necesita, qué pasó",
   "the asks waiting for you": "las preguntas que te esperan",
   "every agent at a glance": "todos los agentes de un vistazo",

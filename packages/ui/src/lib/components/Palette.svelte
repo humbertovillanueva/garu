@@ -22,6 +22,7 @@
     { id: "page:cost", label: t("Cost"), hint: t("what the agents cost"), to: href("cost") },
     { id: "page:new", label: t("New agent"), hint: t("a few questions, then a Garufile"), to: href("new") },
     { id: "page:settings", label: t("Settings"), hint: t("the control room's facts"), to: href("settings") },
+    { id: "page:help", label: t("Help"), hint: t("how Garu works, in plain words"), to: href("help") },
   ]);
   /** A match: the letters typed appear in order ("tm" finds tomay), or anywhere in the hint. */
   const matches = (label: string, hint: string, needle: string) => {
