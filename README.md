@@ -288,6 +288,7 @@ Since then the page took over the rest. "New agent" asks what `garu new` asks (w
 | `garu status` | Home for the terminal: every agent with what it's doing, when it runs next, how its last run went, and what's waiting on you. |
 | `garu backup [file]` · `garu restore <file> [--yes]` | Everything under `.garu` in one file (runs, inbox, grants, notebooks, sign-ins, the token), and the way back for the day the laptop is replaced. A restore moves the old `.garu` aside, never deletes it. |
 | `garu doctor` | Check the computer in one go: Node, the keys in `.env`, every Garufile, each sign-in and its age, the login service, Tailscale, what's waiting on you. A cross means something to fix, and the command says what. |
+| `garu install <source>` | Bring an agent from an https URL, `github:owner/repo/path/Garufile.yaml` or a file: it shows what the agent runs on your computer, what it may do in plain words, what it needs in `.env` and any rule that never wins, asks, then writes it under `agents/`. `--name` renames it, `--yes` skips the question. |
 | `garu validate <Garufile>` | Lint policy, cron, budget, sandbox. |
 | `garu schema [file]` | The Garufile as a JSON Schema, for an editor that validates and completes YAML. The site serves it at [garuagents.com/garufile.schema.json](https://garuagents.com/garufile.schema.json); a Garufile points at it with `# yaml-language-server: $schema=…` on its first line, as the shipped ones do. |
 | `garu auth <Garufile> <server>` | Sign in to a remote tool server once, in your browser. `--forget` removes it. |
