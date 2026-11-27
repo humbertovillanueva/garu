@@ -185,6 +185,14 @@ temp path hidden); `scripts/play-shots.mjs` makes the Play and App Store cards f
   prompt as a block, comments kept) and "Retire" (`POST /api/agents/<agent>/retire` moves `agents/<name>/` to `.garu/retired/<name>-<stamp>/`,
   off the schedule; `mv` it back to bring it back; runs stay). The Cost page shows the month against `GARU_MONTHLY_BUDGET_USD` and
   downloads a month's runs as CSV (`GET /api/runs.csv?month=`).
+- The Garufile for readers and editors: every key in `kernel/src/garufile.ts` carries `.describe()` (its one line; the kernel has no
+  i18n, the CLI's Spanish table holds each line and its test counts them as keys); `garufileJsonSchema()` (`kernel/src/schema.ts`)
+  writes JSON Schema draft 7, `garu schema` writes it to `docs/garufile.schema.json` (served at garuagents.com/garufile.schema.json;
+  a test keeps the file equal), every shipped Garufile and `renderGarufile` start with the `yaml-language-server` line; `garu schema
+  --markdown` writes `docs/garufile.md` (and the es twin under GARU_LANG=es; a test keeps both equal). `policyWords`
+  (`kernel/src/words.ts`, also `@garu/kernel/words` for the browser) says a policy in plain words: the agent page's line above its
+  links, `garu try`, `garu install`. `garu install <source>` (`cli/src/install.ts`: https URL, github:owner/repo[@branch]/path, a
+  GitHub page address, or a file) shows what the file runs here, what it may do and what it needs, asks, then writes agents/<name>/.
 - Pushes beyond asks (`cli/src/ui-server.ts`): a run that stops on its own (error, cost or turn cap, blocked) is pushed
   once a day per agent with the reason and a link to the run (`pushFailure`; days in `.garu/fail-pings.json`; never offline/busy
   runs, chat replies or the demo). `pushText` takes the path to open. "Try a call" on the agent page is
