@@ -24,4 +24,5 @@ export * from "./suggest.js";
 export * from "./oauth.js";
 export * from "./signin.js";
 export * from "./lint.js";
+export * from "./schema.js";
 export * from "./diff.js";
