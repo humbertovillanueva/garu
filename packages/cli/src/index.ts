@@ -74,6 +74,7 @@ import { Reach } from "./ui-reach.js";
 import { VERSION } from "./version.js";
 import { KINDS, SCHEDULES, cronFor, fetchServerPath, isFreeModel, renderGarufile, suggestModel, type Kind, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
 import { policyLines } from "./words.js";
+import { describeForInstall, fetchSource, installGarufile, resolveSource } from "./install.js";
 import { launchdLabel, launchdPlist, launchdPlistPath, logPath, serviceEnv, servicePath, serviceName, systemdUnit, systemdUnitPath } from "./service.js";
 
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
@@ -690,6 +691,34 @@ program
     if (!pick || !existsSync(join(dir, pick))) fail(t("no run {run} for agent \"{agent}\"", { run: run ?? "", agent }));
     stdout.write(`${agent} · ${pick.replace(/\.jsonl$/, "")}\n`);
     for (const line of whyLines(readRun(join(dir, pick)))) stdout.write(`  · ${line}\n`);
+  });
+
+program
+  .command("install")
+  .argument("<source>", t("an https URL, github:owner/repo/path/Garufile.yaml, or a file"))
+  .option("--name <name>", t("install it under another name"))
+  .option("--force", t("overwrite an existing agent of that name"))
+  .option("-y, --yes", t("don't ask; install it"))
+  .description(t("Bring an agent from a URL or a file: see what it runs and what it may do, then it lands under agents/"))
+  .action(async (source: string, opts: { name?: string; force?: boolean; yes?: boolean }) => {
+    loadDotEnv();
+    let text: string;
+    try { text = await fetchSource(resolveSource(source)); } catch (e) { fail((e as Error).message); }
+    let g;
+    try { g = parseGarufile(text, source); } catch (e) { fail(t("that is not a Garufile Garu accepts: {reason}", { reason: (e as Error).message })); }
+    stdout.write(`\n${describeForInstall(g, process.env).map((l) => `  ${l}`).join("\n")}\n\n`);
+    if (!opts.yes) {
+      if (!stdin.isTTY) fail(t("not a terminal; add --yes to install without asking"));
+      const rl = createInterface({ input: stdin, output: stdout });
+      const a = (await rl.question(`${t("Install it as agents/{name}/Garufile.yaml?", { name: opts.name ?? g.name })} [y/N] `)).trim().toLowerCase();
+      rl.close();
+      if (!a.startsWith("y")) { stdout.write(`${t("Nothing written.")}\n`); return; }
+    }
+    let r;
+    try { r = installGarufile(text, process.cwd(), { ...(opts.name ? { name: opts.name } : {}), ...(opts.force ? { force: true } : {}) }); } catch (e) { fail((e as Error).message); }
+    stdout.write(`✔ ${relative(process.cwd(), r.file)}\n`);
+    stdout.write(`  ${t("Edit {file} any time; {command} checks it.", { file: relative(process.cwd(), r.file), command: `npm run garu -- validate ${relative(process.cwd(), r.file)}` })}\n`);
+    stdout.write(`  ${t("or open the control room (npm run garu -- ui --up), click {name}, and press Run job.", { name: r.garufile.name })}\n`);
   });
 
 program
