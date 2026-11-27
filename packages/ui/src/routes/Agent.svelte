@@ -7,6 +7,7 @@
   import Mark from "../lib/components/Mark.svelte";
   import Status from "../lib/components/Status.svelte";
   import Decision from "../lib/components/Decision.svelte";
+  import { policyWords } from "@garu/kernel/words";
   import Budget from "../lib/components/Budget.svelte";
   import Timeline from "../lib/components/Timeline.svelte";
   import ReviewCard from "../lib/components/ReviewCard.svelte";
@@ -21,6 +22,18 @@
 
   let { name }: { name: string } = $props();
   const a = $derived(agentByName(name));
+  // The policy in plain words: what it does on its own, what it asks about, what it never does, how the file ends.
+  const words = $derived.by(() => {
+    if (!a?.policy) return null;
+    const w = policyWords(a.policy.list);
+    const list = (xs: { tool: string; when?: string }[]) => xs.map((x) => (x.when ? t("{tool} when {condition}", { tool: x.tool, condition: x.when }) : x.tool)).join(", ");
+    const parts: string[] = [];
+    if (w.allows.length) parts.push(t("On its own: {list}", { list: list(w.allows) }));
+    if (w.asks.length) parts.push(t("Asks you first: {list}", { list: list(w.asks) }));
+    if (w.blocks.length) parts.push(t("Never: {list}", { list: list(w.blocks) }));
+    parts.push(w.otherwise === "block" ? t("Anything else: blocked") : w.otherwise === "allow" ? t("Anything else: allowed without asking") : t("Anything else: asks you"));
+    return parts;
+  });
   // "Sign in again": the tab is opened on the click (a browser only allows that), then pointed at the
   // address the control room answers with; the waiting ends when the live data shows the sign-in fresh.
   let signingIn = $state<string | null>(null);
@@ -340,6 +353,7 @@
             <p class="mt-2 text-[12px] text-mute">{t("The file keeps your comments. A new schedule starts right away; a notebook needs its garu.remember and garu.forget rules in the policy to be used.")}</p>
           </div>
         {:else}
+          {#if words}<p class="text-[12.5px] leading-relaxed text-fg-2 [overflow-wrap:anywhere]">{#each words as w, i (i)}{#if i}<span class="text-mute"> · </span>{/if}{w}{/each}</p>{/if}
           <div class="flex flex-wrap gap-x-4 gap-y-1">
             <button class="tap text-[12px] text-mute hover:text-fg" onclick={startEdit}>{t("Change schedule, caps or notebook")}</button>
             {#if a.cron}<button class="tap text-[12px] text-mute hover:text-fg" disabled={pausing} onclick={togglePause}>{a.paused ? t("Resume the schedule") : t("Pause the schedule")}</button>{/if}
