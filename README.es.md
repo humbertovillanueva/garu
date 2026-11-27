@@ -292,6 +292,7 @@ Desde entonces la página se quedó con el resto. "Nuevo agente" pregunta lo que
 | `garu backup [file]` · `garu restore <file> [--yes]` | Todo lo que hay bajo `.garu` en un archivo (ejecuciones, bandeja, permisos, libretas, inicios de sesión, el token), y el camino de vuelta para el día que se cambie la laptop. Restaurar aparta el `.garu` anterior, nunca lo borra. |
 | `garu doctor` | Revisa la computadora de una vez: Node, las claves de `.env`, cada Garufile, cada inicio de sesión y su edad, el servicio de inicio, Tailscale, qué te espera. Una cruz es algo por arreglar, y el comando dice qué. |
 | `garu validate <Garufile>` | Revisa política, cron, presupuesto y aislamiento. |
+| `garu schema [archivo]` | El Garufile como JSON Schema, para un editor que valida y completa YAML. El sitio lo sirve en [garuagents.com/garufile.schema.json](https://garuagents.com/garufile.schema.json); un Garufile lo señala con `# yaml-language-server: $schema=…` en su primera línea, como los incluidos. |
 | `garu auth <Garufile> <server>` | Inicia sesión en un servidor de herramientas remoto una vez, en tu navegador. `--forget` lo elimina. |
 | `garu sandbox build` | Construye la imagen de Docker predeterminada para los servidores de herramientas. |
 

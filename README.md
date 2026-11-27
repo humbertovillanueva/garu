@@ -289,6 +289,7 @@ Since then the page took over the rest. "New agent" asks what `garu new` asks (w
 | `garu backup [file]` · `garu restore <file> [--yes]` | Everything under `.garu` in one file (runs, inbox, grants, notebooks, sign-ins, the token), and the way back for the day the laptop is replaced. A restore moves the old `.garu` aside, never deletes it. |
 | `garu doctor` | Check the computer in one go: Node, the keys in `.env`, every Garufile, each sign-in and its age, the login service, Tailscale, what's waiting on you. A cross means something to fix, and the command says what. |
 | `garu validate <Garufile>` | Lint policy, cron, budget, sandbox. |
+| `garu schema [file]` | The Garufile as a JSON Schema, for an editor that validates and completes YAML. The site serves it at [garuagents.com/garufile.schema.json](https://garuagents.com/garufile.schema.json); a Garufile points at it with `# yaml-language-server: $schema=…` on its first line, as the shipped ones do. |
 | `garu auth <Garufile> <server>` | Sign in to a remote tool server once, in your browser. `--forget` removes it. |
 | `garu sandbox build` | Build the default Docker image for tool servers. |
 
