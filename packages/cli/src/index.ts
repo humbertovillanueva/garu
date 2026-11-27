@@ -73,6 +73,7 @@ import { Cron } from "croner";
 import { Reach } from "./ui-reach.js";
 import { VERSION } from "./version.js";
 import { KINDS, SCHEDULES, cronFor, fetchServerPath, isFreeModel, renderGarufile, suggestModel, type Kind, type Schedule, type ScaffoldAnswers } from "./scaffold.js";
+import { policyLines } from "./words.js";
 import { launchdLabel, launchdPlist, launchdPlistPath, logPath, serviceEnv, servicePath, serviceName, systemdUnit, systemdUnitPath } from "./service.js";
 
 const DEFAULT_LOG_ROOT = resolve(process.cwd(), ".garu", "runs");
@@ -727,6 +728,7 @@ program
     for (const l of lintPolicy(a.garufile.policy, a.garufile.tools.map((tl) => tl.name))) {
       if (l.by !== undefined) stdout.write(`  ○ ${t("rule {n} ({tool}) never wins; rule {m} ({other}) above it matches first", { n: l.index + 1, tool: a.garufile.policy[l.index]!.tool, m: l.by + 1, other: a.garufile.policy[l.by]!.tool })}\n`);
     }
+    stdout.write(`\n${policyLines(a.garufile.policy).map((l) => `  ${l}`).join("\n")}\n`);
   });
 
 // ---------------------------------------------------------------------------
