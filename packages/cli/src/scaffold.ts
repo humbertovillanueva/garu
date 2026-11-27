@@ -5,6 +5,7 @@
  */
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { SCHEMA_URL } from "@garu/kernel";
 import { t, locale } from "./i18n.js";
 
 export type Schedule = "manual" | "weekday-morning" | "hourly" | "daily" | { cron: string };
@@ -130,6 +131,7 @@ export function renderGarufile(a: ScaffoldAnswers): string {
   const cron = cronFor(a.schedule);
   const fetchServer = a.fetchServerPath ?? "packages/mcp-fetch/dist/index.js";
   const out: string[] = [];
+  out.push(`# yaml-language-server: $schema=${SCHEMA_URL}`);
   out.push(`# ${titleCase(a.name)} — ${firstSentence(a.task)}`);
   out.push(`#`);
   out.push(`# ${t("Made with `garu new`. The policy starts closed: only the tools named below,")}`);

@@ -16,6 +16,8 @@ import { join, relative, resolve } from "node:path";
 import {
   AUTH_CALLBACK_PORT,
   AUTH_REDIRECT_URL,
+  SCHEMA_URL,
+  garufileJsonSchema,
   lintPolicy,
   SignInBusyError,
   startSignIn,
@@ -687,6 +689,17 @@ program
     if (!pick || !existsSync(join(dir, pick))) fail(t("no run {run} for agent \"{agent}\"", { run: run ?? "", agent }));
     stdout.write(`${agent} · ${pick.replace(/\.jsonl$/, "")}\n`);
     for (const line of whyLines(readRun(join(dir, pick)))) stdout.write(`  · ${line}\n`);
+  });
+
+program
+  .command("schema")
+  .argument("[file]", t("where to write it (prints it without one)"))
+  .description(t("The Garufile as a JSON Schema, for editors that validate and complete YAML"))
+  .action((file: string | undefined) => {
+    const text = JSON.stringify(garufileJsonSchema(), null, 2) + "\n";
+    if (!file) { stdout.write(text); return; }
+    writeFileSync(file, text);
+    stdout.write(`✔ ${t("wrote {file}; a Garufile points at it with its first line: {line}", { file, line: `# yaml-language-server: $schema=${SCHEMA_URL}` })}\n`);
   });
 
 program
