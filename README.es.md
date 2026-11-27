@@ -84,7 +84,7 @@ Un agente solo toca el mundo a través del [Model Context Protocol](https://mode
 
 ## El Garufile
 
-Un archivo describe un agente: quién es, qué puede tocar, cuándo despierta y cuánto puede gastar. Este es uno real de este repositorio, un poco recortado: el agente que ordena la bandeja del autor cada mañana entre semana.
+Un archivo describe un agente: quién es, qué puede tocar, cuándo despierta y cuánto puede gastar. Este es uno real de este repositorio, un poco recortado: el agente que ordena la bandeja del autor cada mañana entre semana. Cada clave, con su tipo, su valor predeterminado y su línea, está en [docs/garufile.es.md](docs/garufile.es.md), escrita a partir del esquema mismo.
 
 ```yaml
 name: bea
@@ -293,7 +293,7 @@ Desde entonces la página se quedó con el resto. "Nuevo agente" pregunta lo que
 | `garu doctor` | Revisa la computadora de una vez: Node, las claves de `.env`, cada Garufile, cada inicio de sesión y su edad, el servicio de inicio, Tailscale, qué te espera. Una cruz es algo por arreglar, y el comando dice qué. |
 | `garu install <origen>` | Trae un agente desde una URL https, `github:dueño/repo/ruta/Garufile.yaml` o un archivo: muestra qué ejecuta el agente en tu computadora, qué puede hacer en palabras sencillas, qué necesita en `.env` y cualquier regla que nunca gane, pregunta, y lo escribe bajo `agents/`. `--name` lo renombra, `--yes` se salta la pregunta. |
 | `garu validate <Garufile>` | Revisa política, cron, presupuesto y aislamiento. |
-| `garu schema [archivo]` | El Garufile como JSON Schema, para un editor que valida y completa YAML. El sitio lo sirve en [garuagents.com/garufile.schema.json](https://garuagents.com/garufile.schema.json); un Garufile lo señala con `# yaml-language-server: $schema=…` en su primera línea, como los incluidos. |
+| `garu schema [archivo]` · `--markdown <archivo>` | El Garufile como JSON Schema, para un editor que valida y completa YAML. El sitio lo sirve en [garuagents.com/garufile.schema.json](https://garuagents.com/garufile.schema.json); un Garufile lo señala con `# yaml-language-server: $schema=…` en su primera línea, como los incluidos. `--markdown` escribe en su lugar la página de referencia: cada clave, su tipo, su valor predeterminado y su línea, [docs/garufile.es.md](docs/garufile.es.md). |
 | `garu auth <Garufile> <server>` | Inicia sesión en un servidor de herramientas remoto una vez, en tu navegador. `--forget` lo elimina. |
 | `garu sandbox build` | Construye la imagen de Docker predeterminada para los servidores de herramientas. |
 

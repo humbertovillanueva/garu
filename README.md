@@ -84,7 +84,7 @@ An agent only ever touches the world through the [Model Context Protocol](https:
 
 ## The Garufile
 
-One file describes an agent: who it is, what it may touch, when it wakes up, and how much it may spend. This is a real one from this repo, a little trimmed: the agent that sorts the author's inbox every weekday morning.
+One file describes an agent: who it is, what it may touch, when it wakes up, and how much it may spend. Every key, with its type, its default and its line, is in [docs/garufile.md](docs/garufile.md), written from the schema itself. This is a real one from this repo, a little trimmed: the agent that sorts the author's inbox every weekday morning.
 
 ```yaml
 name: bea
@@ -290,7 +290,7 @@ Since then the page took over the rest. "New agent" asks what `garu new` asks (w
 | `garu doctor` | Check the computer in one go: Node, the keys in `.env`, every Garufile, each sign-in and its age, the login service, Tailscale, what's waiting on you. A cross means something to fix, and the command says what. |
 | `garu install <source>` | Bring an agent from an https URL, `github:owner/repo/path/Garufile.yaml` or a file: it shows what the agent runs on your computer, what it may do in plain words, what it needs in `.env` and any rule that never wins, asks, then writes it under `agents/`. `--name` renames it, `--yes` skips the question. |
 | `garu validate <Garufile>` | Lint policy, cron, budget, sandbox. |
-| `garu schema [file]` | The Garufile as a JSON Schema, for an editor that validates and completes YAML. The site serves it at [garuagents.com/garufile.schema.json](https://garuagents.com/garufile.schema.json); a Garufile points at it with `# yaml-language-server: $schema=…` on its first line, as the shipped ones do. |
+| `garu schema [file]` · `--markdown <file>` | The Garufile as a JSON Schema, for an editor that validates and completes YAML. The site serves it at [garuagents.com/garufile.schema.json](https://garuagents.com/garufile.schema.json); a Garufile points at it with `# yaml-language-server: $schema=…` on its first line, as the shipped ones do. `--markdown` writes the reference page instead: every key, its type, its default and its line, [docs/garufile.md](docs/garufile.md). |
 | `garu auth <Garufile> <server>` | Sign in to a remote tool server once, in your browser. `--forget` removes it. |
 | `garu sandbox build` | Build the default Docker image for tool servers. |
 
